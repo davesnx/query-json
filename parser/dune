@@ -1,0 +1,10 @@
+(menhir
+ (flags --external-tokens Token --explain)
+ (modules xml_parser))
+
+(library
+ (name parser)
+ (public_name query-json.parser)
+ (libraries menhirLib)
+ (preprocess
+  (pps sedlex.ppx ppx_deriving.show)))
