@@ -1,6 +1,7 @@
 {
   "name": "query-json",
   "esy": {
+    "start": "esy build dune build --watch",
     "build": "dune build -p #{self.name}",
     "install": "esy-installer #{self.name}.install"
   },
