@@ -1,7 +1,3 @@
-(menhir
- (flags --external-tokens Token --explain)
- (modules xml_parser))
-
 (library
  (name parser)
  (public_name query-json.parser)

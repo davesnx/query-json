@@ -1,10 +1,10 @@
 {
   "checksum": "0a21b2193eac313d78c40ba39e49affc",
-  "root": "super-programming-language@link-dev:./package.json",
+  "root": "query-json@link-dev:./package.json",
   "node": {
-    "super-programming-language@link-dev:./package.json": {
-      "id": "super-programming-language@link-dev:./package.json",
-      "name": "super-programming-language",
+    "query-json@link-dev:./package.json": {
+      "id": "query-json@link-dev:./package.json",
+      "name": "query-json",
       "version": "link-dev:./package.json",
       "source": {
         "type": "link-dev",
