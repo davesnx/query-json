@@ -106,23 +106,6 @@ let stdinMock2 = {|
     }
 |};
 
-/* module ErrorWrapper = {
-     type t = {
-       message: string,
-       error: exn,
-     };
-
-     let stack = [];
-   };
-
-   let safe = (msg, f) =>
-     try(f()) {
-     | error =>
-       let wrappedError: ErrorWrapper.t = {message: msg, error};
-       List.append(ErrorWrapper.stack, [wrappedError]);
-     };
-    */
-
 /* .store.book | map(select(.price < 10)) | map(.title) */
 
 /* let program =
@@ -158,42 +141,76 @@ open Yojson.Basic.Util;
 
 exception WrongOperation(string);
 
-let tryingToOperateInAWrongType = (op, memberKind, value) => {
-  raise(
-    WrongOperation(
-      "Trying to " ++ op ++ "on a " ++ value ++ "which is" ++ memberKind,
-    ),
-  );
-};
+module QueryJson = {
+  module ErrorWrapper = {
+    type t = {
+      message: string,
+      error: exn,
+    };
 
-let key = id => filter_member(id);
+    let stack = [];
+  };
 
-let mapper = (f, json: Yojson.Basic.t) => {
-  switch (json) {
-  | `List(list) => List.map(f, list)
-  | `Assoc(a) => tryingToOperateInAWrongType("map", "object", "obj")
-  | `Bool(b) => tryingToOperateInAWrongType("map", "bool", string_of_bool(b))
-  | `Float(f) =>
-    tryingToOperateInAWrongType("map", "float", string_of_float(f))
-  | `Int(i) =>
-    tryingToOperateInAWrongType("map", "int: %d\n", string_of_int(i))
-  | `Null => tryingToOperateInAWrongType("map", "null", "")
-  | `String(s) => tryingToOperateInAWrongType("map", "string", s)
+  let safe = (msg, f) =>
+    try(f()) {
+    | error =>
+      let wrappedError: ErrorWrapper.t = {message: msg, error};
+      List.append(ErrorWrapper.stack, [wrappedError]);
+    };
+
+  module Lib = {
+    let tryingToOperateInAWrongType = (op, memberKind, value: option(string)) => {
+      switch (value) {
+      | Some(v) =>
+        raise(
+          WrongOperation(
+            "Trying to " ++ op ++ "on a " ++ v ++ "which is" ++ memberKind,
+          ),
+        )
+      | None =>
+        raise(WrongOperation("Trying to " ++ op ++ "on a " ++ memberKind))
+      };
+    };
+
+    let operationInWrongType = (name, json) => {
+      switch (json) {
+      | `List(list) => tryingToOperateInAWrongType(name, "list", None)
+      | `Assoc(a) => tryingToOperateInAWrongType(name, "object", Some("obj"))
+      | `Bool(b) =>
+        tryingToOperateInAWrongType(name, "bool", Some(string_of_bool(b)))
+      | `Float(f) =>
+        tryingToOperateInAWrongType(name, "float", Some(string_of_float(f)))
+      | `Int(i) =>
+        tryingToOperateInAWrongType(
+          name,
+          "int: %d\n",
+          Some(string_of_int(i)),
+        )
+      | `Null => tryingToOperateInAWrongType(name, "null", None)
+      | `String(s) => tryingToOperateInAWrongType(name, "string", Some(s))
+      };
+    };
+
+    let key = id => filter_member(id);
+
+    let mapper = (f, json: Yojson.Basic.t) => {
+      switch (json) {
+      | `List(list) => List.map(f, list)
+      | _ => operationInWrongType("map", json)
+      };
+    };
+
+    let truncate = (f, json: Yojson.Basic.t) => {
+      switch (json) {
+      | `Float(f) => f +. 1.
+      | _ => operationInWrongType("truncate", json)
+      };
+    };
   };
 };
 
-let truncate = (f, json: Yojson.Basic.t) => {
-  switch (json) {
-  | `List(list) => tryingToOperateInAWrongType("truncate", "object", "obj")
-  | `Assoc(a) => tryingToOperateInAWrongType("truncate", "object", "obj")
-  | `Bool(b) =>
-    tryingToOperateInAWrongType("truncate", "bool", string_of_bool(b))
-  | `Float(f) => f +. 1.
-  | `Int(i) => tryingToOperateInAWrongType("truncate", "null", "")
-  | `Null => tryingToOperateInAWrongType("truncate", "null", "")
-  | `String(s) => tryingToOperateInAWrongType("truncate", "string", s)
-  };
-};
+open QueryJson;
+open QueryJson.Lib;
 
 let transformedProgram = json => {
   [json]
