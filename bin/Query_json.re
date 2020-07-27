@@ -164,7 +164,13 @@ module QueryJson = {
       | Some(v) =>
         raise(
           WrongOperation(
-            "Trying to " ++ op ++ "on a " ++ v ++ "which is" ++ memberKind,
+            "Trying to "
+            ++ op
+            ++ " on a '"
+            ++ v
+            ++ "' which is '"
+            ++ memberKind
+            ++ "'",
           ),
         )
       | None =>
@@ -200,11 +206,32 @@ module QueryJson = {
       };
     };
 
-    let truncate = (f, json: Yojson.Basic.t) => {
+    let truncate = (json: Yojson.Basic.t) => {
       switch (json) {
       | `Float(f) => f +. 1.
       | _ => operationInWrongType("truncate", json)
       };
+    };
+
+    let lola = (json: list(Yojson.Basic.t)) => {
+      List.map(
+        item => {
+          switch ((item: Yojson.Basic.t)) {
+          | `List(list) =>
+            List.map(
+              lola => {
+                switch (lola) {
+                | `Float(f) => f +. 1.
+                | _ => operationInWrongType("lola", lola)
+                }
+              },
+              list,
+            )
+          | _ => operationInWrongType("asd", item)
+          }
+        },
+        json,
+      );
     };
   };
 };
@@ -213,18 +240,13 @@ open QueryJson;
 open QueryJson.Lib;
 
 let transformedProgram = json => {
-  [json]
-  |> key("store")
-  |> key("book")
-  |> flatten
-  |> key("price")
-  |> mapper(truncate);
+  [json] |> key("pages") |> lola;
 };
 
 /* .pages | map(.title) */
 
 let main = () => {
-  let json = Yojson.Basic.from_string(stdinMock1);
+  let json = Yojson.Basic.from_string(stdinMock2);
   let stdout = transformedProgram(json);
   Console.log(stdout);
 };
