@@ -197,12 +197,10 @@ module QueryJson = {
       };
     };
 
-    let key = id => filter_member(id);
-
-    let mapper = (f, json: Yojson.Basic.t) => {
+    let key = (id, json) => {
       switch (json) {
-      | `List(list) => List.map(f, list)
-      | _ => operationInWrongType("map", json)
+      | `Assoc(x) => filter_member(id)
+      | _ => operationInWrongType("." ++ id, json)
       };
     };
 
@@ -213,21 +211,12 @@ module QueryJson = {
       };
     };
 
-    let lola = (json: list(Yojson.Basic.t)) => {
+    let mapper = (f, json: list(Yojson.Basic.t)) => {
       List.map(
         item => {
           switch ((item: Yojson.Basic.t)) {
-          | `List(list) =>
-            List.map(
-              lola => {
-                switch (lola) {
-                | `Float(f) => f +. 1.
-                | _ => operationInWrongType("lola", lola)
-                }
-              },
-              list,
-            )
-          | _ => operationInWrongType("asd", item)
+          | `List(list) => List.map(f, list)
+          | _ => operationInWrongType("map", item)
           }
         },
         json,
@@ -240,13 +229,17 @@ open QueryJson;
 open QueryJson.Lib;
 
 let transformedProgram = json => {
-  [json] |> key("pages") |> lola;
+  [json]
+  |> filter_member("store")
+  |> filter_member("book")
+  |> flatten
+  |> mapper(item => {key("price", item)});
 };
 
-/* .pages | map(.title) */
+/* .pages | map(.price + 1) */
 
 let main = () => {
-  let json = Yojson.Basic.from_string(stdinMock2);
+  let json = Yojson.Basic.from_string(stdinMock1);
   let stdout = transformedProgram(json);
   Console.log(stdout);
 };
