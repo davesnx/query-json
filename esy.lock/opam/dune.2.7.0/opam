@@ -42,14 +42,14 @@ build: [
 depends: [
   # Please keep the lower bound in sync with .travis.yml, dune-project
   # and min_ocaml_version in bootstrap.ml
-  ("ocaml" {>= "4.07"} | ("ocaml" {< "4.07~~"} & "ocamlfind-secondary"))
+  ("ocaml" {>= "4.08"} | ("ocaml" {< "4.08~~"} & "ocamlfind-secondary"))
   "base-unix"
   "base-threads"
 ]
 url {
-  src: "https://github.com/ocaml/dune/releases/download/2.6.1/dune-2.6.1.tbz"
+  src: "https://github.com/ocaml/dune/releases/download/2.7.0/dune-2.7.0.tbz"
   checksum: [
-    "sha256=5ef959f286448ee172f1cffc86c439a6f7b662676e6015b282db071bb88899a0"
-    "sha512=67b750716563fde1135f3d0f3892f97e912d6f95a40bcd7cd854f3ae09ba0b037e7b8829bdaee141cb6c998396f2a51a380451db117571d77895781798d625e7"
+    "sha256=b417ca85bdce4171e71255be4a9c5a7572646cb1dcb221bba3757dc6ac8f1c15"
+    "sha512=5e5b649b1a16747bf2a0bf093ecf2dc701b2713c166e3d25731422bba2b94e807ded2242ee0e750e2264d21a03c966c24f4812c6d5ed690bba60543db7303f89"
   ]
 }

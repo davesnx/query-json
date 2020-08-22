@@ -4,7 +4,7 @@ type identifier = string;
 [@deriving show]
 type literal =
   | Bool(bool) /* true */
-  | String(string) /* "awasdf" */
+  | String(string) /* "TEXT" */
   | Int(int) /* 123 */
   | Float(float); /* 12.3 */
 
@@ -53,7 +53,7 @@ let program =
 [@deriving show]
 let stdinMock1 = {|
   { "store": {
-    "book": [
+    "books": [
       { "category": "reference",
         "author": "Nigel Rees",
         "title": "Sayings of the Century",
@@ -106,7 +106,7 @@ let stdinMock2 = {|
     }
 |};
 
-/* .store.book | map(select(.price < 10)) | map(.title) */
+/* .store.book | filter(.price < 10)) | map(.title) */
 
 /* let program =
     Pipe(
@@ -139,109 +139,120 @@ let stdinMock2 = {|
 
 open Yojson.Basic.Util;
 
-exception WrongOperation(string);
+exception WTF(string);
 
-module QueryJson = {
-  module ErrorWrapper = {
-    type t = {
-      message: string,
-      error: exn,
-    };
-
-    let stack = [];
-  };
-
-  let safe = (msg, f) =>
-    try(f()) {
-    | error =>
-      let wrappedError: ErrorWrapper.t = {message: msg, error};
-      List.append(ErrorWrapper.stack, [wrappedError]);
-    };
-
-  module Lib = {
-    let tryingToOperateInAWrongType = (op, memberKind, value: option(string)) => {
-      switch (value) {
-      | Some(v) =>
-        raise(
-          WrongOperation(
-            "Trying to "
-            ++ op
-            ++ " on a '"
-            ++ v
-            ++ "' which is '"
-            ++ memberKind
-            ++ "'",
-          ),
-        )
-      | None =>
-        raise(WrongOperation("Trying to " ++ op ++ "on a " ++ memberKind))
-      };
-    };
-
-    let operationInWrongType = (name, json) => {
-      switch (json) {
-      | `List(list) => tryingToOperateInAWrongType(name, "list", None)
-      | `Assoc(a) => tryingToOperateInAWrongType(name, "object", Some("obj"))
-      | `Bool(b) =>
-        tryingToOperateInAWrongType(name, "bool", Some(string_of_bool(b)))
-      | `Float(f) =>
-        tryingToOperateInAWrongType(name, "float", Some(string_of_float(f)))
-      | `Int(i) =>
-        tryingToOperateInAWrongType(
-          name,
-          "int: %d\n",
-          Some(string_of_int(i)),
-        )
-      | `Null => tryingToOperateInAWrongType(name, "null", None)
-      | `String(s) => tryingToOperateInAWrongType(name, "string", Some(s))
-      };
-    };
-
-    let key = (id, json) => {
-      switch (json) {
-      | `Assoc(x) => filter_member(id)
-      | _ => operationInWrongType("." ++ id, json)
-      };
-    };
-
-    let truncate = (json: Yojson.Basic.t) => {
-      switch (json) {
-      | `Float(f) => f +. 1.
-      | _ => operationInWrongType("truncate", json)
-      };
-    };
-
-    let mapper = (f, json: list(Yojson.Basic.t)) => {
-      List.map(
-        item => {
-          switch ((item: Yojson.Basic.t)) {
-          | `List(list) => List.map(f, list)
-          | _ => operationInWrongType("map", item)
-          }
-        },
-        json,
-      );
-    };
+let sum = (amount, json): Yojson.Basic.t => {
+  switch (json) {
+  | `Float(float) => `Float(float_of_int(amount) +. float)
+  | `Int(int) => `Float(float_of_int(amount + int))
+  | `List(_list) => raise(WTF("List"))
+  | `Assoc(_list) => raise(WTF("Assoc"))
+  | `Bool(_bool) => raise(WTF("Bool"))
+  | `Null => raise(WTF("Null"))
+  | `String(_identifier) => raise(WTF("String"))
   };
 };
-
-open QueryJson;
-open QueryJson.Lib;
 
 let transformedProgram = json => {
   [json]
   |> filter_member("store")
-  |> filter_member("book")
-  |> flatten
-  |> mapper(item => {key("price", item)});
+  |> filter_member("books")
+  |> filter_map((json: Yojson.Basic.t) => {
+       switch (json) {
+       | `List(list) =>
+         Some(
+           `List(
+             List.map(item => sum(10, item), filter_member("price", list)),
+           ),
+         )
+       | `Assoc(_list) => raise(WTF("Assoc"))
+       | `Bool(_bool) => raise(WTF("Bool"))
+       | `Float(_float) => raise(WTF("Float"))
+       | `Int(_int) => raise(WTF("Int"))
+       | `Null => raise(WTF("Null"))
+       | `String(_identifier) => raise(WTF("String"))
+       }
+     })
+  |> List.hd;
 };
 
 /* .pages | map(.price + 1) */
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock1);
-  let stdout = transformedProgram(json);
-  Console.log(stdout);
+  let output = transformedProgram(json);
+
+  Console.log(output);
+  Yojson.Basic.pretty_to_string(output);
 };
 
-main();
+Console.log(main());
+
+/* module Json = {
+    let string_of_yojson: (string, Yojson.Safe.t) => result(string, string) =
+      (memberName, json) => {
+        switch (Yojson.Safe.Util.member(memberName, json)) {
+        | `String(v) => Ok(v)
+        | _ => Error("Missing expected property: " ++ memberName)
+        };
+      };
+
+    let bool_of_yojson: Yojson.Safe.t => bool =
+      json => {
+        switch (json) {
+        | `Bool(v) => v
+        | _ => false
+        };
+      };
+
+    module Decode = {
+      open Oni_Core;
+      open Json.Decode;
+
+      let capture = {
+        let captureSimplified = string;
+        let captureNested =
+          obj(({field, _}) => {field.required("name", string)});
+
+        one_of([
+          ("simplified", captureSimplified),
+          ("nested", captureNested),
+        ]);
+      };
+    };
+
+    let captures_of_yojson: Yojson.Safe.t => list(Capture.t) =
+      json => {
+        open Yojson.Safe.Util;
+        let f = keyValuePair => {
+          let (key, json) = keyValuePair;
+          let captureGroup = int_of_string_opt(key);
+          let captureName =
+            json |> Oni_Core.Json.Decode.decode_value(Decode.capture);
+
+          switch (captureGroup, captureName) {
+          | (Some(n), Ok(name)) => Ok((n, name))
+          | _ => Error("Invalid capture group")
+          };
+        };
+
+        let fold = (prev, curr) => {
+          switch (f(curr)) {
+          | Ok(v) => [v, ...prev]
+          | _ => prev
+          };
+        };
+
+        switch (json) {
+        | `Assoc(list) => List.fold_left(fold, [], list) |> List.rev
+        | _ => []
+        };
+      };
+
+    let regex_of_yojson = (~allowBackReferences=true, json) => {
+      switch (json) {
+      | `String(v) => Ok(RegExpFactory.create(~allowBackReferences, v))
+      | _ => Error("Regular expression not specified")
+      };
+    };
+   */

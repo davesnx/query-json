@@ -1,0 +1,5 @@
+(** @canonical Dune__exe.Env *)
+module Env = Dune__exe__Env
+
+(** @canonical Dune__exe.Query_json *)
+module Query_json = Dune__exe__Query_json
