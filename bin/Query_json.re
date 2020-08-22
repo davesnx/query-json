@@ -20,10 +20,9 @@ type expression =
   | Literal(literal)
   | Identity /* . */
   | Key(identifier) /* .foo */
-  | OptionalKey(identifier) /* .foo? */
   | ObjIndex(string) /* ["foo"] */
   | Map(expression) /* .[] */ /* map(x) */
-  | Select(expression) /* .select(x) */
+  | Filter(expression) /* .filter(x) */
   | MapValues(expression) /* .map_values(x) */
   | In /* in */
   | Pipe(expression, expression) /* | */
@@ -34,12 +33,10 @@ type expression =
   | Keys /* keys */
   | Index(int) /* [1] */
   | Length /* length */
-  | List /* [] */
-  | Object /* {} */
-  | Apply(expression)
+  | List /* [] - Not implemented */
+  | Object /* {} - Not implemented */
+  | Apply(expression) /* Not implemented */
   | Compare(expression, conditional, expression); /* => */
-
-/* .store.book | map(select(.price < 10)) | map(.title) */
 
 let program =
   Pipe(
@@ -51,7 +48,7 @@ let program =
   );
 
 [@deriving show]
-let stdinMock1 = {|
+let stdinMock = {|
   { "store": {
     "books": [
       { "category": "reference",
@@ -80,179 +77,108 @@ let stdinMock1 = {|
   }}
 |};
 
-[@deriving show]
-let stdinMock2 = {|
-  {
-    "id": "398eb027",
-    "name": "John Doe",
-    "pages": [
-        {
-          "id": 1,
-          "title": "The Art of Flipping Coins",
-          "url": "http://example.com/398eb027/1"
-        },
-        { "id": 2, "deleted": true },
-        {
-          "id": 3,
-          "title": "Artichoke Salad",
-          "url": "http://example.com/398eb027/3"
-        },
-        {
-          "id": 4,
-          "title": "Flying Bananas",
-          "url": "http://example.com/398eb027/4"
-        }
-      ]
-    }
-|};
-
-/* .store.book | filter(.price < 10)) | map(.title) */
-
-/* let program =
-    Pipe(
-      Pipe(Pipe(Identity, Key("store")), Key("book")),
-      Pipe(
-        Map(Select(Compare(Key("price"), LW, Literal(Int(10))))),
-        Map(Key("title")),
-      ),
-    );
-   */
-
-/* |> filter_map(book => {
-     let int = to_number_option(member("price", book));
-     switch (int) {
-     | Some(i) => Some(i < 10.)
-     | None => None
-     };
-   }); */
-
-/* type json = [
-    | `Assoc of (string * json) list
-    | `Bool of bool
-    | `Float of float
-    | `Int of int
-    | `List of json list
-    | `Null
-    | `String of string
-   ]
-    */
-
 open Yojson.Basic.Util;
 
-exception WTF(string);
+exception WrongOperation(string);
 
-let sum = (amount, json): Yojson.Basic.t => {
-  switch (json) {
-  | `Float(float) => `Float(float_of_int(amount) +. float)
-  | `Int(int) => `Float(float_of_int(amount + int))
-  | `List(_list) => raise(WTF("List"))
-  | `Assoc(_list) => raise(WTF("Assoc"))
-  | `Bool(_bool) => raise(WTF("Bool"))
-  | `Null => raise(WTF("Null"))
-  | `String(_identifier) => raise(WTF("String"))
+let tryingToOperateInAWrongType = (op, memberKind, value: option(string)) => {
+  switch (value) {
+  | Some(v) =>
+    raise(
+      WrongOperation(
+        "Trying to "
+        ++ op
+        ++ " on a '"
+        ++ v
+        ++ "' which is '"
+        ++ memberKind
+        ++ "'",
+      ),
+    )
+  | None =>
+    raise(WrongOperation("Trying to " ++ op ++ "on a " ++ memberKind))
   };
 };
 
-let transformedProgram = json => {
-  [json]
-  |> filter_member("store")
-  |> filter_member("books")
-  |> filter_map((json: Yojson.Basic.t) => {
-       switch (json) {
-       | `List(list) =>
-         Some(
-           `List(
-             List.map(item => sum(10, item), filter_member("price", list)),
-           ),
-         )
-       | `Assoc(_list) => raise(WTF("Assoc"))
-       | `Bool(_bool) => raise(WTF("Bool"))
-       | `Float(_float) => raise(WTF("Float"))
-       | `Int(_int) => raise(WTF("Int"))
-       | `Null => raise(WTF("Null"))
-       | `String(_identifier) => raise(WTF("String"))
-       }
-     })
-  |> List.hd;
+let operationInWrongType = (name, json) => {
+  switch (json) {
+  | `List(_list) => tryingToOperateInAWrongType(name, "list", None)
+  | `Assoc(_a) => tryingToOperateInAWrongType(name, "object", Some("obj"))
+  | `Bool(b) =>
+    tryingToOperateInAWrongType(name, "bool", Some(string_of_bool(b)))
+  | `Float(f) =>
+    tryingToOperateInAWrongType(name, "float", Some(string_of_float(f)))
+  | `Int(i) =>
+    tryingToOperateInAWrongType(name, "int", Some(string_of_int(i)))
+  | `Null => tryingToOperateInAWrongType(name, "null", None)
+  | `String(identifier) =>
+    tryingToOperateInAWrongType(name, "string", Some(identifier))
+  };
 };
 
-/* .pages | map(.price + 1) */
+let sum = (amount: int, json): Yojson.Basic.t => {
+  switch (json) {
+  | `Float(float) => `Float(float_of_int(amount) +. float)
+  | `Int(int) => `Float(float_of_int(amount + int))
+  | _ => operationInWrongType("+", json)
+  };
+};
+
+/* .store.books | map(.price + 10) */
+/* let transformedProgram = json => {
+     json
+     |> member("store")
+     |> member("books")
+     |> map(item => sum(10, member("price", item)));
+   }; */
+
+let keys = json => `List(keys(json) |> List.map(i => `String(i)));
+
+/* .store.books[0].keys */
+/* let transformedProgram = json => {
+     json |> member("store") |> member("books") |> index(0) |> keys;
+   };
+    */
+
+let length = json => `Int(json |> to_list |> List.length);
+
+/* .store.books.length */
+/* let transformedProgram = json => {
+     json |> member("store") |> member("books") |> length;
+   };
+    */
+
+let gt = (json: Yojson.Basic.t, value) => {
+  switch (json) {
+  | `Float(float) => `Bool(float > value)
+  | `Int(int) => `Bool(int > int_of_float(value))
+  | _ => operationInWrongType(">", json)
+  };
+};
+
+let filter = (f: list(Yojson.Basic.t) => bool, json: Yojson.Basic.t) =>
+  if (f(json)) {
+    Some(json);
+  } else {
+    None;
+  };
+
+let id: 'a => 'a = i => i;
+
+let keepSome: list(option('a)) => list('a) =
+  list => List.filter_map(id, list);
+
+let transformedProgram = json => {
+  json |> member("store") |> member("books") |> filter(_ => true);
+};
+
+/* |> map(item => select(i => gt(member("price", i), 10.), item)); */
 
 let main = () => {
-  let json = Yojson.Basic.from_string(stdinMock1);
+  let json = Yojson.Basic.from_string(stdinMock);
   let output = transformedProgram(json);
 
-  Console.log(output);
   Yojson.Basic.pretty_to_string(output);
 };
 
 Console.log(main());
-
-/* module Json = {
-    let string_of_yojson: (string, Yojson.Safe.t) => result(string, string) =
-      (memberName, json) => {
-        switch (Yojson.Safe.Util.member(memberName, json)) {
-        | `String(v) => Ok(v)
-        | _ => Error("Missing expected property: " ++ memberName)
-        };
-      };
-
-    let bool_of_yojson: Yojson.Safe.t => bool =
-      json => {
-        switch (json) {
-        | `Bool(v) => v
-        | _ => false
-        };
-      };
-
-    module Decode = {
-      open Oni_Core;
-      open Json.Decode;
-
-      let capture = {
-        let captureSimplified = string;
-        let captureNested =
-          obj(({field, _}) => {field.required("name", string)});
-
-        one_of([
-          ("simplified", captureSimplified),
-          ("nested", captureNested),
-        ]);
-      };
-    };
-
-    let captures_of_yojson: Yojson.Safe.t => list(Capture.t) =
-      json => {
-        open Yojson.Safe.Util;
-        let f = keyValuePair => {
-          let (key, json) = keyValuePair;
-          let captureGroup = int_of_string_opt(key);
-          let captureName =
-            json |> Oni_Core.Json.Decode.decode_value(Decode.capture);
-
-          switch (captureGroup, captureName) {
-          | (Some(n), Ok(name)) => Ok((n, name))
-          | _ => Error("Invalid capture group")
-          };
-        };
-
-        let fold = (prev, curr) => {
-          switch (f(curr)) {
-          | Ok(v) => [v, ...prev]
-          | _ => prev
-          };
-        };
-
-        switch (json) {
-        | `Assoc(list) => List.fold_left(fold, [], list) |> List.rev
-        | _ => []
-        };
-      };
-
-    let regex_of_yojson = (~allowBackReferences=true, json) => {
-      switch (json) {
-      | `String(v) => Ok(RegExpFactory.create(~allowBackReferences, v))
-      | _ => Error("Regular expression not specified")
-      };
-    };
-   */
