@@ -9,14 +9,8 @@ type literal =
   | Float(float); /* 12.3 */
 
 [@deriving show]
-type conditional =
-  | GT /* Greater > */
-  | LW /* Lower < */
-  | GET /* Greater equal >= */
-  | LWT; /* Lower equal <= */
-
-[@deriving show]
 type expression =
+  | Main(expression)
   | Literal(literal)
   | Identity /* . */
   | Key(identifier) /* .foo */
@@ -28,7 +22,10 @@ type expression =
   | Subtraction(expression, expression) /* - */
   | Division(expression, expression) /* / */
   | Multiply(expression, expression) /* * */
-  | Compare(expression, conditional, expression) /* => */
+  | GT(expression, expression) /* Greater > */
+  | LW(expression, expression) /* Lower < */
+  | GET(expression, expression) /* Greater equal >= */
+  | LWT(expression, expression) /* Lower equal <= */
   | Keys /* keys */
   | Index(int) /* [1] */
   | Length /* length */
@@ -36,15 +33,6 @@ type expression =
   | Object /* {} - Not implemented */
   | Apply(expression) /* Not implemented */
   | MapValues(expression); /* .map_values(x) - Not implemented */
-
-let program =
-  Pipe(
-    Pipe(Pipe(Identity, Key("store")), Key("book")),
-    Pipe(
-      Map(Select(Compare(Key("price"), LW, Literal(Int(10))))),
-      Map(Key("title")),
-    ),
-  );
 
 [@deriving show]
 let stdinMock = {|
@@ -76,7 +64,11 @@ let stdinMock = {|
   }}
 |};
 
-open Yojson.Basic.Util;
+module Json = {
+  include Yojson.Basic.Util;
+};
+
+open Json;
 
 exception WrongOperation(string);
 
@@ -124,7 +116,7 @@ let sum = (amount: int, json): Yojson.Basic.t => {
      |> map(item => sum(10, member("price", item)));
    }; */
 
-let keys = json => `List(keys(json) |> List.map(i => `String(i)));
+let keys = json => `List(Json.keys(json) |> List.map(i => `String(i)));
 
 /* .store.books[0].keys */
 /* let transformedProgram = json => {
@@ -132,7 +124,7 @@ let keys = json => `List(keys(json) |> List.map(i => `String(i)));
    };
     */
 
-let length = json => `Int(json |> to_list |> List.length);
+let length = json => `Int(json |> Json.to_list |> List.length);
 
 /* .store.books.length */
 /* let transformedProgram = json => {
@@ -148,6 +140,30 @@ let gt = (json: Yojson.Basic.t, value: float): bool => {
   };
 };
 
+let gte = (json: Yojson.Basic.t, value: float): bool => {
+  switch (json) {
+  | `Float(float) => float >= value
+  | `Int(int) => int >= int_of_float(value)
+  | _ => operationInWrongType(">=", json)
+  };
+};
+
+let lt = (json: Yojson.Basic.t, value: float): bool => {
+  switch (json) {
+  | `Float(float) => float < value
+  | `Int(int) => int < int_of_float(value)
+  | _ => operationInWrongType("<", json)
+  };
+};
+
+let lte = (json: Yojson.Basic.t, value: float): bool => {
+  switch (json) {
+  | `Float(float) => float <= value
+  | `Int(int) => int <= int_of_float(value)
+  | _ => operationInWrongType("<=", json)
+  };
+};
+
 let filter = (fn: Yojson.Basic.t => bool, json: Yojson.Basic.t) => {
   switch (json) {
   | `List(list) => `List(List.filter(fn, list))
@@ -157,15 +173,46 @@ let filter = (fn: Yojson.Basic.t => bool, json: Yojson.Basic.t) => {
 
 let id: 'a => 'a = i => i;
 
-let transformedProgram = json => {
-  json |> member("store") |> filter(item => gt(member("price", item), 10.));
+/* .store.books | filter(.price > 10) */
+/* let transformedProgram = json => {
+     json
+     |> member("store")
+     |> member("books")
+     |> filter(item => gt(member("price", item), 10.));
+   };
+    */
+
+let program = Main(Identity);
+/* Pipe(
+     Pipe(Pipe(Identity, Key("store")), Key("book")),
+     Pipe(
+       Filter(LW(Key("price"), Literal(Float(10.)))),
+       Map(Key("title")),
+     ),
+   ), */
+
+exception CompilationError(string);
+
+let compile = (expression: expression, _json): Yojson.Basic.t => {
+  switch (expression) {
+  | Main(expr) =>
+    switch (expr) {
+    | Main(_) => raise(CompilationError("Main() can't be nested"))
+    | _ => raise(CompilationError("Not implemented"))
+    }
+  | _ => raise(CompilationError("Program should contain a Main() as a root"))
+  };
 };
 
-/* |> map(item => select(i => gt(member("price", i), 10.), item)); */
+/* json
+   |> member("store")
+   |> member("book")
+   |> filter(item => gt(member("price", item), 10.))
+   |> member("title"); */
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let output = transformedProgram(json);
+  let output = compile(program, json);
 
   Yojson.Basic.pretty_to_string(output);
 };

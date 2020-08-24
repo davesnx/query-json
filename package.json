@@ -9,16 +9,15 @@
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
     "@opam/dune": "~2.6.1",
-    "@opam/ezjsonm": "1.2.0",
     "@opam/menhir": "20200624",
     "@opam/ppx_deriving": "4.5",
+    "@opam/ppxlib": "0.15.0",
     "@opam/sedlex": "2.2",
     "@opam/yojson": "1.7.0",
     "@reason-native/console": "^0.1.0",
     "ocaml": "^4.10.0"
   },
   "devDependencies": {
-    "@opam/ocaml-lsp-server":
-      "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
   }
 }
