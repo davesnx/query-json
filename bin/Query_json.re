@@ -1,54 +1,74 @@
-[@deriving show]
-type identifier = string;
+module Ast = {
+  [@deriving show]
+  type identifier = string;
 
-[@deriving show]
-type literal =
-  | Bool(bool) /* true */
-  | String(string) /* "TEXT" */
-  | Number(float); /* 123 or 123.0 */
+  [@deriving show]
+  type literal =
+    | Bool(bool) /* true */
+    | String(string) /* "TEXT" */
+    | Number(float); /* 123 or 123.0 */
 
-[@deriving show]
-type expression =
-  | Literal(literal)
-  | Identity /* . */
-  | Key(identifier) /* .foo */
-  | Map(expression) /* .[] */ /* map(x) */
-  | Filter(conditional) /* .filter(x) */
-  | Select(expression) /* .select(x) */
-  | Index(int) /* [1] */
-  | Addition(expression, expression) /* + */
-  | Subtraction(expression, expression) /* - */
-  | Division(expression, expression) /* / */
-  | Multiply(expression, expression) /* * */
-  | Pipe(expression, expression) /* | */
-  | Keys /* keys */
-  | Flatten /* flatten */
-  | Head /* head */
-  | Tail /* tail */
-  | Length /* length */
-  | List /* [] */
-  | Object /* {} */
-/* Missing on the AST */
-/* ToEntries, FromEntries */
-/* Has(identifier) */
-/* Range(int, int) */
-/* ToString, ToNumber */
-/* Type */
-/* Sort */
-/* GroupBy(expression) */
-/* Unique */
-/* Reverse */
-/* StartsWith, EndsWith */
-/* Split */
-/* Join */
+  [@deriving show]
+  type expression =
+    | Literal(literal)
+    | Identity /* . */
+    | Key(identifier) /* .foo */
+    | Map(expression) /* .[] */ /* map(x) */
+    | Filter(conditional) /* .filter(x) */
+    | Select(expression) /* .select(x) */
+    | Index(int) /* [1] */
+    | Addition(expression, expression) /* + */
+    | Subtraction(expression, expression) /* - */
+    | Division(expression, expression) /* / */
+    | Multiply(expression, expression) /* * */
+    | Pipe(expression, expression) /* | */
+    | Keys /* keys */
+    | Flatten /* flatten */
+    | Head /* head */
+    | Tail /* tail */
+    | Length /* length */
+    | List /* [] */
+    | Object /* {} */
+  /* Missing on the AST */
+  /* ToEntries, FromEntries */
+  /* Has(identifier) */
+  /* Range(int, int) */
+  /* ToString, ToNumber */
+  /* Type */
+  /* Sort */
+  /* GroupBy(expression) */
+  /* Unique */
+  /* Reverse */
+  /* StartsWith, EndsWith */
+  /* Split */
+  /* Join */
+  and conditional =
+    | GT(expression, expression) /* Greater > */
+    | LT(expression, expression) /* Lower < */
+    | GTE(expression, expression) /* Greater equal >= */
+    | LTE(expression, expression) /* Lower equal <= */
+    | EQ(expression, expression) /* equal == */
+    | NOT_EQ(expression, expression); /* not equal != */
+};
 
-and conditional =
-  | GT(expression, expression) /* Greater > */
-  | LT(expression, expression) /* Lower < */
-  | GTE(expression, expression) /* Greater equal >= */
-  | LTE(expression, expression) /* Lower equal <= */
-  | EQ(expression, expression) /* equal == */
-  | NOT_EQ(expression, expression); /* not equal != */
+open Ast;
+
+/* let expression_value =
+     MenhirLib.Convert.Simplified.traditional2revised(
+       Xml_parser.expression_value,
+     );
+
+   let provider = (buf, ()) => {
+     let token = Tokenizer.tokenize(buf) |> Result.get_ok;
+     let (start, stop) = Sedlexing.lexing_positions(buf);
+     (token, start, stop);
+   };
+
+   let parse = code => {
+     let buf = Sedlexing.Utf8.from_string(code);
+     expression_value(provider(buf));
+   };
+    */
 
 [@deriving show]
 let stdinMock = {|
@@ -81,10 +101,9 @@ let stdinMock = {|
 |};
 
 module Json = {
+  type t = Yojson.Basic.t;
   include Yojson.Basic.Util;
 };
-
-open Json;
 
 exception WrongOperation(string);
 
@@ -92,7 +111,7 @@ type noun =
   | StartsWithVocal(string)
   | StartsWithConsonant(string);
 
-let wrongTypeOperation = (op, memberKind, value: Yojson.Basic.t) => {
+let wrongTypeOperation = (op, memberKind, value: Json.t) => {
   raise(
     WrongOperation(
       "\nERROR: Trying to "
@@ -106,7 +125,7 @@ let wrongTypeOperation = (op, memberKind, value: Yojson.Basic.t) => {
       )
       ++ "."
       ++ "\n\nThe value recived is:\n"
-      ++ Yojson.Basic.to_string(value),
+      ++ Json.to_string(value),
     ),
   );
 };
@@ -128,12 +147,7 @@ let raiseOperationInWrongType = (name, json) => {
 let keys = json => `List(Json.keys(json) |> List.map(i => `String(i)));
 let length = json => `Int(json |> Json.to_list |> List.length);
 let apply =
-    (
-      str: string,
-      fn: (float, float) => float,
-      left: Yojson.Basic.t,
-      right: Yojson.Basic.t,
-    ) => {
+    (str: string, fn: (float, float) => float, left: Json.t, right: Json.t) => {
   switch (left, right) {
   | (`Float(l), `Float(r)) => `Float(fn(l, r))
   | (`Int(l), `Float(r)) => `Float(fn(float_of_int(l), r))
@@ -144,12 +158,7 @@ let apply =
 };
 
 let compare =
-    (
-      str: string,
-      fn: (float, float) => bool,
-      left: Yojson.Basic.t,
-      right: Yojson.Basic.t,
-    ) => {
+    (str: string, fn: (float, float) => bool, left: Json.t, right: Json.t) => {
   switch (left, right) {
   | (`Float(l), `Float(r)) => fn(l, r)
   | (`Int(l), `Float(r)) => fn(float_of_int(l), r)
@@ -171,18 +180,18 @@ let sub = apply("-", (l, r) => l -. r);
 let mult = apply("-", (l, r) => l *. r);
 let div = apply("-", (l, r) => l /. r);
 
-let filter = (fn: Yojson.Basic.t => bool, json: Yojson.Basic.t) => {
+let filter = (fn: Json.t => bool, json: Json.t) => {
   switch (json) {
   | `List(list) => `List(List.filter(fn, list))
   | _ => raiseOperationInWrongType("filter", json)
   };
 };
 
-let id: Yojson.Basic.t => Yojson.Basic.t = i => i;
+let id: Json.t => Json.t = i => i;
 
 exception WrongIndexAccess(string);
 
-let head = (json: Yojson.Basic.t) => {
+let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
     /* TODO: Making sure list have a at least one item
@@ -191,12 +200,12 @@ let head = (json: Yojson.Basic.t) => {
           | _ => raise(WrongIndexAccess("def"))
           }; */
 
-    index(0, `List(list))
+    Json.index(0, `List(list))
   | _ => raiseOperationInWrongType("head", json)
   };
 };
 
-let tail = (json: Yojson.Basic.t) => {
+let tail = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
     /* TODO: Making sure list have at least one item
@@ -205,23 +214,23 @@ let tail = (json: Yojson.Basic.t) => {
           | _ => raise(WrongIndexAccess("def"))
           }; */
     let lastIndex = List.length(list) - 1;
-    index(lastIndex, `List(list));
+    Json.index(lastIndex, `List(list));
   | _ => raiseOperationInWrongType("head", json)
   };
 };
 
 exception CompilationError(string);
 
-let rec compile = (expression: expression, json: Yojson.Basic.t) => {
+let rec compile = (expression: expression, json: Json.t) => {
   switch (expression) {
   | Identity => id(json)
-  | Key(key) => member(key, json)
+  | Key(key) => Json.member(key, json)
   | Keys => keys(json)
-  | Index(idx) => index(idx, json)
+  | Index(idx) => Json.index(idx, json)
   | Head => head(json)
   | Tail => tail(json)
   | Length => length(json)
-  | Map(expr) => map(compile(expr), json)
+  | Map(expr) => Json.map(compile(expr), json)
   | Flatten => raise(CompilationError("Flatten is not implemenet"))
   | Addition(left, right) => add(compile(left, json), compile(right, json))
   | Subtraction(left, right) =>

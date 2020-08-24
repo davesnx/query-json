@@ -1,6 +1,8 @@
 (library
  (name parser)
  (public_name query-json.parser)
- (libraries menhirLib)
+ (libraries menhirLib yojson sedlex)
  (preprocess
-  (pps sedlex.ppx ppx_deriving.show)))
+  (pps ppx_deriving.show sedlex.ppx)
+ )
+)
