@@ -5,7 +5,7 @@ type identifier = string;
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
-  | Int(int) /* 123 */
+  | Int(float) /* 123 */
   | Float(float); /* 12.3 */
 
 [@deriving show]
@@ -15,24 +15,27 @@ type expression =
   | Identity /* . */
   | Key(identifier) /* .foo */
   | Map(expression) /* .[] */ /* map(x) */
-  | Filter(expression) /* .filter(x) */
+  | Filter(conditional) /* .filter(x) */
   | Select(expression) /* .select(x) - Not implemented */
   | Pipe(expression, expression) /* | */
   | Addition(expression, expression) /* + */
   | Subtraction(expression, expression) /* - */
   | Division(expression, expression) /* / */
   | Multiply(expression, expression) /* * */
-  | GT(expression, expression) /* Greater > */
-  | LW(expression, expression) /* Lower < */
-  | GET(expression, expression) /* Greater equal >= */
-  | LWT(expression, expression) /* Lower equal <= */
   | Keys /* keys */
   | Index(int) /* [1] */
   | Length /* length */
   | List /* [] - Not implemented */
   | Object /* {} - Not implemented */
   | Apply(expression) /* Not implemented */
-  | MapValues(expression); /* .map_values(x) - Not implemented */
+  | MapValues(expression) /* .map_values(x) - Not implemented */
+and conditional =
+  | GT(expression, expression) /* Greater > */
+  | LT(expression, expression) /* Lower < */
+  | GTE(expression, expression) /* Greater equal >= */
+  | LTE(expression, expression) /* Lower equal <= */
+  | EQ(expression, expression) /* equal == */
+  | NOT_EQ(expression, expression); /* not equal != */
 
 [@deriving show]
 let stdinMock = {|
@@ -132,37 +135,28 @@ let length = json => `Int(json |> Json.to_list |> List.length);
    };
     */
 
-let gt = (json: Yojson.Basic.t, value: float): bool => {
-  switch (json) {
-  | `Float(float) => float > value
-  | `Int(int) => int > int_of_float(value)
-  | _ => operationInWrongType(">", json)
+let compare =
+    (
+      str: string,
+      f: (float, float) => bool,
+      left: Yojson.Basic.t,
+      right: Yojson.Basic.t,
+    ) => {
+  switch (left, right) {
+  | (`Float(l), `Float(r)) => f(l, r)
+  | (`Int(l), `Float(r)) => f(float_of_int(l), r)
+  | (`Float(l), `Int(r)) => f(l, float_of_int(r))
+  | (`Int(l), `Int(r)) => f(float_of_int(l), float_of_int(r))
+  | _ => operationInWrongType(str, right)
   };
 };
 
-let gte = (json: Yojson.Basic.t, value: float): bool => {
-  switch (json) {
-  | `Float(float) => float >= value
-  | `Int(int) => int >= int_of_float(value)
-  | _ => operationInWrongType(">=", json)
-  };
-};
-
-let lt = (json: Yojson.Basic.t, value: float): bool => {
-  switch (json) {
-  | `Float(float) => float < value
-  | `Int(int) => int < int_of_float(value)
-  | _ => operationInWrongType("<", json)
-  };
-};
-
-let lte = (json: Yojson.Basic.t, value: float): bool => {
-  switch (json) {
-  | `Float(float) => float <= value
-  | `Int(int) => int <= int_of_float(value)
-  | _ => operationInWrongType("<=", json)
-  };
-};
+let gt = compare(">", (l, r) => l > r);
+let gte = compare(">=", (l, r) => l >= r);
+let lt = compare("<", (l, r) => l < r);
+let lte = compare("<=", (l, r) => l <= r);
+let eq = compare("==", (l, r) => l == r);
+let notEq = compare("!=", (l, r) => l != r);
 
 let filter = (fn: Yojson.Basic.t => bool, json: Yojson.Basic.t) => {
   switch (json) {
@@ -171,7 +165,7 @@ let filter = (fn: Yojson.Basic.t => bool, json: Yojson.Basic.t) => {
   };
 };
 
-let id: 'a => 'a = i => i;
+let id: Yojson.Basic.t => Yojson.Basic.t = i => i;
 
 /* .store.books | filter(.price > 10) */
 /* let transformedProgram = json => {
@@ -182,25 +176,50 @@ let id: 'a => 'a = i => i;
    };
     */
 
-let program = Main(Identity);
-/* Pipe(
-     Pipe(Pipe(Identity, Key("store")), Key("book")),
-     Pipe(
-       Filter(LW(Key("price"), Literal(Float(10.)))),
-       Map(Key("title")),
-     ),
-   ), */
+let program =
+  Pipe(
+    Pipe(Key("store"), Key("books")),
+    Filter(EQ(Key("price"), Literal(Int(8.)))),
+  );
 
 exception CompilationError(string);
 
-let compile = (expression: expression, _json): Yojson.Basic.t => {
+let fromAstToYojson = (literal: literal): Yojson.Basic.t =>
+  switch (literal) {
+  | Bool(b) => `Bool(b)
+  | Int(int) => `Int(int_of_float(int))
+  | Float(float) => `Float(float)
+  | String(string) => `String(string)
+  };
+
+let rec compile = (expression: expression, json: Yojson.Basic.t) => {
   switch (expression) {
-  | Main(expr) =>
-    switch (expr) {
-    | Main(_) => raise(CompilationError("Main() can't be nested"))
-    | _ => raise(CompilationError("Not implemented"))
-    }
-  | _ => raise(CompilationError("Program should contain a Main() as a root"))
+  | Identity => id(json)
+  | Key(key) => member(key, json)
+  | Map(expr) => map(compile(expr), json)
+  | Literal(literal) => fromAstToYojson(literal)
+  | Filter(conditional) =>
+    filter(
+      item => {
+        switch (conditional) {
+        | GT(exprA, exprB) =>
+          gt(compile(exprA, item), compile(exprB, item))
+        | GTE(exprA, exprB) =>
+          gte(compile(exprA, item), compile(exprB, item))
+        | LT(exprA, exprB) =>
+          lt(compile(exprA, item), compile(exprB, item))
+        | LTE(exprA, exprB) =>
+          lte(compile(exprA, item), compile(exprB, item))
+        | EQ(exprA, exprB) =>
+          eq(compile(exprA, item), compile(exprB, item))
+        | NOT_EQ(exprA, exprB) =>
+          notEq(compile(exprA, item), compile(exprB, item))
+        }
+      },
+      json,
+    )
+  | Pipe(exprA, exprB) => compile(exprB, compile(exprA, json))
+  | _ => raise(CompilationError("Not implemented"))
   };
 };
 
