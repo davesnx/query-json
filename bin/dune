@@ -3,6 +3,6 @@
  (public_name query-json)
  (libraries console.lib sedlex parser yojson)
  (preprocess
-  (pps ppx_deriving.show ppx_tools_versioned.metaquot_410)
+  (pps ppx_deriving.show sedlex.ppx)
  )
 )

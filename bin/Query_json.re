@@ -24,7 +24,7 @@ type expression =
   | Keys /* keys */
   | Flatten /* flatten */
   | Head /* head */
-  | Tail /* head */
+  | Tail /* tail */
   | Length /* length */
   | List /* [] */
   | Object /* {} */
@@ -210,15 +210,6 @@ let tail = (json: Yojson.Basic.t) => {
   };
 };
 
-let program =
-  Pipe(
-    Pipe(
-      Pipe(Key("store"), Key("books")),
-      Filter(GT(Key("price"), Literal(Number(0.)))),
-    ),
-    Map(Addition(Key("price"), Literal(Number(10.)))),
-  );
-
 exception CompilationError(string);
 
 let rec compile = (expression: expression, json: Yojson.Basic.t) => {
@@ -277,8 +268,106 @@ let rec compile = (expression: expression, json: Yojson.Basic.t) => {
   };
 };
 
+let alpha = [%sedlex.regexp? 'a' .. 'z'];
+
+let dot = [%sedlex.regexp? '.'];
+let digit = [%sedlex.regexp? '0' .. '9'];
+let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Plus(digit))];
+let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
+let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
+
+[@deriving show]
+type token =
+  | NUMBER(float)
+  | STRING(string)
+  | BOOL(bool)
+  | IDENTIFIER(string)
+  | OPEN_LIST
+  | CLOSE_LIST
+  | OPEN_OBJ
+  | CLOSE_OBJ
+  | EQUAL
+  | GREATER_THAN
+  | LOWER_THAN
+  | GREATER_OR_EQUAL_THAN
+  | LOWER_OR_EQUAL_THAN
+  | DOT
+  | PIPE
+  | ADD
+  | SUB
+  | DIV
+  | MULT
+  | WHITESPACE
+  | EOF;
+
+open Sedlexing.Utf8;
+
+let tokenize = buf => {
+  switch%sedlex (buf) {
+  | whitespace => Ok(WHITESPACE)
+  | number =>
+    let num = lexeme(buf) |> float_of_string;
+    Ok(NUMBER(num));
+  | '"' =>
+    let rec read_until_quote = acc =>
+      switch%sedlex (buf) {
+      | "\\\"" => read_until_quote(acc ++ lexeme(buf))
+      | '"' => acc
+      | any => read_until_quote(acc ++ lexeme(buf))
+      | _ => failwith("unrecheable")
+      };
+    let content = read_until_quote("");
+    Ok(STRING(content));
+  | dot => Ok(DOT)
+  | '<' => Ok(LOWER_THAN)
+  | "<=" => Ok(LOWER_OR_EQUAL_THAN)
+  | '>' => Ok(GREATER_THAN)
+  | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+  | "+" => Ok(ADD)
+  | "-" => Ok(SUB)
+  | "*" => Ok(MULT)
+  | "/" => Ok(DIV)
+  | "[" => Ok(OPEN_LIST)
+  | "]" => Ok(CLOSE_LIST)
+  | _ => failwith("Unexpected character")
+  };
+};
+
+/* . */
+/* .foo */
+/* map(x) */
+/* .filter(x) */
+/* .select(x) */
+/* [1] */
+/* + */
+/* - */
+/* / */
+/* * */
+/* | */
+/* keys */
+/* flatten */
+/* head */
+/* head */
+/* length */
+
+let parse = (input: string): expression => {
+  let buf = Sedlexing.Utf8.from_string(input);
+  let rec read = acc =>
+    switch (tokenize(buf)) {
+    | Ok(EOF) => acc
+    | Error(err) => failwith("Problem parsing: " ++ err)
+    | Ok(token) => read([token, ...acc])
+    };
+
+  read([]) |> List.map(show_token) |> List.iter(print_endline);
+
+  Key(".store");
+};
+
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
+  let inputMock = ".store";
+  let program = parse(inputMock);
   let output = compile(program, json);
 
   Yojson.Basic.pretty_to_string(output);
