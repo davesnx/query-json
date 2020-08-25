@@ -27,21 +27,25 @@ module Ast = {
     | Head /* head */
     | Tail /* tail */
     | Length /* length */
+    /* Not implemented */
     | List /* [] */
     | Object /* {} */
-  /* Missing on the AST */
-  /* ToEntries, FromEntries */
-  /* Has(identifier) */
-  /* Range(int, int) */
-  /* ToString, ToNumber */
-  /* Type */
-  /* Sort */
-  /* GroupBy(expression) */
-  /* Unique */
-  /* Reverse */
-  /* StartsWith, EndsWith */
-  /* Split */
-  /* Join */
+    | ToEntries /* to_entries */
+    | FromEntries /* from_entries */
+    | Has(identifier) /* has(x) */
+    | Range(int, int) /* range(1, 10) */
+    | ToString /* to_string */
+    | ToNumber /* to_num */
+    | Type /* type */
+    | Sort /* sort */
+    | SortBy(expression) /* sort_by(x) */
+    | GroupBy(expression) /* group_by(x) */
+    | Unique /* uniq */
+    | Reverse /* reverse */
+    | StartsWith /* starts_with */
+    | EndsWith /* ends_with */
+    | Split /* split */
+    | Join /* join */
   and conditional =
     | GT(expression, expression) /* Greater > */
     | LT(expression, expression) /* Lower < */
@@ -52,23 +56,6 @@ module Ast = {
 };
 
 open Ast;
-
-/* let expression_value =
-     MenhirLib.Convert.Simplified.traditional2revised(
-       Xml_parser.expression_value,
-     );
-
-   let provider = (buf, ()) => {
-     let token = Tokenizer.tokenize(buf) |> Result.get_ok;
-     let (start, stop) = Sedlexing.lexing_positions(buf);
-     (token, start, stop);
-   };
-
-   let parse = code => {
-     let buf = Sedlexing.Utf8.from_string(code);
-     expression_value(provider(buf));
-   };
-    */
 
 [@deriving show]
 let stdinMock = {|
@@ -262,17 +249,9 @@ let rec compile = (expression: expression, json: Json.t) => {
       json,
     )
   | Pipe(left, right) => compile(right, compile(left, json))
-  | Select(_expr) =>
+  | _ =>
     raise(
-      CompilationError("select() is not implemented, maybe use filter()?"),
-    )
-  | List =>
-    raise(
-      CompilationError("Creation of arrays with '[]' is not implemented"),
-    )
-  | Object =>
-    raise(
-      CompilationError("Creation of objeects with '{}' is not implemented"),
+      CompilationError(show_expression(expression) ++ " is not implemented"),
     )
   };
 };
@@ -285,6 +264,8 @@ let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
 let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
 let key = [%sedlex.regexp? (dot, identifier)];
 let apply = [%sedlex.regexp? (alpha, '(', any, ')')];
+let comparation = [%sedlex.regexp? "<=" | "<" | "=" | ">" | ">="];
+let operation = [%sedlex.regexp? "+" | "-" | "*" | "/"];
 
 [@deriving show]
 type token =
@@ -343,26 +324,27 @@ let consume_string = (ending_code_point, buf) => {
 
 let tokenize = buf => {
   switch%sedlex (buf) {
-  | whitespace => Ok(consume_whitespace(buf))
-  | apply => Ok(FUNCTION(lexeme(buf)))
-  | identifier => Ok(IDENTIFIER(lexeme(buf)))
-  | number =>
-    let num = lexeme(buf) |> float_of_string;
-    Ok(NUMBER(num));
-  | "'" => consume_string("'", buf)
-  | dot => Ok(DOT)
-  | key => Ok(KEY(lexeme(buf)))
-  | '<' => Ok(LOWER_THAN)
-  | "<=" => Ok(LOWER_OR_EQUAL_THAN)
-  | '>' => Ok(GREATER_THAN)
-  | ">=" => Ok(GREATER_OR_EQUAL_THAN)
-  | "+" => Ok(ADD)
-  | "-" => Ok(SUB)
-  | "*" => Ok(MULT)
-  | "/" => Ok(DIV)
-  | "[" => Ok(OPEN_LIST)
-  | "]" => Ok(CLOSE_LIST)
-  | _ => Error("Unexpected character")
+  /* | whitespace => Ok(consume_whitespace(buf))
+     | apply => Ok(FUNCTION(lexeme(buf)))
+     | identifier => Ok(IDENTIFIER(lexeme(buf)))
+     | number =>
+       let num = lexeme(buf) |> float_of_string;
+       Ok(NUMBER(num));
+     | "'" => consume_string("'", buf)
+     | dot => Ok(DOT)
+     | key => Ok(KEY(lexeme(buf)))
+     | '<' => Ok(LOWER_THAN)
+     | "<=" => Ok(LOWER_OR_EQUAL_THAN)
+     | '>' => Ok(GREATER_THAN)
+     | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+     | "+" => Ok(ADD)
+     | "-" => Ok(SUB)
+     | "*" => Ok(MULT)
+     | "/" => Ok(DIV)
+     | "[" => Ok(OPEN_LIST)
+     | _ => Error("Unexpected character") */
+  | "]" => Error("asdf")
+  | _ => Ok(FUNCTION(lexeme(buf)))
   };
 };
 
@@ -382,6 +364,14 @@ let tokenize = buf => {
 /* head */
 /* head */
 /* length */
+
+let positionToString = pos =>
+  Printf.sprintf(
+    "[%d,%d+%d]",
+    pos.Lexing.pos_lnum,
+    pos.Lexing.pos_bol,
+    pos.Lexing.pos_cnum - pos.Lexing.pos_bol,
+  );
 
 type location = {
   loc_start: Lexing.position,
@@ -415,8 +405,18 @@ let parse = (input: string): expression => {
     switch (value) {
     | Ok(EOF) => Ok(acc)
     | _ when loc_start.pos_cnum == loc_end.pos_cnum =>
-      failwith("Problem parsing: frozen")
-    | Error(err) => failwith("Problem parsing: " ++ err)
+      failwith(
+        "Problem parsing at position "
+        ++ positionToString(loc_start)
+        ++ " : frozen",
+      )
+    | Error(err) =>
+      failwith(
+        "Problem parsing at position "
+        ++ positionToString(loc_start)
+        ++ " :"
+        ++ err,
+      )
     | _ => read(acc)
     };
   };
@@ -432,12 +432,12 @@ let parse = (input: string): expression => {
 
   Console.log(tokens);
 
-  Key(".store");
+  Key("store");
 };
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|"."|};
+  let inputMock = {|"1 > 2"|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
