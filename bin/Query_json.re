@@ -278,12 +278,13 @@ let rec compile = (expression: expression, json: Json.t) => {
 };
 
 let alpha = [%sedlex.regexp? 'a' .. 'z'];
-
 let dot = [%sedlex.regexp? '.'];
 let digit = [%sedlex.regexp? '0' .. '9'];
 let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Plus(digit))];
 let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
 let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
+let key = [%sedlex.regexp? (dot, identifier)];
+let apply = [%sedlex.regexp? (alpha, '(', any, ')')];
 
 [@deriving show]
 type token =
@@ -291,6 +292,8 @@ type token =
   | STRING(string)
   | BOOL(bool)
   | IDENTIFIER(string)
+  | KEY(string)
+  | FUNCTION(string)
   | OPEN_LIST
   | CLOSE_LIST
   | OPEN_OBJ
@@ -307,27 +310,48 @@ type token =
   | DIV
   | MULT
   | WHITESPACE
-  | EOF;
+  | EOF
+  | BAD_STRING(string);
 
 open Sedlexing.Utf8;
 
+let consume_whitespace = buf =>
+  switch%sedlex (buf) {
+  | Star(whitespace) => WHITESPACE
+  | _ => WHITESPACE
+  };
+
+let consume_string = (ending_code_point, buf) => {
+  let rec read_str = acc => {
+    switch%sedlex (buf) {
+    | '\''
+    | '"' =>
+      let code_point = lexeme(buf);
+      code_point == ending_code_point
+        ? Ok(acc) : read_str(acc ++ lexeme(buf));
+    | eof => Error(acc)
+    | any => read_str(acc ++ lexeme(buf))
+    | _ => failwith("should be unreachable")
+    };
+  };
+
+  switch (read_str("")) {
+  | Ok(string) => Ok(STRING(string))
+  | Error(string) => Error(string)
+  };
+};
+
 let tokenize = buf => {
   switch%sedlex (buf) {
-  | whitespace => Ok(WHITESPACE)
+  | whitespace => Ok(consume_whitespace(buf))
+  | apply => Ok(FUNCTION(lexeme(buf)))
+  | identifier => Ok(IDENTIFIER(lexeme(buf)))
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
-  | '"' =>
-    let rec read_until_quote = acc =>
-      switch%sedlex (buf) {
-      | "\\\"" => read_until_quote(acc ++ lexeme(buf))
-      | '"' => acc
-      | any => read_until_quote(acc ++ lexeme(buf))
-      | _ => failwith("unrecheable")
-      };
-    let content = read_until_quote("");
-    Ok(STRING(content));
+  | "'" => consume_string("'", buf)
   | dot => Ok(DOT)
+  | key => Ok(KEY(lexeme(buf)))
   | '<' => Ok(LOWER_THAN)
   | "<=" => Ok(LOWER_OR_EQUAL_THAN)
   | '>' => Ok(GREATER_THAN)
@@ -338,7 +362,7 @@ let tokenize = buf => {
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
   | "]" => Ok(CLOSE_LIST)
-  | _ => failwith("Unexpected character")
+  | _ => Error("Unexpected character")
   };
 };
 
@@ -359,23 +383,61 @@ let tokenize = buf => {
 /* head */
 /* length */
 
+type location = {
+  loc_start: Lexing.position,
+  loc_end: Lexing.position,
+  loc_ghost: bool,
+};
+
+type tokenWithLoc = {
+  txt: result(token, identifier),
+  loc: location,
+};
+
 let parse = (input: string): expression => {
   let buf = Sedlexing.Utf8.from_string(input);
-  let rec read = acc =>
-    switch (tokenize(buf)) {
-    | Ok(EOF) => acc
-    | Error(err) => failwith("Problem parsing: " ++ err)
-    | Ok(token) => read([token, ...acc])
+  let rec read = acc => {
+    let (loc_start, _) = Sedlexing.lexing_positions(buf);
+    let value = tokenize(buf);
+    let (_, loc_end) = Sedlexing.lexing_positions(buf);
+
+    let token_with_loc = {
+      txt: value,
+      loc: {
+        loc_start,
+        loc_end,
+        loc_ghost: false,
+      },
     };
 
-  read([]) |> List.map(show_token) |> List.iter(print_endline);
+    let acc = [token_with_loc, ...acc];
+
+    switch (value) {
+    | Ok(EOF) => Ok(acc)
+    | _ when loc_start.pos_cnum == loc_end.pos_cnum =>
+      failwith("Problem parsing: frozen")
+    | Error(err) => failwith("Problem parsing: " ++ err)
+    | _ => read(acc)
+    };
+  };
+
+  let tokens =
+    read([])
+    |> Result.map(tokenList =>
+         List.map(
+           resultToken => Result.map(show_token, resultToken.txt),
+           tokenList,
+         )
+       );
+
+  Console.log(tokens);
 
   Key(".store");
 };
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = ".store";
+  let inputMock = {|"."|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
