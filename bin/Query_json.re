@@ -302,50 +302,49 @@ let consume_whitespace = buf =>
   | _ => WHITESPACE
   };
 
-let consume_string = (ending_code_point, buf) => {
-  let rec read_str = acc => {
+let string = buf => {
+  let buffer = Buffer.create(10);
+  let rec read_string = buf =>
     switch%sedlex (buf) {
-    | '\''
-    | '"' =>
-      let code_point = lexeme(buf);
-      code_point == ending_code_point
-        ? Ok(acc) : read_str(acc ++ lexeme(buf));
-    | eof => Error(acc)
-    | any => read_str(acc ++ lexeme(buf))
-    | _ => failwith("should be unreachable")
+    | {|\"|} =>
+      Buffer.add_char(buffer, '"');
+      read_string(buf);
+    | '"' => STRING(Buffer.contents(buffer))
+    | Star(Compl('"')) =>
+      Buffer.add_string(buffer, lexeme(buf));
+      read_string(buf);
+    | _ => assert(false)
     };
-  };
 
-  switch (read_str("")) {
-  | Ok(string) => Ok(STRING(string))
-  | Error(string) => Error(string)
-  };
+  read_string(buf);
 };
 
 let tokenize = buf => {
   switch%sedlex (buf) {
-  /*
-   | apply => Ok(FUNCTION(lexeme(buf)))
-   | identifier => Ok(IDENTIFIER(lexeme(buf)))
-   | number =>
-     let num = lexeme(buf) |> float_of_string;
-     Ok(NUMBER(num));
-   | "'" => consume_string("'", buf)
-   | dot => Ok(DOT)
-   | key => Ok(KEY(lexeme(buf)))
-   | '<' => Ok(LOWER_THAN)
-   | "<=" => Ok(LOWER_OR_EQUAL_THAN)
-   | '>' => Ok(GREATER_THAN)
-   | ">=" => Ok(GREATER_OR_EQUAL_THAN)
-   | "+" => Ok(ADD)
-   | "-" => Ok(SUB)
-   | "*" => Ok(MULT)
-   | "/" => Ok(DIV)
-   | "[" => Ok(OPEN_LIST)
-   | _ => Error("Unexpected character") */
+  | apply => Ok(FUNCTION(lexeme(buf)))
+  | identifier => Ok(IDENTIFIER(lexeme(buf)))
+  | number =>
+    let num = lexeme(buf) |> float_of_string;
+    Ok(NUMBER(num));
+  | dot => Ok(DOT)
+  | '<' => Ok(LOWER_THAN)
+  | "<=" => Ok(LOWER_OR_EQUAL_THAN)
+  | '>' => Ok(GREATER_THAN)
+  | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+  | "+" => Ok(ADD)
+  | "-" => Ok(SUB)
+  | "*" => Ok(MULT)
+  | "/" => Ok(DIV)
+  | "[" => Ok(OPEN_LIST)
+  | key => Ok(KEY(lexeme(buf)))
+  | eof => Ok(EOF)
+  | '"' => Ok(string(buf))
+  | "true" => Ok(BOOL(true))
+  | "false" => Ok(BOOL(false))
   | whitespace => Ok(consume_whitespace(buf))
-  | "]" => Error("asdf")
-  | _ => Ok(FUNCTION(lexeme(buf)))
+  | _ =>
+    let tok = lexeme(buf);
+    Error(Printf.sprintf("Unexpected character %S", tok));
   };
 };
 
@@ -412,6 +411,7 @@ let parse = (input: string): expression => {
            resultToken => Result.map(show_token, resultToken.txt),
            tokenList,
          )
+         |> List.rev
        );
 
   Console.log(tokens);
@@ -421,11 +421,12 @@ let parse = (input: string): expression => {
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|".store"|};
+  let inputMock = {|.store.books|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
   Yojson.Basic.pretty_to_string(output);
 };
 
-Console.log(main());
+/* Console.log(main()); */
+main();
