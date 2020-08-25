@@ -336,7 +336,10 @@ let tokenize = buf => {
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
-  | key => Ok(KEY(lexeme(buf)))
+  | key =>
+    let tok = lexeme(buf);
+    let key = String.sub(tok, 1, String.length(tok) - 1);
+    Ok(KEY(key));
   | eof => Ok(EOF)
   | '"' => Ok(string(buf))
   | "true" => Ok(BOOL(true))
