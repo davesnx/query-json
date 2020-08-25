@@ -324,46 +324,30 @@ let consume_string = (ending_code_point, buf) => {
 
 let tokenize = buf => {
   switch%sedlex (buf) {
-  /* | whitespace => Ok(consume_whitespace(buf))
-     | apply => Ok(FUNCTION(lexeme(buf)))
-     | identifier => Ok(IDENTIFIER(lexeme(buf)))
-     | number =>
-       let num = lexeme(buf) |> float_of_string;
-       Ok(NUMBER(num));
-     | "'" => consume_string("'", buf)
-     | dot => Ok(DOT)
-     | key => Ok(KEY(lexeme(buf)))
-     | '<' => Ok(LOWER_THAN)
-     | "<=" => Ok(LOWER_OR_EQUAL_THAN)
-     | '>' => Ok(GREATER_THAN)
-     | ">=" => Ok(GREATER_OR_EQUAL_THAN)
-     | "+" => Ok(ADD)
-     | "-" => Ok(SUB)
-     | "*" => Ok(MULT)
-     | "/" => Ok(DIV)
-     | "[" => Ok(OPEN_LIST)
-     | _ => Error("Unexpected character") */
+  /*
+   | apply => Ok(FUNCTION(lexeme(buf)))
+   | identifier => Ok(IDENTIFIER(lexeme(buf)))
+   | number =>
+     let num = lexeme(buf) |> float_of_string;
+     Ok(NUMBER(num));
+   | "'" => consume_string("'", buf)
+   | dot => Ok(DOT)
+   | key => Ok(KEY(lexeme(buf)))
+   | '<' => Ok(LOWER_THAN)
+   | "<=" => Ok(LOWER_OR_EQUAL_THAN)
+   | '>' => Ok(GREATER_THAN)
+   | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+   | "+" => Ok(ADD)
+   | "-" => Ok(SUB)
+   | "*" => Ok(MULT)
+   | "/" => Ok(DIV)
+   | "[" => Ok(OPEN_LIST)
+   | _ => Error("Unexpected character") */
+  | whitespace => Ok(consume_whitespace(buf))
   | "]" => Error("asdf")
   | _ => Ok(FUNCTION(lexeme(buf)))
   };
 };
-
-/* . */
-/* .foo */
-/* map(x) */
-/* .filter(x) */
-/* .select(x) */
-/* [1] */
-/* + */
-/* - */
-/* / */
-/* * */
-/* | */
-/* keys */
-/* flatten */
-/* head */
-/* head */
-/* length */
 
 let positionToString = pos =>
   Printf.sprintf(
@@ -437,7 +421,7 @@ let parse = (input: string): expression => {
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|"1 > 2"|};
+  let inputMock = {|".store"|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
