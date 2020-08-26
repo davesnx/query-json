@@ -1,61 +1,57 @@
-module Ast = {
-  [@deriving show]
-  type identifier = string;
+[@deriving show]
+type identifier = string;
 
-  [@deriving show]
-  type literal =
-    | Bool(bool) /* true */
-    | String(string) /* "TEXT" */
-    | Number(float); /* 123 or 123.0 */
+[@deriving show]
+type literal =
+  | Bool(bool) /* true */
+  | String(string) /* "TEXT" */
+  | Number(float); /* 123 or 123.0 */
 
-  [@deriving show]
-  type expression =
-    | Literal(literal)
-    | Identity /* . */
-    | Key(identifier) /* .foo */
-    | Map(expression) /* .[] */ /* map(x) */
-    | Filter(conditional) /* .filter(x) */
-    | Select(expression) /* .select(x) */
-    | Index(int) /* [1] */
-    | Addition(expression, expression) /* + */
-    | Subtraction(expression, expression) /* - */
-    | Division(expression, expression) /* / */
-    | Multiply(expression, expression) /* * */
-    | Pipe(expression, expression) /* | */
-    | Keys /* keys */
-    | Flatten /* flatten */
-    | Head /* head */
-    | Tail /* tail */
-    | Length /* length */
-    /* Not implemented */
-    | List /* [] */
-    | Object /* {} */
-    | ToEntries /* to_entries */
-    | FromEntries /* from_entries */
-    | Has(identifier) /* has(x) */
-    | Range(int, int) /* range(1, 10) */
-    | ToString /* to_string */
-    | ToNumber /* to_num */
-    | Type /* type */
-    | Sort /* sort */
-    | SortBy(expression) /* sort_by(x) */
-    | GroupBy(expression) /* group_by(x) */
-    | Unique /* uniq */
-    | Reverse /* reverse */
-    | StartsWith /* starts_with */
-    | EndsWith /* ends_with */
-    | Split /* split */
-    | Join /* join */
-  and conditional =
-    | GT(expression, expression) /* Greater > */
-    | LT(expression, expression) /* Lower < */
-    | GTE(expression, expression) /* Greater equal >= */
-    | LTE(expression, expression) /* Lower equal <= */
-    | EQ(expression, expression) /* equal == */
-    | NOT_EQ(expression, expression); /* not equal != */
-};
-
-open Ast;
+[@deriving show]
+type expression =
+  | Literal(literal)
+  | Identity /* . */
+  | Key(identifier) /* .foo */
+  | Map(expression) /* .[] */ /* map(x) */
+  | Filter(conditional) /* .filter(x) */
+  | Select(expression) /* .select(x) */
+  | Index(int) /* [1] */
+  | Addition(expression, expression) /* + */
+  | Subtraction(expression, expression) /* - */
+  | Division(expression, expression) /* / */
+  | Multiply(expression, expression) /* * */
+  | Pipe(expression, expression) /* | */
+  | Keys /* keys */
+  | Flatten /* flatten */
+  | Head /* head */
+  | Tail /* tail */
+  | Length /* length */
+  /* Not implemented */
+  | List /* [] */
+  | Object /* {} */
+  | ToEntries /* to_entries */
+  | FromEntries /* from_entries */
+  | Has(identifier) /* has(x) */
+  | Range(int, int) /* range(1, 10) */
+  | ToString /* to_string */
+  | ToNumber /* to_num */
+  | Type /* type */
+  | Sort /* sort */
+  | SortBy(expression) /* sort_by(x) */
+  | GroupBy(expression) /* group_by(x) */
+  | Unique /* uniq */
+  | Reverse /* reverse */
+  | StartsWith /* starts_with */
+  | EndsWith /* ends_with */
+  | Split /* split */
+  | Join /* join */
+and conditional =
+  | GT(expression, expression) /* Greater > */
+  | LT(expression, expression) /* Lower < */
+  | GTE(expression, expression) /* Greater equal >= */
+  | LTE(expression, expression) /* Lower equal <= */
+  | EQ(expression, expression) /* equal == */
+  | NOT_EQ(expression, expression); /* not equal != */
 
 [@deriving show]
 let stdinMock = {|
@@ -263,7 +259,8 @@ let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Plus(digit))];
 let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
 let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
 let key = [%sedlex.regexp? (dot, identifier)];
-let apply = [%sedlex.regexp? (alpha, '(', any, ')')];
+let callback = [%sedlex.regexp? ('(', Plus(any), ')')];
+let apply = [%sedlex.regexp? (identifier, callback)];
 let comparation = [%sedlex.regexp? "<=" | "<" | "=" | ">" | ">="];
 let operation = [%sedlex.regexp? "+" | "-" | "*" | "/"];
 
@@ -274,7 +271,7 @@ type token =
   | BOOL(bool)
   | IDENTIFIER(string)
   | KEY(string)
-  | FUNCTION(string)
+  | FUNCTION(string, result(token, string))
   | OPEN_LIST
   | CLOSE_LIST
   | OPEN_OBJ
@@ -319,9 +316,9 @@ let string = buf => {
   read_string(buf);
 };
 
-let tokenize = buf => {
+let rec tokenize = buf => {
   switch%sedlex (buf) {
-  | apply => Ok(FUNCTION(lexeme(buf)))
+  | eof => Ok(EOF)
   | identifier => Ok(IDENTIFIER(lexeme(buf)))
   | number =>
     let num = lexeme(buf) |> float_of_string;
@@ -336,12 +333,13 @@ let tokenize = buf => {
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
+  | apply => Ok(FUNCTION(lexeme(buf), tokenize(buf)))
   | key =>
     let tok = lexeme(buf);
     let key = String.sub(tok, 1, String.length(tok) - 1);
     Ok(KEY(key));
-  | eof => Ok(EOF)
   | '"' => Ok(string(buf))
+  | '|' => Ok(PIPE)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
   | whitespace => Ok(consume_whitespace(buf))
@@ -351,12 +349,12 @@ let tokenize = buf => {
   };
 };
 
-let positionToString = pos =>
+let positionToString = (start, end_) =>
   Printf.sprintf(
-    "[%d,%d+%d]",
-    pos.Lexing.pos_lnum,
-    pos.Lexing.pos_bol,
-    pos.Lexing.pos_cnum - pos.Lexing.pos_bol,
+    "[line: %d, char: %d-%d]",
+    start.Lexing.pos_lnum,
+    start.Lexing.pos_cnum - start.Lexing.pos_bol,
+    end_.Lexing.pos_cnum - end_.Lexing.pos_bol,
   );
 
 type location = {
@@ -390,17 +388,16 @@ let parse = (input: string): expression => {
 
     switch (value) {
     | Ok(EOF) => Ok(acc)
-    | _ when loc_start.pos_cnum == loc_end.pos_cnum =>
-      failwith(
-        "Problem parsing at position "
-        ++ positionToString(loc_start)
-        ++ " : frozen",
-      )
     | Error(err) =>
       failwith(
-        "Problem parsing at position "
-        ++ positionToString(loc_start)
-        ++ " :"
+        "\n\n"
+        ++ input
+        ++ "\n"
+        ++ String.make(loc_start.pos_cnum, ' ')
+        ++ String.make(loc_end.pos_cnum - loc_start.pos_cnum, '^')
+        ++ "\nProblem parsing at position "
+        ++ positionToString(loc_start, loc_end)
+        ++ "\n"
         ++ err,
       )
     | _ => read(acc)
@@ -424,7 +421,7 @@ let parse = (input: string): expression => {
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|.store.books|};
+  let inputMock = {|map(.)|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
