@@ -255,12 +255,12 @@ let rec compile = (expression: expression, json: Json.t) => {
 let alpha = [%sedlex.regexp? 'a' .. 'z'];
 let dot = [%sedlex.regexp? '.'];
 let digit = [%sedlex.regexp? '0' .. '9'];
-let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Plus(digit))];
-let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
+let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Opt(Plus(digit)))];
 let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
-let key = [%sedlex.regexp? (dot, identifier)];
+let identifierRegex = [%sedlex.regexp? (alpha, Star(alpha | digit))];
+let key = [%sedlex.regexp? (dot, identifierRegex)];
 let callback = [%sedlex.regexp? ('(', Plus(any), ')')];
-let apply = [%sedlex.regexp? (identifier, callback)];
+let apply = [%sedlex.regexp? (identifierRegex, callback)];
 let comparation = [%sedlex.regexp? "<=" | "<" | "=" | ">" | ">="];
 let operation = [%sedlex.regexp? "+" | "-" | "*" | "/"];
 
@@ -276,17 +276,17 @@ type token =
   | CLOSE_LIST
   | OPEN_OBJ
   | CLOSE_OBJ
-  | EQUAL
-  | GREATER_THAN
-  | LOWER_THAN
-  | GREATER_OR_EQUAL_THAN
-  | LOWER_OR_EQUAL_THAN
   | DOT
   | PIPE
   | ADD
   | SUB
   | DIV
   | MULT
+  | EQUAL
+  | GREATER_THAN
+  | LOWER_THAN
+  | GREATER_OR_EQUAL_THAN
+  | LOWER_OR_EQUAL_THAN
   | WHITESPACE
   | EOF
   | BAD_STRING(string);
@@ -316,10 +316,23 @@ let string = buf => {
   read_string(buf);
 };
 
+let parseApply = token => {
+  let openBracketIndex = String.rindex(token, '(');
+  let name = String.sub(token, 0, openBracketIndex);
+  let callback =
+    String.sub(
+      token,
+      openBracketIndex + 1, /* fun(_...) */
+      String.length(token) - 1 - openBracketIndex - 1 /* fun(..._) */
+    );
+
+  (name, callback);
+};
+
 let rec tokenize = buf => {
   switch%sedlex (buf) {
   | eof => Ok(EOF)
-  | identifier => Ok(IDENTIFIER(lexeme(buf)))
+  | identifierRegex => Ok(IDENTIFIER(lexeme(buf)))
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
@@ -333,7 +346,10 @@ let rec tokenize = buf => {
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
-  | apply => Ok(FUNCTION(lexeme(buf), tokenize(buf)))
+  | apply =>
+    let (name, callback) = parseApply(lexeme(buf));
+    let callbackBuf = Sedlexing.Utf8.from_string(callback);
+    Ok(FUNCTION(name, tokenize(callbackBuf)));
   | key =>
     let tok = lexeme(buf);
     let key = String.sub(tok, 1, String.length(tok) - 1);
@@ -421,7 +437,7 @@ let parse = (input: string): expression => {
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|map(.)|};
+  let inputMock = {|map(3 + .lola)|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
