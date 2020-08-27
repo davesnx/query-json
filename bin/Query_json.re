@@ -214,7 +214,6 @@ let rec compile = (expression: expression, json: Json.t) => {
   | Tail => tail(json)
   | Length => length(json)
   | Map(expr) => Json.map(compile(expr), json)
-  | Flatten => raise(CompilationError("Flatten is not implemenet"))
   | Addition(left, right) => add(compile(left, json), compile(right, json))
   | Subtraction(left, right) =>
     sub(compile(left, json), compile(right, json))
@@ -271,7 +270,8 @@ type token =
   | BOOL(bool)
   | IDENTIFIER(string)
   | KEY(string)
-  | FUNCTION(string, result(token, string))
+  | FUNCTION(string)
+  | CLOSE_PARENT
   | OPEN_LIST
   | CLOSE_LIST
   | OPEN_OBJ
@@ -293,12 +293,6 @@ type token =
 
 open Sedlexing.Utf8;
 
-let consume_whitespace = buf =>
-  switch%sedlex (buf) {
-  | Star(whitespace) => WHITESPACE
-  | _ => WHITESPACE
-  };
-
 let string = buf => {
   let buffer = Buffer.create(10);
   let rec read_string = buf =>
@@ -316,23 +310,17 @@ let string = buf => {
   read_string(buf);
 };
 
-let parseApply = token => {
-  let openBracketIndex = String.rindex(token, '(');
-  let name = String.sub(token, 0, openBracketIndex);
-  let callback =
-    String.sub(
-      token,
-      openBracketIndex + 1, /* fun(_...) */
-      String.length(token) - 1 - openBracketIndex - 1 /* fun(..._) */
-    );
-
-  (name, callback);
+let tokenizeApply = buf => {
+  let identifier = lexeme(buf);
+  switch%sedlex (buf) {
+  | '(' => Ok(FUNCTION(identifier))
+  | _ => Ok(IDENTIFIER(identifier))
+  };
 };
 
 let rec tokenize = buf => {
   switch%sedlex (buf) {
   | eof => Ok(EOF)
-  | identifierRegex => Ok(IDENTIFIER(lexeme(buf)))
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
@@ -346,10 +334,8 @@ let rec tokenize = buf => {
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
-  | apply =>
-    let (name, callback) = parseApply(lexeme(buf));
-    let callbackBuf = Sedlexing.Utf8.from_string(callback);
-    Ok(FUNCTION(name, tokenize(callbackBuf)));
+  | identifierRegex => tokenizeApply(buf)
+  | ")" => Ok(CLOSE_PARENT)
   | key =>
     let tok = lexeme(buf);
     let key = String.sub(tok, 1, String.length(tok) - 1);
@@ -358,7 +344,7 @@ let rec tokenize = buf => {
   | '|' => Ok(PIPE)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
-  | whitespace => Ok(consume_whitespace(buf))
+  | whitespace => tokenize(buf)
   | _ =>
     let tok = lexeme(buf);
     Error(Printf.sprintf("Unexpected character %S", tok));
@@ -437,7 +423,7 @@ let parse = (input: string): expression => {
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|map(3 + .lola)|};
+  let inputMock = {|.lola + 3|};
   let program = parse(inputMock);
   let output = compile(program, json);
 
