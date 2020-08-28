@@ -6,3 +6,5 @@
   (pps ppx_deriving.show sedlex.ppx)
  )
 )
+
+(menhir (flags --table --canonical) (modules Parser))

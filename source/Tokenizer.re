@@ -1,4 +1,5 @@
 open Ast;
+open Sedlexing.Utf8;
 
 let alpha = [%sedlex.regexp? 'a' .. 'z'];
 let dot = [%sedlex.regexp? '.'];
@@ -37,10 +38,7 @@ type token =
   | GREATER_OR_EQUAL_THAN
   | LOWER_OR_EQUAL_THAN
   | WHITESPACE
-  | EOF
-  | BAD_STRING(string);
-
-open Sedlexing.Utf8;
+  | EOF;
 
 let string = buf => {
   let buffer = Buffer.create(10);
@@ -121,6 +119,7 @@ type tokenWithLoc = {
 
 let parse = (input: string): expression => {
   let buf = Sedlexing.Utf8.from_string(input);
+  /* let buf = Sedlexing.with_tokenizer(tokenize, inputBuf); */
   let rec read = acc => {
     let (loc_start, _) = Sedlexing.lexing_positions(buf);
     let value = tokenize(buf);
