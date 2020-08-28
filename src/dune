@@ -1,0 +1,8 @@
+(library
+ (name source)
+ (public_name query-json.source)
+ (libraries menhirLib yojson sedlex console.lib)
+ (preprocess
+  (pps ppx_deriving.show sedlex.ppx)
+ )
+)

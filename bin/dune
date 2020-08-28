@@ -1,7 +1,7 @@
 (executable
  (name query_json)
  (public_name query-json)
- (libraries console.lib sedlex parser yojson)
+ (libraries console.lib sedlex source yojson)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx)
  )

@@ -1,8 +1,0 @@
-(library
- (name parser)
- (public_name query-json.parser)
- (libraries menhirLib yojson sedlex)
- (preprocess
-  (pps ppx_deriving.show sedlex.ppx)
- )
-)
