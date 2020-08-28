@@ -425,10 +425,9 @@ let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
   let inputMock = {|.lola + 3|};
   let program = parse(inputMock);
-  let output = compile(program, json);
-
+  let runtime = compile(program);
+  let output = runtime(json);
   Yojson.Basic.pretty_to_string(output);
 };
 
-/* Console.log(main()); */
 main();
