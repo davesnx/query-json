@@ -4,7 +4,7 @@
     "start": "esy build dune build --watch",
     "build": "dune build -p #{self.name}",
     "install": "esy-installer #{self.name}.install",
-    "query-json": "esy dune exec query-json"
+    "query-json": "esy dune exec q"
   },
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
@@ -18,7 +18,6 @@
     "ocaml": "^4.10.0"
   },
   "devDependencies": {
-    "@opam/ocaml-lsp-server":
-      "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
   }
 }

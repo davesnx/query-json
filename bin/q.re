@@ -1,6 +1,5 @@
 open Source;
 
-[@deriving show]
 let stdinMock = {|
   { "store": {
     "books": [
