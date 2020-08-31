@@ -33,6 +33,7 @@ type token =
   | DIV
   | MULT
   | EQUAL
+  | NOT_EQUAL
   | GREATER_THAN
   | LOWER_THAN
   | GREATER_OR_EQUAL_THAN
@@ -76,6 +77,8 @@ let rec tokenize = buf => {
   | "<=" => Ok(LOWER_OR_EQUAL_THAN)
   | '>' => Ok(GREATER_THAN)
   | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+  | "==" => Ok(EQUAL)
+  | "!=" => Ok(NOT_EQUAL)
   | "+" => Ok(ADD)
   | "-" => Ok(SUB)
   | "*" => Ok(MULT)
@@ -113,7 +116,7 @@ type location = {
 };
 
 type tokenWithLoc = {
-  txt: result(token, identifier),
+  txt: result(token, string),
   loc: location,
 };
 

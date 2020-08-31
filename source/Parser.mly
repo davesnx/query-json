@@ -1,55 +1,54 @@
-%token <float> NUMBER
+%{
+    open Ast
+%}
+
 %token <string> STRING
+%token <float> NUMBER
 %token <bool> BOOL
-%token <string> IDENTIFIER
+%token DOT
 %token <string> KEY
+/* %token <string> IDENTIFIER */
+%token PIPE
+%token ADD SUB MULT DIV
+%token EQUAL GREATER_THAN LOWER_THAN GREATER_OR_EQUAL_THAN LOWER_OR_EQUAL_THAN
+
+/*
 %token <string> FUNCTION
 %token CLOSE_PARENT
+*/
+
+/*
 %token OPEN_LIST
 %token CLOSE_LIST
 %token OPEN_OBJ
 %token CLOSE_OBJ
-%token DOT
-%token PIPE
-%token ADD
-%token SUB
-%token DIV
-%token MULT
-%token EQUAL
-%token GREATER_THAN
-%token LOWER_THAN
-%token GREATER_OR_EQUAL_THAN
-%token LOWER_OR_EQUAL_THAN
-%token WHITESPACE
-%token EOF
+ */
 
-/* changed the type, because the script does not return one value, but all
- * results which are calculated in the file */
-%start <int list> main
+%start <Ast.expression> expr
 
 %%
 
-/* the calculated results are accumalted in an OCaml int list */
-main:
-| stmt = statement EOF { [stmt] }
-| stmt = statement m = main { stmt :: m}
-
-/* expressions end with a semicolon, not with a newline character */
-statement:
-| e = expr SEMICOLON { e }
-
 expr:
-| i = INT
-    { i }
-| LPAREN e = expr RPAREN
-    { e }
-| e1 = expr PLUS e2 = expr
-    { e1 + e2 }
-| e1 = expr MINUS e2 = expr
-    { e1 - e2 }
-| e1 = expr TIMES e2 = expr
-    { e1 * e2 }
-| e1 = expr DIV e2 = expr
-    { e1 / e2 }
-| MINUS e = expr %prec UMINUS
-    { - e }
+  | s = STRING
+    { Literal (String s) }
+  | n = NUMBER
+    { Literal (Number n) }
+  | b = BOOL
+    { Literal (Bool b) }
+  /* | f = FUNCTION; cb = callback; CLOSE_PARENT
+    { Map f } */
+  | k = KEY
+    { Key k }
+  | DOT
+    { Identity }
+  | e1 = expr PIPE e2 = expr
+    { Pipe (e1, e2) }
+  | e1 = expr ADD e2 = expr
+    { Addition (e1, e2) }
+  | e1 = expr SUB e2 = expr
+    { Subtraction (e1, e2) }
+  | e1 = expr MULT e2 = expr
+    { Multiply (e1, e2) }
+  | e1 = expr DIV e2 = expr
+    { Division (e1, e2) }
+  ;

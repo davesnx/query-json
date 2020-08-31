@@ -1,7 +1,4 @@
 [@deriving show]
-type identifier = string;
-
-[@deriving show]
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
@@ -11,7 +8,7 @@ type literal =
 type expression =
   | Literal(literal)
   | Identity /* . */
-  | Key(identifier) /* .foo */
+  | Key(string) /* .foo */
   | Map(expression) /* .[] */ /* map(x) */
   | Filter(conditional) /* .filter(x) */
   | Select(expression) /* .select(x) */
@@ -31,7 +28,7 @@ type expression =
   | Object /* {} */
   | ToEntries /* to_entries */
   | FromEntries /* from_entries */
-  | Has(identifier) /* has(x) */
+  | Has(string) /* has(x) */
   | Range(int, int) /* range(1, 10) */
   | ToString /* to_string */
   | ToNumber /* to_num */
