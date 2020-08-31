@@ -31,10 +31,10 @@ let stdinMock = {|
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|.lola + 3|};
-  let program = Tokenizer.parse(inputMock);
+  let inputMock = {|.store.books|};
+  let program = Main.parse(inputMock);
   let runtime = Compiler.compile(program);
   Yojson.Basic.pretty_to_string(runtime(json));
 };
 
-main();
+main() |> Console.log;

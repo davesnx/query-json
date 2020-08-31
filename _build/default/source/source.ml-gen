@@ -1,0 +1,11 @@
+(** @canonical Source.Ast *)
+module Ast = Source__Ast
+
+(** @canonical Source.Compiler *)
+module Compiler = Source__Compiler
+
+(** @canonical Source.Parser *)
+module Parser = Source__Parser
+
+(** @canonical Source.Tokenizer *)
+module Tokenizer = Source__Tokenizer

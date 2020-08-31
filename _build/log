@@ -1,10 +1,10 @@
-# dune exec query-json
+# dune build -w
 # OCAMLPARAM: unset
 # Workspace root: /Users/davesnx/dev/github/query-json
-$ /usr/local/bin/nproc > /var/folders/jr/74_11td95k9420cc55tl9h_80000gn/T/duned34f61.output 2> /dev/null
+$ /usr/local/bin/nproc > /var/folders/jr/74_11td95k9420cc55tl9h_80000gn/T/dune940004.output 2> /dev/null
 # Auto-detected concurrency: 8
 # disable binary cache
-$ /Users/davesnx/.opam/4.09.1/bin/ocamlc.opt -config > /var/folders/jr/74_11td95k9420cc55tl9h_80000gn/T/dune1087aa.output
+$ /Users/davesnx/.opam/4.09.1/bin/ocamlc.opt -config > /var/folders/jr/74_11td95k9420cc55tl9h_80000gn/T/dune809546.output
 # Dune context:
 #  { name = "default"
 #  ; kind = "default"
@@ -104,4 +104,33 @@ $ /Users/davesnx/.opam/4.09.1/bin/ocamlc.opt -config > /var/folders/jr/74_11td95
 #      ; windows_unicode = false
 #      }
 #  }
-# Workspace root: /Users/davesnx/dev/github/query-json
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/refmt --print binary bin/q.re) > _build/default/bin/q.re.ml
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/ocamlc.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -w -49 -nopervasives -nostdlib -g -bin-annot -I source/.source.objs/byte -no-alias-deps -opaque -o source/.source.objs/byte/source.cmo -c -impl source/source.ml-gen)
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/refmt --print binary source/Ast.re) > _build/default/source/Ast.re.ml
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/refmt --print binary source/Compiler.re) > _build/default/source/Compiler.re.ml
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/menhir --table --canonical source/Parser.mly --base source/Parser --infer-write-query source/Parser__mock.ml.mock)
+> File "source/Parser.mly", line 12, characters 7-10:
+> Warning: the token ADD is unused.
+> File "source/Parser.mly", line 12, characters 20-23:
+> Warning: the token DIV is unused.
+> File "source/Parser.mly", line 13, characters 7-12:
+> Warning: the token EQUAL is unused.
+> File "source/Parser.mly", line 13, characters 37-58:
+> Warning: the token GREATER_OR_EQUAL_THAN is unused.
+> File "source/Parser.mly", line 13, characters 13-25:
+> Warning: the token GREATER_THAN is unused.
+> File "source/Parser.mly", line 10, characters 16-26:
+> Warning: the token IDENTIFIER is unused.
+> File "source/Parser.mly", line 13, characters 59-78:
+> Warning: the token LOWER_OR_EQUAL_THAN is unused.
+> File "source/Parser.mly", line 13, characters 26-36:
+> Warning: the token LOWER_THAN is unused.
+> File "source/Parser.mly", line 12, characters 15-19:
+> Warning: the token MULT is unused.
+> File "source/Parser.mly", line 11, characters 7-11:
+> Warning: the token PIPE is unused.
+> File "source/Parser.mly", line 12, characters 11-14:
+> Warning: the token SUB is unused.
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/refmt --print binary source/Tokenizer.re) > _build/default/source/Tokenizer.re.ml
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/ocamldep.opt -modules -impl bin/q.re.ml) > _build/default/bin/.q.eobjs/q.re.ml.d
+$ (cd _build/default && /Users/davesnx/.opam/4.09.1/bin/ocamlopt.opt -w @1..3@5..28@30..39@43@46..47@49..57@61..62-40 -strict-sequence -strict-formats -short-paths -keep-locs -w -49 -nopervasives -nostdlib -g -I source/.source.objs/byte -I source/.source.objs/native -intf-suffix .ml-gen -no-alias-deps -opaque -o source/.source.objs/native/source.cmx -c -impl source/source.ml-gen)
