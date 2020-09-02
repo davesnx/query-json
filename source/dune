@@ -7,4 +7,4 @@
  )
 )
 
-(menhir (flags --external-tokens Tokenizer --explain --table --canonical) (modules Parser))
+(menhir (flags --strict --external-tokens Tokenizer --explain --dump) (modules Parser))

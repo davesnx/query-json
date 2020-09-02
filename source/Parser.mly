@@ -5,16 +5,12 @@
 %token <string> STRING
 %token <float> NUMBER
 %token <bool> BOOL
-%token DOT
 %token <string> KEY
 %token <string> IDENTIFIER
+%token DOT
 %token PIPE
 %token ADD SUB MULT DIV
-%token EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
-%nonassoc EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
-
-%left ADD SUB
-%left MULT DIV
+%token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
 
 %token <string> FUNCTION
 %token CLOSE_PARENT
@@ -24,7 +20,6 @@
 %token OPEN_OBJ
 %token CLOSE_OBJ
 
-%token NOT_EQUAL
 %token WHITESPACE
 %token EOF
 
@@ -33,10 +28,10 @@
 %%
 
 prog:
-  | EOF
+  | EOF;
     { None }
-  | r = expr; EOF
-    { Some r }
+  | r = expr; EOF;
+    { Some (Pipe (Identity, r)) }
   ;
 
 conditional:
@@ -92,7 +87,7 @@ expr:
     }
   | k = KEY;
     { Key k }
-  | DOT; EOF;
+  | DOT;
     { Identity }
   | e1 = expr; PIPE; e2 = expr; WHITESPACE;
     { Pipe (e1, e2) }

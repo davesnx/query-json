@@ -5,12 +5,8 @@ let dot = [%sedlex.regexp? '.'];
 let digit = [%sedlex.regexp? '0' .. '9'];
 let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Opt(Plus(digit)))];
 let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
-let identifierRegex = [%sedlex.regexp? (alpha, Star(alpha | digit))];
-let key = [%sedlex.regexp? (dot, identifierRegex)];
-let callback = [%sedlex.regexp? ('(', Plus(any), ')')];
-let apply = [%sedlex.regexp? (identifierRegex, callback)];
-let comparation = [%sedlex.regexp? "<=" | "<" | "=" | ">" | ">="];
-let operation = [%sedlex.regexp? "+" | "-" | "*" | "/"];
+let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
+let key = [%sedlex.regexp? (dot, identifier)];
 
 [@deriving show]
 type token =
@@ -82,7 +78,7 @@ let rec tokenize = buf => {
   | '|' => Ok(PIPE)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
-  | identifierRegex => tokenizeApply(buf)
+  | identifier => tokenizeApply(buf)
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
   | key =>
