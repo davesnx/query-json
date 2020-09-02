@@ -9,19 +9,7 @@ let positionToString = (start, end_) =>
     end_.Lexing.pos_cnum - end_.Lexing.pos_bol,
   );
 
-type location = {
-  loc_start: Lexing.position,
-  loc_end: Lexing.position,
-  loc_ghost: bool,
-};
-
-type tokenWithLoc = {
-  txt: result(token, string),
-  loc: location,
-};
-
-let expressionParser =
-  MenhirLib.Convert.Simplified.traditional2revised(Parser.expr);
+let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.prog);
 
 let last_position = ref(Location.none);
 
@@ -33,14 +21,18 @@ let provider = (buf, ()) => {
     | Error(error) => failwith(error)
     };
   last_position :=
-    {Location.loc_start: start, loc_end: stop, loc_ghost: false};
+    Location.{loc_start: start, loc_end: stop, loc_ghost: false};
+
+  Console.log(show_token(token));
+
   (token, start, stop);
 };
 
-let parse = (input: string): expression =>
-  try(Sedlexing.Utf8.from_string(input) |> provider |> expressionParser) {
-  | _ =>
-    let {Location.loc_start, loc_end, _} = last_position^;
+let parse = (input: string): option(expression) => {
+  let fn = Sedlexing.Utf8.from_string(input) |> provider;
+  try(menhir(fn)) {
+  | _exn =>
+    let Location.{loc_start, loc_end, _} = last_position^;
     failwith(
       "\n\n"
       ++ input
@@ -48,7 +40,7 @@ let parse = (input: string): expression =>
       ++ String.make(loc_start.pos_cnum, ' ')
       ++ String.make(loc_end.pos_cnum - loc_start.pos_cnum, '^')
       ++ "\nProblem parsing at position "
-      ++ positionToString(loc_start, loc_end)
-      ++ "\n",
+      ++ positionToString(loc_start, loc_end),
     );
   };
+};

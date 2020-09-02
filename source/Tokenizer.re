@@ -33,10 +33,10 @@ type token =
   | MULT
   | EQUAL
   | NOT_EQUAL
-  | GREATER_THAN
-  | LOWER_THAN
-  | GREATER_OR_EQUAL_THAN
-  | LOWER_OR_EQUAL_THAN
+  | GREATER
+  | LOWER
+  | GREATER_EQUAL
+  | LOWER_EQUAL
   | WHITESPACE
   | EOF;
 
@@ -67,10 +67,10 @@ let tokenizeApply = buf => {
 
 let rec tokenize = buf => {
   switch%sedlex (buf) {
-  | '<' => Ok(LOWER_THAN)
-  | "<=" => Ok(LOWER_OR_EQUAL_THAN)
-  | '>' => Ok(GREATER_THAN)
-  | ">=" => Ok(GREATER_OR_EQUAL_THAN)
+  | '<' => Ok(LOWER)
+  | "<=" => Ok(LOWER_EQUAL)
+  | '>' => Ok(GREATER)
+  | ">=" => Ok(GREATER_EQUAL)
   | "==" => Ok(EQUAL)
   | "!=" => Ok(NOT_EQUAL)
   | "+" => Ok(ADD)

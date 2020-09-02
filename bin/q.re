@@ -33,8 +33,12 @@ let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
   let inputMock = {|.store.books|};
   let program = Main.parse(inputMock);
-  let runtime = Compiler.compile(program);
-  Yojson.Basic.pretty_to_string(runtime(json));
+  switch (program) {
+  | Some(prog) =>
+    let runtime = Compiler.compile(prog);
+    Yojson.Basic.pretty_to_string(runtime(json));
+  | None => "There program is empty"
+  };
 };
 
 main() |> Console.log;

@@ -2,3 +2,5 @@ _esy
 *.install
 node_modules
 *.merlin
+esy.lock
+_build

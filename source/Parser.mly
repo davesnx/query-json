@@ -1,5 +1,5 @@
 %{
-    open Ast
+  open Ast
 %}
 
 %token <string> STRING
@@ -10,7 +10,11 @@
 %token <string> IDENTIFIER
 %token PIPE
 %token ADD SUB MULT DIV
-%token EQUAL GREATER_THAN LOWER_THAN GREATER_OR_EQUAL_THAN LOWER_OR_EQUAL_THAN
+%token EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
+%nonassoc EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
+
+%left ADD SUB
+%left MULT DIV
 
 %token <string> FUNCTION
 %token CLOSE_PARENT
@@ -24,74 +28,90 @@
 %token WHITESPACE
 %token EOF
 
-%start <Ast.expression> expr
+%start <Ast.expression option> prog
 
 %%
 
-/* identifiers:
-  | "keys"
-    { Keys }
-  | "flatten"
-    { Flatten }
-  | "head"
-    { Head }
-  | "tail"
-    { Tail }
-  | "length"
-    { Length }
-  | "to_entries"
-    { ToEntries }
-  | "from_entries"
-    { FromEntries }
-  | "to_string"
-    { ToString }
-  | "to_num"
-    { ToNumber }
-  | "type"
-    { Type }
-  | "sort"
-    { Sort }
-  | "uniq"
-    { Unique }
-  | "reverse"
-    { Reverse }
-  | "starts_with"
-    { StartsWith }
-  | "ends_with"
-    { EndsWith }
-  | "split"
-    { Split }
-  | "join"
-    { Join }
- */
+prog:
+  | EOF
+    { None }
+  | r = expr; EOF
+    { Some r }
+  ;
+
+conditional:
+  | e1 = expr; EQUAL; e2 = expr; WHITESPACE;
+    { Equal (e1, e2) }
+  | e1 = expr; NOT_EQUAL; e2 = expr; WHITESPACE;
+    { NotEqual (e1, e2) }
+  | e1 = expr; GREATER; e2 = expr; WHITESPACE;
+    { Greater (e1, e2) }
+  | e1 = expr; LOWER; e2 = expr; WHITESPACE;
+    { Lower (e1, e2) }
+  | e1 = expr; GREATER_EQUAL; e2 = expr; WHITESPACE;
+    { GreaterEqual (e1, e2) }
+  | e1 = expr; LOWER_EQUAL; e2 = expr; WHITESPACE;
+    { LowerEqual (e1, e2) }
+  ;
 
 expr:
-  | s = STRING
+  | s = STRING;
     { Literal (String s) }
-  | n = NUMBER
+  | n = NUMBER;
     { Literal (Number n) }
-  | b = BOOL
+  | b = BOOL;
     { Literal (Bool b) }
-  | f = FUNCTION; cb = expr; CLOSE_PARENT
+  | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "map" -> Map cb
       | "select" -> Select cb
       | "sort_by" -> SortBy cb
       | "group_by" -> GroupBy cb
-      | _ -> failwith "Exn"
+      | _ -> failwith "is not a valid function"
     }
-  | k = KEY
+  | i = IDENTIFIER;
+    { match i with
+      | "keys" -> Keys
+      | "flatten" -> Flatten
+      | "head" -> Head
+      | "tail" -> Tail
+      | "length" -> Length
+      | "to_entries" -> ToEntries
+      | "from_entries" -> FromEntries
+      | "to_string" -> ToString
+      | "to_num" -> ToNumber
+      | "type" -> Type
+      | "sort" -> Sort
+      | "uniq" -> Unique
+      | "reverse" -> Reverse
+      | "starts_with" -> StartsWith
+      | "ends_with" -> EndsWith
+      | "split" -> Split
+      | "join" -> Join
+      | _ -> failwith "is not a valid function"
+    }
+  | k = KEY;
     { Key k }
-  | DOT
+  | DOT; EOF;
     { Identity }
-  /* | e1 = expr PIPE e2 = expr
+  | e1 = expr; PIPE; e2 = expr; WHITESPACE;
     { Pipe (e1, e2) }
-  | e1 = expr ADD e2 = expr
+  | OPEN_LIST; CLOSE_LIST;
+    { List }
+  | OPEN_OBJ; CLOSE_OBJ;
+    { Object }
+  | e1 = expr; ADD; e2 = expr; WHITESPACE;
     { Addition (e1, e2) }
-  | e1 = expr SUB e2 = expr
+  | e1 = expr; SUB; e2 = expr; WHITESPACE;
     { Subtraction (e1, e2) }
-  | e1 = expr MULT e2 = expr
+  | e1 = expr; MULT; e2 = expr; WHITESPACE;
     { Multiply (e1, e2) }
-  | e1 = expr DIV e2 = expr
-    { Division (e1, e2) } */
+  | e1 = expr; DIV; e2 = expr; WHITESPACE;
+    { Division (e1, e2) }
+  | f = FUNCTION; cond = conditional; CLOSE_PARENT;
+    { match f with
+    | "filter" -> Filter (cond)
+    | "has" -> Has (cond)
+    | _ -> failwith "not a valid function"
+    }
   ;

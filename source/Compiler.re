@@ -124,8 +124,8 @@ exception CompilationError(string);
 let rec compile = (expression: expression, json: Json.t) => {
   switch (expression) {
   | Identity => id(json)
-  | Key(key) => Json.member(key, json)
   | Keys => keys(json)
+  | Key(key) => Json.member(key, json)
   | Index(idx) => Json.index(idx, json)
   | Head => head(json)
   | Tail => tail(json)
@@ -147,14 +147,17 @@ let rec compile = (expression: expression, json: Json.t) => {
     filter(
       item => {
         switch (conditional) {
-        | GT(left, right) => gt(compile(left, item), compile(right, item))
-        | GTE(left, right) =>
+        | Greater(left, right) =>
+          gt(compile(left, item), compile(right, item))
+        | GreaterEqual(left, right) =>
           gte(compile(left, item), compile(right, item))
-        | LT(left, right) => lt(compile(left, item), compile(right, item))
-        | LTE(left, right) =>
+        | Lower(left, right) =>
+          lt(compile(left, item), compile(right, item))
+        | LowerEqual(left, right) =>
           lte(compile(left, item), compile(right, item))
-        | EQ(left, right) => eq(compile(left, item), compile(right, item))
-        | NOT_EQ(left, right) =>
+        | Equal(left, right) =>
+          eq(compile(left, item), compile(right, item))
+        | NotEqual(left, right) =>
           notEq(compile(left, item), compile(right, item))
         }
       },

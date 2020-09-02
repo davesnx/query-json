@@ -9,43 +9,43 @@ type expression =
   | Literal(literal)
   | Identity /* . */
   | Key(string) /* .foo */
-  | Map(expression) /* .[] */ /* map(x) */
-  | Filter(conditional) /* .filter(x) */
-  | Select(expression) /* .select(x) */
   | Index(int) /* [1] */
+  | Has(conditional) /* has(x) */
+  | Filter(conditional) /* .filter(x) */
   | Addition(expression, expression) /* + */
   | Subtraction(expression, expression) /* - */
   | Division(expression, expression) /* / */
   | Multiply(expression, expression) /* * */
   | Pipe(expression, expression) /* | */
+  | Range(int, int) /* range(1, 10) */
   | Keys /* keys */
   | Flatten /* flatten */
   | Head /* head */
   | Tail /* tail */
   | Length /* length */
-  /* Not implemented */
   | List /* [] */
   | Object /* {} */
   | ToEntries /* to_entries */
   | FromEntries /* from_entries */
-  | Has(string) /* has(x) */
-  | Range(int, int) /* range(1, 10) */
   | ToString /* to_string */
   | ToNumber /* to_num */
   | Type /* type */
   | Sort /* sort */
-  | SortBy(expression) /* sort_by(x) */
-  | GroupBy(expression) /* group_by(x) */
   | Unique /* uniq */
   | Reverse /* reverse */
   | StartsWith /* starts_with */
   | EndsWith /* ends_with */
   | Split /* split */
   | Join /* join */
+  | Map(expression) /* .[] */ /* map(x) */
+  | Select(expression) /* .select(x) */
+  | SortBy(expression) /* sort_by(x) */
+  | GroupBy(expression) /* group_by(x) */
+
 and conditional =
-  | GT(expression, expression) /* Greater > */
-  | LT(expression, expression) /* Lower < */
-  | GTE(expression, expression) /* Greater equal >= */
-  | LTE(expression, expression) /* Lower equal <= */
-  | EQ(expression, expression) /* equal == */
-  | NOT_EQ(expression, expression); /* not equal != */
+  | Greater(expression, expression) /* > */
+  | Lower(expression, expression) /* < */
+  | GreaterEqual(expression, expression) /* >= */
+  | LowerEqual(expression, expression) /* <= */
+  | Equal(expression, expression) /* == */
+  | NotEqual(expression, expression); /* != */
