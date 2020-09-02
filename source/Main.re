@@ -1,6 +1,8 @@
 open Ast;
 open Tokenizer;
 
+let indent = n => String.make(n * 2, ' ');
+
 let positionToString = (start, end_) =>
   Printf.sprintf(
     "[line: %d, char: %d-%d]",
@@ -13,20 +15,23 @@ let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) =
   let exnToString = Printexc.to_string(exn);
   let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
 
-  Pastel.(
-    "\nInput: "
-    ++ <Pastel bold=true color=Green> input </Pastel>
-    ++ "\n       "
-    ++ String.make(start.pos_cnum, ' ')
-    ++ <Pastel color=BlackBright> pointerRange </Pastel>
-    ++ "\n\n"
-    ++ "Error: "
-    ++ <Pastel bold=true color=Red> exnToString </Pastel>
-    ++ "\n       "
-    ++ "Problem parsing at position "
-    ++ positionToString(start, end_)
-    ++ "\n"
-  );
+  "\n"
+  ++ "Input:"
+  ++ indent(1)
+  ++ Chalk.green(Chalk.bold(input))
+  ++ "\n"
+  ++ indent(4)
+  ++ String.make(start.pos_cnum, ' ')
+  ++ Chalk.gray(pointerRange)
+  ++ "\n\n"
+  ++ "Error:"
+  ++ indent(1)
+  ++ Chalk.red(Chalk.bold(exnToString))
+  ++ "\n"
+  ++ indent(4)
+  ++ "Problem parsing at position "
+  ++ positionToString(start, end_)
+  ++ "\n";
 };
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.prog);
