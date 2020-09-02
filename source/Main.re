@@ -9,16 +9,25 @@ let positionToString = (start, end_) =>
     end_.Lexing.pos_cnum - end_.Lexing.pos_bol,
   );
 
-let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) =>
-  "\n\n"
-  ++ input
-  ++ "\n"
-  ++ String.make(start.pos_cnum, ' ')
-  ++ String.make(end_.pos_cnum - start.pos_cnum, '^')
-  ++ "\nProblem parsing at position "
-  ++ positionToString(start, end_)
-  ++ "\n"
-  ++ Printexc.to_string(exn);
+let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) => {
+  let exnToString = Printexc.to_string(exn);
+  let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
+
+  Pastel.(
+    "\nInput: "
+    ++ <Pastel bold=true color=Green> input </Pastel>
+    ++ "\n       "
+    ++ String.make(start.pos_cnum, ' ')
+    ++ <Pastel color=BlackBright> pointerRange </Pastel>
+    ++ "\n\n"
+    ++ "Error: "
+    ++ <Pastel bold=true color=Red> exnToString </Pastel>
+    ++ "\n       "
+    ++ "Problem parsing at position "
+    ++ positionToString(start, end_)
+    ++ "\n"
+  );
+};
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.prog);
 
@@ -44,6 +53,7 @@ let parse = (input: string): option(expression) => {
   try(menhir(fn)) {
   | exn =>
     let Location.{loc_start, loc_end, _} = last_position^;
+    print_endline(makeError(~input, ~start=loc_start, ~end_=loc_end, exn));
     failwith(makeError(~input, ~start=loc_start, ~end_=loc_end, exn));
   };
 };
