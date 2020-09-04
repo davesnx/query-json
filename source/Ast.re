@@ -1,4 +1,7 @@
 [@deriving show]
+type regex = string;
+
+[@deriving show]
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
@@ -6,41 +9,58 @@ type literal =
 
 [@deriving show]
 type expression =
-  | Literal(literal)
   | Identity /* . */
-  | Key(string) /* .foo */
-  | Index(int) /* [1] */
-  | Has(conditional) /* has(x) */
-  | Filter(conditional) /* .filter(x) */
-  | Addition(expression, expression) /* + */
-  | Subtraction(expression, expression) /* - */
-  | Division(expression, expression) /* / */
-  | Multiply(expression, expression) /* * */
   | Pipe(expression, expression) /* | */
-  | Range(int, int) /* range(1, 10) */
-  | Keys /* keys */
-  | Flatten /* flatten */
-  | Head /* head */
-  | Tail /* tail */
-  | Length /* length */
+  | Comma /* , */
+  | Literal(literal)
+  /* Constructors */
   | List /* [] */
   | Object /* {} */
+  /* Objects */
+  | Key(string) /* .foo */
+  | Has(conditional) /* has(x) */
+  | Keys /* keys */
   | ToEntries /* to_entries */
-  | FromEntries /* from_entries */
-  | ToString /* to_string */
-  | ToNumber /* to_num */
-  | Type /* type */
-  | Sort /* sort */
-  | Unique /* uniq */
-  | Reverse /* reverse */
-  | StartsWith /* starts_with */
-  | EndsWith /* ends_with */
-  | Split /* split */
-  | Join /* join */
+  /* Array */
+  | Index(int) /* [1] */
+  | Filter(conditional) /* .filter(x) */
+  | Range(int, int) /* range(1, 10) */
+  | Flatten /* flatten */
+  | FlatMap /* flat_map | .[] */
+  | Head /* head */
+  | Tail /* tail */
   | Map(expression) /* .[] */ /* map(x) */
   | Select(expression) /* .select(x) */
   | SortBy(expression) /* sort_by(x) */
   | GroupBy(expression) /* group_by(x) */
+  | FromEntries /* from_entries */
+  | Sort /* sort */
+  | Reverse /* reverse */
+  | All(expression) /* all */
+  | Any(expression) /* any */
+  | Some(expression) /* some */
+  | Find(expression) /* .find() */
+  /* operations */
+  | Addition(expression, expression) /* + */
+  | Subtraction(expression, expression) /* - */
+  | Division(expression, expression) /* / */
+  | Multiply(expression, expression) /* * */
+  /* Generic */
+  | ToString /* to_string */
+  | Type /* type */
+  | Unique /* uniq */
+  | Length /* length */
+  | Contains
+  /* Strings */
+  | Test(regex)
+  | StartsWith /* starts_with */
+  | EndsWith /* ends_with */
+  | Split /* split */
+  | Join /* join */
+  | ToNumber /* to_num */
+  | And(conditional, conditional)
+  | Or(conditional, conditional)
+  | Xor(conditional, conditional)
 
 and conditional =
   | Greater(expression, expression) /* > */
