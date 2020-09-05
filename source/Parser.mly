@@ -31,7 +31,7 @@ prog:
   | EOF;
     { None }
   | r = expr; EOF;
-    { Some (Pipe (Identity, r)) }
+    { Some(r) }
   ;
 
 conditional:
