@@ -2,8 +2,8 @@
   "name": "query-json",
   "scripts": {
     "start": "esy build dune build --watch",
-    "build": "dune build -p #{self.name}",
-    "install": "esy-installer #{self.name}.install",
+    "build": "esy dune build -p query-json",
+    "install": "esy-installer query-json.install",
     "query-json": "esy dune exec q",
     "test": "esy dune exec test/Run.exe"
   },

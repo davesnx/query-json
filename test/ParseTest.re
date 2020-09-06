@@ -31,26 +31,3 @@ describe("correctly parse value", ({test, _}) => {
 
   List.iteri(runTest, tests);
 });
-
-/* let print_tests = [
-     ("  a b   |   c ||   d &&   e f", "'a' 'b' | 'c' || 'd' && 'e' 'f'"),
-     ("[ a b ] | [ c || [ d && [ e f ]]]", "'a' 'b' | 'c' || 'd' && 'e' 'f'"),
-     ("'[' abc ']'", "'[' 'abc' ']'"),
-   ];
-   describe("correctly print value", ({test, _}) => {
-     let test = (index, (result, expected)) =>
-       test(
-         "print: " ++ string_of_int(index),
-         ({expect, _}) => {
-           let result =
-             switch (value_of_string(result)) {
-             | Some(result) => result
-             | None => failwith("failed to parse")
-             };
-           let result = value_to_string(result);
-           expect.string(result).toEqual(expected);
-         },
-       );
-     List.iteri(test, print_tests);
-   });
-    */
