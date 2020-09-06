@@ -40,7 +40,7 @@ let stdinMock = {|
 
 let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|.store.book|};
+  let inputMock = {|. | .store | .books|};
   let program = Main.parse(inputMock);
   let runtime: Json.t => Json.t = compile(program);
   Yojson.Basic.pretty_to_string(runtime(json));

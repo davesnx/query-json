@@ -75,16 +75,16 @@ let rec tokenize = buf => {
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_LIST)
   | '"' => Ok(string(buf))
-  | '|' => Ok(PIPE)
+  | "|" => Ok(PIPE)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
-  | identifier => tokenizeApply(buf)
-  | ")" => Ok(CLOSE_PARENT)
-  | dot => Ok(DOT)
   | key =>
     let tok = lexeme(buf);
     let key = String.sub(tok, 1, String.length(tok) - 1);
     Ok(KEY(key));
+  | identifier => tokenizeApply(buf)
+  | ")" => Ok(CLOSE_PARENT)
+  | dot => Ok(DOT)
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));

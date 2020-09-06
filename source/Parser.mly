@@ -20,40 +20,47 @@
 %token OPEN_OBJ
 %token CLOSE_OBJ
 
-%token WHITESPACE
 %token EOF
+
+%left ADD SUB /* lowest precedence */
+%left MULT DIV /* medium precedence */
+%nonassoc PIPE /* highest precedence */
 
 %start <Ast.expression> program
 
 %%
 
 program:
-  | r = expr; EOF;
-    { r }
+  | e = expr; EOF;
+    { e }
+  | e1 = expr; e2 = expr; EOF;
+    { Pipe(e1, e2) }
+  | e1 = expr; e2 = expr; e3 = expr; EOF;
+    { Pipe(e1, Pipe(e2, e3)) }
   ;
 
 conditional:
-  | e1 = expr; EQUAL; e2 = expr; WHITESPACE;
-    { Equal (e1, e2) }
-  | e1 = expr; NOT_EQUAL; e2 = expr; WHITESPACE;
-    { NotEqual (e1, e2) }
-  | e1 = expr; GREATER; e2 = expr; WHITESPACE;
-    { Greater (e1, e2) }
-  | e1 = expr; LOWER; e2 = expr; WHITESPACE;
-    { Lower (e1, e2) }
-  | e1 = expr; GREATER_EQUAL; e2 = expr; WHITESPACE;
-    { GreaterEqual (e1, e2) }
-  | e1 = expr; LOWER_EQUAL; e2 = expr; WHITESPACE;
-    { LowerEqual (e1, e2) }
+  | e1 = expr; EQUAL; e2 = expr;
+    { Equal(e1, e2) }
+  | e1 = expr; NOT_EQUAL; e2 = expr;
+    { NotEqual(e1, e2) }
+  | e1 = expr; GREATER; e2 = expr;
+    { Greater(e1, e2) }
+  | e1 = expr; LOWER; e2 = expr;
+    { Lower(e1, e2) }
+  | e1 = expr; GREATER_EQUAL; e2 = expr;
+    { GreaterEqual(e1, e2) }
+  | e1 = expr; LOWER_EQUAL; e2 = expr;
+    { LowerEqual(e1, e2) }
   ;
 
 expr:
   | s = STRING;
-    { Literal (String s) }
+    { Literal(String s) }
   | n = NUMBER;
-    { Literal (Number n) }
+    { Literal(Number n) }
   | b = BOOL;
-    { Literal (Bool b) }
+    { Literal(Bool b) }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "map" -> Map cb
@@ -87,24 +94,24 @@ expr:
     { Key k }
   | DOT;
     { Identity }
-  | e1 = expr; PIPE; e2 = expr; WHITESPACE;
-    { Pipe (e1, e2) }
+  | e1 = expr; PIPE; e2 = expr;
+    { Pipe(e1, e2) }
   | OPEN_LIST; CLOSE_LIST;
     { List }
   | OPEN_OBJ; CLOSE_OBJ;
     { Object }
-  | e1 = expr; ADD; e2 = expr; WHITESPACE;
-    { Addition (e1, e2) }
-  | e1 = expr; SUB; e2 = expr; WHITESPACE;
-    { Subtraction (e1, e2) }
-  | e1 = expr; MULT; e2 = expr; WHITESPACE;
-    { Multiply (e1, e2) }
-  | e1 = expr; DIV; e2 = expr; WHITESPACE;
-    { Division (e1, e2) }
+  | e1 = expr; ADD; e2 = expr;
+    { Addition(e1, e2) }
+  | e1 = expr; SUB; e2 = expr;
+    { Subtraction(e1, e2) }
+  | e1 = expr; MULT; e2 = expr;
+    { Multiply(e1, e2) }
+  | e1 = expr; DIV; e2 = expr;
+    { Division(e1, e2) }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
-    | "filter" -> Filter (cond)
-    | "has" -> Has (cond)
+    | "filter" -> Filter(cond)
+    | "has" -> Has(cond)
     | _ -> failwith "not a valid function"
     }
   ;
