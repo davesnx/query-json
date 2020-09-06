@@ -38,12 +38,26 @@ let stdinMock = {|
   }
 |};
 
-let main = () => {
+let main = (input: string) => {
   let json = Yojson.Basic.from_string(stdinMock);
-  let inputMock = {|. | .store | .books|};
-  let program = Main.parse(inputMock);
-  let runtime: Json.t => Json.t = compile(program);
+  let program = Main.parse(input);
+  let runtime = compile(program);
+
   Yojson.Basic.pretty_to_string(runtime(json));
 };
 
-main() |> print_endline;
+type config = {
+  verbose: bool,
+  debug: bool,
+};
+
+/* let verbose = ref(false);
+   let debug = ref(false);
+
+   let argSpecList = [("-v", Arg.Set(verbose), "Enables verbose mode")];
+    */
+let input = Sys.argv[1];
+
+/* Check that input is a string */
+
+main(input) |> print_endline;

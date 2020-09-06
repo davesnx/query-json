@@ -4,9 +4,8 @@ let alpha = [%sedlex.regexp? 'a' .. 'z'];
 let dot = [%sedlex.regexp? '.'];
 let digit = [%sedlex.regexp? '0' .. '9'];
 let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Opt(Plus(digit)))];
-let whitespace = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
+let space = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
 let identifier = [%sedlex.regexp? (alpha, Star(alpha | digit))];
-let key = [%sedlex.regexp? (dot, identifier)];
 
 [@deriving show]
 type token =
@@ -14,7 +13,6 @@ type token =
   | STRING(string)
   | BOOL(bool)
   | IDENTIFIER(string)
-  | KEY(string)
   | FUNCTION(string)
   | CLOSE_PARENT
   | OPEN_LIST
@@ -33,7 +31,7 @@ type token =
   | LOWER
   | GREATER_EQUAL
   | LOWER_EQUAL
-  | WHITESPACE
+  | SPACE
   | EOF;
 
 let string = buf => {
@@ -78,17 +76,13 @@ let rec tokenize = buf => {
   | "|" => Ok(PIPE)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
-  | key =>
-    let tok = lexeme(buf);
-    let key = String.sub(tok, 1, String.length(tok) - 1);
-    Ok(KEY(key));
   | identifier => tokenizeApply(buf)
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
-  | whitespace => tokenize(buf)
+  | space => tokenize(buf)
   | eof => Ok(EOF)
   | _ =>
     let tok = lexeme(buf);

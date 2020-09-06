@@ -5,7 +5,6 @@
 %token <string> STRING
 %token <float> NUMBER
 %token <bool> BOOL
-%token <string> KEY
 %token <string> IDENTIFIER
 %token DOT
 %token PIPE
@@ -15,6 +14,8 @@
 %token <string> FUNCTION
 %token CLOSE_PARENT
 
+%token SPACE
+
 %token OPEN_LIST
 %token CLOSE_LIST
 %token OPEN_OBJ
@@ -22,9 +23,9 @@
 
 %token EOF
 
-%left ADD SUB /* lowest precedence */
+%left PIPE SPACE /* lowest precedence */
 %left MULT DIV /* medium precedence */
-%nonassoc PIPE /* highest precedence */
+%left ADD SUB /* highest precedence */
 
 %start <Ast.expression> program
 
@@ -33,42 +34,63 @@
 program:
   | e = expr; EOF;
     { e }
-  | e1 = expr; e2 = expr; EOF;
-    { Pipe(e1, e2) }
-  | e1 = expr; e2 = expr; e3 = expr; EOF;
-    { Pipe(e1, Pipe(e2, e3)) }
-  ;
+  | EOF;
+    { Identity }
 
 conditional:
-  | e1 = expr; EQUAL; e2 = expr;
-    { Equal(e1, e2) }
-  | e1 = expr; NOT_EQUAL; e2 = expr;
-    { NotEqual(e1, e2) }
-  | e1 = expr; GREATER; e2 = expr;
-    { Greater(e1, e2) }
-  | e1 = expr; LOWER; e2 = expr;
-    { Lower(e1, e2) }
-  | e1 = expr; GREATER_EQUAL; e2 = expr;
-    { GreaterEqual(e1, e2) }
-  | e1 = expr; LOWER_EQUAL; e2 = expr;
-    { LowerEqual(e1, e2) }
+  | left = expr; EQUAL; right = expr;
+    { Equal(left, right) }
+  | left = expr; NOT_EQUAL; right = expr;
+    { NotEqual(left, right) }
+  | left = expr; GREATER; right = expr;
+    { Greater(left, right) }
+  | left = expr; LOWER; right = expr;
+    { Lower(left, right) }
+  | left = expr; GREATER_EQUAL; right = expr;
+    { GreaterEqual(left, right) }
+  | left = expr; LOWER_EQUAL; right = expr;
+    { LowerEqual(left, right) }
   ;
 
+path:
+  | k = pair(DOT, STRING)
+    { Key(snd(k)) }
+  | k = pair(DOT, IDENTIFIER)
+    { Key(snd(k)) }
+  | k = pair(DOT, STRING); rst = path
+    { Pipe(Key(snd(k)), rst) }
+  | k = pair(DOT, IDENTIFIER); rst = path
+    { Pipe(Key(snd(k)), rst) }
+
 expr:
+  | left = expr; PIPE; right = expr;
+    { Pipe(left, right) }
+  | left = expr; SPACE; right = expr;
+    { Pipe(left, right) }
+  | left = expr; ADD; right = expr;
+    { Addition(left, right) }
+  | left = expr; SUB; right = expr;
+    { Subtraction(left, right) }
+  | left = expr; MULT; right = expr;
+    { Multiply(left, right) }
+  | left = expr; DIV; right = expr;
+    { Division(left, right) }
   | s = STRING;
-    { Literal(String s) }
+    { Literal(String(s)) }
   | n = NUMBER;
-    { Literal(Number n) }
+    { Literal(Number(n)) }
   | b = BOOL;
-    { Literal(Bool b) }
+    { Literal(Bool(b)) }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
-      | "map" -> Map cb
-      | "select" -> Select cb
-      | "sort_by" -> SortBy cb
-      | "group_by" -> GroupBy cb
-      | _ -> failwith "is not a valid function"
+      | "map" -> Map(cb)
+      | "select" -> Select(cb)
+      | "sort_by" -> SortBy(cb)
+      | "group_by" -> GroupBy(cb)
+      | _ -> failwith "is not a valid function" (* TODO: Print i *)
     }
+  | e = path
+    { e }
   | i = IDENTIFIER;
     { match i with
       | "keys" -> Keys
@@ -88,26 +110,19 @@ expr:
       | "ends_with" -> EndsWith
       | "split" -> Split
       | "join" -> Join
-      | _ -> failwith "is not a valid function"
+      | _ -> failwith "is not a valid function" (* TODO: Print i *)
     }
-  | k = KEY;
-    { Key k }
-  | DOT;
+  /* | path = separated_nonempty_list(KEY, expr);
+    { match path with
+      | key::[] -> Key(key)
+      | key::keys -> Key(keys)
+    } */
+  | DOT; SPACE;
     { Identity }
-  | e1 = expr; PIPE; e2 = expr;
-    { Pipe(e1, e2) }
   | OPEN_LIST; CLOSE_LIST;
     { List }
   | OPEN_OBJ; CLOSE_OBJ;
     { Object }
-  | e1 = expr; ADD; e2 = expr;
-    { Addition(e1, e2) }
-  | e1 = expr; SUB; e2 = expr;
-    { Subtraction(e1, e2) }
-  | e1 = expr; MULT; e2 = expr;
-    { Multiply(e1, e2) }
-  | e1 = expr; DIV; e2 = expr;
-    { Division(e1, e2) }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
