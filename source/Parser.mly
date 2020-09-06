@@ -112,12 +112,7 @@ expr:
       | "join" -> Join
       | _ -> failwith "is not a valid function" (* TODO: Print i *)
     }
-  /* | path = separated_nonempty_list(KEY, expr);
-    { match path with
-      | key::[] -> Key(key)
-      | key::keys -> Key(keys)
-    } */
-  | DOT; SPACE;
+  | DOT;
     { Identity }
   | OPEN_LIST; CLOSE_LIST;
     { List }

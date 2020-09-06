@@ -1,10 +1,11 @@
 {
   "name": "query-json",
-  "esy": {
+  "scripts": {
     "start": "esy build dune build --watch",
     "build": "dune build -p #{self.name}",
     "install": "esy-installer #{self.name}.install",
-    "query-json": "esy dune exec q"
+    "query-json": "esy dune exec q",
+    "test": "esy dune exec test/Run.exe"
   },
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
@@ -15,6 +16,7 @@
     "@opam/sedlex": "2.2",
     "@opam/yojson": "1.7.0",
     "@reason-native/console": "^0.1.0",
+    "@reason-native/rely": "^3.2.1",
     "ocaml": "4.10.0"
   },
   "devDependencies": {
