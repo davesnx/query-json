@@ -1,4 +1,5 @@
 open Source;
+open Source.Compiler;
 
 let stdinMock = {|
   {
@@ -41,12 +42,8 @@ let main = () => {
   let json = Yojson.Basic.from_string(stdinMock);
   let inputMock = {|.store.book|};
   let program = Main.parse(inputMock);
-  switch (program) {
-  | Some(p) =>
-    let runtime = Compiler.compile(p);
-    Yojson.Basic.pretty_to_string(runtime(json));
-  | None => "Empty program"
-  };
+  let runtime: Json.t => Json.t = compile(program);
+  Yojson.Basic.pretty_to_string(runtime(json));
 };
 
 main() |> print_endline;

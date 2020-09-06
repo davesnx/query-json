@@ -23,15 +23,13 @@
 %token WHITESPACE
 %token EOF
 
-%start <Ast.expression option> prog
+%start <Ast.expression> program
 
 %%
 
-prog:
-  | EOF;
-    { None }
+program:
   | r = expr; EOF;
-    { Some(r) }
+    { r }
   ;
 
 conditional:

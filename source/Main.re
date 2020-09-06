@@ -34,7 +34,7 @@ let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) =
   ++ "\n";
 };
 
-let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.prog);
+let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.program);
 
 let last_position = ref(Location.none);
 
@@ -53,12 +53,10 @@ let provider = (buf, ()) => {
   (token, start, stop);
 };
 
-let parse = (input: string): option(expression) => {
-  let fn = Sedlexing.Utf8.from_string(input) |> provider;
-  try(menhir(fn)) {
+let parse = (input: string): expression =>
+  try(Sedlexing.Utf8.from_string(input) |> provider |> menhir) {
   | exn =>
     let Location.{loc_start, loc_end, _} = last_position^;
     print_endline(makeError(~input, ~start=loc_start, ~end_=loc_end, exn));
     failwith(makeError(~input, ~start=loc_start, ~end_=loc_end, exn));
   };
-};

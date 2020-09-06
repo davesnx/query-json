@@ -121,7 +121,7 @@ let tail = (json: Json.t) => {
 
 exception CompilationError(string);
 
-let rec compile = (expression: expression, json: Json.t) => {
+let rec compile = (expression: expression, json): Json.t => {
   switch (expression) {
   | Identity => id(json)
   | Keys => keys(json)
