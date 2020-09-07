@@ -44,8 +44,6 @@ jobs:
       - name: Test
         run: |
           BISECT_ENABLE=yes esy dune runtest --force
-          esy dune exec bisect-ppx-report -- html
-
 
   publish-to-npm:
     needs: build-and-deploy
