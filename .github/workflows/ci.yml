@@ -28,21 +28,24 @@ jobs:
         run: esy install
 
       - name: Print esy cache
-        id: print_esy_cache
-        run: node .github/workflows/print_esy_cache.js
+        id: print-esy-cache
+        run: node .github/workflows/print-esy-cache.js
 
       - name: Try to restore dependencies cache
         id: deps-cache
         uses: actions/cache@v1
         with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          path: ${{ steps.print-esy-cache.outputs.esy_cache }}
           key: ubuntu-latest-4.09-${{ hashFiles('**/index.json') }}
 
       - name: Build
         run: esy dune build --release
 
-      - name: Test with coverage
-        run: esy dune exec test/Run.exe
+      - name: Test
+        run: |
+          BISECT_ENABLE=yes esy dune runtest --force
+          esy dune exec bisect-ppx-report -- html
+
 
   publish-to-npm:
     needs: build-and-deploy

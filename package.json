@@ -5,10 +5,12 @@
     "build": "esy dune build -p query-json",
     "install": "esy-installer query-json.install",
     "query-json": "esy dune exec q",
-    "test": "esy dune exec test/Run.exe"
+    "test": "esy dune exec test/Run.exe",
+    "test:ci": "esy dune runtest"
   },
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
+    "@opam/bisect_ppx": "2.4.1",
     "@opam/dune": "^2.7.0",
     "@opam/menhir": "20200624",
     "@opam/ppx_deriving": "4.5",

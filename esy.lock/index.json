@@ -1,5 +1,5 @@
 {
-  "checksum": "cbc4a2e6787438808b6ca4a032ea9f2d",
+  "checksum": "47aa654f6baf7e1e347a78f395d5ae32",
   "root": "query-json@link-dev:./package.json",
   "node": {
     "query-json@link-dev:./package.json": {
@@ -19,7 +19,9 @@
         "@opam/ppxlib@opam:0.15.0@6a9d8126",
         "@opam/ppx_deriving@opam:4.5@d89f2934",
         "@opam/menhir@opam:20200624@8629ff13",
-        "@opam/dune@opam:2.7.1@6675bb82", "@esy-ocaml/reason@3.6.2@d41d8cd9"
+        "@opam/dune@opam:2.7.1@6675bb82",
+        "@opam/bisect_ppx@opam:2.4.1@b38eb938",
+        "@esy-ocaml/reason@3.6.2@d41d8cd9"
       ],
       "devDependencies": [
         "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2@d41d8cd9"
@@ -179,6 +181,7 @@
         "@opam/topkg@opam:1.0.2@3c5942ad",
         "@opam/ocamlfind@opam:1.8.1@ff07b0f9",
         "@opam/ocamlbuild@opam:0.14.0@6ac75d03",
+        "@opam/cmdliner@opam:1.0.4@93208aac",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
@@ -1137,6 +1140,63 @@
       "overrides": [],
       "dependencies": [ "@esy-ocaml/substs@0.0.1@d41d8cd9" ],
       "devDependencies": []
+    },
+    "@opam/cmdliner@opam:1.0.4@93208aac": {
+      "id": "@opam/cmdliner@opam:1.0.4@93208aac",
+      "name": "@opam/cmdliner",
+      "version": "opam:1.0.4",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/md5/fe/fe2213d0bc63b1e10a2d0aa66d2fc8d9#md5:fe2213d0bc63b1e10a2d0aa66d2fc8d9",
+          "archive:http://erratique.ch/software/cmdliner/releases/cmdliner-1.0.4.tbz#md5:fe2213d0bc63b1e10a2d0aa66d2fc8d9"
+        ],
+        "opam": {
+          "name": "cmdliner",
+          "version": "1.0.4",
+          "path": "esy.lock/opam/cmdliner.1.0.4"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.0@d41d8cd9", "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [ "ocaml@4.10.0@d41d8cd9" ]
+    },
+    "@opam/bisect_ppx@opam:2.4.1@b38eb938": {
+      "id": "@opam/bisect_ppx@opam:2.4.1@b38eb938",
+      "name": "@opam/bisect_ppx",
+      "version": "opam:2.4.1",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/md5/95/9551a49de6b80aa7caf20ec693387c86#md5:9551a49de6b80aa7caf20ec693387c86",
+          "archive:https://github.com/aantron/bisect_ppx/archive/2.4.1.tar.gz#md5:9551a49de6b80aa7caf20ec693387c86"
+        ],
+        "opam": {
+          "name": "bisect_ppx",
+          "version": "2.4.1",
+          "path": "esy.lock/opam/bisect_ppx.2.4.1"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.0@d41d8cd9",
+        "@opam/ppx_tools_versioned@opam:5.4.0@32d1a414",
+        "@opam/ocaml-migrate-parsetree@opam:1.7.3@dbcf3b47",
+        "@opam/dune@opam:2.7.1@6675bb82",
+        "@opam/cmdliner@opam:1.0.4@93208aac",
+        "@opam/base-unix@opam:base@87d0b2eb",
+        "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.0@d41d8cd9",
+        "@opam/ppx_tools_versioned@opam:5.4.0@32d1a414",
+        "@opam/ocaml-migrate-parsetree@opam:1.7.3@dbcf3b47",
+        "@opam/dune@opam:2.7.1@6675bb82",
+        "@opam/cmdliner@opam:1.0.4@93208aac",
+        "@opam/base-unix@opam:base@87d0b2eb"
+      ]
     },
     "@opam/biniou@opam:1.2.1@d7570399": {
       "id": "@opam/biniou@opam:1.2.1@d7570399",

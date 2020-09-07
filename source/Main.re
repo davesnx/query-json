@@ -48,7 +48,7 @@ let provider = (buf, ()) => {
   last_position :=
     Location.{loc_start: start, loc_end: stop, loc_ghost: false};
 
-  print_endline(show_token(token));
+  /* TODO: Add debug flag: print_endline(show_token(token)); */
 
   (token, start, stop);
 };

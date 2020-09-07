@@ -11,3 +11,7 @@
  (public_name Run.exe)
  (libraries Test)
  (modules Run))
+
+(rule
+ (alias  runtest)
+ (action (run ./Run.exe)))
