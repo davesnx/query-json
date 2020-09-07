@@ -33,8 +33,23 @@ jobs:
       - name: Install esy
         run: npm install -g esy
 
+      - name: Try to restore install cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ hashFiles('**/index.json') }}
+
       - name: Install dependencies
         run: esy install
+
+      - name: Print esy cache
+        uses: actions/github-script@v2
+        id: print_esy_cache
+        with:
+          script: |
+            const path = require('path')
+            const scriptPath = path.resolve('.github/workflows/print-esy-cache.js')
+            require(scriptPath)(core)
 
       - name: Cache esy dependencies
         uses: actions/cache@v1
@@ -82,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}
-          path: _build/default/bin/q.exe
+          path: _esy/default/build/default/bin/q.exe
 
   publish:
     needs: build

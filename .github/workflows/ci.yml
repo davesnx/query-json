@@ -38,19 +38,25 @@ jobs:
         run: esy install
 
       - name: Print esy cache
-        id: print-esy-cache
-        run: node .github/workflows/print-esy-cache.js
+        uses: actions/github-script@v2
+        id: print_esy_cache
+        with:
+          script: |
+            const path = require('path')
+            const scriptPath = path.resolve('.github/workflows/print-esy-cache.js')
+            require(scriptPath)(core)
+
+      - name: Try to restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-
 
       - name: Import dependencies
         if: steps.cache.outputs.cache-hit == 'true'
         run: esy import-build _export/*
-
-      - name: Cache esy dependencies
-        id: deps-cache
-        uses: actions/cache@v1
-        with:
-          path: ${{ steps.print-esy-cache.outputs.esy_cache }}
-          key: ubuntu-latest-4.09-${{ hashFiles('**/index.json') }}
 
       - name: Cache node modules
         uses: actions/cache@v1
