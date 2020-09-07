@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  release:
+    types: published
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ocaml-version: ['4.9.1']
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: avsm/setup-ocaml@master
+        with:
+          ocaml-version: ${{ matrix.ocaml-version }}
+
+      - name: Use Node.js 12.x
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Fetch git tags
+        run: git fetch --tags --force
+
+      - name: Install
+        run: esy install
+
+      - name: Cache esy dependencies
+        uses: actions/cache@v1
+        id: cache
+        with:
+          path: _export
+          key: ${{ runner.OS }}-build-${{ hashFiles('esy.lock/index.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-build-${{ env.cache-name }}-
+            ${{ runner.OS }}-build-
+            ${{ runner.OS }}-
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.yarn-cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Build
+        run: esy dune build --release
+
+      - name: Test
+        run: |
+          BISECT_ENABLE=yes esy dune runtest --force
+
+      - name: esy release
+        run: esy release
+
+      - name: Upload _release
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: _release
+          path: _release
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}
+          path: _build/default/bin/q.exe
+
+  publish:
+    needs: build
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Download _release
+        uses: actions/download-artifact@master
+        with:
+          name: _release
+          path: _release
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: ubuntu-latest
+          path: _release/platform-linux-x64
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: macos-latest
+          path: _release/platform-darwin-x64
+
+      - name: Create archives for Github release
+        run: |
+          cd _release/platform-darwin-x64
+          zip -r ../../spin-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          zip -r ../../spin-linux-x64.zip .
+          cd ../..
+
+      - name: Upload spin-darwin-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: spin-darwin-x64.zip
+          asset_name: spin-darwin-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Upload spin-linux-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: spin-linux-x64.zip
+          asset_name: spin-linux-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Publish NPM package
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm config list
+          npm publish --access public
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
