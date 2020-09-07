@@ -1,4 +1,4 @@
-name: Build master - Publish npm
+name: Build master
 on:
   push:
     branches:
@@ -40,7 +40,7 @@ jobs:
         if: steps.cache.outputs.cache-hit == 'true'
         run: esy import-build _export/*
 
-      - name: Try to restore dependencies cache
+      - name: Cache esy dependencies
         id: deps-cache
         uses: actions/cache@v1
         with:
