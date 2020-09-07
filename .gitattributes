@@ -1,0 +1,13 @@
+*.ml text eol=lf
+*.mli text eol=lf
+*.re text eol=lf
+*.rei text eol=lf
+*.res text eol=lf
+*.resi text eol=lf
+
+# Recognize all re files as Reason
+*.re linguist-language=Reason
+
+# Recognize all ml files as OCaml
+*.ml linguist-language=OCaml
+*.mly linguist-language=OCaml
