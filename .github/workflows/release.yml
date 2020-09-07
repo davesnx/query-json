@@ -30,7 +30,10 @@ jobs:
       - name: Fetch git tags
         run: git fetch --tags --force
 
-      - name: Install
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Install dependencies
         run: esy install
 
       - name: Cache esy dependencies
