@@ -32,6 +32,10 @@ jobs:
       - name: Install
         run: esy install
 
+      - name: Print esy cache
+        id: print-esy-cache
+        run: node .github/workflows/print-esy-cache.js
+
       - name: Import dependencies
         if: steps.cache.outputs.cache-hit == 'true'
         run: esy import-build _export/*
