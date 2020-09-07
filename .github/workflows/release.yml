@@ -43,26 +43,16 @@ jobs:
         run: esy install
 
       - name: Print esy cache
-        uses: actions/github-script@v2
         id: print_esy_cache
-        with:
-          script: |
-            const path = require('path')
-            const scriptPath = path.resolve('.github/workflows/print-esy-cache.js')
-            require(scriptPath)(core)
+        run: node .github/workflows/print-esy-cache.js
 
-      - name: Cache esy dependencies
-        uses: actions/cache@v1
-        id: cache
-        env:
-          cache-name: cache-esy-lock
+      - name: Try to restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
         with:
-          path: _export
-          key: ${{ runner.OS }}-build-${{ hashFiles('esy.lock/index.json') }}
-          restore-keys: |
-            ${{ runner.OS }}-build-${{ env.cache-name }}-
-            ${{ runner.OS }}-build-
-            ${{ runner.OS }}-
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-
 
       - name: Cache node modules
         uses: actions/cache@v1
@@ -97,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}
-          path: _esy/default/build/default/bin/q.exe
+          path: _build/default/bin/q.exe
 
   publish:
     needs: build
