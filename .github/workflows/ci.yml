@@ -1,0 +1,67 @@
+name: Build master - Publish npm
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Use OCaml 4.09.1
+        uses: avsm/setup-ocaml@v1
+        with:
+          ocaml-version: 4.09.1
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Install
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node .github/workflows/print_esy_cache.js
+
+      - name: Try to restore dependencies cache
+        id: deps-cache
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: ubuntu-latest-4.09-${{ hashFiles('**/index.json') }}
+
+      - name: Build
+        run: esy dune build --release
+
+      - name: Test with coverage
+        run: esy dune exec test/Run.exe
+
+  publish-to-npm:
+    needs: build-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+          ref: ${{ github.ref }}
+          submodules: true
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Publish packages
+        run: node .github/workflows/publish_to_npm.js
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
