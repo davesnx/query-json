@@ -30,7 +30,7 @@
     "test:ci": "esy dune runtest"
   },
   "esy": {
-    "build": "dune build -p #{self.name}",
+    "build": "dune build -p query-json",
     "buildEnv": {
       "ODOC_SYNTAX": "re"
     },
