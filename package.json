@@ -1,5 +1,26 @@
 {
   "name": "query-json",
+  "version": "0.1.0",
+  "description": "",
+  "author": "davesnx <dsnxmoreno@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/davesnx/query-json",
+  "keywords": [
+    "reason",
+    "ocaml",
+    "jq",
+    "json",
+    "reason-native",
+    "menhir",
+    "cli"
+  ],
+  "bugs": {
+    "url": "https://github.com/davesnx/query-json/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davesnx/query-json.git"
+  },
   "scripts": {
     "start": "esy build dune build --watch",
     "build": "esy dune build -p query-json",
@@ -7,6 +28,17 @@
     "query-json": "esy dune exec q",
     "test": "esy dune exec test/Run.exe",
     "test:ci": "esy dune runtest"
+  },
+  "esy": {
+    "build": "dune build -p #{self.name}",
+    "buildEnv": {
+      "ODOC_SYNTAX": "re"
+    },
+    "release": {
+      "bin": [
+        "q"
+      ]
+    }
   },
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",

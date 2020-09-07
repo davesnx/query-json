@@ -4,3 +4,4 @@ node_modules
 *.merlin
 esy.lock/*
 _build
+_release

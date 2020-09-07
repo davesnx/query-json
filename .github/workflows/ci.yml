@@ -63,6 +63,6 @@ jobs:
         run: npm install -g esy
 
       - name: Publish packages
-        run: node .github/workflows/publish_to_npm.js
+        run: node .github/workflows/publish-npm.js
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
