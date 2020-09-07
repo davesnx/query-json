@@ -35,6 +35,8 @@ jobs:
       - name: Cache esy dependencies
         uses: actions/cache@v1
         id: cache
+        env:
+          cache-name: cache-esy-lock
         with:
           path: _export
           key: ${{ runner.OS }}-build-${{ hashFiles('esy.lock/index.json') }}
