@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        ocaml-version: ['4.9.1']
+        ocaml-version: ['4.09.1']
 
     steps:
       - uses: actions/checkout@v2
