@@ -23,15 +23,15 @@
   },
   "bin": "_build/default/bin/q.exe",
   "scripts": {
-    "start": "esy build dune build --watch",
+    "q": "esy dune exec q",
     "build": "esy dune build -p query-json",
-    "query-json": "esy dune exec q",
+    "start": "esy dune build --watch",
     "test": "esy dune exec test/Run.exe",
     "test:ci": "esy dune runtest",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
   "esy": {
-    "build": "dune build -p query-json",
+    "build": "esy dune build -p query-json",
     "buildsInSource": "_build",
     "buildEnv": {
       "ODOC_SYNTAX": "re"
@@ -54,6 +54,7 @@
     "@reason-native/console": "^0.1.0",
     "@reason-native/rely": "^3.2.1",
     "ocaml": "4.10.0",
-    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
+    "refmterr": "*"
   }
 }
