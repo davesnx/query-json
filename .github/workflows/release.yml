@@ -19,9 +19,6 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Fetch git tags
-        run: git fetch --tags --force
-
       - name: Install esy
         run: npm install -g esy
 
@@ -118,7 +115,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Publish Prerelease
-        if: success() && github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
+        if: success() && github.event_name == 'pull_request' && !startsWith(github.ref, 'refs/tags/')
         run: |
           npm version prerelease -preid $(git rev-parse --short HEAD) -no-git-tag-version
           npm publish --tag=dev --access public
