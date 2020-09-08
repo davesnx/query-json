@@ -68,7 +68,7 @@ jobs:
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
-          name: ${{ matrix.os }}-release
+          name: ${{ matrix.os }}-artifact
           path: _build/default/bin/q.exe
 
   publish:
@@ -93,20 +93,20 @@ jobs:
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: ubuntu-latest
+          name: ubuntu-latest-artifact
           path: _release/platform-linux-x64
 
       - name: Download macOS artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: macos-latest
+          name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
       # - name: Download windows artifacts
       #   uses: actions/download-artifact@master
       #   with:
-      #     name: windows-latest
+      #     name: windows-latest-artifact
       #     path: _release/platform-windows-x64
 
       - name: Create archives for Github release
