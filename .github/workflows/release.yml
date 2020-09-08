@@ -59,11 +59,7 @@ jobs:
 
       - name: Test
         run: |
-          BISECT_ENABLE=yes esy dune runtest --force
-
-      - name: Debug
-        run: |
-          ls -l -R _esy/default
+          esy dune runtest
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
