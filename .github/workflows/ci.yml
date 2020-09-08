@@ -68,9 +68,3 @@ jobs:
 
       - name: Export dependencies
         run: esy export-dependencies
-
-      - name: Deploy coverage
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GH_TOKEN }}
-          publish_dir: ./_coverage
