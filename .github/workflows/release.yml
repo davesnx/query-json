@@ -63,9 +63,9 @@ jobs:
 
       - name: Debug
         run: |
-          ls
-          echo "--"
-          ls _esy
+          ls _esy/default
+          ls _esy/default/build
+          ls _esy/default/build/default
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
