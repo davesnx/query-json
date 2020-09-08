@@ -94,20 +94,20 @@ jobs:
           name: macos-latest-release
           path: binaries/darwin
 
-      - name: Download windows artifacts
-        if: success()
-        uses: actions/download-artifact@master
-        with:
-          name: windows-latest-release
-          path: binaries/windows
+      # - name: Download windows artifacts
+      #  if: success()
+      #  uses: actions/download-artifact@master
+      #  with:
+      #    name: windows-latest-release
+      #    path: binaries/windows
 
       - name: Move artifacts
         if: success()
         run: |
           mkdir -p bin
           mv binaries/darwin/q.exe bin/q-darwin-x64.exe
-          mv binaries/windows/q.exe bin/q-win-x64.exe
           mv binaries/linux/q.exe bin/q-linux-x64.exe
+        # mv binaries/windows/q.exe bin/q-win-x64.exe
 
       - name: Publish
         if: success() && github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/')
