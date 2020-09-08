@@ -14,17 +14,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        ocaml-version: ['4.09.1']
 
     steps:
       - uses: actions/setup-node@v1
         with:
           node-version: 12
-
-      - name: Use OCaml
-        uses: avsm/setup-ocaml@v1
-        with:
-          ocaml-version: ${{ matrix.ocaml-version }}
 
       - name: Checkout
         uses: actions/checkout@v2
