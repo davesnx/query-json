@@ -81,9 +81,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
-          registry-url: "https://registry.npmjs.org"
 
-             - name: Download linux artifacts
+      - name: Download linux artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
