@@ -69,7 +69,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-release
-          path: _build/default/bin/q.exe
+          path: _esy/default/build/default/bin/q.exe
 
   publish:
     needs: build
