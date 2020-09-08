@@ -121,9 +121,9 @@ jobs:
 
           if [ "$REMOTE" != "$CURRENT" ]
           then
-              echo "New verison and remote version are equal, nothing to publish"
-          else
               npm publish --access public
+          else
+              echo "New verison and remote version are equal, nothing to publish"
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
