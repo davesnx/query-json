@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         ocaml-version: ['4.09.1']
 
     steps:
@@ -52,7 +52,6 @@ jobs:
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
           key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-          restore-keys: build-${{ matrix.os }}-
 
       - name: Restore node modules cache
         uses: actions/cache@v1
@@ -73,14 +72,11 @@ jobs:
         run: |
           BISECT_ENABLE=yes esy dune runtest --force
 
-      - name: esy release
-        run: esy release
-
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-release
-          path: _release-${{ matrix.os }}
+          path: _esy/default/build/default/bin/q.exe
 
   publish:
     needs: build
@@ -93,55 +89,47 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
+          registry-url: "https://registry.npmjs.org"
 
-      - name: Download _release
+             - name: Download linux artifacts
+        if: success()
         uses: actions/download-artifact@master
         with:
-          name: _release-${{ matrix.os }}
-          path: _release-${{ matrix.os }}
+          name: ubuntu-latest
+          path: binaries/linux
 
-      - name: Create MacOS zip archive
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          cd _release/ubuntu-latest
-          zip -r ../../query-json-darwin-x64.zip .
-          cd ../..
-
-      - name: Create Linux zip archive
-        if: ${{ matrix.os == 'macos-latest' }}
-        run: |
-          cd _release/macos-latest
-          zip -r ../../query-json-linux-x64.zip .
-          cd ../..
-
-      - name: Upload zip to Github release
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Download macOS artifacts
+        if: success()
+        uses: actions/download-artifact@master
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: query-json-darwin-x64.zip
-          asset_name: query-json-darwin-x64.zip
-          asset_content_type: application/gzip
+          name: macOS-latest
+          path: binaries/darwin
 
-      - name: Upload query-json-linux-x64.zip to Github release
-        if: ${{ matrix.os == 'macos-latest' }}
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      - name: Download windows artifacts
+        if: success()
+        uses: actions/download-artifact@master
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: query-json-linux-x64.zip
-          asset_name: query-json-linux-x64.zip
-          asset_content_type: application/gzip
+          name: windows-latest
+          path: binaries/windows
 
-      - name: Publish NPM package
+      - name: Move artifacts
+        if: success()
         run: |
-          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
-          npm config set scope "@davesnx"
-          npm config list
-          npm publish --access public
-        working-directory: ./_release
+          mkdir -p bin
+          mv binaries/darwin/q.exe bin/q-darwin-x64.exe
+          mv binaries/windows/q.exe bin/q-win-x64.exe
+          mv binaries/linux/q.exe bin/q-linux-x64.exe
+
+      - name: Publish
+        if: success() && github.event_name != 'pull_request' && startsWith(github.ref, 'refs/tags/')
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Publish Prerelease
+        if: success() && github.event_name != 'pull_request' && !startsWith(github.ref, 'refs/tags/')
+        run: |
+          npm version prerelease -preid $(git rev-parse --short HEAD) -no-git-tag-version
+          npm publish --tag=dev --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}

@@ -66,11 +66,11 @@ jobs:
             ${{ runner.os }}-
 
       - name: Build
-        run: esy dune build --release
+        run: esy dune build
 
       - name: Test
         run: |
-          BISECT_ENABLE=yes esy dune runtest --force
+          esy dune runtest
 
       - name: Export dependencies
         run: esy export-dependencies

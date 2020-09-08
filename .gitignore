@@ -7,3 +7,4 @@ esy.lock
 _build
 _release
 _export
+.ci/*
