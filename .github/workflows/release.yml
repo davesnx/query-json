@@ -111,13 +111,18 @@ jobs:
 
       - name: Publish
         if: success() && github.event_name != 'pull_request'
-        run: npm publish --access public
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Publish Prerelease
         if: success() && github.event_name == 'pull_request'
         run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
           npm version prerelease -preid $(git rev-parse --short HEAD) -no-git-tag-version
           npm publish --tag=dev --access public
         env:
