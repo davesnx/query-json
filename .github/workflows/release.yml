@@ -33,7 +33,7 @@ jobs:
       - name: Install esy
         run: npm install -g esy
 
-      - name: Try to restore install cache
+      - name: Try to restore esy cache
         uses: actions/cache@v2
         with:
           path: ~/.esy/source
@@ -54,7 +54,7 @@ jobs:
           key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
           restore-keys: build-${{ matrix.os }}-
 
-      - name: Cache node modules
+      - name: Restore node modules cache
         uses: actions/cache@v1
         env:
           cache-name: cache-node-modules
@@ -76,18 +76,11 @@ jobs:
       - name: esy release
         run: esy release
 
-      - name: Upload _release
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: _release
-          path: _release
-
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
-          name: ${{ matrix.os }}
-          path: _build/default/bin/q.exe
+          name: ${{ matrix.os }}-release
+          path: _release-${{ matrix.os }}
 
   publish:
     needs: build
@@ -104,49 +97,43 @@ jobs:
       - name: Download _release
         uses: actions/download-artifact@master
         with:
-          name: _release
-          path: _release
+          name: _release-${{ matrix.os }}
+          path: _release-${{ matrix.os }}
 
-      - name: Download linux artifacts
-        uses: actions/download-artifact@master
-        with:
-          name: ubuntu-latest
-          path: _release/platform-linux-x64
-
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@master
-        with:
-          name: macos-latest
-          path: _release/platform-darwin-x64
-
-      - name: Create archives for Github release
+      - name: Create MacOS zip archive
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          cd _release/platform-darwin-x64
-          zip -r ../../spin-darwin-x64.zip .
+          cd _release/ubuntu-latest
+          zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
-          cd _release/platform-linux-x64
-          zip -r ../../spin-linux-x64.zip .
+      - name: Create Linux zip archive
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          cd _release/macos-latest
+          zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
-      - name: Upload spin-darwin-x64.zip to Github release
+      - name: Upload zip to Github release
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: spin-darwin-x64.zip
-          asset_name: spin-darwin-x64.zip
+          asset_path: query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
           asset_content_type: application/gzip
 
-      - name: Upload spin-linux-x64.zip to Github release
+      - name: Upload query-json-linux-x64.zip to Github release
+        if: ${{ matrix.os == 'macos-latest' }}
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: spin-linux-x64.zip
-          asset_name: spin-linux-x64.zip
+          asset_path: query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
           asset_content_type: application/gzip
 
       - name: Publish NPM package
