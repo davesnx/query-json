@@ -29,15 +29,17 @@
     "test:ci": "esy dune runtest",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
-  "build": "dune build -p query-json",
-  "buildsInSource": "_build",
-  "buildEnv": {
-    "ODOC_SYNTAX": "re"
-  },
-  "release": {
-    "bin": [
-      "q"
-    ]
+  "esy": {
+    "build": "dune build -p query-json",
+    "buildsInSource": "_build",
+    "buildEnv": {
+      "ODOC_SYNTAX": "re"
+    },
+    "release": {
+      "bin": [
+        "q"
+      ]
+    }
   },
   "devDependencies": {
     "@esy-ocaml/reason": "~3.6.0",

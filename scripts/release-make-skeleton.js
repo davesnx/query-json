@@ -35,7 +35,7 @@ for (const file of filesToCopy) {
 }
 
 Fs.copyFileSync(
-  Path.join(src, "script", "release-postinstall.js"),
+  Path.join(src, "scripts", "release-postinstall.js"),
   Path.join(dst, "postinstall.js")
 );
 

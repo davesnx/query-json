@@ -56,11 +56,14 @@ jobs:
             ${{ runner.os }}-
 
       - name: Build
-        run: esy build --release
+        run: esy build
 
       - name: Test
         run: |
           esy dune runtest
+
+      - name: Debug
+        run: ls -l -R _esy
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
@@ -84,7 +87,7 @@ jobs:
         run: git fetch --tags --force
 
       - name: Make NPM release skeleton
-        run: node script/release-make-skeleton.js
+        run: node scripts/release-make-skeleton.js
 
       - name: Download linux artifacts
         if: success()
