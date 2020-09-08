@@ -84,21 +84,21 @@ jobs:
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: ubuntu-latest
+          name: ubuntu-latest-release
           path: binaries/linux
 
       - name: Download macOS artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: macOS-latest
+          name: macos-latest-release
           path: binaries/darwin
 
       - name: Download windows artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: windows-latest
+          name: windows-latest-release
           path: binaries/windows
 
       - name: Move artifacts
