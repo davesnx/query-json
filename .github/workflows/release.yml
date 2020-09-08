@@ -62,7 +62,10 @@ jobs:
           BISECT_ENABLE=yes esy dune runtest --force
 
       - name: Debug
-        run: tree
+        run: |
+          ls
+          echo "--"
+          ls _esy
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
