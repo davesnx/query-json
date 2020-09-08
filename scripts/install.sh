@@ -30,21 +30,21 @@ set_filename() {
   OS=$(uname -s)
 
   if [ "$OS" == "Linux" ]; then
-    FILENAME="reason-ls-linux-x64"
+    FILENAME="query-json-linux-x64"
   elif [ "$OS" == "Darwin" ]; then
-    FILENAME="reason-ls-darwin-x64"
+    FILENAME="query-json-darwin-x64"
   else
     echo "OS $OS is not supported."
-    echo "If you think that's a bug - please file an issue to https://github.com/danielo515/reason-ls/issues"
+    echo "If you think that's a bug - please file an issue to https://github.com/davesnx/query-json/issues"
     exit 1
   fi
 }
 
 download() {
   if [ "$RELEASE" == "latest" ]; then
-    URL=https://github.com/danielo515/reason-ls/releases/latest/download/$FILENAME.zip
+    URL=https://github.com/danielo515/query-json/releases/latest/download/$FILENAME.zip
   else
-    URL=https://github.com/danielo515/reason-ls/releases/download/$RELEASE/$FILENAME.zip
+    URL=https://github.com/danielo515/query-json/releases/download/$RELEASE/$FILENAME.zip
   fi
 
   DOWNLOAD_DIR=$(mktemp -d)
@@ -60,8 +60,8 @@ download() {
   fi
 
   unzip -q "$DOWNLOAD_DIR/$FILENAME.zip" -d "$DOWNLOAD_DIR"
-  mv "$DOWNLOAD_DIR/reason-ls" "$INSTALL_DIR/reason-ls"
-  chmod u+x "$INSTALL_DIR/reason-ls"
+  mv "$DOWNLOAD_DIR/query-json" "$INSTALL_DIR/query-json"
+  chmod u+x "$INSTALL_DIR/query-json"
 }
 
 check_dependencies() {
