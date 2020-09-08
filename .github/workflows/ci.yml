@@ -33,7 +33,7 @@ jobs:
 
       - name: Print esy cache
         id: print_esy_cache
-        run: node .github/workflows/print-esy-cache.js
+        run: node scripts/print-esy-cache.js
 
       - name: Try to restore build cache
         id: deps-cache

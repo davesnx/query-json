@@ -34,7 +34,7 @@ jobs:
 
       - name: Print esy cache
         id: print_esy_cache
-        run: node .github/workflows/print-esy-cache.js
+        run: node scripts/print-esy-cache.js
 
       - name: Try to restore build cache
         id: deps-cache
@@ -56,7 +56,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Build
-        run: esy build
+        run: esy build --release
 
       - name: Test
         run: |
@@ -80,34 +80,45 @@ jobs:
         with:
           node-version: 12.x
 
+      - name: Fetch git tags
+        run: git fetch --tags --force
+
+      - name: Make NPM release skeleton
+        run: node script/release-make-skeleton.js
+
       - name: Download linux artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: ubuntu-latest-release
-          path: binaries/linux
+          name: ubuntu-latest
+          path: _release/platform-linux-x64
 
       - name: Download macOS artifacts
         if: success()
         uses: actions/download-artifact@master
         with:
-          name: macos-latest-release
-          path: binaries/darwin
+          name: macos-latest
+          path: _release/platform-darwin-x64
 
       # - name: Download windows artifacts
-      #  if: success()
-      #  uses: actions/download-artifact@master
-      #  with:
-      #    name: windows-latest-release
-      #    path: binaries/windows
+      #   uses: actions/download-artifact@master
+      #   with:
+      #     name: windows-latest
+      #     path: _release/platform-windows-x64
 
-      - name: Move artifacts
-        if: success()
+      - name: Create archives for Github release
         run: |
-          mkdir -p bin
-          mv binaries/darwin/q.exe bin/q-darwin-x64.exe
-          mv binaries/linux/q.exe bin/q-linux-x64.exe
-        # mv binaries/windows/q.exe bin/q-win-x64.exe
+          cd _release/platform-darwin-x64
+          zip -r ../../query-json-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          zip -r ../../query-json-linux-x64.zip .
+          cd ../..
+
+          # cd _release/platform-windows-x64
+          # zip -r ../../query-json-windows-x64.zip .
+          # cd ../..
 
       - name: Publish
         if: success() && github.event_name != 'pull_request'
@@ -125,6 +136,7 @@ jobs:
           else
               echo "New verison and remote version are equal, nothing to publish"
           fi
+        working-directory: ./_release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
@@ -135,5 +147,51 @@ jobs:
           npm config set scope "@davesnx"
           npm version prerelease -preid $(git rev-parse --short HEAD) -no-git-tag-version
           npm publish --tag=dev --access public
+        working-directory: ./_release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Create Github release
+        id: create_release
+        if: "startsWith(github.ref, 'refs/tags/v')"
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Upload query-json-darwin-x64.zip to Github release
+        uses: actions/upload-release-asset@v1.0.1
+        if: "startsWith(github.ref, 'refs/tags/v')"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Upload query-json-linux-x64.zip to Github release
+        uses: actions/upload-release-asset@v1.0.1
+        if: "startsWith(github.ref, 'refs/tags/v')"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
+          asset_content_type: application/gzip
+
+      # - name: Upload spin-windows-x64.zip to Github release
+      #   uses: actions/upload-release-asset@v1.0.1
+      #   if: "startsWith(github.ref, 'refs/tags/v')"
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      #   with:
+      #     upload_url: ${{ github.event.release.upload_url }}
+      #     asset_path: spin-windows-x64.zip
+      #     asset_name: spin-windows-x64.zip
+      #     asset_content_type: application/gzip
