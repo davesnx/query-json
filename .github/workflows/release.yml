@@ -114,7 +114,17 @@ jobs:
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
-          npm publish --access public
+
+          REMOTE=$(npm view @davesnx/query-json version)
+          # Shame, we could use q for this!
+          CURRENT=$(jq -r .version package.json)
+
+          if [ "$REMOTE" != "$CURRENT" ]
+          then
+              echo "New verison and remote version are equal, nothing to publish"
+          else
+              npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
