@@ -55,7 +55,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Build
-        run: esy dune build
+        run: esy build
 
       - name: Test
         run: |
