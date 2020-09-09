@@ -165,7 +165,7 @@ jobs:
         with:
           tag_name: ${{ steps.sha.outputs.sha_short }}
           release_name: Release ${{ steps.sha.outputs.sha_short }}
-          draft: true
+          draft: false
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
