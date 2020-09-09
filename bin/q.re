@@ -1,63 +1,53 @@
 open Source;
 open Source.Compiler;
 
-let stdinMock = {|
-  {
-    "store": {
-      "books": [
-        { "category": "reference",
-          "author": "Nigel Rees",
-          "title": "Sayings of the Century",
-          "price": 8
-        },
-        { "category": "fiction",
-          "author": "Evelyn Waugh",
-          "title": "Sword of Honour",
-          "price": 12
-        },
-        { "category": "fiction",
-          "author": "Herman Melville",
-          "title": "Moby Dick",
-          "isbn": "0-553-21311-3",
-          "price": 8
-        },
-        { "category": "fiction",
-          "author": "J. R. R. Tolkien",
-          "title": "The Lord of the Rings",
-          "isbn": "0-395-19395-8",
-          "price": 22
-        }
-      ]
-    },
-    "people": {
-      "Team Mark": 23,
-      "Team Valerie": 12,
-      "Team Jor": 0,
-      "No team": "No score"
-    }
-  }
-|};
+type inputKind =
+  | File
+  | Inline;
 
-let main = (input: string) => {
-  let json = Yojson.Basic.from_string(stdinMock);
-  let program = Main.parse(input);
+let run = (query: string, file: string, _verbose: bool) => {
+  let json = Yojson.Basic.from_file(file);
+  let program = Main.parse(query);
   let runtime = compile(program);
 
-  Yojson.Basic.pretty_to_string(runtime(json));
+  Yojson.Basic.pretty_to_string(runtime(json)) |> print_endline;
 };
 
-type config = {
-  verbose: bool,
-  debug: bool,
+open Cmdliner;
+open Term;
+
+let query = {
+  let doc = "Query to run";
+  Arg.(value & pos(0, string, ".") & info([], ~docv="QUERY", ~doc));
 };
 
-/* let verbose = ref(false);
-   let debug = ref(false);
+let json = {
+  let doc = "JSON file";
+  Arg.(value & pos(1, file, "package.json") & info([], ~docv="FILE", ~doc));
+};
 
-   let argSpecList = [("-v", Arg.Set(verbose), "Enables verbose mode")];
-    */
-let input = Sys.argv[1];
+let verbose = {
+  let doc = "Activate verbossity";
+  Arg.(value & flag & info(["v", "verbose"], ~doc));
+};
 
-/* Check that input is a string */
+let cmd = {
+  (
+    Term.(const(run) $ query $ json $ verbose),
+    Term.info(
+      "q",
+      ~version=Info.version,
+      ~doc="Run operations on JSON",
+      ~exits=Term.default_exits,
+      ~man=[
+        `S(Manpage.s_description),
+        `P("$(tname)" ++ Info.description),
+        `P("q '.dependencies' package.json"),
+        `S(Manpage.s_bugs),
+        `P("Report them to ."),
+      ],
+    ),
+  );
+};
 
-main(input) |> print_endline;
+exit(eval(cmd));
