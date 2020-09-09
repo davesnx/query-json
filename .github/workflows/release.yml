@@ -121,13 +121,10 @@ jobs:
           # zip -r ../../query-json-windows-x64.zip .
           # cd ../..
 
-      - name: Setup BATS
-        uses: mig4/setup-bats@master
-        with:
-          bats-version: 1.1.0
-
       - name: End to end Test
-        run: bats ./e2e/test.sh
+        run: |
+          npm install -g bats
+          bats ./e2e/test.sh
 
       - name: Publish
         if: success() && github.event_name != 'pull_request'
