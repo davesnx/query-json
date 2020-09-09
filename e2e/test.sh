@@ -1,7 +1,11 @@
 #!/usr/bin/env bats
 
 function q () {
-  run "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe" "$@"
+  if [[ ! -z $CI ]]; then
+    run "$BATS_TEST_DIRNAME/../_release/platform-linux-x64/q" "$@"
+  else
+    run "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe" "$@"
+  fi
 }
 
 @test "json call works ok" {
