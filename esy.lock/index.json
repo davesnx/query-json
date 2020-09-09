@@ -1,5 +1,5 @@
 {
-  "checksum": "00f730548dab03d2816e91ac1bec39f3",
+  "checksum": "7597fcc85e61600e4e1775a6ae70eace",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.0@d41d8cd9": {
@@ -10,6 +10,20 @@
         "type": "install",
         "source": [
           "archive:https://registry.npmjs.org/ocaml/-/ocaml-4.10.0.tgz#sha1:3797ee252dca8dec38d3cdd42162923f56dba433"
+        ]
+      },
+      "overrides": [],
+      "dependencies": [],
+      "devDependencies": []
+    },
+    "bats@1.1.0@d41d8cd9": {
+      "id": "bats@1.1.0@d41d8cd9",
+      "name": "bats",
+      "version": "1.1.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://registry.npmjs.org/bats/-/bats-1.1.0.tgz#sha1:6fc44f283ed4e7af2b6ffac93ec5026a1acbdc66"
         ]
       },
       "overrides": [],
@@ -1301,7 +1315,7 @@
       "version": "link-dev:./esy.json",
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
-      "dependencies": [ "@opam/cmdliner@opam:1.0.4@93208aac" ],
+      "dependencies": [ "bats@1.1.0@d41d8cd9" ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "@reason-native/rely@3.2.1@d41d8cd9",
         "@reason-native/console@0.1.0@d41d8cd9",
@@ -1311,6 +1325,7 @@
         "@opam/ocaml-lsp-server@github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2@d41d8cd9",
         "@opam/menhir@opam:20200624@8629ff13",
         "@opam/dune@opam:2.7.1@70792dee",
+        "@opam/cmdliner@opam:1.0.4@93208aac",
         "@opam/bisect_ppx@opam:2.4.1@b38eb938",
         "@esy-ocaml/reason@3.6.2@d41d8cd9"
       ]

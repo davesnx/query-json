@@ -59,8 +59,7 @@ jobs:
         run: esy build
 
       - name: Test
-        run: |
-          esy dune runtest
+        run: esy dune runtest
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
@@ -122,15 +121,21 @@ jobs:
           # zip -r ../../query-json-windows-x64.zip .
           # cd ../..
 
+      - name: Setup BATS
+        uses: mig4/setup-bats@master
+        with:
+          bats-version: 1.1.0
+
+      - name: End to end Test
+        run: bats ./e2e/test.sh
+
       - name: Publish
         if: success() && github.event_name != 'pull_request'
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
-
           REMOTE=$(npm view @davesnx/query-json version)
-          # Shame, we could use q for this!
-          CURRENT=$(jq -r .version package.json)
+          CURRENT=$(_release/platform-linux-x64/q '.version' package.json)
 
           if [ "$REMOTE" != "$CURRENT" ]
           then
@@ -145,6 +150,7 @@ jobs:
       - name: Print short SHA
         id: sha
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
 
       - name: Publish Prerelease
         if: success() && github.event_name == 'pull_request'
