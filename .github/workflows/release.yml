@@ -131,6 +131,8 @@ jobs:
 
       - name: End to end Test
         run: |
+          ls
+          ./q '.version' esy.json
           bats ./e2e/test.sh
         env:
           IS_CI: true
