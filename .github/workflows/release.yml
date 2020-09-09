@@ -62,9 +62,6 @@ jobs:
         run: |
           esy dune runtest
 
-      - name: Debug
-        run: ls -l -R _esy
-
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
@@ -112,10 +109,12 @@ jobs:
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
+          mv q.exe q
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
+          mv q.exe q
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
