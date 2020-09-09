@@ -42,9 +42,9 @@ set_filename() {
 
 download() {
   if [ "$RELEASE" == "latest" ]; then
-    URL=https://github.com/danielo515/query-json/releases/latest/download/$FILENAME.zip
+    URL=https://github.com/davesnx/query-json/releases/latest/download/$FILENAME.zip
   else
-    URL=https://github.com/danielo515/query-json/releases/download/$RELEASE/$FILENAME.zip
+    URL=https://github.com/davesnx/query-json/releases/download/$RELEASE/$FILENAME.zip
   fi
 
   DOWNLOAD_DIR=$(mktemp -d)
