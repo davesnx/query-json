@@ -159,9 +159,10 @@ jobs:
         uses: actions/create-release@v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA_SHORT: ${{ GITHUB_SHA_SHORT }}
         with:
-          tag_name: ${{ GITHUB_SHA }}
-          release_name: Release ${{ GITHUB_SHA }}
+          tag_name: ${{ GITHUB_SHA_SHORT }}
+          release_name: Release ${{ GITHUB_SHA_SHORT }}
           draft: true
           prerelease: true
 
