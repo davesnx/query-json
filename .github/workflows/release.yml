@@ -131,8 +131,6 @@ jobs:
 
       - name: End to end Test
         run: |
-          ls
-          ./q '.version' esy.json
           bats ./e2e/test.sh
         env:
           IS_CI: true
@@ -143,7 +141,7 @@ jobs:
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
           REMOTE=$(npm view @davesnx/query-json version)
-          CURRENT=$(./q '.version' esy.json)
+          CURRENT=$(esy q -- '.version' esy.json)
 
           if [ "$REMOTE" != "$CURRENT" ]
           then
