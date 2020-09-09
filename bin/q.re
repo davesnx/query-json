@@ -5,8 +5,20 @@ type inputKind =
   | File
   | Inline;
 
-let run = (query: string, input: string, _verbose: bool) => {
-  let json = Yojson.Basic.from_file(input);
+let run =
+    (
+      query: string,
+      input: string,
+      kind: inputKind,
+      _verbose: bool,
+      _debug: bool,
+      _colorize: bool,
+    ) => {
+  let json =
+    switch (kind) {
+    | File => Yojson.Basic.from_file(input)
+    | Inline => Yojson.Basic.from_string(input)
+    };
   let program = Main.parse(query);
   let runtime = compile(program);
 
@@ -23,7 +35,13 @@ let query = {
 
 let json = {
   let doc = "JSON file";
-  Arg.(value & pos(1, file, "package.json") & info([], ~doc));
+  Arg.(required & pos(1, some(string), None) & info([], ~doc));
+};
+
+let kind = {
+  let doc = "input kind";
+  let kindEnum = Arg.enum([("file", File), ("inline", Inline)]);
+  Arg.(value & opt(kindEnum, ~vopt=File, File) & info(["k", "kind"], ~doc));
 };
 
 let verbose = {
@@ -31,9 +49,19 @@ let verbose = {
   Arg.(value & flag & info(["v", "verbose"], ~doc));
 };
 
+let debug = {
+  let doc = "Activate debug mode";
+  Arg.(value & flag & info(["d", "debug"], ~doc));
+};
+
+let colorize = {
+  let doc = "Enable or disable color in the output";
+  Arg.(value & flag & info(["c", "colorize"], ~doc));
+};
+
 let cmd = {
   (
-    Term.(const(run) $ query $ json $ verbose),
+    Term.(const(run) $ query $ json $ kind $ verbose $ debug $ colorize),
     Term.info(
       "q",
       ~version=Info.version,
