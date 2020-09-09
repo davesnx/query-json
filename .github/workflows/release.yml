@@ -156,21 +156,19 @@ jobs:
 
       - name: Create Github release
         id: create_release
-        if: "startsWith(github.ref, 'refs/tags/v')"
         uses: actions/create-release@v1.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ env.GITHUB_SHA }}
+          release_name: Release ${{ env.GITHUB_SHA }}
+          draft: true
+          prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
         uses: actions/upload-release-asset@v1.0.1
-        if: "startsWith(github.ref, 'refs/tags/v')"
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: query-json-darwin-x64.zip
@@ -179,9 +177,8 @@ jobs:
 
       - name: Upload query-json-linux-x64.zip to Github release
         uses: actions/upload-release-asset@v1.0.1
-        if: "startsWith(github.ref, 'refs/tags/v')"
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: query-json-linux-x64.zip
@@ -192,7 +189,7 @@ jobs:
       #   uses: actions/upload-release-asset@v1.0.1
       #   if: "startsWith(github.ref, 'refs/tags/v')"
       #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       #   with:
       #     upload_url: ${{ github.event.release.upload_url }}
       #     asset_path: spin-windows-x64.zip
