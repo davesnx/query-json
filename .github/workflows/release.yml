@@ -121,10 +121,11 @@ jobs:
           # zip -r ../../query-json-windows-x64.zip .
           # cd ../..
 
+      - name: Install bats
+        run: npm install -g bats
+
       - name: End to end Test
-        run: |
-          npm install -g bats
-          bats ./e2e/test.sh
+        run: bats ./e2e/test.sh
 
       - name: Publish
         if: success() && github.event_name != 'pull_request'
