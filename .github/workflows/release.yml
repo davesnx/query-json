@@ -143,26 +143,30 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
+       - name: Print short SHA
+        id: sha
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
       - name: Publish Prerelease
         if: success() && github.event_name == 'pull_request'
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
-          npm version prerelease -preid $(git rev-parse --short HEAD) -no-git-tag-version
+          npm version prerelease -preid ${{ steps.sha.outputs.sha_short }} -no-git-tag-version
           npm publish --tag=dev --access public
         working-directory: ./_release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
 
       - name: Create Github release
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_SHA_SHORT: ${{ GITHUB_SHA_SHORT }}
         with:
-          tag_name: ${{ GITHUB_SHA_SHORT }}
-          release_name: Release ${{ GITHUB_SHA_SHORT }}
+          tag_name: ${{ steps.sha.outputs.sha_short }}
+          release_name: Release ${{ steps.sha.outputs.sha_short }}
           draft: true
           prerelease: true
 
