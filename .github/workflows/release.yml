@@ -158,7 +158,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
-
       - name: Create Github release
         id: create_release
         uses: actions/create-release@v1.0.0
