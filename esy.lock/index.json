@@ -1,5 +1,5 @@
 {
-  "checksum": "47aa654f6baf7e1e347a78f395d5ae32",
+  "checksum": "00f730548dab03d2816e91ac1bec39f3",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.0@d41d8cd9": {
@@ -1301,7 +1301,7 @@
       "version": "link-dev:./esy.json",
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
-      "dependencies": [],
+      "dependencies": [ "@opam/cmdliner@opam:1.0.4@93208aac" ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "@reason-native/rely@3.2.1@d41d8cd9",
         "@reason-native/console@0.1.0@d41d8cd9",

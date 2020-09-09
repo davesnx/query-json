@@ -1,6 +1,6 @@
 {
   "name": "@davesnx/query-json",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Simpler implementation of jq in Reason Native",
   "author": "davesnx <dsnxmoreno@gmail.com>",
   "license": "MIT",
@@ -53,6 +53,7 @@
     "@reason-native/console": "^0.1.0",
     "@reason-native/rely": "^3.2.1",
     "ocaml": "4.10.0",
-    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2"
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
+    "@opam/cmdliner": "1.0.4"
   }
 }
