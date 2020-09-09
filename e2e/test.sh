@@ -1,8 +1,9 @@
 #!/usr/bin/env bats
 
 function q () {
-  if [[ ! -z $CI ]]; then
-    run "$BATS_TEST_DIRNAME/../_release/platform-linux-x64/q" "$@"
+  if [[ ! -z $IS_CI ]]; then
+    echo "Running in CI mode"
+    run "$BATS_TEST_DIRNAME/_release/platform-linux-x64/q" "$@"
   else
     run "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe" "$@"
   fi
