@@ -143,7 +143,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
-       - name: Print short SHA
+      - name: Print short SHA
         id: sha
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
