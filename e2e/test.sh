@@ -3,8 +3,7 @@
 function q () {
   if [[ ! -z $IS_CI ]]; then
     echo "Running in CI mode"
-    chmod +x $BATS_TEST_DIRNAME/../_release/platform-linux-x64/q
-    run "$BATS_TEST_DIRNAME/../_release/platform-linux-x64/q" "$@"
+    run q "$@"
   else
     chmod +x "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe"
     run "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe" "$@"

@@ -105,6 +105,11 @@ jobs:
       #     name: windows-latest-artifact
       #     path: _release/platform-windows-x64
 
+      - name: Publish q from linux artifcats
+        run: |
+          cp _release/platform-linux-x64/q.exe ./q
+          chmod +x q
+
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
