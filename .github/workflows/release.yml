@@ -126,7 +126,6 @@ jobs:
 
       - name: End to end Test
         run: |
-          chmod +x
           bats ./e2e/test.sh
         env:
           IS_CI: true

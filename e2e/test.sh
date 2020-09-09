@@ -6,6 +6,7 @@ function q () {
     chmod +x $BATS_TEST_DIRNAME/../_release/platform-linux-x64/q
     run "$BATS_TEST_DIRNAME/../_release/platform-linux-x64/q" "$@"
   else
+    chmod +x "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe"
     run "$BATS_TEST_DIRNAME/../_build/default/bin/q.exe" "$@"
   fi
 }
