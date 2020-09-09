@@ -5,8 +5,8 @@ type inputKind =
   | File
   | Inline;
 
-let run = (query: string, file: string, _verbose: bool) => {
-  let json = Yojson.Basic.from_file(file);
+let run = (query: string, input: string, _verbose: bool) => {
+  let json = Yojson.Basic.from_file(input);
   let program = Main.parse(query);
   let runtime = compile(program);
 
@@ -18,12 +18,12 @@ open Term;
 
 let query = {
   let doc = "Query to run";
-  Arg.(value & pos(0, string, ".") & info([], ~docv="QUERY", ~doc));
+  Arg.(value & pos(0, string, ".") & info([], ~doc));
 };
 
 let json = {
   let doc = "JSON file";
-  Arg.(value & pos(1, file, "package.json") & info([], ~docv="FILE", ~doc));
+  Arg.(value & pos(1, file, "package.json") & info([], ~doc));
 };
 
 let verbose = {
@@ -41,10 +41,10 @@ let cmd = {
       ~exits=Term.default_exits,
       ~man=[
         `S(Manpage.s_description),
-        `P("$(tname)" ++ Info.description),
+        `P(Info.description),
         `P("q '.dependencies' package.json"),
         `S(Manpage.s_bugs),
-        `P("Report them to ."),
+        `P("Report them to " ++ Info.bugUrl),
       ],
     ),
   );
