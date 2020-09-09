@@ -136,7 +136,7 @@ jobs:
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
           REMOTE=$(npm view @davesnx/query-json version)
-          CURRENT=$(_release/platform-linux-x64/q '.version' package.json)
+          CURRENT=$(jq '.version' package.json)
 
           if [ "$REMOTE" != "$CURRENT" ]
           then
