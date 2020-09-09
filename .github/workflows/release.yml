@@ -125,9 +125,7 @@ jobs:
         run: npm install -g bats
 
       - name: End to end Test
-        run: |
-          ls -l -R _release/
-          bats ./e2e/test.sh
+        run: bats ./e2e/test.sh
         env:
           IS_CI: true
 
