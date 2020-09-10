@@ -65,6 +65,8 @@ jobs:
       - name: Test
         run: |
           esy dune runtest --force
+        env:
+          IS_CI: true
 
       - name: Deploy coverage
         run: |
