@@ -10,7 +10,7 @@
 
 ---
 
-**query-json (q)** is a [faster](./benchmarks/report.md) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to native thanks to OCaml. q, allows you to write small programs to operate on top of json files in a cute syntax.
+**query-json (q)** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **q**, allows you to write small programs to operate on top of json files in a cute syntax.
 
 ```bash
 q ".store.books | filter(.price > 10)" stores.json
@@ -35,13 +35,15 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 
 ## It brings
 
-- **Great Performance**: Fast, small footprint and minimum run-time. Check ][report](./benchmarks/report.md)
+- **Great Performance**: Fast, small footprint and minimum run-time. Check [Performance section](#Performance) for a longer explaination.
 - **Delightful errors**:
-  - Better errors when json "shapes" and operations don't match.
+  - Better errors when json types and operation types don't match.
   - `verbose` flag, prints each operation in each state and it's intermediate states.
   - `debug` prints the tokens and the AST.
-- **Improved API**: made small adjustments to the buildin operations. For example, all methods are snake_case instead of alltoghetercase, changed select to filter, and other details.
-- **Small**: Lexer, Parser and Compiler are just 300 LOC and most of all the commands that I use on my day to day, are implemented in only 140 LOC.
+- **Improved API**: made small adjustments to the buildin operations. Some examples are:
+  - All methods are snake_case instead of alltoghetercase
+  - Changed `select` for `filter`
+- **Small**: Lexer, Parser and Compiler are just 300 LOC and most of the commands that I use on my day to day are implemented in only 140 LOC.
 
 ## Installation
 
