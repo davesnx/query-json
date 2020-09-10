@@ -1,7 +1,7 @@
-<p align="center">
+<p>
   <br>
   <br>
-  <img alt="query-json logo" src="docs/logo.svg" />
+  <img width="500" alt="query-json logo" src="docs/logo.svg" />
   <br>
   <br>
   <br>
