@@ -19,6 +19,7 @@ let tests: list((string, expression)) = [
   ),
   (".[1]", Pipe(Identity, Index(1))),
   (".books[1]", Pipe(Key("books"), Index(1))),
+  (".WAT", Key("WAT")),
 ];
 
 describe("correctly parse value", ({test, _}) => {
