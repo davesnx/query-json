@@ -65,7 +65,6 @@ jobs:
       - name: Test
         run: |
           esy dune test --force
-          ls
         env:
           IS_CI: true
 

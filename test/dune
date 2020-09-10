@@ -3,7 +3,9 @@
  (ocamlopt_flags -linkall -g)
  (libraries query-json.lib rely.lib)
  (modules
-  (:standard \ Run)))
+  (:standard \ Run)
+ )
+)
 
 (executable
  (package query-json)
@@ -15,4 +17,5 @@
 
 (rule
  (alias runtest)
- (action (run ./Run.exe)))
+ (action (run ./Run.exe))
+)

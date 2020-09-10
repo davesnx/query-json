@@ -6,6 +6,8 @@ let ppxs =
   | _ -> "ppx_deriving.show sedlex.ppx"
   | exception Not_found -> "ppx_deriving.show sedlex.ppx"
 
+print_endline ppxs
+
 let () = Jbuild_plugin.V1.send @@ {|
  (library
   (name source)
