@@ -1,0 +1,5 @@
+(executable
+ (name q)
+ (public_name q)
+ (libraries console.lib source yojson cmdliner)
+)

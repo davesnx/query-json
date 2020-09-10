@@ -1,0 +1,10 @@
+(library
+ (name source)
+ (public_name query-json.lib)
+ (libraries menhirLib yojson sedlex console.lib compiler-libs.common)
+ (preprocess
+  (pps ppx_deriving.show sedlex.ppx)
+ )
+)
+
+(menhir (flags --strict --external-tokens Tokenizer --explain --dump) (modules Parser))

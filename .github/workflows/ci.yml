@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    steps:
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          persist-credentials: false
+
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Install
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node scripts/print-esy-cache.js
+
+      - name: Try to restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: build-${{ matrix.os }}-
+
+      - name: Import dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: esy import-build _export/*
+
+      - name: Cache node modules
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.yarn-cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Build
+        run: esy dune build
+
+      - name: Test
+        run: |
+          BISECT_ENABLE=yes esy dune runtest --force
+
+      - name: Export dependencies
+        run: esy export-dependencies

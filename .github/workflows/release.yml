@@ -1,0 +1,212 @@
+name: Release
+
+on: [pull_request, push]
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 12.x
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Try to restore esy cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ hashFiles('**/index.json') }}
+
+      - name: Install dependencies
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node scripts/print-esy-cache.js
+
+      - name: Try to restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Restore node modules cache
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.yarn-cache
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: Build
+        run: esy build
+
+      - name: Test
+        run: esy dune runtest
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}-artifact
+          path: _build/default/bin/q.exe
+
+  publish:
+    needs: build
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Fetch git tags
+        run: git fetch --tags --force
+
+      - name: Make NPM release skeleton
+        run: node scripts/release-make-skeleton.js
+
+      - name: Download linux artifacts
+        if: success()
+        uses: actions/download-artifact@master
+        with:
+          name: ubuntu-latest-artifact
+          path: _release/platform-linux-x64
+
+      - name: Download macOS artifacts
+        if: success()
+        uses: actions/download-artifact@master
+        with:
+          name: macos-latest-artifact
+          path: _release/platform-darwin-x64
+
+      # - name: Download windows artifacts
+      #   uses: actions/download-artifact@master
+      #   with:
+      #     name: windows-latest-artifact
+      #     path: _release/platform-windows-x64
+
+      - name: Publish q from linux artifcats
+        run: |
+          cp _release/platform-linux-x64/q.exe ./q
+          chmod +x q
+
+      - name: Create archives for Github release
+        run: |
+          cd _release/platform-darwin-x64
+          mv q.exe q
+          zip -r ../../query-json-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          mv q.exe q
+          zip -r ../../query-json-linux-x64.zip .
+          cd ../..
+
+          # cd _release/platform-windows-x64
+          # zip -r ../../query-json-windows-x64.zip .
+          # cd ../..
+
+      - name: Install bats
+        run: npm install -g bats
+
+      - name: End to end Test
+        run: |
+          bats ./e2e/test.sh
+        env:
+          IS_CI: true
+
+      - name: Publish
+        if: success() && github.event_name != 'pull_request'
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          REMOTE=$(npm view @davesnx/query-json version)
+          CURRENT=$(jq '.version' package.json)
+
+          if [ "$REMOTE" != "$CURRENT" ]
+          then
+              npm publish --access public
+          else
+              echo "New verison and remote version are equal, nothing to publish"
+          fi
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Print short SHA
+        id: sha
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+
+      - name: Publish Prerelease
+        if: success() && github.event_name == 'pull_request'
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm version prerelease -preid ${{ steps.sha.outputs.sha_short }} -no-git-tag-version
+          npm publish --tag=dev --access public
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Create Github release
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.sha.outputs.sha_short }}
+          release_name: Release ${{ steps.sha.outputs.sha_short }}
+          draft: false
+          prerelease: true
+
+      - name: Upload query-json-darwin-x64.zip to Github release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Upload query-json-linux-x64.zip to Github release
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
+          asset_content_type: application/gzip
+
+      # - name: Upload spin-windows-x64.zip to Github release
+      #   uses: actions/upload-release-asset@v1.0.1
+      #   if: "startsWith(github.ref, 'refs/tags/v')"
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     upload_url: ${{ github.event.release.upload_url }}
+      #     asset_path: spin-windows-x64.zip
+      #     asset_name: spin-windows-x64.zip
+      #     asset_content_type: application/gzip

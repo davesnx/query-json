@@ -1,0 +1,62 @@
+{
+  "name": "@davesnx/query-json",
+  "version": "0.2.1",
+  "description": "Simpler implementation of jq in Reason Native",
+  "author": "davesnx <dsnxmoreno@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/davesnx/query-json",
+  "keywords": [
+    "reason",
+    "ocaml",
+    "jq",
+    "json",
+    "reason-native",
+    "menhir",
+    "cli"
+  ],
+  "bugs": {
+    "url": "https://github.com/davesnx/query-json/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/davesnx/query-json.git"
+  },
+  "scripts": {
+    "q": "esy dune exec q",
+    "build": "esy dune build -p query-json",
+    "start": "esy dune build --watch",
+    "test": "esy dune exec test/Run.exe",
+    "test:ci": "esy dune runtest",
+    "format": "esy b dune build @fmt --auto-promote --root ."
+  },
+  "esy": {
+    "build": "dune build -p query-json",
+    "buildsInSource": "_build",
+    "buildEnv": {
+      "ODOC_SYNTAX": "re"
+    },
+    "release": {
+      "bin": [
+        "q"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@esy-ocaml/reason": "~3.6.0",
+    "@opam/bisect_ppx": "2.4.1",
+    "@opam/dune": "^2.7.0",
+    "@opam/menhir": "20200624",
+    "@opam/ppx_deriving": "4.5",
+    "@opam/ppxlib": "0.15.0",
+    "@opam/sedlex": "2.2",
+    "@opam/yojson": "1.7.0",
+    "@reason-native/console": "^0.1.0",
+    "@reason-native/rely": "^3.2.1",
+    "ocaml": "4.10.0",
+    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
+    "@opam/cmdliner": "1.0.4"
+  },
+  "dependencies": {
+    "bats": "^1.1.0"
+  }
+}

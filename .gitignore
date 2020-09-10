@@ -1,0 +1,8 @@
+_esy
+*.install
+node_modules
+*.merlin
+_build
+_release
+_export
+.ci/*
