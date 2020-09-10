@@ -26,7 +26,6 @@
     "build": "esy dune build -p query-json",
     "start": "esy dune build --watch",
     "test": "esy dune exec test/Run.exe",
-    "test:ci": "esy dune runtest",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
   "esy": {
