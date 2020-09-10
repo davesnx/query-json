@@ -9,13 +9,13 @@
 
 ---
 
-**query-json (q)** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **q**, allows you to write small programs to operate on top of json files in a cute syntax.
+**query-json (q)** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **q**, allows you to write small programs to operate on top of json files in a cute syntax:
 
 ```bash
 q ".store.books | filter(.price > 10)" stores.json
 ```
 
-This would access to `"store"` field inside the **stores.json**, access to `"books"` field, (since it's an array) it will run a filter on each item and if `"price"` field is lower than 10 will keep that item on the list, and finally print the resultant list.
+This would access to `"store"` field inside the **stores.json**, access to `"books"` field, (since it's an array) it will run a filter on each item and if `"price"` field is bigger than 10 will keep that item on the list, and finally print the resultant list.
 
 ```json
 [
@@ -167,7 +167,7 @@ The purposes of this project were mostly 2:
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me [@twitter](https://twitter.com/davesnx) or email (dsnxmoreno@gmail.com).
+Contributions are what make the open source community such an amazing place to be, learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me [@twitter](https://twitter.com/davesnx) or email (dsnxmoreno@gmail.com).
 
 ### Support
 
@@ -181,7 +181,7 @@ Requirements: [esy](https://esy.sh)
 git clone https://github.com/davesnx/query-json
 cd query-json
 esy # installs everything
-esy test # runs unit-tests with [rely](https://reason-native.com/docs/rely/), defined under test.
+esy test # runs unit tests with [rely](https://reason-native.com/docs/rely), defined under test/.
 esy q # Run binary
 ```
 
