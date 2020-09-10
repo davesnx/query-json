@@ -1,7 +1,5 @@
 <p>
-  <br>
   <img width="500" alt="query-json logo" src="docs/logo.svg" />
-  <br>
   <br>
   <br>
   <a href="https://github.com/davesnx/query-json/actions"><img src="https://github.com/davesnx/query-json/workflows/Build%20master/badge.svg" /></a>
@@ -188,4 +186,4 @@ esy q # Run binary
 
 ## Acknowledgements
 
-Thanks to [@EduardoRFS](https://github.com/EduardoRFS). Thanks to all the authors of dependencies that this project relies (menhir, sedlex, yojson). Thanks to the OCaml and Reason Native team.
+Thanks to [@EduardoRFS](https://github.com/EduardoRFS). Thanks to all the authors of dependencies that this project relies on: [menhir](http://gallium.inria.fr/~fpottier/menhir), [sedlex](https://github.com/ocaml-community/sedlex), [yojson](https://github.com/ocaml-community/yojson). Thanks to the OCaml and Reason Native team.
