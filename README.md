@@ -5,6 +5,7 @@
   <br>
   <br>
   <a href="https://github.com/davesnx/query-json/actions"><img src="https://github.com/davesnx/query-json/workflows/Build%20master/badge.svg" /></a>
+  <a href='https://coveralls.io/github/davesnx/query-json?branch=master'><img src='https://coveralls.io/repos/github/davesnx/query-json/badge.svg?branch=master' alt='Coverage Status' /></a>
 </p>
 
 ---

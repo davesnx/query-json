@@ -1,9 +1,11 @@
 _esy
+.ci/*
 *.install
 node_modules
 *.merlin
 _build
 _release
 _export
-.ci/*
+_coverage
 ./trash.json
+*.coverage

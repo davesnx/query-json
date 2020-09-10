@@ -10,8 +10,9 @@
  (name Run)
  (public_name Run.exe)
  (libraries Test)
- (modules Run))
+ (modules Run)
+)
 
 (rule
- (alias  runtest)
+ (alias runtest)
  (action (run ./Run.exe)))

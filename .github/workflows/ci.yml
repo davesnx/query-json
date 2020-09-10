@@ -64,7 +64,15 @@ jobs:
 
       - name: Test
         run: |
-          BISECT_ENABLE=yes esy dune runtest --force
+          esy dune runtest -- --force
+
+      - name: Deploy coverage
+        run: |
+          esy bisect-ppx-report html
+          bisect-ppx-report send-to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ github.event.number }}
 
       - name: Export dependencies
         run: esy export-dependencies
