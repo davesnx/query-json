@@ -142,6 +142,8 @@ jobs:
           npm config set scope "@davesnx"
           REMOTE=$(npm view @davesnx/query-json version)
           CURRENT=$(jq '.version' package.json)
+          echo $REMOTE
+          echo $CURRENT
 
           if [ "$REMOTE" != "$CURRENT" ]
           then
