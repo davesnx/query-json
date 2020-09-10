@@ -1,6 +1,5 @@
 <p>
   <br>
-  <br>
   <img width="500" alt="query-json logo" src="docs/logo.svg" />
   <br>
   <br>
