@@ -15,10 +15,10 @@ type token =
   | IDENTIFIER(string)
   | FUNCTION(string)
   | CLOSE_PARENT
-  | OPEN_LIST
-  | CLOSE_LIST
-  | OPEN_OBJ
-  | CLOSE_OBJ
+  | OPEN_BRACKET
+  | CLOSE_BRACKET
+  | OPEN_BRACE
+  | CLOSE_BRACE
   | DOT
   | PIPE
   | ADD
@@ -71,7 +71,10 @@ let rec tokenize = buf => {
   | "-" => Ok(SUB)
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
-  | "[" => Ok(OPEN_LIST)
+  | "[" => Ok(OPEN_BRACKET)
+  | "]" => Ok(CLOSE_BRACKET)
+  | "{" => Ok(OPEN_BRACE)
+  | "}" => Ok(CLOSE_BRACE)
   | '"' => Ok(string(buf))
   | "|" => Ok(PIPE)
   | "true" => Ok(BOOL(true))

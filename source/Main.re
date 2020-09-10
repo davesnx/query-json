@@ -40,7 +40,7 @@ let last_position = ref(Location.none);
 
 exception LexerError(string);
 
-let provider = (buf, ()) => {
+let provider = (~debug, buf, ()) => {
   let (start, stop) = Sedlexing.lexing_positions(buf);
   let token =
     switch (tokenize(buf)) {
@@ -51,15 +51,17 @@ let provider = (buf, ()) => {
   last_position :=
     Location.{loc_start: start, loc_end: stop, loc_ghost: false};
 
-  /* TODO: Add debug flag: print_endline(show_token(token)); */
+  if (debug) {
+    print_endline(show_token(token));
+  };
 
   (token, start, stop);
 };
 
 exception ParseError(string);
 
-let parse = (input: string): expression => {
-  let lexer = Sedlexing.Utf8.from_string(input) |> provider;
+let parse = (input: string, ~debug: bool): expression => {
+  let lexer = Sedlexing.Utf8.from_string(input) |> provider(~debug);
   try(menhir(lexer)) {
   | exn =>
     let Location.{loc_start, loc_end, _} = last_position^;

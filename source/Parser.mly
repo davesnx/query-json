@@ -16,13 +16,14 @@
 
 %token SPACE
 
-%token OPEN_LIST
-%token CLOSE_LIST
-%token OPEN_OBJ
-%token CLOSE_OBJ
+%token OPEN_BRACKET
+%token CLOSE_BRACKET
+%token OPEN_BRACE
+%token CLOSE_BRACE
 
 %token EOF
 
+%left OPEN_BRACKET
 %left PIPE SPACE /* lowest precedence */
 %left MULT DIV /* medium precedence */
 %left ADD SUB /* highest precedence */
@@ -53,20 +54,25 @@ conditional:
   ;
 
 path:
-  | k = pair(DOT, STRING)
-    { Key(snd(k)) }
-  | k = pair(DOT, IDENTIFIER)
-    { Key(snd(k)) }
-  | k = pair(DOT, STRING); rst = path
-    { Pipe(Key(snd(k)), rst) }
-  | k = pair(DOT, IDENTIFIER); rst = path
-    { Pipe(Key(snd(k)), rst) }
+  /* We need both:
+    String is scaped, while Identifier isn't. */
+  | DOT; k = STRING;
+    { Key(k) }
+  | DOT; k = IDENTIFIER;
+    { Key(k) }
+  | DOT; k = STRING; rst = path
+    { Pipe(Key(k), rst) }
+  | DOT; k = IDENTIFIER; rst = path
+    { Pipe(Key(k), rst) }
 
 expr:
   | left = expr; PIPE; right = expr;
     { Pipe(left, right) }
   | left = expr; SPACE; right = expr;
     { Pipe(left, right) }
+  /* Index always gots prefixed by an expr which pipes it. */
+  | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
+    { Pipe(e, Index(int_of_float(num))) }
   | left = expr; ADD; right = expr;
     { Addition(left, right) }
   | left = expr; SUB; right = expr;
@@ -87,7 +93,7 @@ expr:
       | "select" -> Select(cb)
       | "sort_by" -> SortBy(cb)
       | "group_by" -> GroupBy(cb)
-      | _ -> failwith "is not a valid function" (* TODO: Print i *)
+      | _ -> failwith(f ^ "is not a valid function")
     }
   | e = path
     { e }
@@ -110,18 +116,18 @@ expr:
       | "ends_with" -> EndsWith
       | "split" -> Split
       | "join" -> Join
-      | _ -> failwith "is not a valid function" (* TODO: Print i *)
+      | _ -> failwith(i ^ "is not a valid function")
     }
   | DOT;
     { Identity }
-  | OPEN_LIST; CLOSE_LIST;
+  | OPEN_BRACKET; CLOSE_BRACKET;
     { List }
-  | OPEN_OBJ; CLOSE_OBJ;
+  | OPEN_BRACE; CLOSE_BRACE;
     { Object }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
     | "has" -> Has(cond)
-    | _ -> failwith "not a valid function"
+    | _ -> failwith(f ^ " is not a valid function")
     }
   ;

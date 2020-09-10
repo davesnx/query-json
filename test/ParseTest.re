@@ -17,6 +17,8 @@ let tests: list((string, expression)) = [
     ". | map(.price + 1)",
     Pipe(Identity, Map(Addition(Key("price"), Literal(Number(1.))))),
   ),
+  (".[1]", Pipe(Identity, Index(1))),
+  (".books[1]", Pipe(Key("books"), Index(1))),
 ];
 
 describe("correctly parse value", ({test, _}) => {
@@ -24,7 +26,7 @@ describe("correctly parse value", ({test, _}) => {
     test(
       "parse: " ++ string_of_int(index),
       payload => {
-        let result = parse(result);
+        let result = parse(~debug=true, result);
         compare(expected, result, payload);
       },
     );

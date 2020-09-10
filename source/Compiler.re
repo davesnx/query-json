@@ -94,7 +94,7 @@ exception WrongIndexAccess(string);
 let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
-    /* TODO: Making sure list have a at least one item
+    /* TODO: Making sure list have at least one item
        let item =
           try(List.nth(list, 0)) {
           | _ => raise(WrongIndexAccess("def"))

@@ -13,7 +13,7 @@ let run =
       input: string,
       kind: inputKind,
       _verbose: bool,
-      _debug: bool,
+      debug: bool,
       _colorize: bool,
     ) => {
   let json =
@@ -21,7 +21,7 @@ let run =
     | File => Yojson.Basic.from_file(input)
     | Inline => Yojson.Basic.from_string(input)
     };
-  let program = Main.parse(query);
+  let program = Main.parse(~debug, query);
   let runtime = compile(program);
 
   Yojson.Basic.pretty_to_string(runtime(json)) |> print_endline;
