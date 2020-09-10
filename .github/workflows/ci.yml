@@ -68,8 +68,7 @@ jobs:
 
       - name: Deploy coverage
         run: |
-          esy bisect-ppx-report html
-          bisect-ppx-report send-to Coveralls
+          esy bisect-ppx-report send-to Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
