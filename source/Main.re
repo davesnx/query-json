@@ -38,21 +38,19 @@ let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.program);
 
 let last_position = ref(Location.none);
 
-exception LexerError(string);
-
 let provider = (~debug, buf, ()) => {
   let (start, stop) = Sedlexing.lexing_positions(buf);
   let token =
     switch (tokenize(buf)) {
     | Ok(token) => token
-    | Error(error) => raise(LexerError(error))
+    | Error(error) => Error(`LexerError(error))
     };
 
   last_position :=
     Location.{loc_start: start, loc_end: stop, loc_ghost: false};
 
   if (debug) {
-    print_endline(show_token(token));
+    print_endline(token |> show_token);
   };
 
   (token, start, stop);
