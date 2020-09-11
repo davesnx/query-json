@@ -5,8 +5,6 @@ type inputKind =
   | File
   | Inline;
 
-exception ParseError(string);
-
 let run =
     (
       query: string,
@@ -21,10 +19,13 @@ let run =
     | File => Yojson.Basic.from_file(input)
     | Inline => Yojson.Basic.from_string(input)
     };
-  let program = Main.parse(~debug, query);
-  let runtime = compile(program);
 
-  Yojson.Basic.pretty_to_string(runtime(json)) |> print_endline;
+  Main.parse(~debug, query)
+  |> Result.map(compile)
+  |> Result.map(runtime =>
+       runtime(json) |> Yojson.Basic.pretty_to_string |> print_endline
+     )
+  |> Result.map_error(print_endline);
 };
 
 open Cmdliner;

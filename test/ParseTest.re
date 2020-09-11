@@ -27,7 +27,7 @@ describe("correctly parse value", ({test, _}) => {
     test(
       "parse: " ++ string_of_int(index),
       payload => {
-        let result = parse(~debug=true, result);
+        let result = parse(~debug=true, result) |> Result.get_ok;
         compare(expected, result, payload);
       },
     );
