@@ -5,7 +5,8 @@ type regex = string;
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
-  | Number(float); /* 123 or 123.0 */
+  | Number(float) /* 123 or 123.0 */
+  | Null; /* null */
 
 [@deriving show]
 type expression =
@@ -14,12 +15,12 @@ type expression =
   | Comma /* , */
   | Literal(literal)
   /* Constructors */
-  | List /* [] */
-  | Object /* {} */
+  | List(list(expression)) /* [] */
+  | Object(list((string, expression))) /* {} */
   /* Objects */
   | Walk(expression) /* walk() */
   | Transpose(expression) /* transpose() */
-  | Key(string) /* .foo */
+  | Key(string, bool) /* .foo */
   | Has(string) /* has(x) */
   | Keys /* keys */
   | Floor /* floor */
@@ -61,7 +62,7 @@ type expression =
   | AllWithCondition(expression) /* all(c) */
   | AnyWithCondition(expression) /* any(c) */
   | Some(expression) /* some */
-  | Find(expression) /* .find() */
+  | Find(expression) /* find(x) */
   /* operations */
   | Addition(expression, expression) /* + */
   | Subtraction(expression, expression) /* - */

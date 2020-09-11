@@ -21,6 +21,9 @@ type token =
   | CLOSE_BRACE
   | DOT
   | PIPE
+  | QUESTION_MARK
+  | COMMA
+  | NULL
   | ADD
   | SUB
   | DIV
@@ -78,6 +81,9 @@ let rec tokenize = buf => {
   | '"' => Ok(string(buf))
   | "|" => Ok(PIPE)
   | ";" => Ok(SEMICOLON)
+  | "," => Ok(COMMA)
+  | "?" => Ok(QUESTION_MARK)
+  | "null" => Ok(NULL)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
   | identifier => tokenizeApply(buf)

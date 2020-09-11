@@ -3,11 +3,13 @@
 
   let renamed f name = "'" ^ f ^ "' is not valid in q, use '" ^ name ^ "' instead"
   let notImplemented f = "'" ^ f ^ "' is not implemented"
+  let missing f = "'" ^ f ^ "' looks like a function and maybe is not implemented or missing in the parser. Either way, could you open an issue 'https://github.com/davesnx/query-json/issues/new'"
 %}
 
 %token <string> STRING
 %token <float> NUMBER
 %token <bool> BOOL
+%token NULL
 %token <string> IDENTIFIER
 %token DOT
 %token PIPE
@@ -20,11 +22,17 @@
 
 %token SPACE
 
+%token QUESTION_MARK
+%token COMMA
+
 %token OPEN_BRACKET
 %token CLOSE_BRACKET
 %token OPEN_BRACE
 %token CLOSE_BRACE
 
+/* %prec STRING
+%prec CLOSE_PARENT
+ */
 %token EOF
 
 %left OPEN_BRACKET
@@ -41,6 +49,7 @@ program:
     { e }
   | EOF;
     { Identity }
+
 
 conditional:
   | left = expr; EQUAL; right = expr;
@@ -67,13 +76,22 @@ path:
   /* We need both:
     String is scaped, while Identifier isn't. */
   | DOT; k = STRING;
-    { Key(k) }
+    { Key(k, false) }
   | DOT; k = IDENTIFIER;
-    { Key(k) }
+    { Key(k, false) }
   | DOT; k = STRING; rst = path
-    { Pipe(Key(k), rst) }
+    { Pipe(Key(k, false), rst) }
   | DOT; k = IDENTIFIER; rst = path
-    { Pipe(Key(k), rst) }
+    { Pipe(Key(k, false), rst) }
+
+obj_fields: obj = separated_list(COMMA, obj_field)
+  { obj }
+
+obj_field: k = STRING; DOT; v = expr
+  { (k, v) }
+
+list_fields: vl = separated_list(COMMA, expr)
+  { vl }
 
 expr:
   | left = expr; PIPE; right = expr;
@@ -91,12 +109,6 @@ expr:
     { Multiply(left, right) }
   | left = expr; DIV; right = expr;
     { Division(left, right) }
-  | s = STRING;
-    { Literal(String(s)) }
-  | n = NUMBER;
-    { Literal(Number(n)) }
-  | b = BOOL;
-    { Literal(Bool(b)) }
   | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
     { match f with
       | "range" -> Range(int_of_float(from), int_of_float(upto))
@@ -112,7 +124,7 @@ expr:
       | "contains" -> Contains(s)
       | "startswith" -> failwith(renamed f "starts_with")
       | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(f ^ " is not a valid function")
+      | _ -> failwith(missing f)
     }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
@@ -124,12 +136,14 @@ expr:
       | "max_by" -> MaxBy(cb)
       | "group_by" -> GroupBy(cb)
       | "unique_by" -> UniqueBy(cb)
+      | "find" -> Find(cb)
+      | "some" -> Some(cb)
       | "path" -> Path(cb)
       | "any" -> AnyWithCondition(cb)
       | "all" -> AllWithCondition(cb)
       | "walk" -> Walk(cb)
       | "transpose" -> Transpose(cb)
-      | _ -> failwith(f ^ " is not a valid function")
+      | _ -> failwith(missing f)
     }
   | e = path
     { e }
@@ -172,19 +186,29 @@ expr:
       | "isfinite" -> failwith(renamed f "is_finite")
       | "isnormal" -> failwith(renamed f "is_normal")
       | "tostring" -> failwith(renamed f "to_string")
-      (* TODO: Write down all the functions and improve the failwith message *)
-      | _ -> failwith(f ^ " is not a valid function")
+      | _ -> failwith(missing f)
     }
   | DOT;
     { Identity }
-  | OPEN_BRACKET; CLOSE_BRACKET;
-    { List }
-  | OPEN_BRACE; CLOSE_BRACE;
-    { Object }
+  | DOT; DOT;
+    { Recurse }
+  | COMMA;
+    { Comma }
+  | OPEN_BRACKET; obj = obj_fields; CLOSE_BRACKET
+    { Object(obj) }
+  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACE
+    { List(vl) }
+  | s = STRING;
+    { Literal(String(s)) }
+  | n = NUMBER;
+    { Literal(Number(n)) }
+  | b = BOOL;
+    { Literal(Bool(b)) }
+  | NULL
+    { Literal(Null) }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
-    | "if" -> If(cond)
-    | _ -> failwith(f ^ " is not a valid function")
+    | _ -> failwith(missing f)
     }
   ;

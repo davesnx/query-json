@@ -144,9 +144,23 @@ let tail = (json: Json.t) => {
   };
 };
 
-let member = (key: string, json: Json.t) => {
+let makeErrorMissingMember = (op, value: Json.t) => {
+  enter(1)
+  ++ "Error:  Trying to "
+  ++ op
+  ++ " on "
+  ++ Yojson.Basic.to_string(value)
+  ++ ", and doesn't exist";
+};
+
+let member = (key: string, opt: bool, json: Json.t) => {
   switch (json) {
-  | `Assoc(_assoc) => Ok(Json.member(key, json))
+  | `Assoc(_assoc) =>
+    let accessMember = Json.member(key, json);
+    switch (accessMember, opt) {
+    | (_, true) => Ok(accessMember)
+    | (_, false) => Error(makeErrorMissingMember("." ++ key, json))
+    };
   | _ => Error(makeError("." ++ key, json))
   };
 };
@@ -162,7 +176,7 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
   switch (expression) {
   | Identity => Ok(id(json))
   | Keys => keys(json)
-  | Key(key) => member(key, json)
+  | Key(key, opt) => member(key, opt, json)
   | Index(idx) => index(idx, json)
   | Head => head(json)
   | Tail => tail(json)
@@ -177,6 +191,7 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
     | Bool(b) => Ok(`Bool(b))
     | Number(float) => Ok(`Float(float))
     | String(string) => Ok(`String(string))
+    | Null => Ok(`Null)
     }
   | Pipe(left, right) =>
     let cLeft = compile(left, json);
