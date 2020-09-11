@@ -5,66 +5,72 @@ module Json = {
   include Yojson.Basic.Util;
 };
 
-exception WrongOperation(string);
-
 type noun =
   | StartsWithVocal(string)
   | StartsWithConsonant(string);
 
-let wrongTypeOperation = (op, memberKind, value: Json.t) => {
-  raise(
-    WrongOperation(
-      "\nERROR: Trying to "
-      ++ op
-      ++ " on "
-      ++ (
-        switch (memberKind) {
-        | StartsWithVocal(m) => "an " ++ m
-        | StartsWithConsonant(m) => "a " ++ m
-        }
-      )
-      ++ "."
-      ++ "\n\nThe value recived is:\n"
-      ++ Json.to_string(value),
-    ),
-  );
+let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
+  "\nERROR: Trying to "
+  ++ op
+  ++ " on "
+  ++ (
+    switch (memberKind) {
+    | StartsWithVocal(m) => "an " ++ m
+    | StartsWithConsonant(m) => "a " ++ m
+    }
+  )
+  ++ "."
+  ++ "\n\nThe value recived is:\n"
+  ++ Yojson.Basic.pretty_to_string(value);
 };
 
-let raiseOperationInWrongType = (name, json) => {
+let makeError = (name: string, json: Json.t) => {
   switch (json) {
   | `List(_list) =>
-    wrongTypeOperation(name, StartsWithConsonant("list"), json)
-  | `Assoc(_a) => wrongTypeOperation(name, StartsWithVocal("object"), json)
-  | `Bool(_b) => wrongTypeOperation(name, StartsWithConsonant("bool"), json)
+    makeErrorWrongOperation(name, StartsWithConsonant("list"), json)
+  | `Assoc(_assoc) =>
+    makeErrorWrongOperation(name, StartsWithVocal("object"), json)
+  | `Bool(_b) =>
+    makeErrorWrongOperation(name, StartsWithConsonant("bool"), json)
   | `Float(_f) =>
-    wrongTypeOperation(name, StartsWithConsonant("float"), json)
-  | `Int(_i) => wrongTypeOperation(name, StartsWithVocal("int"), json)
-  | `Null => wrongTypeOperation(name, StartsWithConsonant("null"), json)
+    makeErrorWrongOperation(name, StartsWithConsonant("float"), json)
+  | `Int(_i) => makeErrorWrongOperation(name, StartsWithVocal("int"), json)
+  | `Null => makeErrorWrongOperation(name, StartsWithConsonant("null"), json)
   | `String(_identifier) =>
-    wrongTypeOperation(name, StartsWithConsonant("string"), json)
+    makeErrorWrongOperation(name, StartsWithConsonant("string"), json)
   };
 };
-let keys = json => `List(Json.keys(json) |> List.map(i => `String(i)));
-let length = json => `Int(json |> Json.to_list |> List.length);
+
+/* TODO: Handle error */
+let keys = json => Ok(`List(Json.keys(json) |> List.map(i => `String(i))));
+
+let length = (json: Json.t) => {
+  switch (json) {
+  | `List(list) => Ok(`Int(list |> List.length))
+  | _ => Error(makeError("length", json))
+  };
+};
+
 let apply =
     (str: string, fn: (float, float) => float, left: Json.t, right: Json.t) => {
   switch (left, right) {
-  | (`Float(l), `Float(r)) => `Float(fn(l, r))
-  | (`Int(l), `Float(r)) => `Float(fn(float_of_int(l), r))
-  | (`Float(l), `Int(r)) => `Float(fn(l, float_of_int(r)))
-  | (`Int(l), `Int(r)) => `Float(fn(float_of_int(l), float_of_int(r)))
-  | _ => raiseOperationInWrongType(str, left)
+  | (`Float(l), `Float(r)) => Ok(`Float(fn(l, r)))
+  | (`Int(l), `Float(r)) => Ok(`Float(fn(float_of_int(l), r)))
+  | (`Float(l), `Int(r)) => Ok(`Float(fn(l, float_of_int(r))))
+  | (`Int(l), `Int(r)) =>
+    Ok(`Float(fn(float_of_int(l), float_of_int(r))))
+  | _ => Error(makeError(str, left))
   };
 };
 
 let compare =
     (str: string, fn: (float, float) => bool, left: Json.t, right: Json.t) => {
   switch (left, right) {
-  | (`Float(l), `Float(r)) => fn(l, r)
-  | (`Int(l), `Float(r)) => fn(float_of_int(l), r)
-  | (`Float(l), `Int(r)) => fn(l, float_of_int(r))
-  | (`Int(l), `Int(r)) => fn(float_of_int(l), float_of_int(r))
-  | _ => raiseOperationInWrongType(str, right)
+  | (`Float(l), `Float(r)) => Ok(fn(l, r))
+  | (`Int(l), `Float(r)) => Ok(fn(float_of_int(l), r))
+  | (`Float(l), `Int(r)) => Ok(fn(l, float_of_int(r)))
+  | (`Int(l), `Int(r)) => Ok(fn(float_of_int(l), float_of_int(r)))
+  | _ => Error(makeError(str, right))
   };
 };
 
@@ -82,91 +88,112 @@ let div = apply("-", (l, r) => l /. r);
 
 let filter = (fn: Json.t => bool, json: Json.t) => {
   switch (json) {
-  | `List(list) => `List(List.filter(fn, list))
-  | _ => raiseOperationInWrongType("filter", json)
+  | `List(list) => Ok(`List(List.filter(fn, list)))
+  | _ => Error(makeError("filter", json))
   };
 };
 
 let id: Json.t => Json.t = i => i;
 
-exception WrongIndexAccess(string);
-
 let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
-    /* TODO: Making sure list have at least one item
-       let item =
-          try(List.nth(list, 0)) {
-          | _ => raise(WrongIndexAccess("def"))
-          }; */
-
-    Json.index(0, `List(list))
-  | _ => raiseOperationInWrongType("head", json)
+    /* TODO: Making sure list have at least one item */
+    Ok(Json.index(0, `List(list)))
+  | _ => Error(makeError("head", json))
   };
 };
 
 let tail = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
-    /* TODO: Making sure list have at least one item
-       let item =
-          try(List.nth(list, 0)) {
-          | _ => raise(WrongIndexAccess("def"))
-          }; */
+    /* TODO: Making sure list have at least one item */
     let lastIndex = List.length(list) - 1;
-    Json.index(lastIndex, `List(list));
-  | _ => raiseOperationInWrongType("head", json)
+    Ok(Json.index(lastIndex, `List(list)));
+  | _ => Error(makeError("tail", json))
   };
 };
 
-exception CompilationError(string);
+/* TODO: Run this on Assoc only */
+let member = (key, json) => Ok(Json.member(key, json));
 
-let rec compile = (expression: expression, json): Json.t => {
+/* TODO: Run this on List only, String as well? */
+let index = (key, json) => Ok(Json.index(key, json));
+
+let rec compile = (expression: expression, json): result(Json.t, string) => {
   switch (expression) {
-  | Identity => id(json)
+  | Identity => Ok(id(json))
   | Keys => keys(json)
-  | Key(key) => Json.member(key, json)
-  | Index(idx) => Json.index(idx, json)
+  | Key(key) => member(key, json)
+  | Index(idx) => index(idx, json)
   | Head => head(json)
   | Tail => tail(json)
   | Length => length(json)
-  | Map(expr) => Json.map(compile(expr), json)
-  | Addition(left, right) => add(compile(left, json), compile(right, json))
-  | Subtraction(left, right) =>
-    sub(compile(left, json), compile(right, json))
-  | Multiply(left, right) =>
-    mult(compile(left, json), compile(right, json))
-  | Division(left, right) => div(compile(left, json), compile(right, json))
+  | Map(expr) => map(expr, json)
+  | Addition(left, right) => pair(left, right, add, json)
+  | Subtraction(left, right) => pair(left, right, sub, json)
+  | Multiply(left, right) => pair(left, right, mult, json)
+  | Division(left, right) => pair(left, right, div, json)
   | Literal(literal) =>
     switch (literal) {
-    | Bool(b) => `Bool(b)
-    | Number(float) => `Float(float)
-    | String(string) => `String(string)
+    | Bool(b) => Ok(`Bool(b))
+    | Number(float) => Ok(`Float(float))
+    | String(string) => Ok(`String(string))
     }
+  | Pipe(left, right) =>
+    let cLeft = compile(left, json);
+    switch (cLeft) {
+    | Ok(l) => compile(right, l)
+    | Error(err) => Error(err)
+    };
   | Filter(conditional) =>
     filter(
       item => {
         switch (conditional) {
-        | Greater(left, right) =>
-          gt(compile(left, item), compile(right, item))
-        | GreaterEqual(left, right) =>
-          gte(compile(left, item), compile(right, item))
-        | Lower(left, right) =>
-          lt(compile(left, item), compile(right, item))
-        | LowerEqual(left, right) =>
-          lte(compile(left, item), compile(right, item))
-        | Equal(left, right) =>
-          eq(compile(left, item), compile(right, item))
-        | NotEqual(left, right) =>
-          notEq(compile(left, item), compile(right, item))
+        | Greater(left, right) => condition(left, right, gt, item)
+        | GreaterEqual(left, right) => condition(left, right, gte, item)
+        | Lower(left, right) => condition(left, right, lt, item)
+        | LowerEqual(left, right) => condition(left, right, lte, item)
+        | Equal(left, right) => condition(left, right, eq, item)
+        | NotEqual(left, right) => condition(left, right, notEq, item)
         }
       },
       json,
     )
-  | Pipe(left, right) => compile(right, compile(left, json))
-  | _ =>
-    raise(
-      CompilationError(show_expression(expression) ++ " is not implemented"),
-    )
+  | _ => Error(show_expression(expression) ++ " is not implemented")
+  };
+}
+and pair = (left, right, op, json) => {
+  let l = compile(left, json);
+  let r = compile(right, json);
+
+  switch (l, r) {
+  | (Ok(l), Ok(r)) => op(l, r)
+  | (Error(err), _) => Error(err)
+  | (_, Error(err)) => Error(err)
+  };
+}
+and condition = (left, right, op, json) => {
+  let l = compile(left, json);
+  let r = compile(right, json);
+
+  switch (l, r) {
+  | (Ok(l), Ok(r)) =>
+    switch (op(l, r)) {
+    | Ok(b) => b
+    /* If the condition fails, return false */
+    | Error(_err) => false
+    }
+  | (Error(_err), _) => false
+  | (_, Error(_err)) => false
+  };
+}
+and map = (expr: expression, json: Json.t) => {
+  switch (json) {
+  | `List(_list) =>
+    /* TODO: Making sure list have at least one item */
+    /* TODO: compiler(expr, item) |> Result.get_ok can raise exn */
+    Ok(Json.map(item => compile(expr, item) |> Result.get_ok, json))
+  | _ => Error(makeError("map", json))
   };
 };

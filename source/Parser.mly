@@ -93,7 +93,8 @@ expr:
       | "select" -> Select(cb)
       | "sort_by" -> SortBy(cb)
       | "group_by" -> GroupBy(cb)
-      | _ -> failwith(f ^ "is not a valid function")
+      (* TODO: Write down all the functions and improve the failwith message *)
+      | _ -> failwith(f ^ " is not a valid function")
     }
   | e = path
     { e }
@@ -116,7 +117,8 @@ expr:
       | "ends_with" -> EndsWith
       | "split" -> Split
       | "join" -> Join
-      | _ -> failwith(i ^ "is not a valid function")
+      (* TODO: Write down all the functions and improve the failwith message *)
+      | _ -> failwith(i ^ " is not a valid function")
     }
   | DOT;
     { Identity }
@@ -128,6 +130,7 @@ expr:
     { match f with
     | "filter" -> Filter(cond)
     | "has" -> Has(cond)
+    (* TODO: Write down all the functions and improve the failwith message *)
     | _ -> failwith(f ^ " is not a valid function")
     }
   ;

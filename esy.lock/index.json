@@ -1,5 +1,5 @@
 {
-  "checksum": "7597fcc85e61600e4e1775a6ae70eace",
+  "checksum": "04bb376bec1b6bce33339bd9bd2d46da",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.0@d41d8cd9": {
@@ -572,6 +572,33 @@
       ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "@opam/dune@opam:2.7.1@70792dee"
+      ]
+    },
+    "@opam/ppx_let@opam:v0.14.0@eb9b93e0": {
+      "id": "@opam/ppx_let@opam:v0.14.0@eb9b93e0",
+      "name": "@opam/ppx_let",
+      "version": "opam:v0.14.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/md5/fa/faf5b4b69ef2595916f74fff251a9d2c#md5:faf5b4b69ef2595916f74fff251a9d2c",
+          "archive:https://ocaml.janestreet.com/ocaml-core/v0.14/files/ppx_let-v0.14.0.tar.gz#md5:faf5b4b69ef2595916f74fff251a9d2c"
+        ],
+        "opam": {
+          "name": "ppx_let",
+          "version": "v0.14.0",
+          "path": "esy.lock/opam/ppx_let.v0.14.0"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.0@d41d8cd9", "@opam/ppxlib@opam:0.15.0@6a9d8126",
+        "@opam/dune@opam:2.7.1@70792dee", "@opam/base@opam:v0.14.0@8bc55fce",
+        "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.0@d41d8cd9", "@opam/ppxlib@opam:0.15.0@6a9d8126",
+        "@opam/dune@opam:2.7.1@70792dee", "@opam/base@opam:v0.14.0@8bc55fce"
       ]
     },
     "@opam/ppx_deriving@opam:4.5@d89f2934": {
@@ -1274,6 +1301,34 @@
         "ocaml@4.10.0@d41d8cd9", "@opam/ocamlfind@opam:1.8.1@ff07b0f9"
       ]
     },
+    "@opam/base@opam:v0.14.0@8bc55fce": {
+      "id": "@opam/base@opam:v0.14.0@8bc55fce",
+      "name": "@opam/base",
+      "version": "opam:v0.14.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/md5/5a/5a00382c724e97b6768aaa27481dd3cc#md5:5a00382c724e97b6768aaa27481dd3cc",
+          "archive:https://ocaml.janestreet.com/ocaml-core/v0.14/files/base-v0.14.0.tar.gz#md5:5a00382c724e97b6768aaa27481dd3cc"
+        ],
+        "opam": {
+          "name": "base",
+          "version": "v0.14.0",
+          "path": "esy.lock/opam/base.v0.14.0"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.0@d41d8cd9", "@opam/sexplib0@opam:v0.14.0@ddeb6438",
+        "@opam/dune-configurator@opam:2.7.1@96307faa",
+        "@opam/dune@opam:2.7.1@70792dee", "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.0@d41d8cd9", "@opam/sexplib0@opam:v0.14.0@ddeb6438",
+        "@opam/dune-configurator@opam:2.7.1@96307faa",
+        "@opam/dune@opam:2.7.1@70792dee"
+      ]
+    },
     "@esy-ocaml/substs@0.0.1@d41d8cd9": {
       "id": "@esy-ocaml/substs@0.0.1@d41d8cd9",
       "name": "@esy-ocaml/substs",
@@ -1315,7 +1370,9 @@
       "version": "link-dev:./esy.json",
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
-      "dependencies": [ "bats@1.1.0@d41d8cd9" ],
+      "dependencies": [
+        "bats@1.1.0@d41d8cd9", "@opam/ppx_let@opam:v0.14.0@eb9b93e0"
+      ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "@reason-native/rely@3.2.1@d41d8cd9",
         "@reason-native/console@0.1.0@d41d8cd9",

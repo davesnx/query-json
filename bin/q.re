@@ -22,8 +22,13 @@ let run =
 
   Main.parse(~debug, query)
   |> Result.map(compile)
-  |> Result.map(runtime =>
-       runtime(json) |> Yojson.Basic.pretty_to_string |> print_endline
+  |> Result.map(runtime => runtime(json))
+  |> Result.map(res =>
+       res
+       |> Result.map(output =>
+            output |> Yojson.Basic.pretty_to_string |> print_endline
+          )
+       |> Result.map_error(print_endline)
      )
   |> Result.map_error(print_endline);
 };
