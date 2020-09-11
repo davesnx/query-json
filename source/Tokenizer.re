@@ -17,6 +17,7 @@ type token =
   | OPEN_BRACKET
   | CLOSE_BRACKET
   | OPEN_BRACE
+  | SEMICOLON
   | CLOSE_BRACE
   | DOT
   | PIPE
@@ -76,6 +77,7 @@ let rec tokenize = buf => {
   | "}" => Ok(CLOSE_BRACE)
   | '"' => Ok(string(buf))
   | "|" => Ok(PIPE)
+  | ";" => Ok(SEMICOLON)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
   | identifier => tokenizeApply(buf)

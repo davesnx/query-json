@@ -17,8 +17,10 @@ type expression =
   | List /* [] */
   | Object /* {} */
   /* Objects */
+  | Walk(expression) /* walk() */
+  | Transpose(expression) /* transpose() */
   | Key(string) /* .foo */
-  | Has(conditional) /* has(x) */
+  | Has(string) /* has(x) */
   | Keys /* keys */
   | Floor /* floor */
   | Sqrt /* sqrt */
@@ -33,27 +35,31 @@ type expression =
   | Any /* any */
   | All /* all */
   | In /* in */
+  | Recurse /* recurse */
   | RecurseDown /* recurse_down */
   | ToEntries /* to_entries */
   | ToString /* to_string */
   | FromEntries /* from_entries */
   | WithEntries
   | Nan
-  | Isnan
+  | IsNan
   /* Array */
   | Index(int) /* [1] */
   | Filter(conditional) /* .filter(x) */
   | Range(int, int) /* range(1, 10) */
   | Flatten /* flatten */
-  | FlatMap /* flat_map | .[] */
   | Head /* head */
   | Tail /* tail */
   | Map(expression) /* .[] */ /* map(x) */
+  | FlatMap(expression) /* flat_map */
   | Select(expression) /* .select(x) */
   | SortBy(expression) /* sort_by(x) */
   | GroupBy(expression) /* group_by(x) */
-  | AllWithCondition(conditional) /* all(c) */
-  | AnyWithCondition(conditional) /* any(c) */
+  | UniqueBy(expression) /* unique_by(x) */
+  | MinBy(expression) /* min_by(x) */
+  | MaxBy(expression) /* max_by(x) */
+  | AllWithCondition(expression) /* all(c) */
+  | AnyWithCondition(expression) /* any(c) */
   | Some(expression) /* some */
   | Find(expression) /* .find() */
   /* operations */
@@ -63,19 +69,25 @@ type expression =
   | Multiply(expression, expression) /* * */
   /* Generic */
   | Length /* length */
-  | Contains
+  | Contains(string)
   /* Strings */
   | Test(regex)
-  | StartsWith /* starts_with */
-  | EndsWith /* ends_with */
-  | Split /* split */
-  | Join /* join */
   | ToNumber /* to_num */
-  | And(conditional, conditional)
-  | Or(conditional, conditional)
-  | Xor(conditional, conditional)
+  | StartsWith(string) /* starts_with */
+  | EndsWith(string) /* ends_with */
+  | Split(string) /* split */
+  | Join(string) /* join */
+  | Path(expression) /* path(x) */
+  /* Logic */
+  | If(conditional)
+  | Then(expression)
+  | Else(expression)
+  | Break
 
 and conditional =
+  | And(expression, expression) /* and */
+  | Or(expression, expression) /* or */
+  | Not(expression, expression) /* ! */
   | Greater(expression, expression) /* > */
   | Lower(expression, expression) /* < */
   | GreaterEqual(expression, expression) /* >= */

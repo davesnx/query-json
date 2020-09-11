@@ -84,12 +84,24 @@ let compare =
   };
 };
 
+let condition =
+    (str: string, fn: (bool, bool) => bool, left: Json.t, right: Json.t) => {
+  switch (left, right) {
+  | (`Bool(l), `Bool(r)) => Ok(fn(l, r))
+  | _ => Error(makeError(str, right))
+  };
+};
+
 let gt = compare(">", (l, r) => l > r);
 let gte = compare(">=", (l, r) => l >= r);
 let lt = compare("<", (l, r) => l < r);
 let lte = compare("<=", (l, r) => l <= r);
-let eq = compare("==", (l, r) => l == r);
-let notEq = compare("!=", (l, r) => l != r);
+let and_ = condition("and", (l, r) => l && r);
+let or_ = condition("or", (l, r) => l || r);
+let not_ = condition("not", (l, _) => !l);
+
+let eq = condition("==", (l, r) => l == r);
+let notEq = condition("!=", (l, r) => l != r);
 
 let add = apply("+", (l, r) => l +. r);
 let sub = apply("-", (l, r) => l -. r);
@@ -182,6 +194,9 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
         | LowerEqual(left, right) => condition(left, right, lte, item)
         | Equal(left, right) => condition(left, right, eq, item)
         | NotEqual(left, right) => condition(left, right, notEq, item)
+        | And(left, right) => condition(left, right, and_, item)
+        | Or(left, right) => condition(left, right, or_, item)
+        | Not(left, right) => condition(left, right, not_, item)
         }
       },
       json,

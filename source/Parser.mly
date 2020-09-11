@@ -1,5 +1,8 @@
 %{
   open Ast
+
+  let renamed f name = "'" ^ f ^ "' is not valid in q, use '" ^ name ^ "' instead"
+  let notImplemented f = "'" ^ f ^ "' is not implemented"
 %}
 
 %token <string> STRING
@@ -8,8 +11,9 @@
 %token <string> IDENTIFIER
 %token DOT
 %token PIPE
+%token SEMICOLON
 %token ADD SUB MULT DIV
-%token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL
+%token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR NOT
 
 %token <string> FUNCTION
 %token CLOSE_PARENT
@@ -51,6 +55,12 @@ conditional:
     { GreaterEqual(left, right) }
   | left = expr; LOWER_EQUAL; right = expr;
     { LowerEqual(left, right) }
+  | left = expr; AND; right = expr;
+    { LowerEqual(left, right) }
+  | left = expr; OR; right = expr;
+    { LowerEqual(left, right) }
+  | left = expr; NOT; right = expr;
+    { LowerEqual(left, right) }
   ;
 
 path:
@@ -87,18 +97,48 @@ expr:
     { Literal(Number(n)) }
   | b = BOOL;
     { Literal(Bool(b)) }
+  | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
+    { match f with
+      | "range" -> Range(int_of_float(from), int_of_float(upto))
+      | _ -> failwith(f ^ " is not a valid function")
+     }
+  | f = FUNCTION; s = STRING; CLOSE_PARENT;
+    { match f with
+      | "has" -> Has(s)
+      | "starts_with" -> StartsWith(s)
+      | "ends_with" -> EndsWith(s)
+      | "split" -> Split(s)
+      | "join" -> Join(s)
+      | "contains" -> Contains(s)
+      | "startswith" -> failwith(renamed f "starts_with")
+      | "endswith" -> failwith(renamed f "ends_with")
+      | _ -> failwith(f ^ " is not a valid function")
+    }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "map" -> Map(cb)
+      | "flat_map" -> FlatMap(cb)
       | "select" -> Select(cb)
       | "sort_by" -> SortBy(cb)
+      | "min_by" -> MinBy(cb)
+      | "max_by" -> MaxBy(cb)
       | "group_by" -> GroupBy(cb)
+      | "unique_by" -> UniqueBy(cb)
+      | "path" -> Path(cb)
+      | "any" -> AnyWithCondition(cb)
+      | "all" -> AllWithCondition(cb)
+      | "walk" -> Walk(cb)
+      | "transpose" -> Transpose(cb)
       | _ -> failwith(f ^ " is not a valid function")
     }
   | e = path
     { e }
   | f = IDENTIFIER;
     { match f with
+      | "if" -> failwith(notImplemented f)
+      | "then" -> failwith(notImplemented f)
+      | "else" -> failwith(notImplemented f)
+      | "break" -> failwith(notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -110,10 +150,6 @@ expr:
       | "sort" -> Sort
       | "uniq" -> Unique
       | "reverse" -> Reverse
-      | "starts_with" -> StartsWith
-      | "ends_with" -> EndsWith
-      | "split" -> Split
-      | "join" -> Join
       | "floor" -> Floor
       | "sqrt" -> Sqrt
       | "min" -> Min
@@ -124,17 +160,18 @@ expr:
       | "any" -> Any
       | "all" -> All
       | "in" -> In
+      | "recurse" -> Recurse
       | "recurse_down" -> RecurseDown
       | "to_entries" -> ToEntries
       | "from_entries" -> FromEntries
       | "with_entries" -> WithEntries
       | "nan" -> Nan
-      | "isnan" -> Isnan
-      | "tonumber" -> failwith("'" ^ f ^ "' tonumber is not valid in q, use 'to_number' instead")
-      | "isinfinite" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_infinite' instead")
-      | "isfinite" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_finite' instead")
-      | "isnormal" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_normal' instead")
-      | "tostring" -> failwith("'" ^ f ^ "' is not valid in q, use 'to_string' instead")
+      | "isnan" -> IsNan
+      | "tonumber" -> failwith(renamed f "to_number")
+      | "isinfinite" -> failwith(renamed f "is_infinite")
+      | "isfinite" -> failwith(renamed f "is_finite")
+      | "isnormal" -> failwith(renamed f "is_normal")
+      | "tostring" -> failwith(renamed f "to_string")
       (* TODO: Write down all the functions and improve the failwith message *)
       | _ -> failwith(f ^ " is not a valid function")
     }
@@ -147,8 +184,7 @@ expr:
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
-    | "has" -> Has(cond)
-    (* TODO: Write down all the functions and improve the failwith message *)
+    | "if" -> If(cond)
     | _ -> failwith(f ^ " is not a valid function")
     }
   ;
