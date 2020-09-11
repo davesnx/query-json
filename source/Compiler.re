@@ -1,4 +1,5 @@
 open Ast;
+open Console;
 
 module Json = {
   type t = Yojson.Basic.t;
@@ -10,7 +11,8 @@ type noun =
   | StartsWithConsonant(string);
 
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
-  "\nERROR: Trying to "
+  enter(1)
+  ++ "Error:  Trying to "
   ++ op
   ++ " on "
   ++ (
@@ -20,8 +22,11 @@ let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
     }
   )
   ++ "."
-  ++ "\n\nThe value recived is:\n"
-  ++ Yojson.Basic.pretty_to_string(value);
+  ++ enter(2)
+  ++ "Recived value:"
+  ++ enter(1)
+  ++ indent(4)
+  ++ Yojson.Basic.to_string(value);
 };
 
 let makeError = (name: string, json: Json.t) => {

@@ -1,7 +1,6 @@
 open Ast;
 open Tokenizer;
-
-let indent = n => String.make(n * 2, ' ');
+open Console;
 
 let positionToString = (start, end_) =>
   Printf.sprintf(
@@ -15,23 +14,23 @@ let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) =
   let exnToString = Printexc.to_string(exn);
   let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
 
-  "\n"
+  enter(1)
   ++ "Input:"
   ++ indent(1)
   ++ Chalk.green(Chalk.bold(input))
-  ++ "\n"
+  ++ enter(1)
   ++ indent(4)
   ++ String.make(start.pos_cnum, ' ')
   ++ Chalk.gray(pointerRange)
-  ++ "\n\n"
+  ++ enter(2)
   ++ "Error:"
   ++ indent(1)
   ++ Chalk.red(Chalk.bold(exnToString))
-  ++ "\n"
+  ++ enter(1)
   ++ indent(4)
   ++ "Problem parsing at position "
   ++ positionToString(start, end_)
-  ++ "\n";
+  ++ enter(1);
 };
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.program);
