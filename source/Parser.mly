@@ -93,20 +93,17 @@ expr:
       | "select" -> Select(cb)
       | "sort_by" -> SortBy(cb)
       | "group_by" -> GroupBy(cb)
-      (* TODO: Write down all the functions and improve the failwith message *)
       | _ -> failwith(f ^ " is not a valid function")
     }
   | e = path
     { e }
-  | i = IDENTIFIER;
-    { match i with
+  | f = IDENTIFIER;
+    { match f with
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
       | "tail" -> Tail
       | "length" -> Length
-      | "to_entries" -> ToEntries
-      | "from_entries" -> FromEntries
       | "to_string" -> ToString
       | "to_num" -> ToNumber
       | "type" -> Type
@@ -117,8 +114,29 @@ expr:
       | "ends_with" -> EndsWith
       | "split" -> Split
       | "join" -> Join
+      | "floor" -> Floor
+      | "sqrt" -> Sqrt
+      | "min" -> Min
+      | "max" -> Max
+      | "unique" -> Unique
+      | "explode" -> Explode
+      | "implode" -> Implode
+      | "any" -> Any
+      | "all" -> All
+      | "in" -> In
+      | "recurse_down" -> RecurseDown
+      | "to_entries" -> ToEntries
+      | "from_entries" -> FromEntries
+      | "with_entries" -> WithEntries
+      | "nan" -> Nan
+      | "isnan" -> Isnan
+      | "tonumber" -> failwith("'" ^ f ^ "' tonumber is not valid in q, use 'to_number' instead")
+      | "isinfinite" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_infinite' instead")
+      | "isfinite" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_finite' instead")
+      | "isnormal" -> failwith("'" ^ f ^ "' is not valid in q, use 'is_normal' instead")
+      | "tostring" -> failwith("'" ^ f ^ "' is not valid in q, use 'to_string' instead")
       (* TODO: Write down all the functions and improve the failwith message *)
-      | _ -> failwith(i ^ " is not a valid function")
+      | _ -> failwith(f ^ " is not a valid function")
     }
   | DOT;
     { Identity }

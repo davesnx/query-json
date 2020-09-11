@@ -20,7 +20,26 @@ type expression =
   | Key(string) /* .foo */
   | Has(conditional) /* has(x) */
   | Keys /* keys */
+  | Floor /* floor */
+  | Sqrt /* sqrt */
+  | Type /* type */
+  | Sort /* sort */
+  | Min /* min */
+  | Max /* max */
+  | Unique /* unique */
+  | Reverse /* reverse */
+  | Explode /* explode */
+  | Implode /* implode */
+  | Any /* any */
+  | All /* all */
+  | In /* in */
+  | RecurseDown /* recurse_down */
   | ToEntries /* to_entries */
+  | ToString /* to_string */
+  | FromEntries /* from_entries */
+  | WithEntries
+  | Nan
+  | Isnan
   /* Array */
   | Index(int) /* [1] */
   | Filter(conditional) /* .filter(x) */
@@ -33,11 +52,8 @@ type expression =
   | Select(expression) /* .select(x) */
   | SortBy(expression) /* sort_by(x) */
   | GroupBy(expression) /* group_by(x) */
-  | FromEntries /* from_entries */
-  | Sort /* sort */
-  | Reverse /* reverse */
-  | All(expression) /* all */
-  | Any(expression) /* any */
+  | AllWithCondition(conditional) /* all(c) */
+  | AnyWithCondition(conditional) /* any(c) */
   | Some(expression) /* some */
   | Find(expression) /* .find() */
   /* operations */
@@ -46,9 +62,6 @@ type expression =
   | Division(expression, expression) /* / */
   | Multiply(expression, expression) /* * */
   /* Generic */
-  | ToString /* to_string */
-  | Type /* type */
-  | Unique /* uniq */
   | Length /* length */
   | Contains
   /* Strings */

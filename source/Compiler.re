@@ -46,8 +46,13 @@ let makeError = (name: string, json: Json.t) => {
   };
 };
 
-/* TODO: Handle error */
-let keys = json => Ok(`List(Json.keys(json) |> List.map(i => `String(i))));
+let keys = (json: Json.t) => {
+  switch (json) {
+  | `List(_list) =>
+    Ok(`List(Json.keys(json) |> List.map(i => `String(i))))
+  | _ => Error(makeError("keys", json))
+  };
+};
 
 let length = (json: Json.t) => {
   switch (json) {
@@ -100,11 +105,16 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 
 let id: Json.t => Json.t = i => i;
 
+let makeEmptyListError = op => {
+  enter(1) ++ "Error:  Trying to " ++ op ++ " on an empty array.";
+};
+
 let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
-    /* TODO: Making sure list have at least one item */
-    Ok(Json.index(0, `List(list)))
+    List.length(list) > 0
+      ? Ok(Json.index(0, `List(list))) : Error(makeEmptyListError("head"))
+
   | _ => Error(makeError("head", json))
   };
 };
@@ -112,18 +122,29 @@ let head = (json: Json.t) => {
 let tail = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
-    /* TODO: Making sure list have at least one item */
-    let lastIndex = List.length(list) - 1;
-    Ok(Json.index(lastIndex, `List(list)));
+    List.length(list) > 0
+      ? {
+        let lastIndex = List.length(list) - 1;
+        Ok(Json.index(lastIndex, `List(list)));
+      }
+      : Error(makeEmptyListError("head"))
   | _ => Error(makeError("tail", json))
   };
 };
 
-/* TODO: Run this on Assoc only */
-let member = (key, json) => Ok(Json.member(key, json));
+let member = (key: string, json: Json.t) => {
+  switch (json) {
+  | `Assoc(_assoc) => Ok(Json.member(key, json))
+  | _ => Error(makeError("." ++ key, json))
+  };
+};
 
-/* TODO: Run this on List only, String as well? */
-let index = (key, json) => Ok(Json.index(key, json));
+let index = (value: int, json: Json.t) => {
+  switch (json) {
+  | `List(_list) => Ok(Json.index(value, json))
+  | _ => Error(makeError("[" ++ string_of_int(value) ++ "]", json))
+  };
+};
 
 let rec compile = (expression: expression, json): result(Json.t, string) => {
   switch (expression) {
@@ -135,10 +156,10 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
   | Tail => tail(json)
   | Length => length(json)
   | Map(expr) => map(expr, json)
-  | Addition(left, right) => pair(left, right, add, json)
-  | Subtraction(left, right) => pair(left, right, sub, json)
-  | Multiply(left, right) => pair(left, right, mult, json)
-  | Division(left, right) => pair(left, right, div, json)
+  | Addition(left, right) => operation(left, right, add, json)
+  | Subtraction(left, right) => operation(left, right, sub, json)
+  | Multiply(left, right) => operation(left, right, mult, json)
+  | Division(left, right) => operation(left, right, div, json)
   | Literal(literal) =>
     switch (literal) {
     | Bool(b) => Ok(`Bool(b))
@@ -168,24 +189,24 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
   | _ => Error(show_expression(expression) ++ " is not implemented")
   };
 }
-and pair = (left, right, op, json) => {
-  let l = compile(left, json);
-  let r = compile(right, json);
+and operation = (leftR, rightR, op, json) => {
+  let exprLeft = compile(leftR, json);
+  let exprRight = compile(rightR, json);
 
-  switch (l, r) {
-  | (Ok(l), Ok(r)) => op(l, r)
+  switch (exprLeft, exprRight) {
+  | (Ok(left), Ok(right)) => op(left, right)
   | (Error(err), _) => Error(err)
   | (_, Error(err)) => Error(err)
   };
 }
-and condition = (left, right, op, json) => {
-  let l = compile(left, json);
-  let r = compile(right, json);
+and condition = (leftR, rightR, op, json) => {
+  let exprLeft = compile(leftR, json);
+  let exprRight = compile(rightR, json);
 
-  switch (l, r) {
-  | (Ok(l), Ok(r)) =>
-    switch (op(l, r)) {
-    | Ok(b) => b
+  switch (exprLeft, exprRight) {
+  | (Ok(left), Ok(right)) =>
+    switch (op(left, right)) {
+    | Ok(boolean) => boolean
     /* If the condition fails, return false */
     | Error(_err) => false
     }
@@ -195,10 +216,13 @@ and condition = (left, right, op, json) => {
 }
 and map = (expr: expression, json: Json.t) => {
   switch (json) {
-  | `List(_list) =>
-    /* TODO: Making sure list have at least one item */
+  | `List(list) =>
     /* TODO: compiler(expr, item) |> Result.get_ok can raise exn */
-    Ok(Json.map(item => compile(expr, item) |> Result.get_ok, json))
+    List.length(list) > 0
+      ? {
+        Ok(Json.map(item => compile(expr, item) |> Result.get_ok, json));
+      }
+      : Error(makeEmptyListError("map"))
   | _ => Error(makeError("map", json))
   };
 };
