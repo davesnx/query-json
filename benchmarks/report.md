@@ -1,6 +1,8 @@
 ## Benchmark Report
 The benchmarks run on a 13" MacBook Pro (2020) with a 1.4 GHz Quad-Core i5 and 16GB 2133MHz RAM.
 
+Based on q 0.2.1
+
 # Using [hyperfine](https://github.com/sharkdp/hyperfine)
 
 `$ hyperfine --warmup 10 'q . esy.json' 'jq . esy.json'`
