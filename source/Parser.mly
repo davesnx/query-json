@@ -22,7 +22,7 @@
 
 %token SPACE
 
-/* %token QUESTION_MARK */
+%token QUESTION_MARK
 %token EXCLAMATION_MARK
 %token COMMA
 
@@ -72,14 +72,14 @@ conditional:
 path:
   /* We need both:
     String is scaped, while Identifier isn't. */
-  | DOT; k = STRING;
-    { Key(k, false) }
-  | DOT; k = IDENTIFIER;
-    { Key(k, false) }
-  | DOT; k = STRING; rst = path
-    { Pipe(Key(k, false), rst) }
-  | DOT; k = IDENTIFIER; rst = path
-    { Pipe(Key(k, false), rst) }
+  | DOT; k = STRING; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+  | DOT; k = STRING; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(k, opt), rst) }
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(k, opt), rst) }
 
 obj_fields: obj = separated_list(COMMA, obj_field)
   { obj }

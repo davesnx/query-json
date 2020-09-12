@@ -13,12 +13,12 @@ type noun =
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
   enter(1)
   ++ "Error:  Trying to "
-  ++ op
+  ++ Chalk.bold(op)
   ++ " on "
   ++ (
     switch (memberKind) {
-    | StartsWithVocal(m) => "an " ++ m
-    | StartsWithConsonant(m) => "a " ++ m
+    | StartsWithVocal(m) => "an " ++ Chalk.bold(m)
+    | StartsWithConsonant(m) => "a " ++ Chalk.bold(m)
     }
   )
   ++ "."
@@ -26,7 +26,7 @@ let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
   ++ "Recived value:"
   ++ enter(1)
   ++ indent(4)
-  ++ Yojson.Basic.to_string(value);
+  ++ Chalk.gray(Yojson.Basic.to_string(value));
 };
 
 let makeError = (name: string, json: Json.t) => {
@@ -118,7 +118,7 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 let id: Json.t => Json.t = i => i;
 
 let makeEmptyListError = op => {
-  enter(1) ++ "Error:  Trying to " ++ op ++ " on an empty array.";
+  enter(1) ++ "Error:  Trying to " ++ Chalk.bold(op) ++ " on an empty array.";
 };
 
 let head = (json: Json.t) => {
@@ -147,10 +147,10 @@ let tail = (json: Json.t) => {
 let makeErrorMissingMember = (op, value: Json.t) => {
   enter(1)
   ++ "Error:  Trying to "
-  ++ op
+  ++ Chalk.bold(op)
   ++ " on "
-  ++ Yojson.Basic.to_string(value)
-  ++ ", and doesn't exist";
+  ++ Chalk.gray(Yojson.Basic.to_string(value))
+  ++ " and it doesn't exist.";
 };
 
 let member = (key: string, opt: bool, json: Json.t) => {
@@ -158,8 +158,10 @@ let member = (key: string, opt: bool, json: Json.t) => {
   | `Assoc(_assoc) =>
     let accessMember = Json.member(key, json);
     switch (accessMember, opt) {
+    | (`Null, true) => Ok(accessMember)
+    | (`Null, false) => Error(makeErrorMissingMember("." ++ key, json))
+    | (_, false) => Ok(accessMember)
     | (_, true) => Ok(accessMember)
-    | (_, false) => Error(makeErrorMissingMember("." ++ key, json))
     };
   | _ => Error(makeError("." ++ key, json))
   };

@@ -23,8 +23,8 @@ let tests: list((string, expression)) = [
   (".[1]", Pipe(Identity, Index(1))),
   (".books[1]", Pipe(Key("books", false), Index(1))),
   (".WAT", Key("WAT", false)),
-  /* (".WAT?", Key("WAT", true)), */
   ("head", Head),
+  (".WAT?", Key("WAT", true)),
 ];
 
 describe("correctly parse value", ({test, _}) => {
@@ -32,7 +32,11 @@ describe("correctly parse value", ({test, _}) => {
     test(
       "parse: " ++ string_of_int(index),
       payload => {
-        let result = parse(~debug=false, result) |> Result.get_ok;
+        let result =
+          switch (parse(~debug=true, result)) {
+          | Ok(r) => r
+          | Error(err) => failwith(err)
+          };
         compare(expected, result, payload);
       },
     );
