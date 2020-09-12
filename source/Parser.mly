@@ -15,14 +15,15 @@
 %token PIPE
 %token SEMICOLON
 %token ADD SUB MULT DIV
-%token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR NOT
+%token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR
 
 %token <string> FUNCTION
 %token CLOSE_PARENT
 
 %token SPACE
 
-%token QUESTION_MARK
+/* %token QUESTION_MARK */
+%token EXCLAMATION_MARK
 %token COMMA
 
 %token OPEN_BRACKET
@@ -30,9 +31,6 @@
 %token OPEN_BRACE
 %token CLOSE_BRACE
 
-/* %prec STRING
-%prec CLOSE_PARENT
- */
 %token EOF
 
 %left OPEN_BRACKET
@@ -49,7 +47,6 @@ program:
     { e }
   | EOF;
     { Identity }
-
 
 conditional:
   | left = expr; EQUAL; right = expr;
@@ -68,7 +65,7 @@ conditional:
     { LowerEqual(left, right) }
   | left = expr; OR; right = expr;
     { LowerEqual(left, right) }
-  | left = expr; NOT; right = expr;
+  | left = expr; EXCLAMATION_MARK; right = expr;
     { LowerEqual(left, right) }
   ;
 
@@ -114,18 +111,6 @@ expr:
       | "range" -> Range(int_of_float(from), int_of_float(upto))
       | _ -> failwith(f ^ " is not a valid function")
      }
-  | f = FUNCTION; s = STRING; CLOSE_PARENT;
-    { match f with
-      | "has" -> Has(s)
-      | "starts_with" -> StartsWith(s)
-      | "ends_with" -> EndsWith(s)
-      | "split" -> Split(s)
-      | "join" -> Join(s)
-      | "contains" -> Contains(s)
-      | "startswith" -> failwith(renamed f "starts_with")
-      | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(missing f)
-    }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "map" -> Map(cb)
@@ -143,6 +128,14 @@ expr:
       | "all" -> AllWithCondition(cb)
       | "walk" -> Walk(cb)
       | "transpose" -> Transpose(cb)
+      | "has" -> Has(cb)
+      | "starts_with" -> StartsWith(cb)
+      | "ends_with" -> EndsWith(cb)
+      | "split" -> Split(cb)
+      | "join" -> Join(cb)
+      | "contains" -> Contains(cb)
+      | "startswith" -> failwith(renamed f "starts_with")
+      | "endswith" -> failwith(renamed f "ends_with")
       | _ -> failwith(missing f)
     }
   | e = path
@@ -181,6 +174,7 @@ expr:
       | "with_entries" -> WithEntries
       | "nan" -> Nan
       | "isnan" -> IsNan
+      | "reduce" -> failwith(renamed f "reduce()")
       | "tonumber" -> failwith(renamed f "to_number")
       | "isinfinite" -> failwith(renamed f "is_infinite")
       | "isfinite" -> failwith(renamed f "is_finite")
@@ -194,9 +188,9 @@ expr:
     { Recurse }
   | COMMA;
     { Comma }
-  | OPEN_BRACKET; obj = obj_fields; CLOSE_BRACKET
+  | OPEN_BRACE; obj = obj_fields; CLOSE_BRACE
     { Object(obj) }
-  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACE
+  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACKET
     { List(vl) }
   | s = STRING;
     { Literal(String(s)) }

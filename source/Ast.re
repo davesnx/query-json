@@ -21,7 +21,7 @@ type expression =
   | Walk(expression) /* walk() */
   | Transpose(expression) /* transpose() */
   | Key(string, bool) /* .foo */
-  | Has(string) /* has(x) */
+  | Has(expression) /* has(x) */
   | Keys /* keys */
   | Floor /* floor */
   | Sqrt /* sqrt */
@@ -52,7 +52,8 @@ type expression =
   | Head /* head */
   | Tail /* tail */
   | Map(expression) /* .[] */ /* map(x) */
-  | FlatMap(expression) /* flat_map */
+  | FlatMap(expression) /* flat_map(x) */
+  | Reduce(expression) /* reduce(x) */
   | Select(expression) /* .select(x) */
   | SortBy(expression) /* sort_by(x) */
   | GroupBy(expression) /* group_by(x) */
@@ -70,14 +71,14 @@ type expression =
   | Multiply(expression, expression) /* * */
   /* Generic */
   | Length /* length */
-  | Contains(string)
+  | Contains(expression)
   /* Strings */
   | Test(regex)
   | ToNumber /* to_num */
-  | StartsWith(string) /* starts_with */
-  | EndsWith(string) /* ends_with */
-  | Split(string) /* split */
-  | Join(string) /* join */
+  | StartsWith(expression) /* starts_with */
+  | EndsWith(expression) /* ends_with */
+  | Split(expression) /* split */
+  | Join(expression) /* join */
   | Path(expression) /* path(x) */
   /* Logic */
   | If(conditional)

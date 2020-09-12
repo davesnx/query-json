@@ -19,6 +19,7 @@ type token =
   | OPEN_BRACE
   | SEMICOLON
   | CLOSE_BRACE
+  | EXCLAMATION_MARK
   | DOT
   | PIPE
   | QUESTION_MARK
@@ -28,6 +29,8 @@ type token =
   | SUB
   | DIV
   | MULT
+  | AND
+  | OR
   | EQUAL
   | NOT_EQUAL
   | GREATER
@@ -64,6 +67,7 @@ let tokenizeApply = buf => {
 
 let rec tokenize = buf => {
   switch%sedlex (buf) {
+  | eof => Ok(EOF)
   | '<' => Ok(LOWER)
   | "<=" => Ok(LOWER_EQUAL)
   | '>' => Ok(GREATER)
@@ -71,6 +75,9 @@ let rec tokenize = buf => {
   | "==" => Ok(EQUAL)
   | "!=" => Ok(NOT_EQUAL)
   | "+" => Ok(ADD)
+  | "and" => Ok(AND)
+  | "!" => Ok(EXCLAMATION_MARK)
+  | "or" => Ok(OR)
   | "-" => Ok(SUB)
   | "*" => Ok(MULT)
   | "/" => Ok(DIV)
@@ -78,7 +85,6 @@ let rec tokenize = buf => {
   | "]" => Ok(CLOSE_BRACKET)
   | "{" => Ok(OPEN_BRACE)
   | "}" => Ok(CLOSE_BRACE)
-  | '"' => Ok(string(buf))
   | "|" => Ok(PIPE)
   | ";" => Ok(SEMICOLON)
   | "," => Ok(COMMA)
@@ -86,14 +92,14 @@ let rec tokenize = buf => {
   | "null" => Ok(NULL)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
-  | identifier => tokenizeApply(buf)
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
+  | '"' => Ok(string(buf))
+  | identifier => tokenizeApply(buf)
   | number =>
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
   | space => tokenize(buf)
-  | eof => Ok(EOF)
   | _ =>
     let tok = lexeme(buf);
     Error(Printf.sprintf("Unexpected character %S", tok));

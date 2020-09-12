@@ -10,16 +10,20 @@ let compare = (expected, result, {expect, _}) => {
 
 let tests: list((string, expression)) = [
   (".", Identity),
-  (".store", Key("store")),
-  (".store.books", Pipe(Key("store"), Key("books"))),
-  (".store | .books", Pipe(Key("store"), Key("books"))),
+  (".store", Key("store", false)),
+  (".store.books", Pipe(Key("store", false), Key("books", false))),
+  (".store | .books", Pipe(Key("store", false), Key("books", false))),
   (
     ". | map(.price + 1)",
-    Pipe(Identity, Map(Addition(Key("price"), Literal(Number(1.))))),
+    Pipe(
+      Identity,
+      Map(Addition(Key("price", false), Literal(Number(1.)))),
+    ),
   ),
   (".[1]", Pipe(Identity, Index(1))),
-  (".books[1]", Pipe(Key("books"), Index(1))),
-  (".WAT", Key("WAT")),
+  (".books[1]", Pipe(Key("books", false), Index(1))),
+  (".WAT", Key("WAT", false)),
+  /* (".WAT?", Key("WAT", true)), */
   ("head", Head),
 ];
 
