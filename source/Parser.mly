@@ -111,6 +111,8 @@ expr:
       | "range" -> Range(int_of_float(from), int_of_float(upto))
       | _ -> failwith(f ^ " is not a valid function")
      }
+  | f = FUNCTION; CLOSE_PARENT;
+    { failwith(f ^ "(), should contain a body") }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "map" -> Map(cb)

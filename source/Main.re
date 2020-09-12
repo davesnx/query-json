@@ -10,8 +10,20 @@ let positionToString = (start, end_) =>
     end_.Lexing.pos_cnum - end_.Lexing.pos_bol,
   );
 
+let extractExn = (str: string) => {
+  let first = String.index_opt(str, '(');
+  let last = String.rindex_opt(str, ')');
+  switch (first, last) {
+  | (Some(firstIndex), Some(lastIndex)) =>
+    let first = firstIndex + 2;
+    let length = lastIndex - firstIndex - 1 - 2;
+    String.sub(str, first, length);
+  | (_, _) => str
+  };
+};
+
 let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) => {
-  let exnToString = Printexc.to_string(exn);
+  let exnToString = extractExn(Printexc.to_string(exn));
   let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
 
   enter(1)
