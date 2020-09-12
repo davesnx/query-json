@@ -23,7 +23,7 @@ function q () {
 }
 
 @test "non defined field gives back null" {
-  q '.wat' $BATS_TEST_DIRNAME/mock.json
+  q '.wat?' $BATS_TEST_DIRNAME/mock.json
   [ "$status" -eq 0 ]
   [ "$output" = "null" ]
 }
