@@ -48,7 +48,7 @@ let makeError = (name: string, json: Json.t) => {
 
 let keys = (json: Json.t) => {
   switch (json) {
-  | `List(_list) =>
+  | `Assoc(_list) =>
     Ok(`List(Json.keys(json) |> List.map(i => `String(i))))
   | _ => Error(makeError("keys", json))
   };
