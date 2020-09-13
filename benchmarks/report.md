@@ -58,5 +58,5 @@ q  0.01 real         0.01 user         0.00 sys
 ### Simple operation an attribute on a huge JSON (110M) file
 ```
 jq 2.58 real         2.33 user         0.23 sys
-q 2.23 real         2.09 user         0.13 sys
+q  2.23 real         2.09 user         0.13 sys
 ```

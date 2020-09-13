@@ -35,8 +35,12 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 
 - **Great Performance**: Fast, small footprint and minimum run-time. Check [Performance section](#Performance) for a longer explaination.
 - **Delightful errors**:
-  - Better errors when json types and operation types don't match.
-  - `verbose` flag, prints each operation in each state and it's intermediate states.
+  - Better errors when json types and operation types don't match:
+    ```bash
+    $ esy q -- '.esy.release.wat' esy.json
+    Error: Trying to .wat on `{"bin": ["q"]}` and it does not exist.
+    ```
+  - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
   - `debug` prints the tokens and the AST.
 - **Improved API**: made small adjustments to the buildin operations. Some examples are:
   - All methods are snake_case instead of alltoghetercase
