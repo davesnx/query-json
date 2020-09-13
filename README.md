@@ -98,9 +98,10 @@ The purposes of this project were mostly 2:
 
 - #### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
   - `--version` ✅
-  - `--kind` This is different than jq ✅
+  - `--kind`. This is different than jq ✅
     - `--kind=file` and the 2nd argument can be a json file
     - `--kind=inline` and the 2nd argument can be a json as a string
+  - `--no-color`. This disables colors ✅
   - ...rest ⚠️
 
 - #### [Basic filters](https://stedolan.github.io/jq/manual/v1.6/#Basicfilters)
@@ -175,7 +176,7 @@ Contributions are what make the open source community such an amazing place to b
 
 ### Support
 
-I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) or (reasonml.chat)[https://reasonml.chat] so feel free to ask anything there.
+I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) or [reasonml.chat](https://reasonml.chat) so feel free to ask anything there.
 
 ### Setup
 

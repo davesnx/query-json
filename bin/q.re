@@ -12,12 +12,12 @@ let run =
       kind: inputKind,
       _verbose: bool,
       debug: bool,
-      _colorize: bool,
+      noColor: bool,
     ) => {
   let json =
     switch (kind) {
-    | File => Yojson.Basic.from_file(input)
-    | Inline => Yojson.Basic.from_string(input)
+    | File => Source.Json.parseFile(input)
+    | Inline => Source.Json.parseString(input)
     };
 
   Main.parse(~debug, query)
@@ -25,8 +25,9 @@ let run =
   |> Result.map(runtime => runtime(json))
   |> Result.map(res =>
        res
-       |> Result.map(output =>
-            output |> Yojson.Basic.pretty_to_string |> print_endline
+       |> Result.map(o =>
+            Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
+            |> print_endline
           )
        |> Result.map_error(print_endline)
      )
@@ -62,14 +63,14 @@ let debug = {
   Arg.(value & flag & info(["d", "debug"], ~doc));
 };
 
-let colorize = {
+let noColor = {
   let doc = "Enable or disable color in the output";
-  Arg.(value & flag & info(["c", "colorize"], ~doc));
+  Arg.(value & flag & info(["c", "no-color"], ~doc));
 };
 
 let cmd = {
   (
-    Term.(const(run) $ query $ json $ kind $ verbose $ debug $ colorize),
+    Term.(const(run) $ query $ json $ kind $ verbose $ debug $ noColor),
     Term.info(
       "q",
       ~version=Info.version,
