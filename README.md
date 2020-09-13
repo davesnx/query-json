@@ -45,6 +45,7 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 - **Improved API**: made small adjustments to the buildin operations. Some examples are:
   - All methods are snake_case instead of alltoghetercase
   - Changed `select` for `filter`
+  - Supports comments in JSONs
 - **Small**: Lexer, Parser and Compiler are just 300 LOC and most of the commands that I use on my day to day are implemented in only 140 LOC.
 
 ## Installation
