@@ -22,7 +22,7 @@ let (pp_print_string, pp_print_bool, pp_print_list, fprintf, asprintf) =
    */
 
 let parseFile = Yojson.Basic.from_file;
-let parseString = Yojson.Basic.from_file;
+let parseString = Yojson.Basic.from_string;
 
 let string = str => {
   let buf = Buffer.create(String.length(str) * 5 / 4);
