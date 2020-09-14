@@ -53,14 +53,14 @@ const pkgJson = {
     postinstall: "node postinstall.js",
   },
   bin: {
-    q: "q",
+    "query-json": "query-json",
   },
   files: [
     "platform-windows-x64/",
     "platform-linux-x64/",
     "platform-darwin-x64/",
     "postinstall.js",
-    "q",
+    "query-json",
   ],
 };
 
