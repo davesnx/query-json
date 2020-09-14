@@ -113,12 +113,12 @@ jobs:
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
-          mv q.exe q
+          mv q.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv q.exe q
+          mv q.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 

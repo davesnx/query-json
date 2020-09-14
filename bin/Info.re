@@ -1,5 +1,5 @@
-let version = "0.3.7";
-let description = "query-json is a faster and simpler re-implementation of jq in Reason Native, available under 'q'";
+let version = "0.4.0";
+let description = "query-json is a faster and simpler re-implementation of jq in Reason Native";
 
 let repo = "https://github.com/davesnx/query-json";
 let bugUrl = repo ++ "/issues";

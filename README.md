@@ -11,7 +11,7 @@
 **query-json (q)** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **q**, allows you to write small programs to operate on top of json files in a cute syntax:
 
 ```bash
-q ".store.books | filter(.price > 10)" stores.json
+query-json ".store.books | filter(.price > 10)" stores.json
 ```
 
 This would access to `"store"` field inside the **stores.json**, access to `"books"` field, (since it's an array) it will run a filter on each item and if `"price"` field is bigger than 10 will keep that item on the list, and finally print the resultant list.
@@ -70,6 +70,16 @@ yarn global add @davesnx/query-json
 ```
 
 ### Download zip files from [GitHub](https://github.com/davesnx/query-json/releases)
+
+### Usage
+
+```bash
+query-json '.' pokemons.json
+query-json --kind=inline '.' '{ "wooop": { "siiie": 1 } }'
+
+# I have aliased query-json to be "q" for short.
+alias q="query-json"
+```
 
 ## Performance
 
