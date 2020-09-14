@@ -77,7 +77,7 @@ yarn global add @davesnx/query-json
 query-json '.' pokemons.json
 query-json --kind=inline '.' '{ "wooop": { "siiie": 1 } }'
 
-# I have aliased query-json to be "q" for short.
+# I have aliased query-json to be "q" for short, you can set it in your dotfiles.
 alias q="query-json"
 ```
 

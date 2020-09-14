@@ -60,8 +60,8 @@ download() {
   fi
 
   unzip -q "$DOWNLOAD_DIR/$FILENAME.zip" -d "$DOWNLOAD_DIR"
-  mv "$DOWNLOAD_DIR/q" "$INSTALL_DIR/q"
-  chmod u+x "$INSTALL_DIR/q"
+  mv "$DOWNLOAD_DIR/query-json" "$INSTALL_DIR/query-json"
+  chmod u+x "$INSTALL_DIR/query-json"
 }
 
 check_dependencies() {
