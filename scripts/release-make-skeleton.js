@@ -39,7 +39,7 @@ Fs.copyFileSync(
   Path.join(dst, "postinstall.js")
 );
 
-const filesToTouch = ["q"];
+const filesToTouch = ["query-json"];
 
 for (const file of filesToTouch) {
   const p = Path.join(dst, file);
