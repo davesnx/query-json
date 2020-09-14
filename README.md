@@ -85,9 +85,9 @@ alias q="query-json"
 
 [This report](./benchmarks/report.md) is not a exaustive performance report of both tools, it's a overview for the percived performance of the user. Here I don't profile each tool and trying to see what are the bootlenecks, since I asume that both tools have the penalty of parsing a JSON file. Simply run a bash script and analyze the results.
 
-Aside from that, **q** isn't feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses and some of the **jq** operations aren't native, are builtin with the runtime. In order to do a proper comparision all of this above would need to take into consideration.
+Aside from that, **query-json** isn't feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses and some of the **jq** operations aren't native, are builtin with the runtime. In order to do a proper comparision all of this above would need to take into consideration.
 
-The report shows that **q** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
+The report shows that **query-json** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
 
 ## Purpose
 
