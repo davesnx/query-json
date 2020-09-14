@@ -8,7 +8,7 @@
 
 ---
 
-**query-json (q)** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **q**, allows you to write small programs to operate on top of json files in a cute syntax:
+**query-json** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to OCaml. **query-json**, allows you to write small programs to operate on top of json files in a cute syntax:
 
 ```bash
 query-json ".store.books | filter(.price > 10)" stores.json
@@ -37,8 +37,8 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 - **Delightful errors**:
   - Better errors when json types and operation types don't match:
     ```bash
-    $ esy q -- '.esy.release.wat' esy.json
-    Error: Trying to .wat on `{"bin": ["q"]}` and it does not exist.
+    $ query-json '.esy.release.wat' esy.json
+    Error: Trying to .wat on `{"bin": ["query-json"]}` and it does not exist.
     ```
   - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
   - `debug` prints the tokens and the AST.
@@ -85,7 +85,7 @@ alias q="query-json"
 
 [This report](./benchmarks/report.md) is not a exaustive performance report of both tools, it's a overview for the percived performance of the user. Here I don't profile each tool and trying to see what are the bootlenecks, since I asume that both tools have the penalty of parsing a JSON file. Simply run a bash script and analyze the results.
 
-Aside from that, **q** isn't feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that q misses and some of the **jq** operations aren't native, are builtin with the runtime. In order to do a proper comparision all of this above would need to take into consideration.
+Aside from that, **q** isn't feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses and some of the **jq** operations aren't native, are builtin with the runtime. In order to do a proper comparision all of this above would need to take into consideration.
 
 The report shows that **q** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
 
@@ -197,7 +197,7 @@ git clone https://github.com/davesnx/query-json
 cd query-json
 esy # installs everything
 esy test # runs unit tests with [rely](https://reason-native.com/docs/rely), defined under test/.
-esy q # Run binary
+esy bin # Run binary
 ```
 
 ## Acknowledgements

@@ -72,14 +72,14 @@ let cmd = {
   (
     Term.(const(run) $ query $ json $ kind $ verbose $ debug $ noColor),
     Term.info(
-      "q",
+      "query-json",
       ~version=Info.version,
       ~doc="Run operations on JSON",
       ~exits=Term.default_exits,
       ~man=[
         `S(Manpage.s_description),
         `P(Info.description),
-        `P("q '.dependencies' package.json"),
+        `P("query-json '.dependencies' package.json"),
         `S(Manpage.s_bugs),
         `P("Report them to " ++ Info.bugUrl),
       ],

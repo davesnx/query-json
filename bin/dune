@@ -1,5 +1,5 @@
 (executable
- (name q)
- (public_name q)
+ (name Bin)
+ (public_name Bin)
  (libraries console.lib source yojson cmdliner)
 )

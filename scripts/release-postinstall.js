@@ -6,7 +6,7 @@ const Fs = require("fs");
 
 const platform = process.platform;
 
-const binariesToCopy = ["q"];
+const binariesToCopy = ["query-json"];
 
 function find_arch() {
   // The running binary is 64-bit, so the OS is clearly 64-bit.

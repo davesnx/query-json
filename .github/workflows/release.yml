@@ -65,7 +65,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-artifact
-          path: _build/default/bin/q.exe
+          path: _build/default/bin/Bin.exe
 
   publish:
     needs: build
@@ -105,20 +105,20 @@ jobs:
       #     name: windows-latest-artifact
       #     path: _release/platform-windows-x64
 
-      - name: Publish q from linux artifcats
+      - name: Publish query-json from linux artifcats
         run: |
-          cp _release/platform-linux-x64/q.exe ./q
-          chmod +x q
+          cp _release/platform-linux-x64/Bin.exe ./query-json
+          chmod +x query-json
 
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
-          mv q.exe query-json
+          mv Bin.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv q.exe query-json
+          mv Bin.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
