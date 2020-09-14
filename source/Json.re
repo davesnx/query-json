@@ -1,11 +1,28 @@
+open Printf;
+open Console;
+
 type t = Yojson.Basic.t;
 include Yojson.Basic.Util;
 
-let parseFile = Yojson.Basic.from_file;
-let parseString = Yojson.Basic.from_file;
-
 let (pp_print_string, pp_print_bool, pp_print_list, fprintf, asprintf) =
   Format.(pp_print_string, pp_print_bool, pp_print_list, fprintf, asprintf);
+
+/*
+ TODO: Return result(string, string)
+
+ let parseString = str =>
+    try(Ok(Yojson.Basic.from_string(str))) {
+    | e => Error(Printexc.to_string(e))
+    };
+
+  let parseFile = file =>
+    try(Ok(Yojson.Basic.from_file(file))) {
+    | e => Error(Printexc.to_string(e))
+    };
+   */
+
+let parseFile = Yojson.Basic.from_file;
+let parseString = Yojson.Basic.from_file;
 
 let string = str => {
   let buf = Buffer.create(String.length(str) * 5 / 4);
@@ -25,62 +42,100 @@ let string = str => {
   Buffer.contents(buf);
 };
 
-let list = (sep, ppx, out, l) => {
-  let pp_sep = (out, ()) => fprintf(out, "%s@ ", sep);
-  pp_print_list(~pp_sep, ppx, out, l);
+let quotes = str => "\"" ++ str ++ "\"";
+let array = Easy_format.list;
+let record = Easy_format.list;
+
+let id = (i: string): string => i;
+
+module Color = {
+  let rec format = (json: t) =>
+    switch (json) {
+    | `Null => Easy_format.Atom("null" |> Chalk.green, Easy_format.atom)
+    | `Bool(b) =>
+      Easy_format.Atom(string_of_bool(b) |> Chalk.green, Easy_format.atom)
+    | `Int(i) =>
+      Easy_format.Atom(i |> string_of_int |> Chalk.green, Easy_format.atom)
+    | `Float(f) =>
+      Easy_format.Atom(f |> string_of_float |> Chalk.green, Easy_format.atom)
+    | `String(s) =>
+      Easy_format.Atom(string(s) |> quotes |> Chalk.green, Easy_format.atom)
+    | `List([]) => Easy_format.Atom("[]", Easy_format.atom)
+    | `List(l) =>
+      Easy_format.List(("[", ",", "]", array), List.map(format, l))
+    | `Assoc([]) => Easy_format.Atom("{}", Easy_format.atom)
+    | `Assoc(l) =>
+      Easy_format.List(("{", ",", "}", record), List.map(format_field, l))
+    }
+  and format_field = ((name, json)) => {
+    let s =
+      sprintf("%s:", string(name) |> quotes |> Chalk.blue |> Chalk.bold);
+
+    Easy_format.Label(
+      (Easy_format.Atom(s, Easy_format.atom), Easy_format.label),
+      format(json),
+    );
+  };
 };
 
-let rec format =
-        (~colorize: bool, ~summarize: bool, out: Format.formatter, json: t)
-        : unit =>
-  switch (json) {
-  | `Int(n) =>
-    if (colorize) {
-      fprintf(out, "\x1b[32m%d\x1b[39m", n);
-    } else {
-      fprintf(out, "%d", n);
+module Summarize = {
+  let rec format = (json: t) =>
+    switch (json) {
+    | `Null => Easy_format.Atom("null" |> Chalk.green, Easy_format.atom)
+    | `Bool(b) =>
+      Easy_format.Atom(string_of_bool(b) |> Chalk.green, Easy_format.atom)
+    | `Int(i) =>
+      Easy_format.Atom(i |> string_of_int |> Chalk.green, Easy_format.atom)
+    | `Float(f) =>
+      Easy_format.Atom(f |> string_of_float |> Chalk.green, Easy_format.atom)
+    | `String(s) =>
+      Easy_format.Atom(string(s) |> quotes |> Chalk.green, Easy_format.atom)
+    | `List([]) => Easy_format.Atom("[]", Easy_format.atom)
+    | `List(l) =>
+      Easy_format.List(("[", ",", "]", array), List.map(format, l))
+    | `Assoc([]) => Easy_format.Atom("{}", Easy_format.atom)
+    | `Assoc(l) =>
+      Easy_format.List(("{", ",", "}", record), List.map(format_field, l))
     }
-  | `Float(n) =>
-    if (colorize) {
-      fprintf(out, "\x1b[32m%f\x1b[39m", n);
-    } else {
-      fprintf(out, "%f", n);
-    }
-  | `String(s) =>
-    if (colorize) {
-      fprintf(out, "\x1b[32m\"%s\"\x1b[39m", string(s));
-    } else {
-      fprintf(out, "\"%s\"", string(s));
-    }
-  | `Null => pp_print_string(out, "null")
-  | `Bool(b) => pp_print_bool(out, b)
-  | `List([]) => pp_print_string(out, "[]")
-  | `List(l) =>
-    fprintf(
-      out,
-      "[@;<1 0>@[<hov>%a@]@;<1 -2>]",
-      list(",", format(~colorize, ~summarize)),
-      l,
-    )
-  | `Assoc([]) => pp_print_string(out, "{}")
-  | `Assoc(l) =>
-    fprintf(
-      out,
-      "{@;<1 0>%a@;<1 -2>}",
-      list(",", field(~colorize, ~summarize)),
-      l,
-    )
-  }
-and field = (~colorize, ~summarize, out, (name, x)) =>
-  fprintf(
-    out,
-    colorize ? "@[<hv2>\x1b[34m%s\x1b[39m: %a@]" : "@[<hv2>\"%s\": %a@]",
-    string(name),
-    format(~colorize, ~summarize),
-    x,
-  );
+  and format_field = ((name, json)) => {
+    let s =
+      sprintf("%s:", string(name) |> quotes |> Chalk.blue |> Chalk.bold);
 
-let pretty = (~colorize, ~summarize, out, json) =>
-  fprintf(out, "@[<hv2>%a@]", format(~colorize, ~summarize), (json :> t));
-let toString = (json, ~colorize=true, ~summarize) =>
-  asprintf("%a", pretty(~colorize, ~summarize), json);
+    Easy_format.Label(
+      (Easy_format.Atom(s, Easy_format.atom), Easy_format.label),
+      format(json),
+    );
+  };
+};
+
+module NoColor = {
+  let rec format = (json: t) =>
+    switch (json) {
+    | `Null => Easy_format.Atom("null", Easy_format.atom)
+    | `Bool(b) => Easy_format.Atom(string_of_bool(b), Easy_format.atom)
+    | `Int(i) => Easy_format.Atom(i |> string_of_int, Easy_format.atom)
+    | `Float(f) => Easy_format.Atom(f |> string_of_float, Easy_format.atom)
+    | `String(s) => Easy_format.Atom(string(s) |> quotes, Easy_format.atom)
+    | `List([]) => Easy_format.Atom("[]", Easy_format.atom)
+    | `List(l) =>
+      Easy_format.List(("[", ",", "]", array), List.map(format, l))
+    | `Assoc([]) => Easy_format.Atom("{}", Easy_format.atom)
+    | `Assoc(l) =>
+      Easy_format.List(("{", ",", "}", record), List.map(format_field, l))
+    }
+  and format_field = ((name, json)) => {
+    let s = sprintf("%s:", string(name) |> quotes);
+
+    Easy_format.Label(
+      (Easy_format.Atom(s, Easy_format.atom), Easy_format.label),
+      format(json),
+    );
+  };
+};
+
+let toString = (json: t, ~colorize, ~summarize) =>
+  switch (colorize, summarize) {
+  | (true, _) => Easy_format.Pretty.to_string(Color.format(json))
+  | (false, false) => Easy_format.Pretty.to_string(NoColor.format(json))
+  | (_, true) => Easy_format.Pretty.to_string(Summarize.format(json))
+  };

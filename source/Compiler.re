@@ -1,11 +1,6 @@
 open Ast;
 open Console;
 
-module Json = {
-  type t = Yojson.Basic.t;
-  include Yojson.Basic.Util;
-};
-
 type noun =
   | StartsWithVocal(string)
   | StartsWithConsonant(string);
@@ -26,7 +21,7 @@ let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
   ++ "Recived value:"
   ++ enter(1)
   ++ indent(4)
-  ++ Chalk.gray(Yojson.Basic.to_string(value));
+  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
 let makeError = (name: string, json: Json.t) => {
@@ -149,7 +144,7 @@ let makeErrorMissingMember = (op, value: Json.t) => {
   ++ "Error:  Trying to "
   ++ Chalk.bold(op)
   ++ " on "
-  ++ Chalk.gray(Yojson.Basic.to_string(value))
+  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true))
   ++ " and it doesn't exist.";
 };
 
