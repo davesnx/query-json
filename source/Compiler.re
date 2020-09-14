@@ -149,11 +149,13 @@ let tail = (json: Json.t) => {
   };
 };
 
-let makeErrorMissingMember = (op, value: Json.t) => {
+let makeErrorMissingMember = (op, key, value: Json.t) => {
   printError(
     "Trying to "
     ++ singleQuotes(Chalk.bold(op))
-    ++ " on an object, that don't have the field 'wat':"
+    ++ " on an object, that don't have the field "
+    ++ singleQuotes(key)
+    ++ ":"
     ++ enter(1)
     ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true)),
   );
@@ -165,7 +167,7 @@ let member = (key: string, opt: bool, json: Json.t) => {
     let accessMember = Json.member(key, json);
     switch (accessMember, opt) {
     | (`Null, true) => Ok(accessMember)
-    | (`Null, false) => Error(makeErrorMissingMember("." ++ key, json))
+    | (`Null, false) => Error(makeErrorMissingMember("." ++ key, key, json))
     | (_, false) => Ok(accessMember)
     | (_, true) => Ok(accessMember)
     };
