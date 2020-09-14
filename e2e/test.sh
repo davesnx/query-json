@@ -11,7 +11,7 @@ function query-json () {
 }
 
 @test "json call works ok" {
-  query-json--no-color '.first.name' e2e/mock.json
+  query-json --no-color '.first.name' e2e/mock.json
   [ "$status" -eq 0 ]
   [ "$output" = '"John Doe"' ]
 }
