@@ -1,11 +1,10 @@
 open Ast;
 open Console;
+open Encoding;
 
 type noun =
   | StartsWithVocal(string)
   | StartsWithConsonant(string);
-
-let singleQuotes = str => "'" ++ str ++ "'";
 
 let printError = str =>
   enter(1)
@@ -226,6 +225,9 @@ let rec compile = (expression: expression, json): result(Json.t, string) => {
       },
       json,
     )
+  | List([]) =>
+    let alias = Pipe(Identity, Map(Identity));
+    compile(alias, json);
   | _ => Error(show_expression(expression) ++ " is not implemented")
   };
 }

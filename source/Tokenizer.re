@@ -100,8 +100,7 @@ let rec tokenize = buf => {
     let num = lexeme(buf) |> float_of_string;
     Ok(NUMBER(num));
   | space => tokenize(buf)
-  | _ =>
-    let tok = lexeme(buf);
-    Error(Printf.sprintf("Unexpected character %S", tok));
+  | any => Error("Unexpected character '" ++ lexeme(buf) ++ "'")
+  | _ => Error("Unexpected character")
   };
 };

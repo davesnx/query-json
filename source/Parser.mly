@@ -1,9 +1,5 @@
 %{
   open Ast
-
-  let renamed f name = "'" ^ f ^ "' is not valid in q, use '" ^ name ^ "' instead"
-  let notImplemented f = "'" ^ f ^ "' is not implemented"
-  let missing f = "'" ^ f ^ "' looks like a function and maybe is not implemented or missing in the parser. Either way, could you open an issue 'https://github.com/davesnx/query-json/issues/new'"
 %}
 
 %token <string> STRING
@@ -80,6 +76,8 @@ path:
     { Pipe(Key(k, opt), rst) }
   | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
     { Pipe(Key(k, opt), rst) }
+  | DOT; k = NUMBER;
+    { failwith(Errors.keyWithString k) }
 
 obj_fields: obj = separated_list(COMMA, obj_field)
   { obj }
@@ -136,18 +134,18 @@ expr:
       | "split" -> Split(cb)
       | "join" -> Join(cb)
       | "contains" -> Contains(cb)
-      | "startswith" -> failwith(renamed f "starts_with")
-      | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(missing f)
+      | "startswith" -> failwith(Errors.renamed f "starts_with")
+      | "endswith" -> failwith(Errors.renamed f "ends_with")
+      | _ -> failwith(Errors.missing f)
     }
   | e = path
     { e }
   | f = IDENTIFIER;
     { match f with
-      | "if" -> failwith(notImplemented f)
-      | "then" -> failwith(notImplemented f)
-      | "else" -> failwith(notImplemented f)
-      | "break" -> failwith(notImplemented f)
+      | "if" -> failwith(Errors.notImplemented f)
+      | "then" -> failwith(Errors.notImplemented f)
+      | "else" -> failwith(Errors.notImplemented f)
+      | "break" -> failwith(Errors.notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -175,14 +173,15 @@ expr:
       | "from_entries" -> FromEntries
       | "with_entries" -> WithEntries
       | "nan" -> Nan
-      | "isnan" -> IsNan
-      | "reduce" -> failwith(renamed f "reduce()")
-      | "tonumber" -> failwith(renamed f "to_number")
-      | "isinfinite" -> failwith(renamed f "is_infinite")
-      | "isfinite" -> failwith(renamed f "is_finite")
-      | "isnormal" -> failwith(renamed f "is_normal")
-      | "tostring" -> failwith(renamed f "to_string")
-      | _ -> failwith(missing f)
+      | "is_nan" -> IsNan
+      | "isnan" -> failwith(Errors.renamed f "is_nan")
+      | "reduce" -> failwith(Errors.renamed f "reduce()")
+      | "tonumber" -> failwith(Errors.renamed f "to_number")
+      | "isinfinite" -> failwith(Errors.renamed f "is_infinite")
+      | "isfinite" -> failwith(Errors.renamed f "is_finite")
+      | "isnormal" -> failwith(Errors.renamed f "is_normal")
+      | "tostring" -> failwith(Errors.renamed f "to_string")
+      | _ -> failwith(Errors.missing f)
     }
   | DOT;
     { Identity }
@@ -205,6 +204,6 @@ expr:
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
-    | _ -> failwith(missing f)
+    | _ -> failwith(Errors.missing f)
     }
   ;

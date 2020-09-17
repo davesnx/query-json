@@ -52,7 +52,8 @@ let last_position = ref(Location.none);
 exception LexerError(string);
 
 let provider =
-    (~debug, buf): (token, Stdlib__lexing.position, Stdlib__lexing.position) => {
+    (~debug as _, buf)
+    : (token, Stdlib__lexing.position, Stdlib__lexing.position) => {
   let (start, stop) = Sedlexing.lexing_positions(buf);
   let token =
     switch (tokenize(buf)) {
@@ -63,9 +64,9 @@ let provider =
   last_position :=
     Location.{loc_start: start, loc_end: stop, loc_ghost: false};
 
-  if (debug) {
-    print_endline(token |> show_token);
-  };
+  /* if (debug) {
+       print_endline(token |> show_token);
+     }; */
 
   (token, start, stop);
 };

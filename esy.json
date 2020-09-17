@@ -22,7 +22,7 @@
     "url": "https://github.com/davesnx/query-json.git"
   },
   "scripts": {
-    "bin": "esy dune exec query-json",
+    "bin": "esy dune exec Bin",
     "build": "esy dune build",
     "start": "esy dune build --watch",
     "test": "esy dune exec test/Run.exe",
