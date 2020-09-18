@@ -60,3 +60,23 @@ query-json  0.01 real         0.01 user         0.00 sys
 jq          2.58 real         2.33 user         0.23 sys
 query-json  2.23 real         2.09 user         0.13 sys
 ```
+
+## Explanation
+
+There are a few good asumtions about why **query-json** is faster, there are just speculations since I didn't profile neither jq, neither query-json.
+
+The feature that I think penalizes a lot jq is "def functions", the capacity of define any function that can be available during run-time.
+
+This creates a few layers, one of the difference is the interpreter and the linker, the responsible for getting all the builtin functions and compile them have them ready to use at runtime.
+
+The other pain point is the architecture of the operations on jq, since it's a stack based meanwhile query-json it's a piped recursive operations, and I think OCaml compiler optimizes the piped operations since are tail-recursive.
+
+Aside from the code, the OCaml stack, menhir has been proved to be really fast when creating those kind of compilers.
+
+I will dig more into performance in [here](https://github.com/davesnx/query-json/issues/7) and try to profile both tools in order to improve mine.
+
+#### Resources
+[jq Internals: the interpreter](https://github.com/stedolan/jq/wiki/Internals:-the-interpreter)
+[jq Internals: backtracking](https://github.com/stedolan/jq/wiki/Internals:-backtracking)
+[jq Internals: the linker](https://github.com/stedolan/jq/wiki/Internals:-the-linker)
+[jq Internals: thestack](https://github.com/stedolan/jq/wiki/Internals:-the-stack)
