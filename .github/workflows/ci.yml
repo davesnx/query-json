@@ -64,7 +64,7 @@ jobs:
 
       - name: Test
         run: |
-          esy dune test --force
+          esy dune exec test/Run.exe --force
           ls
         env:
           BISECT_ENABLE: "yes"
