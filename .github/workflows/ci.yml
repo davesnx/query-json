@@ -65,7 +65,7 @@ jobs:
       - name: Test
         run: |
           esy dune exec test/Run.exe --force
-          esy dune exec bisect-ppx-report --coverage-path . send-to Coveralls
+          esy dune exec bisect-ppx-report send-to Coveralls *.coverage
         env:
           BISECT_ENABLE: "yes"
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
