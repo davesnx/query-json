@@ -69,12 +69,12 @@ jobs:
         env:
           BISECT_ENABLE: "yes"
 
-      # - name: Deploy coverage
-      #   run: |
-      #     esy bisect-ppx-report send-to Coveralls
-      #   env:
-      #     COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-      #     PULL_REQUEST_NUMBER: ${{ github.event.number }}
+      - name: Deploy coverage
+        run: |
+          esy dune exec bisect-ppx-report -- send-to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          PULL_REQUEST_NUMBER: ${{ github.event.number }}
 
       - name: Export dependencies
         run: esy export-dependencies
