@@ -8,21 +8,29 @@ type inputKind =
 let run =
     (
       query: string,
-      input: string,
+      json: option(string),
       kind: inputKind,
       _verbose: bool,
       debug: bool,
       noColor: bool,
     ) => {
-  let json =
-    switch (kind) {
-    | File => Source.Json.parseFile(input)
-    | Inline => Source.Json.parseString(input)
+  let input =
+    switch (kind, json) {
+    | (File, Some(j)) => Source.Json.parseFile(j)
+    | (Inline, Some(j)) => Source.Json.parseString(j)
+    | (_, None) =>
+      let ic = Unix.(stdin |> in_channel_of_descr);
+      Source.Json.parseChannel(ic);
     };
 
   Main.parse(~debug, query)
   |> Result.map(compile)
-  |> Result.map(runtime => runtime(json))
+  |> Result.map(runtime => {
+       switch (input) {
+       | Ok(inp) => runtime(inp)
+       | Error(err) => Error(err)
+       }
+     })
   |> Result.map(res =>
        res
        |> Result.map(o =>
@@ -44,7 +52,7 @@ let query = {
 
 let json = {
   let doc = "JSON file";
-  Arg.(required & pos(1, some(string), None) & info([], ~doc));
+  Arg.(value & pos(1, some(string), None) & info([], ~doc));
 };
 
 let kind = {

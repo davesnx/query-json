@@ -71,14 +71,31 @@ yarn global add @davesnx/query-json
 
 ### Download zip files from [GitHub](https://github.com/davesnx/query-json/releases)
 
-### Usage
+## Usage
 
+I recommend to write the query in single-quotes inside the terminal, since writting JSON requires double-quotes for the properties, either filtering or creating them.
+
+> NOTE: I have aliased query-json to be "q" for short, you can set it in your dotfiles. `alias q="query-json"`.
+
+
+#### query from stdin
 ```bash
-query-json '.' pokemons.json
-query-json --kind=inline '.' '{ "wooop": { "siiie": 1 } }'
+cat pokemons | q '.'
+```
 
-# I have aliased query-json to be "q" for short, you can set it in your dotfiles.
-alias q="query-json"
+#### query a json file
+```bash
+q '.' pokemons.json
+```
+
+#### query a json inlined
+```bash
+q --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
+```
+
+#### query without colors
+```bash
+q '.' pokemons.json --no-colors
 ```
 
 ## Performance
