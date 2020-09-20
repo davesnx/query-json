@@ -65,6 +65,7 @@ jobs:
       - name: Test
         run: |
           esy dune test --force
+          ls
         env:
           BISECT_ENABLE: "yes"
 
