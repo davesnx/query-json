@@ -70,6 +70,7 @@ jobs:
 
       - name: Deploy coverage
         run: |
+          esy dune exec bisect-ppx-report coveralls coverage.json
           esy dune exec bisect-ppx-report send-to Coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}

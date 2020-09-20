@@ -9,3 +9,4 @@ _export
 _coverage
 ./trash.json
 *.coverage
+coverage.json
