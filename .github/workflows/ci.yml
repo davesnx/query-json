@@ -66,7 +66,7 @@ jobs:
         run: |
           esy dune test --force
         env:
-          IS_CI: true
+          BISECT_ENABLE: "yes"
 
       # - name: Deploy coverage
       #   run: |

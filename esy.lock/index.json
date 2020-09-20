@@ -919,12 +919,12 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.10.0@d41d8cd9", "@opam/result@opam:1.5@6b753c82",
-        "@opam/dune@opam:2.7.1@70792dee", "@opam/csexp@opam:1.3.1@5165cf17",
+        "@opam/dune@opam:2.7.1@70792dee", "@opam/csexp@opam:1.3.2@5cea14af",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "@opam/result@opam:1.5@6b753c82",
-        "@opam/dune@opam:2.7.1@70792dee", "@opam/csexp@opam:1.3.1@5165cf17"
+        "@opam/dune@opam:2.7.1@70792dee", "@opam/csexp@opam:1.3.2@5cea14af"
       ]
     },
     "@opam/dune-build-info@opam:2.7.1@da03d61d": {
@@ -981,20 +981,20 @@
         "@opam/base-threads@opam:base@36803084"
       ]
     },
-    "@opam/csexp@opam:1.3.1@5165cf17": {
-      "id": "@opam/csexp@opam:1.3.1@5165cf17",
+    "@opam/csexp@opam:1.3.2@5cea14af": {
+      "id": "@opam/csexp@opam:1.3.2@5cea14af",
       "name": "@opam/csexp",
-      "version": "opam:1.3.1",
+      "version": "opam:1.3.2",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/sha256/89/89e8c4181dc13e99cf67ddf2e258ea334352470e65b39041e62b61bcf0825155#sha256:89e8c4181dc13e99cf67ddf2e258ea334352470e65b39041e62b61bcf0825155",
-          "archive:https://github.com/ocaml-dune/csexp/releases/download/1.3.1/csexp-1.3.1.tbz#sha256:89e8c4181dc13e99cf67ddf2e258ea334352470e65b39041e62b61bcf0825155"
+          "archive:https://opam.ocaml.org/cache/sha256/f2/f21f427b277f07e8bfd050e00c640a5893c1bf4b689147640fa383255dcf1c4a#sha256:f21f427b277f07e8bfd050e00c640a5893c1bf4b689147640fa383255dcf1c4a",
+          "archive:https://github.com/ocaml-dune/csexp/releases/download/1.3.2/csexp-1.3.2.tbz#sha256:f21f427b277f07e8bfd050e00c640a5893c1bf4b689147640fa383255dcf1c4a"
         ],
         "opam": {
           "name": "csexp",
-          "version": "1.3.1",
-          "path": "esy.lock/opam/csexp.1.3.1"
+          "version": "1.3.2",
+          "path": "esy.lock/opam/csexp.1.3.2"
         }
       },
       "overrides": [],
@@ -1231,7 +1231,7 @@
       "version": "link-dev:./esy.json",
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
-      "dependencies": [],
+      "dependencies": [ "@opam/bisect_ppx@opam:2.4.1@b38eb938" ],
       "devDependencies": [
         "ocaml@4.10.0@d41d8cd9", "bats@1.1.0@d41d8cd9",
         "@reason-native/rely@3.2.1@d41d8cd9",
