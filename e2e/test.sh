@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 function query-json () {
-  if [[ ! -z $IS_CI ]]; then
+  if [[ -n $IS_CI ]]; then
     echo "Running in CI mode"
     run ./query-json "$@"
   else
@@ -17,7 +17,13 @@ function query-json () {
 }
 
 @test "inline call works ok" {
-  query-json --kind="inline" --no-color '.' '{ "a": 1 }'
+  cath e2e/mock.json | query-json '.first.name'
+  [ "$status" -eq 0 ]
+  [ "$output" = '"John Doe"' ]
+}
+
+@test "stdin works ok" {
+  query-json --no-color '.' '{ "a": 1 }'
   [ "$status" -eq 0 ]
   [ "$output" = '{ "a": 1 }' ]
 }
