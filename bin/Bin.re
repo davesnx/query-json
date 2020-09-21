@@ -1,5 +1,6 @@
 open Source;
 open Source.Compiler;
+open Source.Console;
 
 type inputKind =
   | File
@@ -7,7 +8,7 @@ type inputKind =
 
 let run =
     (
-      query: string,
+      query: option(string),
       json: option(string),
       kind: inputKind,
       _verbose: bool,
@@ -27,23 +28,27 @@ let run =
       )
     };
 
-  Main.parse(~debug, query)
-  |> Result.map(compile)
-  |> Result.map(runtime => {
-       switch (input) {
-       | Ok(inp) => runtime(inp)
-       | Error(err) => Error(err)
-       }
-     })
-  |> Result.map(res =>
-       res
-       |> Result.map(o =>
-            Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
-            |> print_endline
-          )
-       |> Result.map_error(e => print_endline(Errors.printError(e)))
-     )
-  |> Result.map_error(e => print_endline(Errors.printError(e)));
+  switch (query) {
+  | Some(q) =>
+    Main.parse(~debug, q)
+    |> Result.map(compile)
+    |> Result.map(runtime => {
+         switch (input) {
+         | Ok(inp) => runtime(inp)
+         | Error(err) => Error(err)
+         }
+       })
+    |> Result.map(res =>
+         res
+         |> Result.map(o =>
+              Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
+              |> print_endline
+            )
+         |> Result.map_error(e => print_endline(Errors.printError(e)))
+       )
+    |> Result.map_error(e => print_endline(Errors.printError(e)))
+  | None => Ok(Ok(print_endline(usage())))
+  };
 };
 
 open Cmdliner;
@@ -51,7 +56,7 @@ open Term;
 
 let query = {
   let doc = "Query to run";
-  Arg.(value & pos(0, string, ".") & info([], ~doc));
+  Arg.(value & pos(0, some(string), None) & info([], ~doc));
 };
 
 let json = {

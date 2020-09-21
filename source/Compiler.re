@@ -7,7 +7,7 @@ type noun =
 
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
   "Trying to "
-  ++ singleQuotes(Chalk.bold(op))
+  ++ Formatting.singleQuotes(Chalk.bold(op))
   ++ " on "
   ++ (
     switch (memberKind) {
@@ -16,7 +16,7 @@ let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
     }
   )
   ++ ":"
-  ++ enter(1)
+  ++ Formatting.enter(1)
   ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
@@ -109,7 +109,9 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 let id: Json.t => Json.t = i => i;
 
 let makeEmptyListError = op => {
-  "Trying to " ++ singleQuotes(Chalk.bold(op)) ++ " on an empty array.";
+  "Trying to "
+  ++ Formatting.singleQuotes(Chalk.bold(op))
+  ++ " on an empty array.";
 };
 
 let head = (json: Json.t) => {
@@ -137,11 +139,11 @@ let tail = (json: Json.t) => {
 
 let makeErrorMissingMember = (op, key, value: Json.t) => {
   "Trying to "
-  ++ doubleQuotes(Chalk.bold(op))
+  ++ Formatting.doubleQuotes(Chalk.bold(op))
   ++ " on an object, that don't have the field "
-  ++ doubleQuotes(key)
+  ++ Formatting.doubleQuotes(key)
   ++ ":"
-  ++ enter(1)
+  ++ Formatting.enter(1)
   ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
