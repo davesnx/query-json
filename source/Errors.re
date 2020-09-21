@@ -1,4 +1,12 @@
-open Encoding;
+open Console;
+
+let printError = str =>
+  enter(1)
+  ++ Chalk.red(Chalk.bold("Error"))
+  ++ Chalk.red(":")
+  ++ indent(1)
+  ++ str
+  ++ enter(1);
 
 let renamed = (f, name) =>
   "'" ++ f ++ "' is not valid in q, use '" ++ name ++ "' instead";
@@ -13,5 +21,5 @@ let keyWithString = k =>
   ++ string_of_int(int_of_float(k))
   ++ " is not valid. If you want to access a field that is a number, use double-quotes:"
   ++ "'."
-  ++ quotes(string_of_int(int_of_float(k)))
+  ++ doubleQuotes(string_of_int(int_of_float(k)))
   ++ "'";

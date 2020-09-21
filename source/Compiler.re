@@ -1,34 +1,23 @@
 open Ast;
 open Console;
-open Encoding;
 
 type noun =
   | StartsWithVocal(string)
   | StartsWithConsonant(string);
 
-let printError = str =>
-  enter(1)
-  ++ Chalk.red(Chalk.bold("Error"))
-  ++ Chalk.red(":")
-  ++ indent(1)
-  ++ str
-  ++ enter(1);
-
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
-  printError(
-    "Trying to "
-    ++ singleQuotes(Chalk.bold(op))
-    ++ " on "
-    ++ (
-      switch (memberKind) {
-      | StartsWithVocal(m) => "an " ++ Chalk.bold(m)
-      | StartsWithConsonant(m) => "a " ++ Chalk.bold(m)
-      }
-    )
-    ++ ":"
-    ++ enter(1)
-    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true)),
-  );
+  "Trying to "
+  ++ singleQuotes(Chalk.bold(op))
+  ++ " on "
+  ++ (
+    switch (memberKind) {
+    | StartsWithVocal(m) => "an " ++ Chalk.bold(m)
+    | StartsWithConsonant(m) => "a " ++ Chalk.bold(m)
+    }
+  )
+  ++ ":"
+  ++ enter(1)
+  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
 let makeError = (name: string, json: Json.t) => {
@@ -120,9 +109,7 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 let id: Json.t => Json.t = i => i;
 
 let makeEmptyListError = op => {
-  printError(
-    "Trying to " ++ singleQuotes(Chalk.bold(op)) ++ " on an empty array.",
-  );
+  "Trying to " ++ singleQuotes(Chalk.bold(op)) ++ " on an empty array.";
 };
 
 let head = (json: Json.t) => {
@@ -149,15 +136,13 @@ let tail = (json: Json.t) => {
 };
 
 let makeErrorMissingMember = (op, key, value: Json.t) => {
-  printError(
-    "Trying to "
-    ++ singleQuotes(Chalk.bold(op))
-    ++ " on an object, that don't have the field "
-    ++ singleQuotes(key)
-    ++ ":"
-    ++ enter(1)
-    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true)),
-  );
+  "Trying to "
+  ++ doubleQuotes(Chalk.bold(op))
+  ++ " on an object, that don't have the field "
+  ++ doubleQuotes(key)
+  ++ ":"
+  ++ enter(1)
+  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
 let member = (key: string, opt: bool, json: Json.t) => {

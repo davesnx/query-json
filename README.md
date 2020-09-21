@@ -77,15 +77,14 @@ I recommend to write the query in single-quotes inside the terminal, since writt
 
 > NOTE: I have aliased query-json to be "q" for short, you can set it in your dotfiles. `alias q="query-json"`.
 
-
-#### query from stdin
-```bash
-cat pokemons | q '.'
-```
-
 #### query a json file
 ```bash
 q '.' pokemons.json
+```
+
+#### query from stdin
+```bash
+cat pokemons | q --kind=inline '.'
 ```
 
 #### query a json inlined

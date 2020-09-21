@@ -18,9 +18,13 @@ let run =
     switch (kind, json) {
     | (File, Some(j)) => Source.Json.parseFile(j)
     | (Inline, Some(j)) => Source.Json.parseString(j)
-    | (_, None) =>
+    | (Inline, None) =>
       let ic = Unix.(stdin |> in_channel_of_descr);
       Source.Json.parseChannel(ic);
+    | (File, None) =>
+      Error(
+        "Expected a file, got nothing. If you want to read from stdin, use --kind='inline'.",
+      )
     };
 
   Main.parse(~debug, query)
@@ -37,9 +41,9 @@ let run =
             Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
             |> print_endline
           )
-       |> Result.map_error(print_endline)
+       |> Result.map_error(e => print_endline(Errors.printError(e)))
      )
-  |> Result.map_error(print_endline);
+  |> Result.map_error(e => print_endline(Errors.printError(e)));
 };
 
 open Cmdliner;

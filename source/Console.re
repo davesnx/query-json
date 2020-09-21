@@ -40,3 +40,6 @@ module Chalk = {
 
 let indent = n => String.make(n * 2, ' ');
 let enter = n => String.make(n, '\n');
+
+let doubleQuotes = str => "\"" ++ str ++ "\"";
+let singleQuotes = str => "'" ++ str ++ "'";

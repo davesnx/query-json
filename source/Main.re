@@ -26,23 +26,19 @@ let makeError = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) =
   let exnToString = extractExn(Printexc.to_string(exn));
   let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
 
-  enter(1)
+  Chalk.red(Chalk.bold(exnToString))
+  ++ enter(1)
+  ++ indent(4)
+  ++ "Problem parsing at position "
+  ++ positionToString(start, end_)
+  ++ enter(2)
   ++ "Input:"
   ++ indent(1)
   ++ Chalk.green(Chalk.bold(input))
   ++ enter(1)
   ++ indent(4)
   ++ String.make(start.pos_cnum, ' ')
-  ++ Chalk.gray(pointerRange)
-  ++ enter(2)
-  ++ "Error:"
-  ++ indent(1)
-  ++ Chalk.red(Chalk.bold(exnToString))
-  ++ enter(1)
-  ++ indent(4)
-  ++ "Problem parsing at position "
-  ++ positionToString(start, end_)
-  ++ enter(1);
+  ++ Chalk.gray(pointerRange);
 };
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised(Parser.program);
