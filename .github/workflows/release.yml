@@ -58,7 +58,7 @@ jobs:
         run: esy build
 
       - name: Test
-        run: esy dune runtest
+        run: esy test
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
