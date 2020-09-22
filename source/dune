@@ -1,11 +1,23 @@
-(library
+(* -*- tuareg -*- *)
+
+let ppxs =
+  match Sys.getenv "BISECT_ENABLE" with
+  | "yes" -> "ppx_deriving.show sedlex.ppx bisect_ppx"
+  | _ -> "ppx_deriving.show sedlex.ppx"
+  | exception Not_found -> "ppx_deriving.show sedlex.ppx"
+;;
+
+let () = Jbuild_plugin.V1.send @@ {|
+ (library
   (name source)
   (public_name query-json.lib)
   (libraries menhirLib yojson sedlex console.lib compiler-libs.common)
-  (flags (:standard -w +A-4-9-44-48-40-42 -warn-error -3-4-9-44-48 -safe-string))
   (preprocess
-   (pps ppx_deriving.show sedlex.ppx)
+   (pps |} ^ ppxs ^ {|)
   )
-)
+  (flags (:standard -w +A-4-9-44-48-40-42 -warn-error -3-4-9-44-48 -safe-string))
+ )
 
 (menhir (flags --strict --external-tokens Tokenizer --explain --dump) (modules Parser))
+
+|}

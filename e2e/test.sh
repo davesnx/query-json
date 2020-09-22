@@ -1,12 +1,12 @@
 #!/usr/bin/env bats
 
 function query-json () {
-  if [[ ! -z $IS_CI ]]; then
+  if [[ -n $IS_CI ]]; then
     echo "Running in CI mode"
     run ./query-json "$@"
   else
-    chmod +x _build/default/bin/query-json.exe
-    run "_build/default/bin/query-json.exe" "$@"
+    chmod +x _build/default/bin/Bin.exe
+    run "_build/default/bin/Bin.exe" "$@"
   fi
 }
 
@@ -17,10 +17,17 @@ function query-json () {
 }
 
 @test "inline call works ok" {
-  query-json --kind="inline" --no-color '.' '{ "a": 1 }'
+  query-json --no-color --kind=inline '.' '{ "a": 1 }'
   [ "$status" -eq 0 ]
   [ "$output" = '{ "a": 1 }' ]
 }
+
+# Can't test stdin on bash :(
+# @test "stdin works ok" {
+#   cat e2e/mock.json | query-json '.first.name'
+#   [ "$status" -eq 0 ]
+#   [ "$output" = '"John Doe"' ]
+# }
 
 @test "non defined field gives back null" {
   query-json --no-color '.wat?' e2e/mock.json

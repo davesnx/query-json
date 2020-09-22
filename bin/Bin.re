@@ -1,5 +1,6 @@
 open Source;
 open Source.Compiler;
+open Source.Console;
 
 type inputKind =
   | File
@@ -7,31 +8,47 @@ type inputKind =
 
 let run =
     (
-      query: string,
-      input: string,
+      query: option(string),
+      json: option(string),
       kind: inputKind,
       _verbose: bool,
       debug: bool,
       noColor: bool,
     ) => {
-  let json =
-    switch (kind) {
-    | File => Source.Json.parseFile(input)
-    | Inline => Source.Json.parseString(input)
+  let input =
+    switch (kind, json) {
+    | (File, Some(j)) => Source.Json.parseFile(j)
+    | (Inline, Some(j)) => Source.Json.parseString(j)
+    | (Inline, None) =>
+      let ic = Unix.(stdin |> in_channel_of_descr);
+      Source.Json.parseChannel(ic);
+    | (File, None) =>
+      Error(
+        "Expected a file, got nothing. If you want to read from stdin, use --kind='inline'.",
+      )
     };
 
-  Main.parse(~debug, query)
-  |> Result.map(compile)
-  |> Result.map(runtime => runtime(json))
-  |> Result.map(res =>
-       res
-       |> Result.map(o =>
-            Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
-            |> print_endline
-          )
-       |> Result.map_error(print_endline)
-     )
-  |> Result.map_error(print_endline);
+  switch (query) {
+  | Some(q) =>
+    Main.parse(~debug, q)
+    |> Result.map(compile)
+    |> Result.map(runtime => {
+         switch (input) {
+         | Ok(inp) => runtime(inp)
+         | Error(err) => Error(err)
+         }
+       })
+    |> Result.map(res =>
+         res
+         |> Result.map(o =>
+              Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
+              |> print_endline
+            )
+         |> Result.map_error(e => print_endline(Errors.printError(e)))
+       )
+    |> Result.map_error(e => print_endline(Errors.printError(e)))
+  | None => Ok(Ok(print_endline(usage())))
+  };
 };
 
 open Cmdliner;
@@ -39,12 +56,12 @@ open Term;
 
 let query = {
   let doc = "Query to run";
-  Arg.(value & pos(0, string, ".") & info([], ~doc));
+  Arg.(value & pos(0, some(string), None) & info([], ~doc));
 };
 
 let json = {
   let doc = "JSON file";
-  Arg.(required & pos(1, some(string), None) & info([], ~doc));
+  Arg.(value & pos(1, some(string), None) & info([], ~doc));
 };
 
 let kind = {

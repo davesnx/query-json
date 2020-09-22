@@ -1,30 +1,34 @@
 open Printf;
 open Console;
 
-type t = Yojson.Basic.t;
+include Yojson.Basic;
 include Yojson.Basic.Util;
 
 let (pp_print_string, pp_print_bool, pp_print_list, fprintf, asprintf) =
   Format.(pp_print_string, pp_print_bool, pp_print_list, fprintf, asprintf);
 
-/*
- TODO: Return result(string, string)
-
- let parseString = str =>
-    try(Ok(Yojson.Basic.from_string(str))) {
-    | e => Error(Printexc.to_string(e))
-    };
-
-  let parseFile = file =>
-    try(Ok(Yojson.Basic.from_file(file))) {
-    | e => Error(Printexc.to_string(e))
-    };
-   */
-
 let quotes = str => "\"" ++ str ++ "\"";
 
-let parseFile = Yojson.Basic.from_file;
-let parseString = Yojson.Basic.from_string;
+let parseString = str =>
+  try(Ok(Yojson.Basic.from_string(str))) {
+  | e =>
+    Error(Printexc.to_string(e) ++ " There was an error reading the string")
+  };
+
+let parseFile = file =>
+  try(Ok(Yojson.Basic.from_file(file))) {
+  | e =>
+    Error(Printexc.to_string(e) ++ " There was an error reading the file")
+  };
+
+let parseChannel = channel =>
+  try(Ok(Yojson.Basic.from_channel(channel))) {
+  | e =>
+    Error(
+      Printexc.to_string(e)
+      ++ " There was an error reading from standard input",
+    )
+  };
 
 let string = str => {
   let buf = Buffer.create(String.length(str) * 5 / 4);
