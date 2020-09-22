@@ -1,6 +1,6 @@
 {
   "name": "@davesnx/query-json",
-  "version": "0.5.3",
+  "version": "0.5.6",
   "description": "faster and simpler re-implementation of jq in Reason Native",
   "author": "davesnx <dsnxmoreno@gmail.com>",
   "license": "MIT",
@@ -22,10 +22,10 @@
     "url": "https://github.com/davesnx/query-json.git"
   },
   "scripts": {
-    "bin": "esy dune exec Bin",
-    "build": "esy dune build",
-    "start": "esy dune build --watch",
-    "test": "esy dune exec test/Run.exe",
+    "bin": "esy b dune exec Bin",
+    "build": "esy b dune build",
+    "start": "esy b dune build --watch",
+    "test": "esy b dune exec test/Run.exe",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
   "esy": {
