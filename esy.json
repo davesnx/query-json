@@ -1,22 +1,15 @@
 {
   "name": "@davesnx/query-json",
   "version": "0.5.7",
-  "description": "faster and simpler re-implementation of jq in Reason Native",
+  "description":
+    "faster and simpler re-implementation of jq in Reason Native",
   "author": "davesnx <dsnxmoreno@gmail.com>",
   "license": "MIT",
   "homepage": "https://github.com/davesnx/query-json",
   "keywords": [
-    "reason",
-    "ocaml",
-    "jq",
-    "json",
-    "reason-native",
-    "menhir",
-    "cli"
+    "reason", "ocaml", "jq", "json", "reason-native", "menhir", "cli"
   ],
-  "bugs": {
-    "url": "https://github.com/davesnx/query-json/issues"
-  },
+  "bugs": { "url": "https://github.com/davesnx/query-json/issues" },
   "repository": {
     "type": "git",
     "url": "https://github.com/davesnx/query-json.git"
@@ -31,14 +24,8 @@
   "esy": {
     "build": "dune build -p query-json",
     "buildsInSource": "_build",
-    "buildEnv": {
-      "ODOC_SYNTAX": "re"
-    },
-    "release": {
-      "bin": [
-        "Bin"
-      ]
-    }
+    "buildEnv": { "ODOC_SYNTAX": "re" },
+    "release": { "bin": [ "Bin" ] }
   },
   "devDependencies": {
     "@esy-ocaml/reason": "~3.6.0",
@@ -51,8 +38,14 @@
     "@reason-native/console": "^0.1.0",
     "@reason-native/rely": "^3.2.1",
     "ocaml": "4.10.0",
-    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
+    "@opam/ocaml-lsp-server":
+      "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
     "@opam/cmdliner": "1.0.4",
     "bats": "^1.1.0"
+  },
+  "dependencies": {
+    "@opam/js_of_ocaml": "3.7.0",
+    "@opam/js_of_ocaml-compiler": "3.7.0",
+    "@opam/js_of_ocaml-ppx": "3.7.0"
   }
 }
