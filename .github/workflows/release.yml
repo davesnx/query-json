@@ -1,6 +1,6 @@
 name: Release
 
-on: [pull_request, push]
+on: [push]
 
 jobs:
   build:
@@ -132,6 +132,7 @@ jobs:
         run: npm install -g bats
 
       - name: End to end Test
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           bats ./e2e/test.sh
         env:
