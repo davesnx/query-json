@@ -1,6 +1,6 @@
 name: Release
 
-on: [pull_request, push]
+on: [push]
 
 jobs:
   build:
@@ -8,8 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        # os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -59,7 +58,9 @@ jobs:
         run: esy build
 
       - name: Test
-        run: esy dune runtest
+        run: |
+          rm test/__snapshots__/.gitkeep
+          esy test
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
@@ -99,13 +100,14 @@ jobs:
           name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
-      # - name: Download windows artifacts
-      #   uses: actions/download-artifact@master
-      #   with:
-      #     name: windows-latest-artifact
-      #     path: _release/platform-windows-x64
+      - name: Download windows artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: windows-latest-artifact
+          path: _release/platform-windows-x64
 
       - name: Publish query-json from linux artifcats
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           cp _release/platform-linux-x64/Bin.exe ./query-json
           chmod +x query-json
@@ -122,21 +124,29 @@ jobs:
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
-          # cd _release/platform-windows-x64
-          # zip -r ../../query-json-windows-x64.zip .
-          # cd ../..
+          cd _release/platform-windows-x64
+          zip -r ../../query-json-windows-x64.zip .
+          cd ../..
 
       - name: Install bats
         run: npm install -g bats
 
-      - name: End to end Test
+      - name: End to end Test (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           bats ./e2e/test.sh
         env:
           IS_CI: true
 
+      - name: End to end Test (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          sh -c 'bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
+        env:
+          IS_CI: true
+
       - name: Publish
-        if: success() && github.event_name != 'pull_request'
+        if: success() && github.event_name != 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -157,9 +167,7 @@ jobs:
         id: sha
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
-
       - name: Publish Prerelease
-        if: success() && github.event_name == 'pull_request'
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -200,13 +208,13 @@ jobs:
           asset_name: query-json-linux-x64.zip
           asset_content_type: application/gzip
 
-      # - name: Upload spin-windows-x64.zip to Github release
-      #   uses: actions/upload-release-asset@v1.0.1
-      #   if: "startsWith(github.ref, 'refs/tags/v')"
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     upload_url: ${{ github.event.release.upload_url }}
-      #     asset_path: spin-windows-x64.zip
-      #     asset_name: spin-windows-x64.zip
-      #     asset_content_type: application/gzip
+      - name: Upload query-json-windows-x64.zip to Github release
+        uses: actions/upload-release-asset@v1.0.1
+        if: "startsWith(github.ref, 'refs/tags/v')"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-windows-x64.zip
+          asset_name: query-json-windows-x64.zip
+          asset_content_type: application/gzip
