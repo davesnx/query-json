@@ -76,6 +76,24 @@ list_fields: vl = separated_list(COMMA, expr)
   { vl }
 
 expr:
+  | DOT;
+    { Identity }
+  | DOT; DOT;
+    { Recurse }
+  | COMMA;
+    { Comma }
+  | OPEN_BRACE; obj = obj_fields; CLOSE_BRACE
+    { Object(obj) }
+  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACKET
+    { List(vl) }
+  | s = STRING;
+    { Literal(String(s)) }
+  | n = NUMBER;
+    { Literal(Number(n)) }
+  | b = BOOL;
+    { Literal(Bool(b)) }
+  | NULL
+    { Literal(Null) }
   | left = expr; PIPE; right = expr;
     { Pipe(left, right) }
   | left = expr; SPACE; right = expr;
@@ -83,6 +101,12 @@ expr:
   /* Index always gots prefixed by an expr which pipes it. */
   | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
     { Pipe(e, Index(int_of_float(num))) }
+  | DOT; str = STRING; opt = boption(QUESTION_MARK)
+    { Key(str, opt) }
+  | DOT; id = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(id, opt) }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
+    { Key(string_of_int(int_of_float(f)), opt) }
   | left = expr; ADD; right = expr;
     { Addition(left, right) }
   | left = expr; SUB; right = expr;
@@ -125,12 +149,6 @@ expr:
       | "endswith" -> failwith(renamed f "ends_with")
       | _ -> failwith(missing f)
     }
-  | DOT; str = STRING; opt = boption(QUESTION_MARK)
-    { Key(str, opt) }
-  | DOT; id = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key(id, opt) }
-  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
-    { Key(string_of_int(int_of_float(f)), opt) }
   | f = IDENTIFIER;
     { match f with
       | "if" -> failwith(notImplemented f)
@@ -174,24 +192,6 @@ expr:
       | "tostring" -> failwith(renamed f "to_string")
       | _ -> failwith(missing f)
     }
-  | DOT;
-    { Identity }
-  | DOT; DOT;
-    { Recurse }
-  | COMMA;
-    { Comma }
-  | OPEN_BRACE; obj = obj_fields; CLOSE_BRACE
-    { Object(obj) }
-  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACKET
-    { List(vl) }
-  | s = STRING;
-    { Literal(String(s)) }
-  | n = NUMBER;
-    { Literal(Number(n)) }
-  | b = BOOL;
-    { Literal(Bool(b)) }
-  | NULL
-    { Literal(Null) }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
