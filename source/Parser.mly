@@ -1,6 +1,5 @@
 %{
   open Ast;;
-  open Console.Errors;;
 %}
 
 %token <string> STRING
@@ -30,12 +29,12 @@
 
 %token EOF
 
-%left OPEN_BRACKET
+/* %left OPEN_BRACKET */
 %left PIPE SPACE /* lowest precedence */
 %left MULT DIV /* medium precedence */
 %left ADD SUB /* highest precedence */
 
-%start <Ast.expression> program
+%start <expression> program
 
 %%
 
@@ -99,8 +98,8 @@ expr:
   | left = expr; SPACE; right = expr;
     { Pipe(left, right) }
   /* Index always gots prefixed by an expr which pipes it. */
-  | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
-    { Pipe(e, Index(int_of_float(num))) }
+  /* | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
+    { Pipe(e, Index(int_of_float(num))) } */
   | DOT; str = STRING; opt = boption(QUESTION_MARK)
     { Key(str, opt) }
   | DOT; id = IDENTIFIER; opt = boption(QUESTION_MARK)
@@ -145,16 +144,16 @@ expr:
       | "split" -> Split(cb)
       | "join" -> Join(cb)
       | "contains" -> Contains(cb)
-      | "startswith" -> failwith(renamed f "starts_with")
-      | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(missing f)
+      | "startswith" -> failwith(Console.Errors.renamed f "starts_with")
+      | "endswith" -> failwith(Console.Errors.renamed f "ends_with")
+      | _ -> failwith(Console.Errors.missing f)
     }
   | f = IDENTIFIER;
     { match f with
-      | "if" -> failwith(notImplemented f)
-      | "then" -> failwith(notImplemented f)
-      | "else" -> failwith(notImplemented f)
-      | "break" -> failwith(notImplemented f)
+      | "if" -> failwith(Console.Errors.notImplemented f)
+      | "then" -> failwith(Console.Errors.notImplemented f)
+      | "else" -> failwith(Console.Errors.notImplemented f)
+      | "break" -> failwith(Console.Errors.notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -183,18 +182,18 @@ expr:
       | "with_entries" -> WithEntries
       | "nan" -> Nan
       | "is_nan" -> IsNan
-      | "isnan" -> failwith(renamed f "is_nan")
-      | "reduce" -> failwith(renamed f "reduce()")
-      | "tonumber" -> failwith(renamed f "to_number")
-      | "isinfinite" -> failwith(renamed f "is_infinite")
-      | "isfinite" -> failwith(renamed f "is_finite")
-      | "isnormal" -> failwith(renamed f "is_normal")
-      | "tostring" -> failwith(renamed f "to_string")
-      | _ -> failwith(missing f)
+      | "isnan" -> failwith(Console.Errors.renamed f "is_nan")
+      | "reduce" -> failwith(Console.Errors.renamed f "reduce()")
+      | "tonumber" -> failwith(Console.Errors.renamed f "to_number")
+      | "isinfinite" -> failwith(Console.Errors.renamed f "is_infinite")
+      | "isfinite" -> failwith(Console.Errors.renamed f "is_finite")
+      | "isnormal" -> failwith(Console.Errors.renamed f "is_normal")
+      | "tostring" -> failwith(Console.Errors.renamed f "to_string")
+      | _ -> failwith(Console.Errors.missing f)
     }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
-    | _ -> failwith(missing f)
+    | _ -> failwith(Console.Errors.missing f)
     }
   ;
