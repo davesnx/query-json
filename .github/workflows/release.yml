@@ -58,9 +58,7 @@ jobs:
         run: esy build
 
       - name: Test
-        run: |
-          rm test/__snapshots__/.gitkeep
-          esy test
+        run: esy test
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
