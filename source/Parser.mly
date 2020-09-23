@@ -1,5 +1,6 @@
 %{
   open Ast;;
+  open Console.Errors;;
 %}
 
 %token <string> STRING
@@ -132,7 +133,7 @@ expr:
       | "group_by" -> GroupBy(cb)
       | "unique_by" -> UniqueBy(cb)
       | "find" -> Find(cb)
-      | "some" -> Some(cb)
+      | "some" -> Some_(cb)
       | "path" -> Path(cb)
       | "any" -> AnyWithCondition(cb)
       | "all" -> AllWithCondition(cb)
@@ -144,16 +145,16 @@ expr:
       | "split" -> Split(cb)
       | "join" -> Join(cb)
       | "contains" -> Contains(cb)
-      | "startswith" -> failwith(Console.Errors.renamed f "starts_with")
-      | "endswith" -> failwith(Console.Errors.renamed f "ends_with")
-      | _ -> failwith(Console.Errors.missing f)
+      | "startswith" -> failwith(renamed f "starts_with")
+      | "endswith" -> failwith(renamed f "ends_with")
+      | _ -> failwith(missing f)
     }
   | f = IDENTIFIER;
     { match f with
-      | "if" -> failwith(Console.Errors.notImplemented f)
-      | "then" -> failwith(Console.Errors.notImplemented f)
-      | "else" -> failwith(Console.Errors.notImplemented f)
-      | "break" -> failwith(Console.Errors.notImplemented f)
+      | "if" -> failwith(notImplemented f)
+      | "then" -> failwith(notImplemented f)
+      | "else" -> failwith(notImplemented f)
+      | "break" -> failwith(notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -182,18 +183,18 @@ expr:
       | "with_entries" -> WithEntries
       | "nan" -> Nan
       | "is_nan" -> IsNan
-      | "isnan" -> failwith(Console.Errors.renamed f "is_nan")
-      | "reduce" -> failwith(Console.Errors.renamed f "reduce()")
-      | "tonumber" -> failwith(Console.Errors.renamed f "to_number")
-      | "isinfinite" -> failwith(Console.Errors.renamed f "is_infinite")
-      | "isfinite" -> failwith(Console.Errors.renamed f "is_finite")
-      | "isnormal" -> failwith(Console.Errors.renamed f "is_normal")
-      | "tostring" -> failwith(Console.Errors.renamed f "to_string")
-      | _ -> failwith(Console.Errors.missing f)
+      | "isnan" -> failwith(renamed f "is_nan")
+      | "reduce" -> failwith(renamed f "reduce()")
+      | "tonumber" -> failwith(renamed f "to_number")
+      | "isinfinite" -> failwith(renamed f "is_infinite")
+      | "isfinite" -> failwith(renamed f "is_finite")
+      | "isnormal" -> failwith(renamed f "is_normal")
+      | "tostring" -> failwith(renamed f "to_string")
+      | _ -> failwith(missing f)
     }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
-    | _ -> failwith(Console.Errors.missing f)
+    | _ -> failwith(missing f)
     }
   ;
