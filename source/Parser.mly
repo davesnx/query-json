@@ -66,20 +66,6 @@ conditional:
     { LowerEqual(left, right) }
   ;
 
-path:
-  /* We need both:
-    String is scaped, while Identifier isn't. */
-  | DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
-  | DOT; k = STRING; opt = boption(QUESTION_MARK); rst = path
-    { Pipe(Key(k, opt), rst) }
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
-    { Pipe(Key(k, opt), rst) }
-  | DOT; k = NUMBER;
-    { failwith(keyWithString k) }
-
 obj_fields: obj = separated_list(COMMA, obj_field)
   { obj }
 
@@ -139,8 +125,12 @@ expr:
       | "endswith" -> failwith(renamed f "ends_with")
       | _ -> failwith(missing f)
     }
-  | e = path
-    { e }
+  | DOT; str = STRING; opt = boption(QUESTION_MARK)
+    { Key(str, opt) }
+  | DOT; id = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(id, opt) }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
+    { Key(string_of_int(int_of_float(f)), opt) }
   | f = IDENTIFIER;
     { match f with
       | "if" -> failwith(notImplemented f)
