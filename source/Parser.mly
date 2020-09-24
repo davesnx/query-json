@@ -17,21 +17,20 @@
 %token <string> FUNCTION
 %token CLOSE_PARENT
 
-%token SPACE
-
 %token QUESTION_MARK
 %token EXCLAMATION_MARK
 %token COMMA
 
 %token OPEN_BRACKET
 %token CLOSE_BRACKET
+/*
 %token OPEN_BRACE
 %token CLOSE_BRACE
-
+ */
 %token EOF
 
 /* %left OPEN_BRACKET */
-%left PIPE SPACE /* lowest precedence */
+%left PIPE /* lowest precedence */
 %left MULT DIV /* medium precedence */
 %left ADD SUB /* highest precedence */
 
@@ -66,14 +65,27 @@ conditional:
     { LowerEqual(left, right) }
   ;
 
-obj_fields: obj = separated_list(COMMA, obj_field)
-  { obj }
+path:
+  | DOT; k = STRING; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+  | DOT; k = STRING; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(k, opt), rst) }
 
-obj_field: k = STRING; DOT; v = expr
-  { (k, v) }
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(k, opt), rst) }
 
-list_fields: vl = separated_list(COMMA, expr)
-  { vl }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
+    { Key(string_of_int(int_of_float(f)), opt) }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(string_of_int(int_of_float(f)), opt), rst) }
+
+  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
+    { Index(int_of_float(num)) }
+  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET; rst = path
+    { Pipe(Index(int_of_float(num)), rst) }
+  ;
 
 expr:
   | DOT;
@@ -82,10 +94,6 @@ expr:
     { Recurse }
   | COMMA;
     { Comma }
-  | OPEN_BRACE; obj = obj_fields; CLOSE_BRACE
-    { Object(obj) }
-  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACKET
-    { List(vl) }
   | s = STRING;
     { Literal(String(s)) }
   | n = NUMBER;
@@ -96,17 +104,6 @@ expr:
     { Literal(Null) }
   | left = expr; PIPE; right = expr;
     { Pipe(left, right) }
-  | left = expr; SPACE; right = expr;
-    { Pipe(left, right) }
-  /* Index always gots prefixed by an expr which pipes it. */
-  /* | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
-    { Pipe(e, Index(int_of_float(num))) } */
-  | DOT; str = STRING; opt = boption(QUESTION_MARK)
-    { Key(str, opt) }
-  | DOT; id = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key(id, opt) }
-  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
-    { Key(string_of_int(int_of_float(f)), opt) }
   | left = expr; ADD; right = expr;
     { Addition(left, right) }
   | left = expr; SUB; right = expr;
@@ -197,4 +194,6 @@ expr:
     | "filter" -> Filter(cond)
     | _ -> failwith(missing f)
     }
+  | e = path;
+    { e }
   ;

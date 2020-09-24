@@ -9,9 +9,16 @@ let compare = (expected, result, {expect, _}) => {
 };
 
 let tests: list((string, expression)) = [
-  (".", Identity),
-  (".store", Key("store", false)),
+  /* (".[1]", Pipe(Identity, Index(1))), */
+  (". | [1]", Pipe(Identity, Index(1))),
   (".store.books", Pipe(Key("store", false), Key("books", false))),
+  (".books[1]", Pipe(Key("books", false), Index(1))),
+  (
+    ".books[1].author",
+    Pipe(Key("books", false), Pipe(Index(1), Key("author", false))),
+  ),
+  (".store", Key("store", false)),
+  (".", Identity),
   (".store | .books", Pipe(Key("store", false), Key("books", false))),
   (
     ". | map(.price + 1)",
@@ -20,8 +27,6 @@ let tests: list((string, expression)) = [
       Map(Addition(Key("price", false), Literal(Number(1.)))),
     ),
   ),
-  (".[1]", Pipe(Identity, Index(1))),
-  (".books[1]", Pipe(Key("books", false), Index(1))),
   (".WAT", Key("WAT", false)),
   ("head", Head),
   (".WAT?", Key("WAT", true)),
@@ -33,7 +38,7 @@ describe("correctly parse value", ({test, _}) => {
       "parse: " ++ string_of_int(index),
       payload => {
         let result =
-          switch (parse(~debug=false, result)) {
+          switch (parse(~debug=true, result)) {
           | Ok(r) => r
           | Error(err) => failwith(err)
           };
