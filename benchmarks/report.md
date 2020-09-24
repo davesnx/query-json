@@ -9,70 +9,71 @@ Executing `$ ./benchmarks/run.sh` runs both steps.
 
 `$ ./benchmarks/run.sh`
 
+```bash
 query-json: 0.5.8
 jq: jq-1.6
 faq: 0.0.6
 fx: 20.0.2
-
-### Benchmark #1: jq . esy.json
 ```
+
+#### Benchmark #1: jq . esy.json
+```bash
   Time (mean ± σ):      27.6 ms ±   1.0 ms    [User: 25.4 ms, System: 1.2 ms]
   Range (min … max):    26.5 ms …  32.1 ms    71 runs
 ```
 
-### Benchmark #1: query-json . esy.json
-```
+#### Benchmark #1: query-json . esy.json
+```bash
   Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
   Range (min … max):     7.3 ms …   8.9 ms    267 runs
 ```
-### Benchmark #2: jq . esy.json
-```
+#### Benchmark #2: jq . esy.json
+```bash
   Time (mean ± σ):      27.6 ms ±   1.1 ms    [User: 25.3 ms, System: 1.2 ms]
   Range (min … max):    26.4 ms …  34.5 ms    98 runs
 ```
-## **Summary** `query-json . esy.json` ran 3.56 ± 0.18 times faster than `jq . esy.json`
+### **Summary** `query-json . esy.json` ran 3.56 ± 0.18 times faster than `jq . esy.json`
 
-### Benchmark #1: faq . esy.json
-```
+#### Benchmark #1: faq . esy.json
+```bash
   Time (mean ± σ):      55.1 ms ±   0.6 ms    [User: 54.5 ms, System: 5.1 ms]
   Range (min … max):    53.9 ms …  57.2 ms    43 runs
 ```
-### Benchmark #1: query-json . esy.json
-```
+#### Benchmark #1: query-json . esy.json
+```bash
   Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
   Range (min … max):     7.3 ms …   8.9 ms    280 runs
 ```
-### Benchmark #2: faq . esy.json
-```
+#### Benchmark #2: faq . esy.json
+```bash
   Time (mean ± σ):      55.2 ms ±   0.7 ms    [User: 54.8 ms, System: 5.2 ms]
   Range (min … max):    53.9 ms …  57.2 ms    51 runs
 ```
-## **Summary** `query-json . esy.json` ran 7.11 ± 0.23 times faster than `faq . esy.json`
+### **Summary** `query-json . esy.json` ran 7.11 ± 0.23 times faster than `faq . esy.json`
 
-### Benchmark #1: fx esy.json .
-```
+#### Benchmark #1: fx esy.json .
+```bash
   Time (mean ± σ):      60.5 ms ±   1.8 ms    [User: 48.6 ms, System: 13.3 ms]
   Range (min … max):    59.1 ms …  70.9 ms    40 runs
 ```
-### Benchmark #1: query-json . esy.json
-```
+#### Benchmark #1: query-json . esy.json
+```bash
   Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
   Range (min … max):     7.4 ms …   8.8 ms    256 runs
 ```
-### Benchmark #2: fx esy.json .
-```
+#### Benchmark #2: fx esy.json .
+```bash
   Time (mean ± σ):      60.3 ms ±   0.6 ms    [User: 48.5 ms, System: 12.9 ms]
   Range (min … max):    59.3 ms …  62.1 ms    47 runs
 ```
-## **Summary** `query-json . esy.json` ran 7.73 ± 0.24 times faster than `fx esy.json .`
+### **Summary** `query-json . esy.json` ran 7.73 ± 0.24 times faster than `fx esy.json .`
 
 ---
 
 ## Running [run.sh](./run.sh)
 
 ### Select an attribute (`.first.id`) on a small (4kb) JSON file
-
-```
+```bash
 query-json        0.00 real         0.00 user         0.00 sys
 jq                0.02 real         0.02 user         0.00 sys
 faq               0.05 real         0.05 user         0.00 sys
@@ -80,14 +81,14 @@ fx                0.06 real         0.04 user         0.01 sys
 ```
 
 ### Select an attribute (`.`) on a medium (132k) JSON file
-```
+```bash
 query-json        0.02 real         0.01 user         0.00 sys
 jq                0.04 real         0.03 user         0.00 sys
 faq               0.07 real         0.08 user         0.00 sys
 fx                0.11 real         0.12 user         0.02 sys
 ```
 ### Map an attribute (`map(.)`) on a big JSON (604k) file
-```
+```bash
 query-json        0.07 real         0.06 user         0.00 sys
 jq                0.08 real         0.07 user         0.00 sys
 faq               0.12 real         0.14 user         0.01 sys
@@ -95,14 +96,14 @@ fx                0.17 real         0.20 user         0.02 sys
 ```
 
 ### Simple operation (`.second.store.books | map(.price + 10)`) on a small (4kb) JSON file
-```
+```bash
 query-json        0.00 real         0.00 user         0.00 sys
 jq                0.02 real         0.02 user         0.00 sys
 faq               0.06 real         0.04 user         0.01 sys
 ```
 
 ### Simple operation (`map(.time)`) on a medium (132k) JSON file
-```
+```bash
 query-json        0.01 real         0.00 user         0.00 sys
 jq                0.03 real         0.03 user         0.00 sys
 faq               0.07 real         0.07 user         0.00 sys
@@ -110,14 +111,14 @@ fx                0.08 real         0.08 user         0.01 sys
 ```
 
 ### Simple operation (`map(select(.base.Attack > 100)) | map(.name.english)`) an attribute on a big JSON (604k) file
-```
+```bash
 query-json        0.01 real         0.01 user         0.00 sys
 jq                0.05 real         0.05 user         0.00 sys
 faq               0.10 real         0.09 user         0.01 sys
 ```
 
 ### Simple operation (`keys`) an attribute on a huge JSON (110M) file
-```
+```bash
 query-json        2.17 real         2.04 user         0.12 sys
 jq                2.47 real         2.25 user         0.21 sys
 faq               6.22 real         6.79 user         0.56 sys
