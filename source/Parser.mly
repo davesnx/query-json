@@ -9,6 +9,7 @@
 %token NULL
 %token <string> IDENTIFIER
 %token DOT
+%token RECURSE
 %token PIPE
 %token SEMICOLON
 %token ADD SUB MULT DIV
@@ -90,7 +91,7 @@ path:
 expr:
   | DOT;
     { Identity }
-  | DOT; DOT;
+  | RECURSE;
     { Recurse }
   | COMMA;
     { Comma }
