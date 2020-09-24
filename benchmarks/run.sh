@@ -8,15 +8,23 @@ title () {
   echo "$2"
 }
 
-title "## Running benchmark tests..."
-jq --version
-query-json --version
-faq --version
-fx --version
+title "Running benchmark tests..."
+echo "query-json: $(query-json --version)"
+echo "jq: $(jq --version)"
+echo "faq: $(faq --version)"
+echo "fx: $(fx --version)"
+echo ""
 
 test () {
   /usr/bin/time "$@"
 }
+
+hyperfine --prepare 'query-json . esy.json' 'jq . esy.json'
+hyperfine 'query-json . esy.json' 'jq . esy.json'
+hyperfine --prepare 'query-json . esy.json' 'faq . esy.json'
+hyperfine 'query-json . esy.json' 'faq . esy.json'
+hyperfine --prepare 'query-json . esy.json' 'fx esy.json .'
+hyperfine 'query-json . esy.json' 'fx esy.json .'
 
 touch $trash;
 
