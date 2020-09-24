@@ -19,7 +19,30 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Restore global node_modules cache
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Try to restore esy cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ hashFiles('**/index.json') }}
+
+      - name: Install dependencies
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node scripts/print-esy-cache.js
+
+      - name: Restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Restore global node modules cache
         uses: actions/cache@v1
         env:
           cache-name: cache-node-modules
@@ -30,23 +53,6 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
-
-      - name: Install esy
-        run: npm install -g esy
-
-      - name: Print esy cache
-        id: print_esy_cache
-        run: node scripts/print-esy-cache.js
-
-      - name: Restore dependencies cache
-        id: deps-cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/esy.json') }}
-
-      - name: Install dependencies
-        run: esy install
 
       - name: Build
         run: esy build
