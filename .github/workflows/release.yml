@@ -19,40 +19,34 @@ jobs:
         with:
           node-version: 12.x
 
+      - name: Restore global node_modules cache
+        uses: actions/cache@v1
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
       - name: Install esy
         run: npm install -g esy
-
-      - name: Try to restore esy cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.esy/source
-          key: source-${{ hashFiles('**/index.json') }}
-
-      - name: Install dependencies
-        run: esy install
 
       - name: Print esy cache
         id: print_esy_cache
         run: node scripts/print-esy-cache.js
 
-      - name: Try to restore build cache
+      - name: Restore dependencies cache
         id: deps-cache
         uses: actions/cache@v2
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/esy.json') }}
 
-      - name: Restore node modules cache
-        uses: actions/cache@v1
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ~/.yarn-cache
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+      - name: Install dependencies
+        run: esy install
 
       - name: Build
         run: esy build
