@@ -58,7 +58,7 @@ jobs:
 
       - name: Test
         run: |
-          rm -rf test/__snapshots__/.gitkeep
+          rm test/__snapshots__/.gitkeep
           esy dune exec test/Run.exe --force
           esy dune exec bisect-ppx-report send-to Coveralls *.coverage
         env:

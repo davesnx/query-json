@@ -59,7 +59,7 @@ jobs:
 
       - name: Test
         run: |
-          rm -rf test/__snapshots__/.gitkeep
+          rm test/__snapshots__/.gitkeep
           esy test
 
       - name: Upload artifacts for ${{ matrix.os }}

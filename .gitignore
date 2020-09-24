@@ -10,5 +10,3 @@ _coverage
 ./trash.json
 *.coverage
 coverage.json
-
-!test/__snapshots__/
