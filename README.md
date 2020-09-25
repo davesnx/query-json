@@ -8,7 +8,14 @@
 
 ---
 
-**query-json** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and compiled to binary thanks to the OCaml compiler. **query-json**, allows you to write small programs to operate on top of json files in a cute syntax:
+**query-json** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and distributed as a dependency-free binary thanks to the OCaml compiler. **query-json**, allows you to write small programs to operate on top of json files in a cute syntax:
+
+## Purpose
+
+It was created with 2 reasons in mind, learn and fun:
+
+- **Learn how to write a lexer/parser/compiler with the OCaml stack** using `menhir` and `sedlex` while trying to create a compiler with great error messages and possibly recoverability (currently _work in progress_).
+- **Create a CLI tool in Reason Native** and being able to distribute it as a binary, enjoy it's performance and try further with cross-compilation.
 
 ```bash
 query-json ".store.books | filter(.price > 10)" stores.json
@@ -33,15 +40,16 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 
 ## It brings
 
-- **Great Performance**: Fast, small footprint and minimum run-time. Check [Performance section](#Performance) for a longer explaination.
+- **Great Performance**: Fast, small footprint and minimum run-time. Check [Performance section](#Performance) for a longer explanation.
 - **Delightful errors**:
-  - Better errors when json types and operation types don't match:
+  - Better errors when json types and operation don't match:
     ```bash
     $ query-json '.esy.release.wat' esy.json
-    Error: Trying to .wat on `{"bin": ["query-json"]}` and it does not exist.
+    Error:  Trying to ".wat" on an object, that don't have the field "wat":
+    { "bin": ... }
     ```
-  - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
   - `debug` prints the tokens and the AST.
+  - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
 - **Improved API**: made small adjustments to the buildin operations. Some examples are:
   - All methods are snake_case instead of alltoghetercase
   - Changed `select` for `filter`
@@ -53,19 +61,15 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
 ### Using a bash script
 
 Check the content of [scripts/install.sh](./scripts/install.sh) before running anything in your local. [Friends don't let friends curl | bash](https://sysdig.com/blog/friends-dont-let-friends-curl-bash).
-```
+```bash
 curl -sfL https://raw.githubusercontent.com/davesnx/query-json/master/scripts/install.sh | bash
 ```
 
-### Using npm
+### Using npm/yarn
 
-```
+```bash
 npm install --global @davesnx/query-json
-```
-
-### Using yarn
-
-```
+# or
 yarn global add @davesnx/query-json
 ```
 
@@ -73,7 +77,7 @@ yarn global add @davesnx/query-json
 
 ## Usage
 
-I recommend to write the query in single-quotes inside the terminal, since writting JSON requires double-quotes for the properties, either filtering or creating them.
+I recommend to write the query in single-quotes inside the terminal, since writting JSON requires double-quotes for accessing properties.
 
 > NOTE: I have aliased query-json to be "q" for short, you can set it in your dotfiles. `alias q="query-json"`.
 
@@ -104,13 +108,6 @@ q '.' pokemons.json --no-colors
 Aside from that, **query-json** doesn't have feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses and some of the **jq** operations aren't native, are builtin with the runtime. In order to do a proper comparision all of this above would need to take into consideration.
 
 The report shows that **query-json** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
-
-## Purpose
-
-The purposes of this project were mostly 2:
-
-- **Learn how to write a lexer/parser/compiler with the OCaml stack** using `menhir` and `sedlex` while trying to create a compiler with great error messages and possibly recoverability (currently _work in progress_).
-- **Create a CLI tool in Reason Native** and being able to distribute it as a binary, enjoy it's performance and try further with cross-compilation.
 
 ## Currently supported feature set:
 
