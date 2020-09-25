@@ -17,6 +17,8 @@ It was created with 2 reasons in mind, learn and fun:
 - **Learn how to write a lexer/parser/compiler with the OCaml stack** using `menhir` and `sedlex` while trying to create a compiler with great error messages and possibly recoverability (currently _work in progress_).
 - **Create a CLI tool in Reason Native** and being able to distribute it as a binary, enjoy it's performance and try further with cross-compilation.
 
+## Intro
+
 ```bash
 query-json ".store.books | filter(.price > 10)" stores.json
 ```
