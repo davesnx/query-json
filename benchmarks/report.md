@@ -1,13 +1,25 @@
 # Benchmark Report
 The benchmarks run on a 13" MacBook Pro (2020) with a 1.4 GHz Quad-Core i5 and 16GB 2133MHz RAM.
 
-This benchmark consists in steps: one using [hyperfine](https://github.com/sharkdp/hyperfine) which evaluates the simple identity of each tool, to check boot time performance and the other running a time with a different kind of queries on a set of different json file sizes.
+This benchmark consists twoo different steps, the boot time and a timer on a few operations over different (json) file sizes.
 
-Executing `$ ./benchmarks/run.sh` runs both steps.
+Executing `$ ./benchmarks/hyper.sh` runs hyperfile.
+Executing `$ ./benchmarks/run.sh` runs the timers.
 
 ## Output
 
-`$ ./benchmarks/run.sh`
+`$ ./benchmarks/hyper.sh`
+
+| Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
+|:---|---:|---:|---:|---:|
+| `query-json . esy.json` | 7.9 ± 0.4 | 7.3 | 11.3 | 1.00 |
+| `jq . esy.json` | 27.6 ± 0.5 | 26.8 | 29.0 | 3.50 ± 0.21 |
+| `faq . esy.json` | 55.3 ± 1.1 | 53.7 | 60.0 | 7.00 ± 0.42 |
+| `fx esy.json .` | 64.5 ± 2.7 | 62.2 | 72.7 | 8.16 ± 0.58 |
+
+---
+
+## Running [run.sh](./run.sh)
 
 ```bash
 query-json: 0.5.8
@@ -15,62 +27,6 @@ jq: jq-1.6
 faq: 0.0.6
 fx: 20.0.2
 ```
-
-#### Benchmark #1: jq . esy.json
-```bash
-  Time (mean ± σ):      27.6 ms ±   1.0 ms    [User: 25.4 ms, System: 1.2 ms]
-  Range (min … max):    26.5 ms …  32.1 ms    71 runs
-```
-
-#### Benchmark #1: query-json . esy.json
-```bash
-  Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
-  Range (min … max):     7.3 ms …   8.9 ms    267 runs
-```
-#### Benchmark #2: jq . esy.json
-```bash
-  Time (mean ± σ):      27.6 ms ±   1.1 ms    [User: 25.3 ms, System: 1.2 ms]
-  Range (min … max):    26.4 ms …  34.5 ms    98 runs
-```
-### **Summary** `query-json . esy.json` ran 3.56 ± 0.18 times faster than `jq . esy.json`
-
-#### Benchmark #1: faq . esy.json
-```bash
-  Time (mean ± σ):      55.1 ms ±   0.6 ms    [User: 54.5 ms, System: 5.1 ms]
-  Range (min … max):    53.9 ms …  57.2 ms    43 runs
-```
-#### Benchmark #1: query-json . esy.json
-```bash
-  Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
-  Range (min … max):     7.3 ms …   8.9 ms    280 runs
-```
-#### Benchmark #2: faq . esy.json
-```bash
-  Time (mean ± σ):      55.2 ms ±   0.7 ms    [User: 54.8 ms, System: 5.2 ms]
-  Range (min … max):    53.9 ms …  57.2 ms    51 runs
-```
-### **Summary** `query-json . esy.json` ran 7.11 ± 0.23 times faster than `faq . esy.json`
-
-#### Benchmark #1: fx esy.json .
-```bash
-  Time (mean ± σ):      60.5 ms ±   1.8 ms    [User: 48.6 ms, System: 13.3 ms]
-  Range (min … max):    59.1 ms …  70.9 ms    40 runs
-```
-#### Benchmark #1: query-json . esy.json
-```bash
-  Time (mean ± σ):       7.8 ms ±   0.2 ms    [User: 3.4 ms, System: 2.1 ms]
-  Range (min … max):     7.4 ms …   8.8 ms    256 runs
-```
-#### Benchmark #2: fx esy.json .
-```bash
-  Time (mean ± σ):      60.3 ms ±   0.6 ms    [User: 48.5 ms, System: 12.9 ms]
-  Range (min … max):    59.3 ms …  62.1 ms    47 runs
-```
-### **Summary** `query-json . esy.json` ran 7.73 ± 0.24 times faster than `fx esy.json .`
-
----
-
-## Running [run.sh](./run.sh)
 
 ### Select an attribute (`.first.id`) on a small (4kb) JSON file
 ```bash
