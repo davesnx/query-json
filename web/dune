@@ -1,20 +1,5 @@
-(library
-  (name web)
-  (public_name query-json)
-  (preprocess (pps js_of_ocaml-ppx))
+(executable
+ (name Web)
+ (modes js)
+ (libraries console.lib source yojson cmdliner js_of_ocaml)
 )
-
-(rule
-  (targets query-json.js)
-  (action
-    (run %{bin:js_of_ocaml} compile
-         -o %{targets}
-         --pretty
-         Index.re
-     )
-  )
-)
-
-(alias
-  (name default)
-  (deps query-json.js index.html))
