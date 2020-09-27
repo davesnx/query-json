@@ -28,14 +28,15 @@ let run = (query: option(string), json: string) => {
   };
 };
 
-Js_of_ocaml.Js.export(
-  "queryJson",
-  [%js
-    {
-      as _;
-      pub add = (x, y) => x +. y;
-      pub abs = x => abs_float(x);
-      val zero = 0.
-    }
-  ],
-);
+/* Js_of_ocaml.Js.export(
+     "queryJson",
+     [%js
+       {
+         as _;
+         pub add = (x, y) => x +. y;
+         pub abs = x => abs_float(x);
+         val zero = 0.
+       }
+     ],
+   );
+    */

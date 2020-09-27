@@ -1,5 +1,5 @@
 (executable
- (name Web)
+ (name Js)
  (modes js)
  (libraries console.lib source yojson cmdliner js_of_ocaml)
 )
