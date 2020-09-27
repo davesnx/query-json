@@ -123,7 +123,7 @@ expr:
       | "group_by" -> GroupBy(cb)
       | "unique_by" -> UniqueBy(cb)
       | "find" -> Find(cb)
-      | "some" -> Some(cb)
+      | "some" -> Some_(cb)
       | "path" -> Path(cb)
       | "any" -> AnyWithCondition(cb)
       | "all" -> AllWithCondition(cb)

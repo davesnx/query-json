@@ -62,7 +62,7 @@ type expression =
   | MaxBy(expression) /* max_by(x) */
   | AllWithCondition(expression) /* all(c) */
   | AnyWithCondition(expression) /* any(c) */
-  | Some(expression) /* some */
+  | Some_(expression) /* some */
   | Find(expression) /* find(x) */
   /* operations */
   | Addition(expression, expression) /* + */
