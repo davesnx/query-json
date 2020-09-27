@@ -1,0 +1,6 @@
+{
+  "ocaml.sandbox": {
+    "kind": "esy",
+    "root": "/Users/davesnx/dev/github/query-json"
+  }
+}

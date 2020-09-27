@@ -1,0 +1,32 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "parcel index.html",
+    "build": "bsb -make-world",
+    "start": "bsb -make-world -w -ws _ ",
+    "clean": "bsb -clean-world",
+    "server": "moduleserve ./ --port 8000",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "BuckleScript",
+    "ReasonReact",
+    "reason-react"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@davesnx/styled-ppx": "1.0.1-nightly.d7c8a70.0",
+    "bs-css": "^13.0.0",
+    "parcel": "^1.12.4",
+    "react": "^16.8.1",
+    "react-dom": "^16.8.1",
+    "reason-react": ">=0.7.0"
+  },
+  "devDependencies": {
+    "bs-platform": "^7.0.1",
+    "bsb-js": "^1.1.7",
+    "moduleserve": "^0.9.0"
+  }
+}
