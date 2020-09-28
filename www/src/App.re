@@ -1,6 +1,6 @@
 open Belt;
 
-[@bs.module "../../_build/default/js/Js.bc.js"]
+[@bs.module "query-json-js"]
 external queryJson: (string, string) => string = "run";
 
 let mockJson = {|
@@ -98,9 +98,9 @@ let reduce = (state, action) => {
   | UpdateJson(json) => {...state, json: Some(json)}
   | ComputeResult =>
     switch (state.json) {
-    | Some(json) =>
-      let result = queryJson(state.query, json);
-      {...state, result: Some(result)};
+    | Some(_json) =>
+      /* let result = queryJson(state.query, json); */
+      {...state, result: None}
     | None => state
     }
   };

@@ -1,5 +1,5 @@
 {
-  "name": "reason-react-examples",
+  "name": "vite-reason-react-starter",
   "reason": {
     "react-jsx": 3
   },
@@ -13,7 +13,7 @@
   ],
   "package-specs": [
     {
-      "module": "commonjs",
+      "module": "es6",
       "in-source": true
     }
   ],
