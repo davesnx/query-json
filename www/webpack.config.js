@@ -1,42 +1,26 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 const isProd = process.env.NODE_ENV === 'production';
 
 module.exports = {
-  entry: './src/Index.bs.js',
+  context: path.resolve('../'),
+  entry: './www/src/Index.bs.js',
   mode: isProd ? 'production' : 'development',
-  resolve: {
-    extensions: ['.js'],
-    modules: [
-      'node_modules',
-      path.resolve(__dirname, '../../_build/default/js'),
-    ],
-    alias: {
-      'query-json': path.resolve(
-        __dirname,
-        '..',
-        '..',
-        '_build',
-        'default',
-        'js',
-        'Js.bs.js'
-      ),
-    },
-  },
   node: {
     fs: 'empty',
     child_process: 'empty',
   },
   plugins: [
     new HtmlWebpackPlugin({
-      template: './index.html',
-      inject: false,
+      template: './www/index.html',
+      inject: true,
     }),
   ],
   devServer: {
     compress: true,
-    contentBase: './',
+    contentBase: './www/src',
     port: process.env.PORT || 8000,
     historyApiFallback: true,
   },

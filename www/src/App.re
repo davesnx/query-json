@@ -1,46 +1,49 @@
 open Belt;
 
-[@bs.module "query-json-js"]
-external queryJson: (string, string) => string = "run";
+type response = result(string, string);
+
+[@bs.module "../../_build/default/js/Js.bc.js"]
+external queryJson: (string, string) => response = "run";
 
 let mockJson = {|
-  {
-    "store": {
-      "books": [
-        {
-          "category": "reference",
-          "author": "Nigel Rees",
-          "title": "Sayings of the Century",
-          "price": 8.95
-        },
-        {
-          "category": "fiction",
-          "author": "Evelyn Waugh",
-          "title": "Sword of Honour",
-          "price": 12.99
-        },
-        {
-          "category": "fiction",
-          "author": "Herman Melville",
-          "title": "Moby Dick",
-          "isbn": "0-553-21311-3",
-          "price": 8.99
-        },
-        {
-          "category": "fiction",
-          "author": "J. R. R. Tolkien",
-          "title": "The Lord of the Rings",
-          "isbn": "0-395-19395-8",
-          "price": 22.99
-        }
-      ]
+{
+  "store": {
+    "books": [
+      {
+        "category": "reference",
+        "author": "Nigel Rees",
+        "title": "Sayings of the Century",
+        "price": 8.95
+      },
+      {
+        "category": "fiction",
+        "author": "Evelyn Waugh",
+        "title": "Sword of Honour",
+        "price": 12.99
+      },
+      {
+        "category": "fiction",
+        "author": "Herman Melville",
+        "title": "Moby Dick",
+        "isbn": "0-553-21311-3",
+        "price": 8.99
+      },
+      {
+        "category": "fiction",
+        "author": "J. R. R. Tolkien",
+        "title": "The Lord of the Rings",
+        "isbn": "0-395-19395-8",
+        "price": 22.99
+      }
+    ]
   }
+}
 |};
 
 module Header = {
   [@react.component]
   let make = () => {
-    <Text> "Hello world" </Text>;
+    <Text> "query-json playground" </Text>;
   };
 };
 
@@ -77,30 +80,37 @@ module Json = {
 
 module Result = {
   [@react.component]
-  let make = (~text) =>
+  let make = (~value: response) => {
+    let text =
+      switch (value) {
+      | Ok(o) => o
+      | Error(e) => e
+      };
+
     <div> <pre> <code> {React.string(text)} </code> </pre> </div>;
+  };
 };
 
 type t = {
   query: string,
   json: option(string),
-  result: option(string),
+  output: option(response),
 };
 
 type actions =
   | UpdateQuery(string)
   | UpdateJson(string)
-  | ComputeResult;
+  | ComputeOutput;
 
 let reduce = (state, action) => {
   switch (action) {
   | UpdateQuery(query) => {...state, query}
   | UpdateJson(json) => {...state, json: Some(json)}
-  | ComputeResult =>
+  | ComputeOutput =>
     switch (state.json) {
-    | Some(_json) =>
-      /* let result = queryJson(state.query, json); */
-      {...state, result: None}
+    | Some(json) =>
+      let result = queryJson(state.query, json);
+      {...state, output: Some(result)};
     | None => state
     }
   };
@@ -111,17 +121,17 @@ let make = () => {
   let (state, dispatch) =
     React.useReducer(
       reduce,
-      {query: "", json: Some(mockJson), result: None},
+      {query: "", json: Some(mockJson), output: None},
     );
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
-    dispatch(ComputeResult);
+    dispatch(ComputeOutput);
   };
 
   let onJsonChange = value => {
-    dispatch(UpdateQuery(value));
-    dispatch(ComputeResult);
+    dispatch(UpdateJson(value));
+    dispatch(ComputeOutput);
   };
 
   <Page>
@@ -135,6 +145,11 @@ let make = () => {
       value={Option.getWithDefault(state.json, "")}
       onChange=onJsonChange
     />
-    <Result text={Option.getWithDefault(state.result, "")} />
+    <div>
+      {switch (state.output) {
+       | Some(value) => <Result value />
+       | None => React.null
+       }}
+    </div>
   </Page>;
 };

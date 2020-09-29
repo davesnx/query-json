@@ -1,33 +1,51 @@
 open Js_of_ocaml;
 open Source;
 
-let renderError = e => print_endline(Console.Errors.printError(e));
+let renderError = e => Console.Errors.printError(e);
 
-let run = (query, json) => {
-  let _js_query = Js.to_string(query);
-  let js_json = Js.to_string(json);
-  let input = Json.parseString(js_json);
-  switch (input) {
-  | Ok(inp) => print_endline(inp |> Json.pretty_to_string)
-  | Error(_err) => ()
+type out = result(string, string);
+
+let to_bs_result = (res: out) => {
+  switch (res) {
+  | Ok(str) =>
+    Js.Unsafe.obj([|
+      ("_0", Js.Unsafe.inject(Js.string(str))),
+      ("TAG", Js.Unsafe.inject(0)),
+    |])
+  | Error(str) =>
+    Js.Unsafe.obj([|
+      ("_0", Js.Unsafe.inject(Js.string(str))),
+      ("TAG", Js.Unsafe.inject(1)),
+    |])
   };
-  /* Main.parse(~debug=false, js_query)
-     |> Result.map(compile)
-     |> Result.map(runtime => {
-          switch (input) {
-          | Ok(inp) => runtime(inp)
-          | Error(err) => Error(err)
-          }
-        })
-     |> Result.map(res =>
-          res
-          |> Result.map(o =>
-               Json.toString(o, ~colorize=true, ~summarize=false)
-               |> print_endline
-             )
-          |> Result.map_error(renderError)
-        )
-     |> Result.map_error(renderError); */
 };
 
-Js_of_ocaml.Js.export("run", run);
+let run = (query, json) => {
+  let js_query = Js.to_string(query);
+  let js_json = Js.to_string(json);
+  let input = Json.parseString(js_json);
+
+  let result =
+    Main.parse(~debug=true, js_query)
+    |> Result.map(Compiler.compile)
+    |> Result.map(runtime => {
+         switch (input) {
+         | Ok(inp) => runtime(inp)
+         | Error(err) => Error(err)
+         }
+       });
+
+  (
+    switch (result) {
+    | Ok(res) =>
+      switch (res) {
+      | Ok(r) => Ok(Json.toString(~colorize=false, ~summarize=false, r))
+      | Error(e) => Error(e)
+      }
+    | Error(err) => Error(err)
+    }
+  )
+  |> to_bs_result;
+};
+
+Js.export("run", run);
