@@ -104,14 +104,6 @@ module Errors = {
   let missing = f =>
     Formatting.singleQuotes(f)
     ++ " looks like a function and maybe is not implemented or missing in the parser. Either way, could you open an issue 'https://github.com/davesnx/query-json/issues/new'";
-
-  let keyWithString = k =>
-    "."
-    ++ string_of_int(int_of_float(k))
-    ++ " is not valid. If you want to access a field that is a number, use double-quotes: "
-    ++ Formatting.singleQuotes(
-         "." ++ Formatting.doubleQuotes(string_of_int(int_of_float(k))),
-       );
 };
 
 let usage = () =>

@@ -46,8 +46,8 @@ jobs:
         env:
           cache-name: cache-node-modules
         with:
-          path: ~/.yarn-cache
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
@@ -58,6 +58,7 @@ jobs:
 
       - name: Test
         run: |
+          rm test/__snapshots__/.gitkeep
           esy dune exec test/Run.exe --force
           esy dune exec bisect-ppx-report send-to Coveralls *.coverage
         env:

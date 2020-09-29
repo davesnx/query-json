@@ -31,6 +31,10 @@ let parse = (input: string, ~debug: bool): result(expression, string) => {
   let buf = Sedlexing.Utf8.from_string(input);
   let lexer = () => provider(~debug, buf);
 
+  if (debug) {
+    print_endline("");
+  };
+
   try(Ok(menhir(lexer))) {
   | exn =>
     let Location.{loc_start, loc_end, _} = last_position^;

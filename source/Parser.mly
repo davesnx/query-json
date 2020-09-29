@@ -9,6 +9,7 @@
 %token NULL
 %token <string> IDENTIFIER
 %token DOT
+%token RECURSE
 %token PIPE
 %token SEMICOLON
 %token ADD SUB MULT DIV
@@ -17,25 +18,24 @@
 %token <string> FUNCTION
 %token CLOSE_PARENT
 
-%token SPACE
-
 %token QUESTION_MARK
 %token EXCLAMATION_MARK
 %token COMMA
 
 %token OPEN_BRACKET
 %token CLOSE_BRACKET
+/*
 %token OPEN_BRACE
 %token CLOSE_BRACE
-
+ */
 %token EOF
 
-%left OPEN_BRACKET
-%left PIPE SPACE /* lowest precedence */
+/* %left OPEN_BRACKET */
+%left PIPE /* lowest precedence */
 %left MULT DIV /* medium precedence */
 %left ADD SUB /* highest precedence */
 
-%start <Ast.expression> program
+%start <expression> program
 
 %%
 
@@ -67,36 +67,44 @@ conditional:
   ;
 
 path:
-  /* We need both:
-    String is scaped, while Identifier isn't. */
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
     { Key(k, opt) }
   | DOT; k = STRING; opt = boption(QUESTION_MARK); rst = path
     { Pipe(Key(k, opt), rst) }
+
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
   | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
     { Pipe(Key(k, opt), rst) }
-  | DOT; k = NUMBER;
-    { failwith(keyWithString k) }
 
-obj_fields: obj = separated_list(COMMA, obj_field)
-  { obj }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
+    { Key(string_of_int(int_of_float(f)), opt) }
+  | DOT; f = NUMBER; opt = boption(QUESTION_MARK); rst = path
+    { Pipe(Key(string_of_int(int_of_float(f)), opt), rst) }
 
-obj_field: k = STRING; DOT; v = expr
-  { (k, v) }
-
-list_fields: vl = separated_list(COMMA, expr)
-  { vl }
+  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
+    { Index(int_of_float(num)) }
+  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET; rst = path
+    { Pipe(Index(int_of_float(num)), rst) }
+  ;
 
 expr:
+  | DOT;
+    { Identity }
+  | RECURSE;
+    { Recurse }
+  | COMMA;
+    { Comma }
+  | s = STRING;
+    { Literal(String(s)) }
+  | n = NUMBER;
+    { Literal(Number(n)) }
+  | b = BOOL;
+    { Literal(Bool(b)) }
+  | NULL
+    { Literal(Null) }
   | left = expr; PIPE; right = expr;
     { Pipe(left, right) }
-  | left = expr; SPACE; right = expr;
-    { Pipe(left, right) }
-  /* Index always gots prefixed by an expr which pipes it. */
-  | e = expr; OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
-    { Pipe(e, Index(int_of_float(num))) }
   | left = expr; ADD; right = expr;
     { Addition(left, right) }
   | left = expr; SUB; right = expr;
@@ -139,8 +147,6 @@ expr:
       | "endswith" -> failwith(renamed f "ends_with")
       | _ -> failwith(missing f)
     }
-  | e = path
-    { e }
   | f = IDENTIFIER;
     { match f with
       | "if" -> failwith(notImplemented f)
@@ -184,27 +190,11 @@ expr:
       | "tostring" -> failwith(renamed f "to_string")
       | _ -> failwith(missing f)
     }
-  | DOT;
-    { Identity }
-  | DOT; DOT;
-    { Recurse }
-  | COMMA;
-    { Comma }
-  | OPEN_BRACE; obj = obj_fields; CLOSE_BRACE
-    { Object(obj) }
-  | OPEN_BRACKET; vl = list_fields; CLOSE_BRACKET
-    { List(vl) }
-  | s = STRING;
-    { Literal(String(s)) }
-  | n = NUMBER;
-    { Literal(Number(n)) }
-  | b = BOOL;
-    { Literal(Bool(b)) }
-  | NULL
-    { Literal(Null) }
   | f = FUNCTION; cond = conditional; CLOSE_PARENT;
     { match f with
     | "filter" -> Filter(cond)
     | _ -> failwith(missing f)
     }
+  | e = path;
+    { e }
   ;

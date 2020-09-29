@@ -21,6 +21,8 @@ type token =
   | CLOSE_BRACE
   | EXCLAMATION_MARK
   | DOT
+  | DOUBLE_DOT
+  | RECURSE
   | PIPE
   | QUESTION_MARK
   | COMMA
@@ -37,7 +39,6 @@ type token =
   | LOWER
   | GREATER_EQUAL
   | LOWER_EQUAL
-  | SPACE
   | EOF;
 
 let string = buf => {
@@ -94,6 +95,8 @@ let rec tokenize = buf => {
   | "false" => Ok(BOOL(false))
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
+  | ':' => Ok(DOUBLE_DOT)
+  | ".." => Ok(RECURSE)
   | '"' => Ok(string(buf))
   | identifier => tokenizeApply(buf)
   | number =>

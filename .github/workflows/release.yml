@@ -35,20 +35,20 @@ jobs:
         id: print_esy_cache
         run: node scripts/print-esy-cache.js
 
-      - name: Try to restore build cache
+      - name: Restore build cache
         id: deps-cache
         uses: actions/cache@v2
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
           key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
 
-      - name: Restore node modules cache
+      - name: Restore global node modules cache
         uses: actions/cache@v1
         env:
           cache-name: cache-node-modules
         with:
-          path: ~/.yarn-cache
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/yarn.lock') }}
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
