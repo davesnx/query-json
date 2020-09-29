@@ -168,6 +168,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -178,6 +179,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
@@ -189,6 +191,7 @@ jobs:
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -199,6 +202,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-linux-x64.zip to Github release
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -209,6 +213,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-windows-x64.zip to Github release
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-release-asset@v1.0.1
         if: "startsWith(github.ref, 'refs/tags/v')"
         env:
