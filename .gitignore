@@ -1,12 +1,21 @@
-_esy
-.ci/*
-*.install
+# Node
 node_modules
+
+# Editor
 *.merlin
+
+# Esy
+_esy
 _build
 _release
 _export
+*.install
+
+# bisect_ppx Coverage
 _coverage
 ./trash.json
 *.coverage
 coverage.json
+
+# BuckleScript artifacts
+*.bs.js

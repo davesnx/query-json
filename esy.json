@@ -54,5 +54,10 @@
     "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
     "@opam/cmdliner": "1.0.4",
     "bats": "^1.1.0"
+  },
+  "dependencies": {
+    "@opam/js_of_ocaml": "3.7.0",
+    "@opam/js_of_ocaml-compiler": "3.7.0",
+    "@opam/js_of_ocaml-ppx": "3.7.0"
   }
 }

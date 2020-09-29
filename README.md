@@ -90,7 +90,7 @@ q '.' pokemons.json
 
 #### query from stdin
 ```bash
-cat pokemons.json | q --kind=inline '.'
+cat pokemons.json | q '.'
 ```
 
 #### query a json inlined
