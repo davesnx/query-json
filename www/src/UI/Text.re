@@ -88,13 +88,11 @@ module Typography = {
       | `Mono => "font-mono"
       };
 
-    let className = "";
-
-    <span className> children </span>;
+    <span> children </span>;
   };
 };
 
-type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `B1 | `B2 | `B3 | `Label];
+type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label];
 
 [@react.component]
 let make =
@@ -105,7 +103,7 @@ let make =
       ~uppercase=false,
       ~truncate=false,
       ~children,
-      ~kind=`B2,
+      ~kind=`Body,
       ~fontFamily=?,
       ~tracking=?,
     ) => {
@@ -116,9 +114,7 @@ let make =
     | `H3 => (`Medium, `Semibold, `Normal)
     | `H4 => (`Small, `Semibold, `Normal)
     | `H5 => (`Small, `Normal, `Normal)
-    | `B1 => (`Medium, `Normal, `Normal)
-    | `B2 => (`Small, `Normal, `Normal)
-    | `B3 => (`XSmall, `Normal, `Normal)
+    | `Body => (`Medium, `Normal, `Normal)
     | `Label => (`Small, `Medium, `Loose)
     };
 

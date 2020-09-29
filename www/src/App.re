@@ -5,8 +5,7 @@ type response = result(string, string);
 [@bs.module "../../_build/default/js/Js.bc.js"]
 external queryJson: (string, string) => response = "run";
 
-let mockJson = {|
-{
+let mockJson = {|{
   "store": {
     "books": [
       {
@@ -40,19 +39,56 @@ let mockJson = {|
 }
 |};
 
+module Menu = [%styled {|
+  width: 75vw;
+  height: 10vh;
+|}];
+
 module Header = {
   [@react.component]
   let make = () => {
-    <Text> "query-json playground" </Text>;
+    <Menu> <Text> "query-json playground" </Text> </Menu>;
   };
 };
 
-module Page = {
-  [@react.component]
-  let make = (~children) => {
-    children;
-  };
-};
+module SpacerBottom = [%styled "margin-bottom: 8px"];
+module SpacerTop = [%styled "margin-top: 8px"];
+module SpacerRight = [%styled "margin-right: 8px"];
+module SpacerLeft = [%styled "margin-left: 8px; height: 100%;"];
+
+module Page = [%styled
+  {|
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+|}
+];
+
+module Container = [%styled.main
+  {|
+  width: 75vw;
+  height: 80vh;
+
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+|}
+];
+
+module ColumnHalf = [%styled.div {|
+  width: 50%;
+  height: 100%;
+|}];
+
+module Stack = [%styled.div
+  {|
+  display: flex;
+  flex-direction: column;
+
+  height: 100%;
+  |}
+];
 
 module Query = {
   [@react.component]
@@ -74,7 +110,26 @@ module Json = {
       onChange(value);
     };
 
-    <textarea value onChange=onChangeHandler />;
+    <textarea
+      className=[%css "height: 100%;"]
+      value
+      onChange=onChangeHandler
+    />;
+  };
+};
+
+module Box = [%styled.div
+  {|
+  background: #C4C4C4;
+  height: 100%;
+  width: 100%;
+|}
+];
+
+module EmptyResult = {
+  [@react.component]
+  let make = () => {
+    <Box />;
   };
 };
 
@@ -87,7 +142,7 @@ module Result = {
       | Error(e) => e
       };
 
-    <div> <pre> <code> {React.string(text)} </code> </pre> </div>;
+    <Box> <pre> <code> {React.string(text)} </code> </pre> </Box>;
   };
 };
 
@@ -135,21 +190,36 @@ let make = () => {
   };
 
   <Page>
+    <SpacerTop />
+    <SpacerTop />
     <Header />
-    <Query
-      value={state.query}
-      placeholder="Type the filter, ex: '.'"
-      onChange=onQueryChange
-    />
-    <Json
-      value={Option.getWithDefault(state.json, "")}
-      onChange=onJsonChange
-    />
-    <div>
-      {switch (state.output) {
-       | Some(value) => <Result value />
-       | None => React.null
-       }}
-    </div>
+    <SpacerBottom />
+    <Container>
+      <ColumnHalf>
+        <Stack>
+          <Query
+            value={state.query}
+            placeholder="Type the filter, ex: '.'"
+            onChange=onQueryChange
+          />
+          <SpacerBottom />
+          <Json
+            value={Option.getWithDefault(state.json, "")}
+            onChange=onJsonChange
+          />
+        </Stack>
+        <SpacerRight />
+      </ColumnHalf>
+      <ColumnHalf>
+        <div className="non-scroll">
+          <SpacerLeft>
+            {switch (state.output) {
+             | Some(value) => <Result value />
+             | None => <EmptyResult />
+             }}
+          </SpacerLeft>
+        </div>
+      </ColumnHalf>
+    </Container>
   </Page>;
 };
