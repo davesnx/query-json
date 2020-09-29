@@ -16,10 +16,10 @@
 %token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR
 
 %token <string> FUNCTION
+%token OPEN_PARENT
 %token CLOSE_PARENT
 
 %token QUESTION_MARK
-%token EXCLAMATION_MARK
 %token COMMA
 
 %token OPEN_BRACKET
@@ -31,9 +31,14 @@
 %token EOF
 
 /* %left OPEN_BRACKET */
-%left PIPE /* lowest precedence */
-%left MULT DIV /* medium precedence */
-%left ADD SUB /* highest precedence */
+/* according to https://github.com/stedolan/jq/issues/1326 */
+%right PIPE /* lowest precedence */
+%left COMMA
+%left OR
+%left AND
+%nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
+%left ADD SUB
+%left MULT DIV /* highest precedence */
 
 %start <expression> program
 
@@ -45,7 +50,19 @@ program:
   | EOF;
     { Identity }
 
-conditional:
+expr:
+  | left = expr; COMMA; right = expr;
+    { Comma(left, right) }
+  | left = expr; PIPE; right = expr;
+    { Pipe(left, right) }
+  | left = expr; ADD; right = expr;
+    { Addition(left, right) }
+  | left = expr; SUB; right = expr;
+    { Subtraction(left, right) }
+  | left = expr; MULT; right = expr;
+    { Multiply(left, right) }
+  | left = expr; DIV; right = expr;
+    { Division(left, right) }
   | left = expr; EQUAL; right = expr;
     { Equal(left, right) }
   | left = expr; NOT_EQUAL; right = expr;
@@ -59,42 +76,17 @@ conditional:
   | left = expr; LOWER_EQUAL; right = expr;
     { LowerEqual(left, right) }
   | left = expr; AND; right = expr;
-    { LowerEqual(left, right) }
+    { And(left, right) }
   | left = expr; OR; right = expr;
-    { LowerEqual(left, right) }
-  | left = expr; EXCLAMATION_MARK; right = expr;
-    { LowerEqual(left, right) }
-  ;
+    { Or(left, right) }
+  | e = term
+    { e }
 
-path:
-  | DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
-  | DOT; k = STRING; opt = boption(QUESTION_MARK); rst = path
-    { Pipe(Key(k, opt), rst) }
-
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK); rst = path
-    { Pipe(Key(k, opt), rst) }
-
-  | DOT; f = NUMBER; opt = boption(QUESTION_MARK)
-    { Key(string_of_int(int_of_float(f)), opt) }
-  | DOT; f = NUMBER; opt = boption(QUESTION_MARK); rst = path
-    { Pipe(Key(string_of_int(int_of_float(f)), opt), rst) }
-
-  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET;
-    { Index(int_of_float(num)) }
-  | OPEN_BRACKET; num = NUMBER; CLOSE_BRACKET; rst = path
-    { Pipe(Index(int_of_float(num)), rst) }
-  ;
-
-expr:
+term:
   | DOT;
     { Identity }
   | RECURSE;
     { Recurse }
-  | COMMA;
-    { Comma }
   | s = STRING;
     { Literal(String(s)) }
   | n = NUMBER;
@@ -103,16 +95,6 @@ expr:
     { Literal(Bool(b)) }
   | NULL
     { Literal(Null) }
-  | left = expr; PIPE; right = expr;
-    { Pipe(left, right) }
-  | left = expr; ADD; right = expr;
-    { Addition(left, right) }
-  | left = expr; SUB; right = expr;
-    { Subtraction(left, right) }
-  | left = expr; MULT; right = expr;
-    { Multiply(left, right) }
-  | left = expr; DIV; right = expr;
-    { Division(left, right) }
   | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
     { match f with
       | "range" -> Range(int_of_float(from), int_of_float(upto))
@@ -122,6 +104,7 @@ expr:
     { failwith(f ^ "(), should contain a body") }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
+      | "filter" -> Map(Select(cb)) (* for backward compatibility *)
       | "map" -> Map(cb)
       | "flat_map" -> FlatMap(cb)
       | "select" -> Select(cb)
@@ -149,6 +132,7 @@ expr:
     }
   | f = IDENTIFIER;
     { match f with
+      | "empty" -> Empty
       | "if" -> failwith(notImplemented f)
       | "then" -> failwith(notImplemented f)
       | "else" -> failwith(notImplemented f)
@@ -181,6 +165,7 @@ expr:
       | "with_entries" -> WithEntries
       | "nan" -> Nan
       | "is_nan" -> IsNan
+      | "not" -> Not
       | "isnan" -> failwith(renamed f "is_nan")
       | "reduce" -> failwith(renamed f "reduce()")
       | "tonumber" -> failwith(renamed f "to_number")
@@ -190,11 +175,24 @@ expr:
       | "tostring" -> failwith(renamed f "to_string")
       | _ -> failwith(missing f)
     }
-  | f = FUNCTION; cond = conditional; CLOSE_PARENT;
-    { match f with
-    | "filter" -> Filter(cond)
-    | _ -> failwith(missing f)
-    }
-  | e = path;
+  | OPEN_BRACKET; CLOSE_BRACKET;
+    { List(Empty) }
+  | OPEN_BRACKET; e = expr; CLOSE_BRACKET;
+    { List(e) }
+  | OPEN_PARENT; e = expr; CLOSE_PARENT;
     { e }
+  | e = term; OPEN_BRACKET; i = NUMBER; CLOSE_BRACKET
+    { Pipe(e, Index(int_of_float(i))) }
+
+  | DOT; k = STRING; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+
+  | e = term; DOT; k = STRING; opt = boption(QUESTION_MARK)
+    { Pipe(e, Key(k, opt)) }
+
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Key(k, opt) }
+
+  | e = term; DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { Pipe(e, Key(k, opt)) }
   ;

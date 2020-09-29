@@ -40,9 +40,17 @@ let run =
        })
     |> Result.map(res =>
          res
-         |> Result.map(o =>
-              Source.Json.toString(o, ~colorize=!noColor, ~summarize=false)
-              |> print_endline
+         |> Result.map(os =>
+              List.iter(
+                o =>
+                  Source.Json.toString(
+                    o,
+                    ~colorize=!noColor,
+                    ~summarize=false,
+                  )
+                  |> print_endline,
+                os,
+              )
             )
          |> Result.map_error(e => print_endline(Errors.printError(e)))
        )

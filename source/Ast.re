@@ -11,11 +11,12 @@ type literal =
 [@deriving show]
 type expression =
   | Identity /* . */
+  | Empty /* empty */
   | Pipe(expression, expression) /* | */
-  | Comma /* , */
+  | Comma(expression, expression) /* expr1 , expr2 */
   | Literal(literal)
   /* Constructors */
-  | List(list(expression)) /* [] */
+  | List(expression) /* [ expr ] */
   | Object(list((string, expression))) /* {} */
   /* Objects */
   | Walk(expression) /* walk() */
@@ -45,8 +46,7 @@ type expression =
   | Nan
   | IsNan
   /* Array */
-  | Index(int) /* [1] */
-  | Filter(conditional) /* .filter(x) */
+  | Index(int) /* .[1] */
   | Range(int, int) /* range(1, 10) */
   | Flatten /* flatten */
   | Head /* head */
@@ -54,7 +54,7 @@ type expression =
   | Map(expression) /* .[] */ /* map(x) */
   | FlatMap(expression) /* flat_map(x) */
   | Reduce(expression) /* reduce(x) */
-  | Select(expression) /* .select(x) */
+  | Select(expression) /* select(x) */
   | SortBy(expression) /* sort_by(x) */
   | GroupBy(expression) /* group_by(x) */
   | UniqueBy(expression) /* unique_by(x) */
@@ -81,15 +81,14 @@ type expression =
   | Join(expression) /* join */
   | Path(expression) /* path(x) */
   /* Logic */
-  | If(conditional)
+  | If(expression)
   | Then(expression)
   | Else(expression)
   | Break
-
-and conditional =
+  /* Conditionals */
   | And(expression, expression) /* and */
   | Or(expression, expression) /* or */
-  | Not(expression, expression) /* ! */
+  | Not /* not */
   | Greater(expression, expression) /* > */
   | Lower(expression, expression) /* < */
   | GreaterEqual(expression, expression) /* >= */
