@@ -47,14 +47,14 @@ module Menu = [%styled {|
 module Header = {
   [@react.component]
   let make = () => {
-    <Menu> <Text> "query-json playground" </Text> </Menu>;
+    <Menu> <Text> "" </Text> </Menu>;
   };
 };
 
-module SpacerBottom = [%styled "margin-bottom: 8px"];
-module SpacerTop = [%styled "margin-top: 8px"];
-module SpacerRight = [%styled "margin-right: 8px"];
-module SpacerLeft = [%styled "margin-left: 8px; height: 100%;"];
+module SpacerBottom = [%styled "margin-bottom: 16px"];
+module SpacerTop = [%styled "margin-top: 16px"];
+module SpacerRight = [%styled "margin-right: 16px"];
+module SpacerLeft = [%styled "margin-left: 16px; height: 100%;"];
 
 module Page = [%styled
   {|
@@ -98,7 +98,21 @@ module Query = {
       onChange(value);
     };
 
-    <input type_="text" value placeholder onChange=onChangeHandler />;
+    <input
+      type_="text"
+      value
+      placeholder
+      onChange=onChangeHandler
+      className=[%css
+        {|
+        border: none;
+        color: rgb(74, 85, 104);
+        border-radius: 4px;
+        font-size: 18px;
+        background: rgb(237, 242, 247);
+    |}
+      ]
+    />;
   };
 };
 
@@ -111,7 +125,17 @@ module Json = {
     };
 
     <textarea
-      className=[%css "height: 100%;"]
+      className=[%css
+        {|
+        font-size: 16px;
+        height: 100%;
+        resize: none;
+        border: none;
+        color: rgb(74, 85, 104);
+        border-radius: 4px;
+        background: rgb(237, 242, 247);
+      |}
+      ]
       value
       onChange=onChangeHandler
     />;
@@ -120,9 +144,11 @@ module Json = {
 
 module Box = [%styled.div
   {|
-  background: #C4C4C4;
+  background: rgb(237, 242, 247);
   height: 100%;
   width: 100%;
+
+  border-radius: 4px;
 |}
 ];
 
@@ -142,7 +168,18 @@ module Result = {
       | Error(e) => e
       };
 
-    <Box> <pre> <code> {React.string(text)} </code> </pre> </Box>;
+    <Box>
+      <pre
+        className=[%css
+          {|
+            margin: 0px;
+            background: rgb(237, 242, 247);
+            font-size: 16px;
+          |}
+        ]>
+        <code> {React.string(text)} </code>
+      </pre>
+    </Box>;
   };
 };
 
@@ -190,10 +227,7 @@ let make = () => {
   };
 
   <Page>
-    <SpacerTop />
-    <SpacerTop />
     <Header />
-    <SpacerBottom />
     <Container>
       <ColumnHalf>
         <Stack>
