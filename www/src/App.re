@@ -39,10 +39,14 @@ let mockJson = {|{
 }
 |};
 
-module Menu = [%styled {|
-  width: 75vw;
+module Menu = [%styled
+  {|
+  width: 100vw;
   height: 10vh;
-|}];
+  background: rgb(32, 33, 37);
+  margin-bottom: 40px;
+|}
+];
 
 module Header = {
   [@react.component]
@@ -119,26 +123,11 @@ module Query = {
 module Json = {
   [@react.component]
   let make = (~value, ~onChange) => {
-    let onChangeHandler = event => {
-      let value = ReactEvent.Form.target(event)##value;
+    let onChangeHandler = (_event, value) => {
       onChange(value);
     };
 
-    <textarea
-      className=[%css
-        {|
-        font-size: 16px;
-        height: 100%;
-        resize: none;
-        border: none;
-        color: rgb(74, 85, 104);
-        border-radius: 4px;
-        background: rgb(237, 242, 247);
-      |}
-      ]
-      value
-      onChange=onChangeHandler
-    />;
+    <Editor value onChange=onChangeHandler />;
   };
 };
 
@@ -155,31 +144,25 @@ module Box = [%styled.div
 module EmptyResult = {
   [@react.component]
   let make = () => {
-    <Box />;
+    let noop = (_, _) => ();
+    <Editor value="" onChange=noop />;
   };
 };
 
 module Result = {
   [@react.component]
-  let make = (~value: response) => {
+  let make = (~value: response, ~onChange) => {
     let text =
       switch (value) {
       | Ok(o) => o
       | Error(e) => e
       };
 
-    <Box>
-      <pre
-        className=[%css
-          {|
-            margin: 0px;
-            background: rgb(237, 242, 247);
-            font-size: 16px;
-          |}
-        ]>
-        <code> {React.string(text)} </code>
-      </pre>
-    </Box>;
+    let onChangeHandler = (_event, value) => {
+      onChange(value);
+    };
+
+    <Editor value=text onChange=onChangeHandler />;
   };
 };
 
@@ -192,12 +175,14 @@ type t = {
 type actions =
   | UpdateQuery(string)
   | UpdateJson(string)
+  | UpdateResult(string)
   | ComputeOutput;
 
 let reduce = (state, action) => {
   switch (action) {
   | UpdateQuery(query) => {...state, query}
   | UpdateJson(json) => {...state, json: Some(json)}
+  | UpdateResult(value) => {...state, output: Some(Ok(value))}
   | ComputeOutput =>
     switch (state.json) {
     | Some(json) =>
@@ -226,6 +211,10 @@ let make = () => {
     dispatch(ComputeOutput);
   };
 
+  let onResultChange = value => {
+    dispatch(UpdateResult(value));
+  };
+
   <Page>
     <Header />
     <Container>
@@ -248,7 +237,7 @@ let make = () => {
         <div className="non-scroll">
           <SpacerLeft>
             {switch (state.output) {
-             | Some(value) => <Result value />
+             | Some(value) => <Result value onChange=onResultChange />
              | None => <EmptyResult />
              }}
           </SpacerLeft>
