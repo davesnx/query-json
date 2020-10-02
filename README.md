@@ -54,7 +54,7 @@ This would access to `"store"` field inside the **stores.json**, access to `"boo
   - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
 - **Improved API**: made small adjustments to the buildin operations. Some examples are:
   - All methods are snake_case instead of alltoghetercase
-  - Changed `select` for `filter`
+  - Added `filter(p)` as an alias for `map(select(p))`
   - Supports comments in JSONs
 - **Small**: Lexer, Parser and Compiler are just 300 LOC and most of the commands that I use on my day to day are implemented in only 140 LOC.
 
@@ -137,9 +137,9 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Array Index: `.[2]` ✅
   - Pipe: `|` ✅
   - Array/String Slice: `.[10:15]` ⚠️
-  - Array/Object Value Iterator: `.[]` 🔴
-  - Comma: `,` ⚠️
-  - Parenthesis: `()` ⚠️
+  - Array/Object Value Iterator: `.[]` ✅
+  - Comma: `,` ✅
+  - Parenthesis: `()` ✅️
 
 - #### [Types and Values](https://stedolan.github.io/jq/manual/v1.6/#TypesandValues) ⚠️
 
@@ -151,7 +151,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - `length` ✅
   - `keys` ✅
   - `map` ✅
-  - `select` it's renamed to `filter` and operates differently. Filter is an alias to `map(select())`. ✅
+  - `select` ✅
   - `has(key)` ⚠️
   - `in` ⚠️
   - `path(path_expression)` ⚠️

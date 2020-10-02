@@ -9,13 +9,13 @@ let compare = (expected, result, {expect, _}) => {
 };
 
 let tests: list((string, expression)) = [
-  /* (".[1]", Pipe(Identity, Index(1))), */
-  (". | [1]", Pipe(Identity, Index(1))),
+  (".[1]", Pipe(Identity, Index(1))),
+  ("[1]", List(Literal(Number(1.)))),
   (".store.books", Pipe(Key("store", false), Key("books", false))),
   (".books[1]", Pipe(Key("books", false), Index(1))),
   (
     ".books[1].author",
-    Pipe(Key("books", false), Pipe(Index(1), Key("author", false))),
+    Pipe(Pipe(Key("books", false), Index(1)), Key("author", false)),
   ),
   (".store", Key("store", false)),
   (".", Identity),
@@ -30,6 +30,20 @@ let tests: list((string, expression)) = [
   (".WAT", Key("WAT", false)),
   ("head", Head),
   (".WAT?", Key("WAT", true)),
+  ("1, 2", Comma(Literal(Number(1.)), Literal(Number(2.)))),
+  ("empty", Empty),
+  (
+    "(1, 2) + 3",
+    Addition(
+      Comma(Literal(Number(1.)), Literal(Number(2.))),
+      Literal(Number(3.)),
+    ),
+  ),
+  ("[1, 2]", List(Comma(Literal(Number(1.)), Literal(Number(2.))))),
+  ("select(true)", Select(Literal(Bool(true)))),
+  ("[1][0]", Pipe(List(Literal(Number(1.))), Index(0))),
+  ("[1].foo", Pipe(List(Literal(Number(1.))), Key("foo", false))),
+  ("(empty).foo?", Pipe(Empty, Key("foo", true))),
 ];
 
 describe("correctly parse value", ({test, _}) => {
