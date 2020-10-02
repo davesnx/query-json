@@ -34,7 +34,12 @@ let run = (rawQuery, rawJson) => {
     switch (result) {
     | Ok(res) =>
       switch (res) {
-      | Ok(r) => Ok(Json.toString(~colorize=false, ~summarize=false, r))
+      | Ok(r) =>
+        Ok(
+          r
+          |> List.map(Json.toString(~colorize=false, ~summarize=false))
+          |> String.concat("\n"),
+        )
       | Error(e) => Error(e)
       }
     | Error(err) => Error(err)
