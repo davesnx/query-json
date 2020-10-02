@@ -37,47 +37,50 @@ let makeError = (name: string, json: Json.t) => {
   };
 };
 
-let pure = x => Ok([x]);
-
 let empty = Ok([]);
 
-let lift2 =
-    (f: ('a, 'b) => 'c, mx: result('a, string), my: result('b, string))
-    : result('c, string) => {
-  switch (mx) {
-  | Ok(x) =>
-    switch (my) {
-    | Ok(y) => Ok(f(x, y))
+module Results {
+  let return = x => Ok([x]);
+
+  let lift2 =
+      (f: ('a, 'b) => 'c, mx: result('a, string), my: result('b, string))
+      : result('c, string) => {
+    switch (mx) {
+    | Ok(x) =>
+      switch (my) {
+      | Ok(y) => Ok(f(x, y))
+      | Error(err) => Error(err)
+      }
     | Error(err) => Error(err)
-    }
-  | Error(err) => Error(err)
+    };
   };
-};
 
-let collect =
-    (xs: list(result(list('a), string))): result(list('a), string) =>
-  List.fold_right(lift2((@)), xs, empty);
+  let collect =
+      (xs: list(result(list('a), string))): result(list('a), string) =>
+    List.fold_right(lift2((@)), xs, empty);
 
-let bind =
-    (mx: result(list('a), string), f: 'a => result(list('b), string))
-    : result(list('b), string) => {
-  switch (mx) {
-  | Ok(xs) => collect(List.map(f, xs))
-  | Error(err) => Error(err)
+  let bind =
+      (mx: result(list('a), string), f: 'a => result(list('b), string))
+      : result(list('b), string) => {
+    switch (mx) {
+    | Ok(xs) => collect(List.map(f, xs))
+    | Error(err) => Error(err)
+    };
   };
-};
+}
+
 
 let keys = (json: Json.t) => {
   switch (json) {
   | `Assoc(_list) =>
-    pure(`List(Json.keys(json) |> List.map(i => `String(i))))
+    Results.return(`List(Json.keys(json) |> List.map(i => `String(i))))
   | _ => Error(makeError("keys", json))
   };
 };
 
 let length = (json: Json.t) => {
   switch (json) {
-  | `List(list) => pure(`Int(list |> List.length))
+  | `List(list) => Results.return(`Int(list |> List.length))
   | _ => Error(makeError("length", json))
   };
 };
@@ -85,19 +88,19 @@ let length = (json: Json.t) => {
 let not_ = (json: Json.t) => {
   switch (json) {
   | `Bool(false)
-  | `Null => pure(`Bool(true))
-  | _ => pure(`Bool(false))
+  | `Null => Results.return(`Bool(true))
+  | _ => Results.return(`Bool(false))
   };
 };
 
 let apply =
     (str: string, fn: (float, float) => float, left: Json.t, right: Json.t) => {
   switch (left, right) {
-  | (`Float(l), `Float(r)) => pure(`Float(fn(l, r)))
-  | (`Int(l), `Float(r)) => pure(`Float(fn(float_of_int(l), r)))
-  | (`Float(l), `Int(r)) => pure(`Float(fn(l, float_of_int(r))))
+  | (`Float(l), `Float(r)) => Results.return(`Float(fn(l, r)))
+  | (`Int(l), `Float(r)) => Results.return(`Float(fn(float_of_int(l), r)))
+  | (`Float(l), `Int(r)) => Results.return(`Float(fn(l, float_of_int(r))))
   | (`Int(l), `Int(r)) =>
-    pure(`Float(fn(float_of_int(l), float_of_int(r))))
+    Results.return(`Float(fn(float_of_int(l), float_of_int(r))))
   | _ => Error(makeError(str, left))
   };
 };
@@ -105,11 +108,11 @@ let apply =
 let compare =
     (str: string, fn: (float, float) => bool, left: Json.t, right: Json.t) => {
   switch (left, right) {
-  | (`Float(l), `Float(r)) => pure(`Bool(fn(l, r)))
-  | (`Int(l), `Float(r)) => pure(`Bool(fn(float_of_int(l), r)))
-  | (`Float(l), `Int(r)) => pure(`Bool(fn(l, float_of_int(r))))
+  | (`Float(l), `Float(r)) => Results.return(`Bool(fn(l, r)))
+  | (`Int(l), `Float(r)) => Results.return(`Bool(fn(float_of_int(l), r)))
+  | (`Float(l), `Int(r)) => Results.return(`Bool(fn(l, float_of_int(r))))
   | (`Int(l), `Int(r)) =>
-    pure(`Bool(fn(float_of_int(l), float_of_int(r))))
+    Results.return(`Bool(fn(float_of_int(l), float_of_int(r))))
   | _ => Error(makeError(str, right))
   };
 };
@@ -117,7 +120,7 @@ let compare =
 let condition =
     (str: string, fn: (bool, bool) => bool, left: Json.t, right: Json.t) => {
   switch (left, right) {
-  | (`Bool(l), `Bool(r)) => pure(`Bool(fn(l, r)))
+  | (`Bool(l), `Bool(r)) => Results.return(`Bool(fn(l, r)))
   | _ => Error(makeError(str, right))
   };
 };
@@ -130,8 +133,8 @@ let and_ = condition("and", (&&));
 let or_ = condition("or", (||));
 
 /* Does OCaml equality on Json.t implies JSON equality? */
-let eq = (l, r) => pure(`Bool(l == r));
-let notEq = (l, r) => pure(`Bool(l != r));
+let eq = (l, r) => Results.return(`Bool(l == r));
+let notEq = (l, r) => Results.return(`Bool(l != r));
 
 let add = apply("+", (l, r) => l +. r);
 let sub = apply("-", (l, r) => l -. r);
@@ -155,7 +158,7 @@ let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
     List.length(list) > 0
-      ? pure(Json.index(0, `List(list)))
+      ? Results.return(Json.index(0, `List(list)))
       : Error(makeEmptyListError("head"))
 
   | _ => Error(makeError("head", json))
@@ -168,7 +171,7 @@ let tail = (json: Json.t) => {
     List.length(list) > 0
       ? {
         let lastIndex = List.length(list) - 1;
-        pure(Json.index(lastIndex, `List(list)));
+        Results.return(Json.index(lastIndex, `List(list)));
       }
       : Error(makeEmptyListError("head"))
   | _ => Error(makeError("tail", json))
@@ -190,10 +193,10 @@ let member = (key: string, opt: bool, json: Json.t) => {
   | `Assoc(_assoc) =>
     let accessMember = Json.member(key, json);
     switch (accessMember, opt) {
-    | (`Null, true) => pure(accessMember)
+    | (`Null, true) => Results.return(accessMember)
     | (`Null, false) => Error(makeErrorMissingMember("." ++ key, key, json))
-    | (_, false) => pure(accessMember)
-    | (_, true) => pure(accessMember)
+    | (_, false) => Results.return(accessMember)
+    | (_, true) => Results.return(accessMember)
     };
   | _ => Error(makeError("." ++ key, json))
   };
@@ -201,7 +204,7 @@ let member = (key: string, opt: bool, json: Json.t) => {
 
 let index = (value: int, json: Json.t) => {
   switch (json) {
-  | `List(_list) => pure(Json.index(value, json))
+  | `List(_list) => Results.return(Json.index(value, json))
   | _ => Error(makeError("[" ++ string_of_int(value) ++ "]", json))
   };
 };
@@ -209,7 +212,7 @@ let index = (value: int, json: Json.t) => {
 let rec compile =
         (expression: expression, json): result(list(Json.t), string) => {
   switch (expression) {
-  | Identity => pure(json)
+  | Identity => Results.return(json)
   | Empty => empty
   | Keys => keys(json)
   | Key(key, opt) => member(key, opt, json)
@@ -225,16 +228,16 @@ let rec compile =
   | Division(left, right) => operation(left, right, div, json)
   | Literal(literal) =>
     switch (literal) {
-    | Bool(b) => pure(`Bool(b))
-    | Number(float) => pure(`Float(float))
-    | String(string) => pure(`String(string))
-    | Null => pure(`Null)
+    | Bool(b) => Results.return(`Bool(b))
+    | Number(float) => Results.return(`Float(float))
+    | String(string) => Results.return(`String(string))
+    | Null => Results.return(`Null)
     }
-  | Pipe(left, right) => bind(compile(left, json), compile(right))
+  | Pipe(left, right) => Results.bind(compile(left, json), compile(right))
   | Select(conditional) =>
-    bind(compile(conditional, json), res =>
+    Results.bind(compile(conditional, json), res =>
       switch (res) {
-      | `Bool(b) => b ? pure(json) : empty
+      | `Bool(b) => b ? Results.return(json) : empty
       | _ => Error(makeError("select", res))
       }
     )
@@ -246,7 +249,7 @@ let rec compile =
   | NotEqual(left, right) => operation(left, right, notEq, json)
   | And(left, right) => operation(left, right, and_, json)
   | Or(left, right) => operation(left, right, or_, json)
-  | List(expr) => Result.bind(compile(expr, json), xs => pure(`List(xs)))
+  | List(expr) => Result.bind(compile(expr, json), xs => Results.return(`List(xs)))
   | Comma(leftR, rightR) =>
     Result.bind(compile(leftR, json), left =>
       Result.bind(compile(rightR, json), right => Ok(left @ right))
@@ -255,8 +258,8 @@ let rec compile =
   };
 }
 and operation = (leftR, rightR, op, json) => {
-  bind(compile(leftR, json), left =>
-    bind(compile(rightR, json), right => op(left, right))
+  Results.bind(compile(leftR, json), left =>
+    Results.bind(compile(rightR, json), right => op(left, right))
   );
 }
 and map = (expr: expression, json: Json.t) => {
@@ -264,7 +267,7 @@ and map = (expr: expression, json: Json.t) => {
   | `List(list) =>
     List.length(list) > 0
       ? {
-        collect(List.map(item => compile(expr, item), list));
+        Results.collect(List.map(item => compile(expr, item), list)) |> Result.map(x => [`List(x)])
       }
       : Error(makeEmptyListError("map"))
   | _ => Error(makeError("map", json))
