@@ -13,13 +13,13 @@ type token =
   | BOOL(bool)
   | IDENTIFIER(string)
   | FUNCTION(string)
+  | OPEN_PARENT
   | CLOSE_PARENT
   | OPEN_BRACKET
   | CLOSE_BRACKET
   | OPEN_BRACE
   | SEMICOLON
   | CLOSE_BRACE
-  | EXCLAMATION_MARK
   | DOT
   | DOUBLE_DOT
   | RECURSE
@@ -77,7 +77,6 @@ let rec tokenize = buf => {
   | "!=" => Ok(NOT_EQUAL)
   | "+" => Ok(ADD)
   | "and" => Ok(AND)
-  | "!" => Ok(EXCLAMATION_MARK)
   | "or" => Ok(OR)
   | "-" => Ok(SUB)
   | "*" => Ok(MULT)
@@ -93,6 +92,7 @@ let rec tokenize = buf => {
   | "null" => Ok(NULL)
   | "true" => Ok(BOOL(true))
   | "false" => Ok(BOOL(false))
+  | "(" => Ok(OPEN_PARENT)
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
   | ':' => Ok(DOUBLE_DOT)
