@@ -9,6 +9,7 @@
     <style type="text/css">
       * {
         font-family: "IBM Plex Mono", monospace;
+        box-sizing: border-box;
       }
 
       html, body, #root {
@@ -31,8 +32,17 @@
       input:active,
       textarea:focus,
       input:focus {
-        background: rgb(237, 242, 247);
+        /* background: rgb(237, 242, 247); */
         outline-color: rgb(32, 120, 194);
+      }
+
+      .monaco-editor {
+        padding: 8px 0;
+      }
+
+      /* Monaco's editor parent element */
+      section {
+        overflow: hidden;
       }
     </style>
   </head>

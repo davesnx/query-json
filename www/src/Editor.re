@@ -14,6 +14,8 @@ module Monaco = {
     lineNumbersMinChars: int,
     padding,
     minimap,
+    wordWrap: string,
+    selectionHighlight: bool,
   };
 
   [@react.component] [@bs.module "@monaco-editor/react"]
@@ -23,13 +25,33 @@ module Monaco = {
       ~height: string,
       ~value: string,
       ~onChange: (ReactEvent.Form.t, string) => unit,
-      ~className: string,
+      ~className: string=?,
       ~style: ReactDOMRe.Style.t=?,
       ~theme: string,
       ~options: options
     ) =>
     React.element =
     "default";
+};
+
+let options: Monaco.options = {
+  fontSize: 16,
+  fontFamily: "IBM Plex Mono",
+  glyphMargin: false,
+  lineNumbersMinChars: 3,
+  padding: {
+    top: 8,
+    bottom: 8,
+  },
+  minimap: {
+    enabled: false,
+  },
+  wordWrap: "on",
+  selectionHighlight: false,
+  /* scrollbar: {
+       horizontal: 2,
+       vertical: 1,
+     }, */
 };
 
 [@react.component]
@@ -39,23 +61,8 @@ let make = (~value: string, ~onChange) => {
     height="100%"
     value
     onChange
-    options={
-      fontSize: 16,
-      fontFamily: "IBM Plex Mono",
-      glyphMargin: false,
-      lineNumbersMinChars: 3,
-      padding: {
-        top: 8,
-        bottom: 8,
-      },
-      minimap: {
-        enabled: false,
-      },
-    }
+    options
     theme="dark"
     style={ReactDOMRe.Style.make(~padding="8px", ())}
-    className=[%css {|
-         border-radius: 4px;
-       |}]
   />;
 };

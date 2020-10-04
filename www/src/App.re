@@ -1,9 +1,36 @@
 open Belt;
+open Webapi;
+
+module Router = {
+  include ReasonReactRouter;
+};
 
 type response = result(string, string);
 
 [@bs.module "../../_build/default/js/Js.bc.js"]
 external queryJson: (string, string) => response = "run";
+
+module Base64 = {
+  [@bs.val] external btoa: string => string = "window.btoa";
+  [@bs.val] external atob: string => string = "window.atob";
+
+  let encode = string =>
+    try(Ok(btoa(string))) {
+    | _exn => Error("There was a problem turning string to Base64")
+    };
+
+  let decode = string =>
+    try(Ok(atob(string))) {
+    | _exn => Error("There was a problem turning Base64 to string")
+    };
+};
+
+let empty = opt => {
+  switch (opt) {
+  | Some(o) => o
+  | None => ""
+  };
+};
 
 let mockJson = {|{
   "store": {
@@ -66,30 +93,26 @@ module Page = [%styled
   flex-direction: column;
   align-items: center;
   height: 100vh;
+  background: #0a0a0a;
 |}
 ];
 
-module Container = [%styled.main
-  {|
+module Container = [%styled.main {|
   width: 75vw;
   height: 80vh;
-
-  display: flex;
-  flex-direction: row;
-  justify-content: space-around;
-|}
-];
+|}];
 
 module ColumnHalf = [%styled.div {|
   width: 50%;
   height: 100%;
 |}];
 
-module Stack = [%styled.div
+module Row = [%styled.div
   {|
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
 
+  width: 100%;
   height: 100%;
   |}
 ];
@@ -109,11 +132,11 @@ module Query = {
       onChange=onChangeHandler
       className=[%css
         {|
+        width: 100%;
         border: none;
-        color: rgb(74, 85, 104);
-        border-radius: 4px;
+        background: rgb(32, 33, 36);
         font-size: 18px;
-        background: rgb(237, 242, 247);
+        color: rgb(237, 242, 247);
     |}
       ]
     />;
@@ -141,7 +164,7 @@ module Box = [%styled.div
 |}
 ];
 
-module EmptyResult = {
+module EmptyOutput = {
   [@react.component]
   let make = () => {
     let noop = (_, _) => ();
@@ -149,7 +172,7 @@ module EmptyResult = {
   };
 };
 
-module Result = {
+module Output = {
   [@react.component]
   let make = (~value: response, ~onChange) => {
     let text =
@@ -158,9 +181,12 @@ module Result = {
       | Error(e) => e
       };
 
-    let onChangeHandler = (_event, value) => {
-      onChange(value);
-    };
+    let hasError = Result.isOk(value);
+
+    let onChangeHandler = (_event, value) =>
+      if (!hasError) {
+        onChange(value);
+      };
 
     <Editor value=text onChange=onChangeHandler />;
   };
@@ -193,13 +219,55 @@ let reduce = (state, action) => {
   };
 };
 
+module QueryParams = {
+  [@decco]
+  type t = {
+    query: string,
+    json: option(string),
+  };
+  let toState = qp => {
+    {query: qp.query, json: qp.json, output: None};
+  };
+
+  let decode = (json: Js.Json.t) => {
+    switch (t_decode(json)) {
+    | Ok(o) => Ok(o)
+    | Error(_) => Error("Problem decoding QueryParams")
+    };
+  };
+
+  let encode = (queryParams): Js.Json.t => {
+    t_encode(queryParams);
+  };
+};
+
 [@react.component]
 let make = () => {
-  let (state, dispatch) =
-    React.useReducer(
-      reduce,
-      {query: "", json: Some(mockJson), output: None},
-    );
+  let url = Router.useUrl();
+
+  let urlState =
+    switch (url.hash) {
+    | data when String.length(data) > 0 =>
+      let base64 = Base64.decode(data);
+      let json = Result.map(base64, Js.Json.parseExn);
+      switch (Result.flatMap(json, QueryParams.decode)) {
+      | Ok(res) => Some(res)
+      | Error(_) => None
+      };
+    | "" => None
+    | _ => None
+    };
+
+  let initialState =
+    switch (urlState) {
+    | Some(state) =>
+      let result = queryJson(state.query, empty(state.json));
+      let newState = QueryParams.toState(state);
+      {...newState, output: Some(result)};
+    | None => {query: "", json: Some(mockJson), output: None}
+    };
+
+  let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
@@ -215,34 +283,47 @@ let make = () => {
     dispatch(UpdateResult(value));
   };
 
+  let onShareClick = _ => {
+    let seachParams =
+      QueryParams.encode({query: state.query, json: state.json});
+    let searchString = Js.Json.stringifyWithSpace(seachParams, 2);
+    let encodedSearch = Base64.encode(searchString);
+
+    switch (encodedSearch) {
+    | Ok(url) => Router.push("#" ++ url)
+    | Error(_) => ()
+    };
+  };
+
   <Page>
     <Header />
+    <button onClick=onShareClick> {React.string("Save")} </button>
     <Container>
-      <ColumnHalf>
-        <Stack>
-          <Query
-            value={state.query}
-            placeholder="Type the filter, ex: '.'"
-            onChange=onQueryChange
-          />
-          <SpacerBottom />
+      <Query
+        value={state.query}
+        placeholder="Type the filter, ex: '.'"
+        onChange=onQueryChange
+      />
+      <SpacerBottom />
+      <Row>
+        <ColumnHalf>
           <Json
             value={Option.getWithDefault(state.json, "")}
             onChange=onJsonChange
           />
-        </Stack>
-        <SpacerRight />
-      </ColumnHalf>
-      <ColumnHalf>
-        <div className="non-scroll">
-          <SpacerLeft>
-            {switch (state.output) {
-             | Some(value) => <Result value onChange=onResultChange />
-             | None => <EmptyResult />
-             }}
-          </SpacerLeft>
-        </div>
-      </ColumnHalf>
+          <SpacerRight />
+        </ColumnHalf>
+        <ColumnHalf>
+          <div className="non-scroll">
+            <SpacerLeft>
+              {switch (state.output) {
+               | Some(value) => <Output value onChange=onResultChange />
+               | None => <EmptyOutput />
+               }}
+            </SpacerLeft>
+          </div>
+        </ColumnHalf>
+      </Row>
     </Container>
   </Page>;
 };

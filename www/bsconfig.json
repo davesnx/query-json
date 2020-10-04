@@ -21,10 +21,13 @@
   "namespace": true,
   "bs-dependencies": [
     "reason-react",
-    "bs-css-emotion"
+    "bs-css-emotion",
+    "bs-webapi",
+    "decco"
   ],
   "ppx-flags": [
-    "@davesnx/styled-ppx/styled-ppx"
+    "@davesnx/styled-ppx/styled-ppx",
+    "decco/ppx"
   ],
   "refmt": 3
 }

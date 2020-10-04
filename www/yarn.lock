@@ -813,10 +813,22 @@ bs-css@13.0.0, bs-css@^13.0.0:
   resolved "https://registry.yarnpkg.com/bs-css/-/bs-css-13.0.0.tgz#1cc53d9403abbb97cd9d6c8ee9574eec03c2c3a0"
   integrity sha512-GIa+sS6RftSmr/2BROnn1cJfv1SJSnwBlVZ4sONsaDtEH1dQ5IfCSHz3J+bHoiVYQtQZJFqX/EjgCzUu5v6Vcw==
 
+bs-fetch@^0.6.2:
+  version "0.6.2"
+  resolved "https://registry.yarnpkg.com/bs-fetch/-/bs-fetch-0.6.2.tgz#37d982e9f79b9bc44c23e87ae78ccbee1f869adf"
+  integrity sha512-VXEjp8kY3vHPckaoy3d96Bx0KYjJAPLNISBwfpwMN26K6DtuZYwI2HKhx7zeHBajz1bRArfx7O8OOLcdtujMvg==
+
 bs-platform@^8.2.0:
   version "8.2.0"
   resolved "https://registry.yarnpkg.com/bs-platform/-/bs-platform-8.2.0.tgz#f3f4c06d5710a4c782f0ed030b1fe11e74a0a6d7"
   integrity sha512-quvmUac/ZxGDsT7L5+6RNXrLPvLHkWFownacaqlwVoyAm770bPyupTRU49ALPGk3HpjfD5eE+lpGdOSPtuwJiA==
+
+bs-webapi@^0.19.1:
+  version "0.19.1"
+  resolved "https://registry.yarnpkg.com/bs-webapi/-/bs-webapi-0.19.1.tgz#cae7d65fc43795376becc44b56f46d85e5b8e878"
+  integrity sha512-sRhkNdHFBxzoiLH+r8rhlW9XSafBbbGCkvsxtTJ1QMABEaHKj8TejwA7TuBZH2ZYL2ur3sk291ukkge5qFm3Uw==
+  dependencies:
+    bs-fetch "^0.6.2"
 
 buffer-from@^1.0.0:
   version "1.1.1"
@@ -1326,6 +1338,11 @@ decamelize@^1.2.0:
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/decamelize/-/decamelize-1.2.0.tgz#f6534d15148269b20352e7bee26f501f9a191290"
   integrity sha1-9lNNFRSCabIDUue+4m9QH5oZEpA=
+
+decco@^1.3.0:
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/decco/-/decco-1.3.0.tgz#25a130a4638fcf2088f713fe871e58308604c0cb"
+  integrity sha512-pednHg+Skby+sw193hbHTRLihZskmXrPsVMlqL9XpuLm+HfwMgS76lFRAkTGAi3435q0TBygTpt8McVTyk4Sfw==
 
 decode-uri-component@^0.2.0:
   version "0.2.0"
