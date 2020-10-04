@@ -39,7 +39,7 @@ let makeError = (name: string, json: Json.t) => {
 
 let empty = Ok([]);
 
-module Results {
+module Results = {
   let return = x => Ok([x]);
 
   let lift2 =
@@ -67,8 +67,7 @@ module Results {
     | Error(err) => Error(err)
     };
   };
-}
-
+};
 
 let keys = (json: Json.t) => {
   switch (json) {
@@ -249,7 +248,8 @@ let rec compile =
   | NotEqual(left, right) => operation(left, right, notEq, json)
   | And(left, right) => operation(left, right, and_, json)
   | Or(left, right) => operation(left, right, or_, json)
-  | List(expr) => Result.bind(compile(expr, json), xs => Results.return(`List(xs)))
+  | List(expr) =>
+    Result.bind(compile(expr, json), xs => Results.return(`List(xs)))
   | Comma(leftR, rightR) =>
     Result.bind(compile(leftR, json), left =>
       Result.bind(compile(rightR, json), right => Ok(left @ right))
@@ -267,7 +267,8 @@ and map = (expr: expression, json: Json.t) => {
   | `List(list) =>
     List.length(list) > 0
       ? {
-        Results.collect(List.map(item => compile(expr, item), list)) |> Result.map(x => [`List(x)])
+        Results.collect(List.map(item => compile(expr, item), list))
+        |> Result.map(x => [`List(x)]);
       }
       : Error(makeEmptyListError("map"))
   | _ => Error(makeError("map", json))

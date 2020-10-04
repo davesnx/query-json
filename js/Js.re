@@ -21,7 +21,7 @@ let run = (rawQuery, rawJson) => {
   let json = Js.to_string(rawJson);
 
   let result =
-    Main.parse(~debug=true, query)
+    Main.parse(~debug=false, query)
     |> Result.map(Compiler.compile)
     |> Result.map(runtime => {
          switch (Json.parseString(json)) {
