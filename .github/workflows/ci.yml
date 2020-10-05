@@ -89,6 +89,7 @@ jobs:
           npm run build;
 
       - name: Deploy
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: peaceiris/actions-gh-pages@v2.4.0
         env:
           PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
