@@ -8,6 +8,7 @@
     "analyze": "webpack --mode=production --profile --json > stats.json && webpack-bundle-analyzer stats.json",
     "dev": "run-p re:watch serve",
     "build": "run-s re:build js:build",
+    "build:prod": "run-s re:build js:build:production",
     "re:build": "bsb -make-world -clean-world",
     "re:watch": "bsb -make-world -clean-world -w",
     "re:clean": "bsb -clean-world"
@@ -19,6 +20,7 @@
     "bs-css-emotion": "^2.0.0",
     "bs-webapi": "^0.19.1",
     "decco": "^1.3.0",
+    "gh-pages": "^3.1.0",
     "monaco-editor": "^0.21.2",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",

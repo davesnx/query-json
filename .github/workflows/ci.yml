@@ -4,44 +4,23 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Built and test
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-      - uses: actions/setup-node@v1
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 12.x
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/setup-node@v1
         with:
-          node-version: 12
+          node-version: 12.x
 
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
-
-      - name: Install esy
-        run: npm install -g esy
-
-      - name: Install
-        run: esy install
-
-      - name: Print esy cache
-        id: print_esy_cache
-        run: node scripts/print-esy-cache.js
-
-      - name: Try to restore build cache
-        id: deps-cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-          restore-keys: build-${{ matrix.os }}-
-
-      - name: Import dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: esy import-build _export/*
-
-      - name: Cache node modules
+      - name: Restore global node modules cache
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/cache@v1
         env:
           cache-name: cache-node-modules
@@ -52,6 +31,33 @@ jobs:
             ${{ runner.os }}-build-${{ env.cache-name }}-
             ${{ runner.os }}-build-
             ${{ runner.os }}-
+
+      - name: Install esy
+        run: npm install -g esy
+
+      - name: Restore esy cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.esy/source
+          key: source-${{ hashFiles('**/index.json') }}
+
+      - name: Install
+        run: esy install
+
+      - name: Print esy cache
+        id: print_esy_cache
+        run: node scripts/print-esy-cache.js
+
+      - name: Restore build cache
+        id: deps-cache
+        uses: actions/cache@v2
+        with:
+          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
+          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Import dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: esy import-build _export/*
 
       - name: Build
         run: esy dune build
@@ -68,3 +74,175 @@ jobs:
 
       - name: Export dependencies
         run: esy export-dependencies
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}-artifact
+          path: _build/default/bin/Bin.exe
+
+      - name: Web build
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          cd www;
+          npm install;
+          npm run build;
+
+      - name: Deploy
+        uses: peaceiris/actions-gh-pages@v2.4.0
+        env:
+          PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISH_BRANCH: gh-pages
+          PUBLISH_DIR: ./build
+
+  publish:
+    needs: build
+    name: Publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Use Node.js 12.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+
+      - name: Make NPM release skeleton
+        run: node scripts/release-make-skeleton.js
+
+      - name: Download linux artifacts
+        if: success()
+        uses: actions/download-artifact@master
+        with:
+          name: ubuntu-latest-artifact
+          path: _release/platform-linux-x64
+
+      - name: Download macOS artifacts
+        if: success()
+        uses: actions/download-artifact@master
+        with:
+          name: macos-latest-artifact
+          path: _release/platform-darwin-x64
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@master
+        with:
+          name: windows-latest-artifact
+          path: _release/platform-windows-x64
+
+      - name: Publish query-json from linux artifcats
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          cp _release/platform-linux-x64/Bin.exe ./query-json
+          chmod +x query-json
+
+      - name: Create archives for Github release
+        run: |
+          cd _release/platform-darwin-x64
+          mv Bin.exe query-json
+          zip -r ../../query-json-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          mv Bin.exe query-json
+          zip -r ../../query-json-linux-x64.zip .
+          cd ../..
+
+          cd _release/platform-windows-x64
+          zip -r ../../query-json-windows-x64.zip .
+          cd ../..
+
+      - name: Install bats
+        run: npm install -g bats
+
+      - name: End to end Test (Linux)
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          bats ./e2e/test.sh
+        env:
+          IS_CI: true
+
+      - name: End to end Test (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          sh -c 'bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
+        env:
+          IS_CI: true
+
+      - name: Publish
+        if: success() && github.event_name != 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          REMOTE=$(npm view @davesnx/query-json version)
+          CURRENT=$(jq -r '.version' package.json)
+
+          if [ "$REMOTE" != "$CURRENT" ]
+          then
+              npm publish --access public
+          else
+              echo "New verison and remote version are equal, nothing to publish"
+          fi
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Print short SHA
+        id: sha
+        run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
+
+      - name: Publish Prerelease
+        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm version prerelease -preid ${{ steps.sha.outputs.sha_short }} -no-git-tag-version
+          npm publish --tag=dev --access public
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Create Github release
+        if: success()
+        id: create_release
+        uses: actions/create-release@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.sha.outputs.sha_short }}
+          release_name: Release ${{ steps.sha.outputs.sha_short }}
+          draft: false
+          prerelease: true
+
+      - name: Upload query-json-darwin-x64.zip to Github release
+        if: success()
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Upload query-json-linux-x64.zip to Github release
+        if: success()
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
+          asset_content_type: application/gzip
+
+      - name: Upload query-json-windows-x64.zip to Github release
+        if: success()
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: query-json-windows-x64.zip
+          asset_name: query-json-windows-x64.zip
+          asset_content_type: application/gzip
