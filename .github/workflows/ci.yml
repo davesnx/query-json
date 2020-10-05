@@ -86,7 +86,7 @@ jobs:
         run: |
           cd www;
           npm install;
-          npm run build;
+          npm run build:prod;
 
       - name: Deploy
         if: ${{ matrix.os == 'ubuntu-latest' }}
