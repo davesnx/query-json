@@ -1,5 +1,4 @@
 open Belt;
-open Webapi;
 
 module Router = {
   include ReasonReactRouter;
@@ -178,7 +177,11 @@ module Output = {
     let text =
       switch (value) {
       | Ok(o) => o
-      | Error(e) => e
+      | Error(e) =>
+        /* TODO: Instead of removing the '[m' characters, Console and Compiler
+            shoudn't add those if there's colorize=false. It's a tedious task, to break all the Chalk calls and Compiler calls. That's why we transform the output.
+           */
+        Js.String.replaceByRe([%re "/\[\d+m/g"], "", e)
       };
 
     let hasError = Result.isOk(value);
@@ -213,6 +216,7 @@ let reduce = (state, action) => {
     switch (state.json) {
     | Some(json) =>
       let result = queryJson(state.query, json);
+      Js.log(result);
       {...state, output: Some(result)};
     | None => state
     }
