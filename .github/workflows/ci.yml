@@ -60,7 +60,7 @@ jobs:
         run: esy import-build _export/*
 
       - name: Build
-        run: esy dune build
+        run: esy build
 
       - name: Test
         run: |
