@@ -84,14 +84,14 @@ jobs:
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          sudo apt-get install tree;
+          sudo apt-get install tree
           tree -L 3 _build;
           cd www;
           npm install
           npm run build:prod
 
       - name: Deploy to prod
-        if: ${{ matrix.os == 'ubuntu-latest' }} && github.event_name != 'pull_request'
+        if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' }}
         working-directory: ./www
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
@@ -131,7 +131,7 @@ jobs:
           path: _release/platform-linux-x64
 
       - name: Download macOS artifacts
-        if: success()
+        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: macos-latest-artifact
@@ -183,7 +183,7 @@ jobs:
           IS_CI: true
 
       - name: Publish
-        if: success() && github.event_name != 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -205,7 +205,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
-        if: success() && github.event_name == 'pull_request' && ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -216,7 +216,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
-        if: success()
+        if: ${{ success() }}
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
@@ -228,7 +228,7 @@ jobs:
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
-        if: success()
+        if: ${{ success() }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -239,7 +239,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-linux-x64.zip to Github release
-        if: success()
+        if: ${{ success() }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -250,7 +250,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-windows-x64.zip to Github release
-        if: success()
+        if: ${{ success() }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
