@@ -76,18 +76,13 @@ jobs:
       - name: Export dependencies
         run: esy export-dependencies
 
-      - name: Upload artifacts for ${{ matrix.os }}
-        uses: actions/upload-artifact@master
-        with:
-          name: ${{ matrix.os }}-artifact
-          path: _build/default/bin/Bin.exe
-
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
+          esy build
           sudo apt-get install tree
-          tree -L 3 _build;
-          cd www;
+          tree -L 3 _build
+          cd www
           npm install
           npm run build:prod
 
@@ -108,6 +103,12 @@ jobs:
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
           npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=dist
+
+      - name: Upload artifacts for ${{ matrix.os }}
+        uses: actions/upload-artifact@master
+        with:
+          name: ${{ matrix.os }}-artifact
+          path: _build/default/bin/Bin.exe
 
   publish:
     needs: build
