@@ -85,8 +85,8 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         working_directory: ~/www
         run: |
-          npm install;
-          npm run build:prod;
+          npm install
+          npm run build:prod
 
       - name: Deploy to prod
         if: ${{ matrix.os == 'ubuntu-latest' }}
