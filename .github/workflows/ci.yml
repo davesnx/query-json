@@ -83,8 +83,9 @@ jobs:
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        working-directory: ./www
         run: |
+          tree -L 3 _build;
+          cd www;
           npm install
           npm run build:prod
 
