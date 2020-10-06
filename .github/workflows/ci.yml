@@ -83,14 +83,14 @@ jobs:
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        working_directory: ./www
+        working-directory: ./www
         run: |
           npm install
           npm run build:prod
 
       - name: Deploy to prod
         if: ${{ matrix.os == 'ubuntu-latest' }} && github.event_name != 'pull_request'
-        working_directory: ./www
+        working-directory: ./www
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
@@ -99,7 +99,7 @@ jobs:
 
       - name: Deploy preview
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        working_directory: ./www
+        working-directory: ./www
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
