@@ -89,7 +89,7 @@ jobs:
           npm run build:prod
 
       - name: Deploy to prod
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' }} && github.event_name != 'pull_request'
         working_directory: ~/www
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
@@ -104,7 +104,7 @@ jobs:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dist
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=dist
 
   publish:
     needs: build
