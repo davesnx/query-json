@@ -95,7 +95,7 @@ jobs:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dust
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dist
 
       - name: Deploy preview
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -104,7 +104,7 @@ jobs:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dust
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dist
 
   publish:
     needs: build
