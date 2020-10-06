@@ -88,13 +88,23 @@ jobs:
           npm install;
           npm run build:prod;
 
-      - name: Deploy
+      - name: Deploy to prod
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: peaceiris/actions-gh-pages@v2.4.0
+        working_directory: ~/www
         env:
-          PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISH_BRANCH: gh-pages
-          PUBLISH_DIR: ./build
+          SITE_ID: ${{ secrets.SITE_ID }}
+          AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run:
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dust
+
+      - name: Deploy preview
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        working_directory: ~/www
+        env:
+          SITE_ID: ${{ secrets.SITE_ID }}
+          AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run:
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dust
 
   publish:
     needs: build
