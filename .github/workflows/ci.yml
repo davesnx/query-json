@@ -84,6 +84,7 @@ jobs:
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
+          sudo apt-get install tree;
           tree -L 3 _build;
           cd www;
           npm install
