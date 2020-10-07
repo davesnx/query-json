@@ -1,4 +1,5 @@
 module Typography = {
+  type color = [ | `White | `Dark | `Grey];
   type size = [ | `Small | `Medium | `Large | `XXLarge];
   type leading = [ | `None | `Tight | `Snug | `Normal | `Relaxed | `Loose];
   type align = [ | `Left | `Right | `Center | `Justify];
@@ -19,11 +20,10 @@ module Typography = {
   [@react.component]
   let make =
       (
-        ~color as _,
+        ~color,
         ~tracking=`Normal,
         ~size=`Medium,
         ~weight=`Normal,
-        ~leading=`Normal,
         ~align=`Left,
         ~inline as _,
         ~uppercase as _,
@@ -41,27 +41,51 @@ module Typography = {
       | `Widest => "tracking-widest"
       };
 
-    let _size =
+    let size =
       switch (size) {
-      | `XSmall => "text-xs"
-      | `Small => "text-sm"
-      | `Medium => "text-md"
-      | `Large => "text-lg"
-      | `XLarge => "text-xl"
-      | `XXLarge => "text-xxl"
+      | `XSmall =>
+        %css
+        "font-size: 14px"
+      | `Small =>
+        %css
+        "font-size: 16px"
+      | `Medium =>
+        %css
+        "font-size: 18px"
+      | `Large =>
+        %css
+        "font-size: 20px"
+      | `XLarge =>
+        %css
+        "font-size: 26px"
+      | `XXLarge =>
+        %css
+        "font-size: 45px"
       };
 
-    let _weight =
+    let weight =
       switch (weight) {
-      | `Hairline => "font-hairline"
-      | `Thin => "font-thin"
-      | `Light => "font-light"
-      | `Normal => "font-normal"
-      | `Medium => "font-medium"
-      | `Semibold => "font-semibold"
-      | `Bold => "font-bold"
-      | `Extrabold => "font-extrabold"
-      | `Black => "font-black"
+      | `Thin =>
+        %css
+        "font-weight: 200"
+      | `Light =>
+        %css
+        "font-weight: 300"
+      | `Normal =>
+        %css
+        "font-weight: 400"
+      | `Medium =>
+        %css
+        "font-weight: 500"
+      | `Semibold =>
+        %css
+        "font-weight: 600"
+      | `Bold =>
+        %css
+        "font-weight: 700"
+      | `Extrabold =>
+        %css
+        "font-weight: 800"
       };
 
     let _align =
@@ -72,67 +96,59 @@ module Typography = {
       | `Center => "text-center"
       };
 
-    let _lineHeight =
-      switch (leading) {
-      | `None => "leading-none"
-      | `Tight => "leading-tight"
-      | `Snug => "leading-snug"
-      | `Normal => "leading-normal"
-      | `Relaxed => "leading-relaxed"
-      | `Loose => "leading-loose"
-      };
-
     let _fontFamily =
       switch (fontFamily) {
       | `Sans => "font-sans"
       | `Mono => "font-mono"
       };
 
-    let className = "";
+    let color =
+      switch (color) {
+      | `White =>
+        %css
+        "color: #FAFAFA"
+      | `Black =>
+        %css
+        "color: rgb(21, 21, 21);"
+      | `Grey =>
+        %css
+        "color: #949495"
+      };
+
+    let className = color ++ " " ++ size ++ " " ++ weight;
 
     <span className> children </span>;
   };
 };
 
-type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `B1 | `B2 | `B3 | `Label];
+type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label];
 
 [@react.component]
 let make =
     (
-      ~color=`Mono500,
+      ~color=`White,
       ~align=`Left,
       ~inline=false,
       ~uppercase=false,
       ~truncate=false,
       ~children,
-      ~kind=`B2,
+      ~kind=`Body,
       ~fontFamily=?,
       ~tracking=?,
     ) => {
-  let (size, weight, leading) =
+  let (size, weight) =
     switch (kind) {
-    | `H1 => (`XLarge, `Semibold, `Normal)
-    | `H2 => (`Large, `Semibold, `Normal)
-    | `H3 => (`Medium, `Semibold, `Normal)
-    | `H4 => (`Small, `Semibold, `Normal)
-    | `H5 => (`Small, `Normal, `Normal)
-    | `B1 => (`Medium, `Normal, `Normal)
-    | `B2 => (`Small, `Normal, `Normal)
-    | `B3 => (`XSmall, `Normal, `Normal)
-    | `Label => (`Small, `Medium, `Loose)
+    | `H1 => (`XLarge, `Semibold)
+    | `H2 => (`Large, `Semibold)
+    | `H3 => (`Medium, `Semibold)
+    | `H4 => (`Small, `Semibold)
+    | `H5 => (`Medium, `Extrabold)
+    | `Body => (`Medium, `Normal)
+    | `Label => (`Small, `Medium)
     };
 
   <Typography
-    size
-    weight
-    align
-    inline
-    color
-    truncate
-    uppercase
-    leading
-    ?fontFamily
-    ?tracking>
+    size weight align inline color truncate uppercase ?fontFamily ?tracking>
     {React.string(children)}
   </Typography>;
 };

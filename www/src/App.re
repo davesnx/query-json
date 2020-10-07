@@ -1,12 +1,37 @@
 open Belt;
 
+module Router = {
+  include ReasonReactRouter;
+};
+
 type response = result(string, string);
 
 [@bs.module "../../_build/default/js/Js.bc.js"]
 external queryJson: (string, string) => response = "run";
 
-let mockJson = {|
-{
+module Base64 = {
+  [@bs.val] external btoa: string => string = "window.btoa";
+  [@bs.val] external atob: string => string = "window.atob";
+
+  let encode = string =>
+    try(Ok(btoa(string))) {
+    | _exn => Error("There was a problem turning string to Base64")
+    };
+
+  let decode = string =>
+    try(Ok(atob(string))) {
+    | _exn => Error("There was a problem turning Base64 to string")
+    };
+};
+
+let empty = opt => {
+  switch (opt) {
+  | Some(o) => o
+  | None => ""
+  };
+};
+
+let mockJson = {|{
   "store": {
     "books": [
       {
@@ -40,17 +65,125 @@ let mockJson = {|
 }
 |};
 
+module Menu = [%styled
+  {|
+  width: 100vw;
+  height: 7vh;
+  background: rgb(32, 33, 37);
+  margin-bottom: 32px;
+|}
+];
+
+module Wrapper = [%styled.main
+  {|
+  width: 75vw;
+  height: 100%;
+  margin: 0 auto;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+|}
+];
+
+module SpacerBottom = [%styled "margin-bottom: 16px"];
+module SpacerTop = [%styled "margin-top: 16px"];
+module SpacerRight = [%styled "margin-right: 16px"];
+module SpacerLeft = [%styled "margin-left: 16px; height: 100%;"];
+
+module Page = [%styled
+  {|
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  background: #0a0a0a;
+|}
+];
+
+module Container = [%styled.main {|
+  width: 75vw;
+  height: 80vh;
+|}];
+
+module ColumnHalf = [%styled.div {|
+  width: 50%;
+  height: 100%;
+|}];
+
+module Row = [%styled.div
+  {|
+  display: flex;
+  flex-direction: row;
+
+  width: 100%;
+  height: 100%;
+  |}
+];
+
+module Distribute = [%styled.div
+  {|
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  |}
+];
+
+module Button = [%styled.button
+  {|
+  border: none;
+  color: #FAFAFA;
+  background: rgb(43, 75, 175);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(43, 75, 175, 0.8);
+  }
+|}
+];
+
+module Link = [%styled.a
+  {|
+  text-decoration: none;
+  color: #FAFAFA;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+
+  &:hover {
+    opacity: 0.6;
+  }
+|}
+];
+
 module Header = {
   [@react.component]
-  let make = () => {
-    <Text> "query-json playground" </Text>;
-  };
-};
-
-module Page = {
-  [@react.component]
-  let make = (~children) => {
-    children;
+  let make = (~onShareClick) => {
+    <Menu>
+      <Wrapper>
+        <Distribute>
+          <Text color=`White kind=`H2> "query-json" </Text>
+        </Distribute>
+        <Distribute>
+          <Link
+            href="https://twitter.com/davesnx" target="_blank" rel="noopener">
+            <Icons.Twitter />
+          </Link>
+          <SpacerLeft />
+          <Link
+            href="https://github.com/davesnx/query-json"
+            target="_blank"
+            rel="noopener">
+            <Icons.Github />
+          </Link>
+          <SpacerLeft />
+          <Button onClick=onShareClick>
+            <Text> "Share unique URL" </Text>
+          </Button>
+        </Distribute>
+      </Wrapper>
+    </Menu>;
   };
 };
 
@@ -62,32 +195,74 @@ module Query = {
       onChange(value);
     };
 
-    <input type_="text" value placeholder onChange=onChangeHandler />;
+    <input
+      type_="text"
+      value
+      placeholder
+      onChange=onChangeHandler
+      className=[%css
+        {|
+        width: 100%;
+        border: none;
+        background: rgb(32, 33, 36);
+        font-size: 18px;
+        color: rgb(237, 242, 247);
+    |}
+      ]
+    />;
   };
 };
 
 module Json = {
   [@react.component]
   let make = (~value, ~onChange) => {
-    let onChangeHandler = event => {
-      let value = ReactEvent.Form.target(event)##value;
+    let onChangeHandler = (_event, value) => {
       onChange(value);
     };
 
-    <textarea value onChange=onChangeHandler />;
+    <Editor value onChange=onChangeHandler />;
   };
 };
 
-module Result = {
+module Box = [%styled.div
+  {|
+  background: rgb(237, 242, 247);
+  height: 100%;
+  width: 100%;
+
+  border-radius: 4px;
+|}
+];
+
+module EmptyOutput = {
   [@react.component]
-  let make = (~value: response) => {
+  let make = () => {
+    let noop = (_, _) => ();
+    <Editor value="" onChange=noop />;
+  };
+};
+
+module Output = {
+  [@react.component]
+  let make = (~value: response, ~onChange) => {
     let text =
       switch (value) {
       | Ok(o) => o
-      | Error(e) => e
+      | Error(e) =>
+        /* TODO: Instead of removing the '[m' characters, Console and Compiler
+            shoudn't add those if there's colorize=false. It's a tedious task, to break all the Chalk calls and Compiler calls. That's why we transform the output.
+           */
+        Js.String.replaceByRe([%re "/\[\d+m/g"], "", e)
       };
 
-    <div> <pre> <code> {React.string(text)} </code> </pre> </div>;
+    let hasError = Result.isOk(value);
+
+    let onChangeHandler = (_event, value) =>
+      if (!hasError) {
+        onChange(value);
+      };
+
+    <Editor value=text onChange=onChangeHandler />;
   };
 };
 
@@ -100,29 +275,74 @@ type t = {
 type actions =
   | UpdateQuery(string)
   | UpdateJson(string)
+  | UpdateResult(string)
   | ComputeOutput;
 
 let reduce = (state, action) => {
   switch (action) {
   | UpdateQuery(query) => {...state, query}
   | UpdateJson(json) => {...state, json: Some(json)}
+  | UpdateResult(value) => {...state, output: Some(Ok(value))}
   | ComputeOutput =>
     switch (state.json) {
     | Some(json) =>
       let result = queryJson(state.query, json);
+      Js.log(result);
       {...state, output: Some(result)};
     | None => state
     }
   };
 };
 
+module QueryParams = {
+  [@decco]
+  type t = {
+    query: string,
+    json: option(string),
+  };
+  let toState = qp => {
+    {query: qp.query, json: qp.json, output: None};
+  };
+
+  let decode = (json: Js.Json.t) => {
+    switch (t_decode(json)) {
+    | Ok(o) => Ok(o)
+    | Error(_) => Error("Problem decoding QueryParams")
+    };
+  };
+
+  let encode = (queryParams): Js.Json.t => {
+    t_encode(queryParams);
+  };
+};
+
 [@react.component]
 let make = () => {
-  let (state, dispatch) =
-    React.useReducer(
-      reduce,
-      {query: "", json: Some(mockJson), output: None},
-    );
+  let url = Router.useUrl();
+
+  let urlState =
+    switch (url.hash) {
+    | data when String.length(data) > 0 =>
+      let base64 = Base64.decode(data);
+      let json = Result.map(base64, Js.Json.parseExn);
+      switch (Result.flatMap(json, QueryParams.decode)) {
+      | Ok(res) => Some(res)
+      | Error(_) => None
+      };
+    | "" => None
+    | _ => None
+    };
+
+  let initialState =
+    switch (urlState) {
+    | Some(state) =>
+      let result = queryJson(state.query, empty(state.json));
+      let newState = QueryParams.toState(state);
+      {...newState, output: Some(result)};
+    | None => {query: "", json: Some(mockJson), output: None}
+    };
+
+  let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
@@ -134,22 +354,50 @@ let make = () => {
     dispatch(ComputeOutput);
   };
 
+  let onResultChange = value => {
+    dispatch(UpdateResult(value));
+  };
+
+  let onShareClick = _ => {
+    let seachParams =
+      QueryParams.encode({query: state.query, json: state.json});
+    let searchString = Js.Json.stringifyWithSpace(seachParams, 2);
+    let encodedSearch = Base64.encode(searchString);
+
+    switch (encodedSearch) {
+    | Ok(url) => Router.push("#" ++ url)
+    | Error(_) => ()
+    };
+  };
+
   <Page>
-    <Header />
-    <Query
-      value={state.query}
-      placeholder="Type the filter, ex: '.'"
-      onChange=onQueryChange
-    />
-    <Json
-      value={Option.getWithDefault(state.json, "")}
-      onChange=onJsonChange
-    />
-    <div>
-      {switch (state.output) {
-       | Some(value) => <Result value />
-       | None => React.null
-       }}
-    </div>
+    <Header onShareClick />
+    <Container>
+      <Query
+        value={state.query}
+        placeholder="Type the filter, ex: '.'"
+        onChange=onQueryChange
+      />
+      <SpacerBottom />
+      <Row>
+        <ColumnHalf>
+          <Json
+            value={Option.getWithDefault(state.json, "")}
+            onChange=onJsonChange
+          />
+          <SpacerRight />
+        </ColumnHalf>
+        <ColumnHalf>
+          <div className="non-scroll">
+            <SpacerLeft>
+              {switch (state.output) {
+               | Some(value) => <Output value onChange=onResultChange />
+               | None => <EmptyOutput />
+               }}
+            </SpacerLeft>
+          </div>
+        </ColumnHalf>
+      </Row>
+    </Container>
   </Page>;
 };

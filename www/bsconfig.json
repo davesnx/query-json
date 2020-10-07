@@ -1,5 +1,5 @@
 {
-  "name": "vite-reason-react-starter",
+  "name": "www",
   "reason": {
     "react-jsx": 3
   },
@@ -20,7 +20,14 @@
   "suffix": ".bs.js",
   "namespace": true,
   "bs-dependencies": [
-    "reason-react"
+    "reason-react",
+    "bs-css-emotion",
+    "bs-webapi",
+    "decco"
+  ],
+  "ppx-flags": [
+    "@davesnx/styled-ppx/styled-ppx",
+    "decco/ppx"
   ],
   "refmt": 3
 }
