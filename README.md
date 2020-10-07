@@ -1,5 +1,7 @@
 <p>
-  <img width="500" alt="query-json logo" src="docs/logo.svg" />
+  <br>
+  <img width="450" alt="query-json logo" src="docs/logo.svg" />
+  <br>
   <br>
   <br>
   <a href="https://github.com/davesnx/query-json/actions"><img src="https://github.com/davesnx/query-json/workflows/Build%20master/badge.svg" /></a>
