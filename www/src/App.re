@@ -68,18 +68,23 @@ let mockJson = {|{
 module Menu = [%styled
   {|
   width: 100vw;
-  height: 10vh;
+  height: 7vh;
   background: rgb(32, 33, 37);
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 |}
 ];
 
-module Header = {
-  [@react.component]
-  let make = () => {
-    <Menu> <Text> "" </Text> </Menu>;
-  };
-};
+module Wrapper = [%styled.main
+  {|
+  width: 75vw;
+  height: 100%;
+  margin: 0 auto;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+|}
+];
 
 module SpacerBottom = [%styled "margin-bottom: 16px"];
 module SpacerTop = [%styled "margin-top: 16px"];
@@ -115,6 +120,45 @@ module Row = [%styled.div
   height: 100%;
   |}
 ];
+
+module Distribute = [%styled.div
+  {|
+  display: flex;
+  flex-direction: row;
+  |}
+];
+
+module Button = [%styled.button
+  {|
+  border: none;
+  color: white;
+  background: rgb(50, 100, 255);
+|}
+];
+
+module Header = {
+  [@react.component]
+  let make = (~onShareClick) => {
+    <Menu>
+      <Wrapper>
+        <Distribute>
+          <Text color=`White> "query-json" </Text>
+          <SpacerLeft />
+          <Text color=`Grey kind=`Body>
+            "Faster and simpler implementation of jq in Reason Native"
+          </Text>
+        </Distribute>
+        <Distribute>
+          <Button onClick=onShareClick> <Text> "Share" </Text> </Button>
+          <SpacerLeft />
+          <Text color=`White> "github-logo" </Text>
+          <SpacerLeft />
+          <Text color=`White> "twitter-logo" </Text>
+        </Distribute>
+      </Wrapper>
+    </Menu>;
+  };
+};
 
 module Query = {
   [@react.component]
@@ -300,8 +344,7 @@ let make = () => {
   };
 
   <Page>
-    <Header />
-    <button onClick=onShareClick> {React.string("Save")} </button>
+    <Header onShareClick />
     <Container>
       <Query
         value={state.query}

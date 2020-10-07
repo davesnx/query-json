@@ -1,4 +1,5 @@
 module Typography = {
+  type color = [ | `White | `Dark | `Grey];
   type size = [ | `Small | `Medium | `Large | `XXLarge];
   type leading = [ | `None | `Tight | `Snug | `Normal | `Relaxed | `Loose];
   type align = [ | `Left | `Right | `Center | `Justify];
@@ -19,7 +20,7 @@ module Typography = {
   [@react.component]
   let make =
       (
-        ~color as _,
+        ~color,
         ~tracking=`Normal,
         ~size=`Medium,
         ~weight=`Normal,
@@ -41,14 +42,26 @@ module Typography = {
       | `Widest => "tracking-widest"
       };
 
-    let _size =
+    let size =
       switch (size) {
-      | `XSmall => "text-xs"
-      | `Small => "text-sm"
-      | `Medium => "text-md"
-      | `Large => "text-lg"
-      | `XLarge => "text-xl"
-      | `XXLarge => "text-xxl"
+      | `XSmall =>
+        %css
+        "font-size: 14px"
+      | `Small =>
+        %css
+        "font-size: 16px"
+      | `Medium =>
+        %css
+        "font-size: 18px"
+      | `Large =>
+        %css
+        "font-size: 20px"
+      | `XLarge =>
+        %css
+        "font-size: 26px"
+      | `XXLarge =>
+        %css
+        "font-size: 45px"
       };
 
     let _weight =
@@ -88,7 +101,22 @@ module Typography = {
       | `Mono => "font-mono"
       };
 
-    <span> children </span>;
+    let color =
+      switch (color) {
+      | `White =>
+        %css
+        "color: #FAFAFA"
+      | `Black =>
+        %css
+        "color: #030303"
+      | `Grey =>
+        %css
+        "color: #707070"
+      };
+
+    let className = color ++ " " ++ size;
+
+    <span className> children </span>;
   };
 };
 
@@ -97,7 +125,7 @@ type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label];
 [@react.component]
 let make =
     (
-      ~color=`Mono500,
+      ~color=`White,
       ~align=`Left,
       ~inline=false,
       ~uppercase=false,
