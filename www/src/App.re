@@ -133,11 +133,11 @@ module Button = [%styled.button
   {|
   border: none;
   color: #FAFAFA;
-  background: rgb(50, 100, 255);
+  background: rgb(43, 75, 175);
   cursor: pointer;
 
   &:hover {
-    background: rgba(50, 100, 255, 0.6);
+    background: rgba(43, 75, 175, 0.8);
   }
 |}
 ];
