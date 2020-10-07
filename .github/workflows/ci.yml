@@ -79,7 +79,7 @@ jobs:
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          esy build
+          esy b dune build
           sudo apt-get install tree
           tree -L 3 _build
           cd www
