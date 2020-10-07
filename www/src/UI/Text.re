@@ -24,7 +24,6 @@ module Typography = {
         ~tracking=`Normal,
         ~size=`Medium,
         ~weight=`Normal,
-        ~leading=`Normal,
         ~align=`Left,
         ~inline as _,
         ~uppercase as _,
@@ -64,17 +63,29 @@ module Typography = {
         "font-size: 45px"
       };
 
-    let _weight =
+    let weight =
       switch (weight) {
-      | `Hairline => "font-hairline"
-      | `Thin => "font-thin"
-      | `Light => "font-light"
-      | `Normal => "font-normal"
-      | `Medium => "font-medium"
-      | `Semibold => "font-semibold"
-      | `Bold => "font-bold"
-      | `Extrabold => "font-extrabold"
-      | `Black => "font-black"
+      | `Thin =>
+        %css
+        "font-weight: 200"
+      | `Light =>
+        %css
+        "font-weight: 300"
+      | `Normal =>
+        %css
+        "font-weight: 400"
+      | `Medium =>
+        %css
+        "font-weight: 500"
+      | `Semibold =>
+        %css
+        "font-weight: 600"
+      | `Bold =>
+        %css
+        "font-weight: 700"
+      | `Extrabold =>
+        %css
+        "font-weight: 800"
       };
 
     let _align =
@@ -83,16 +94,6 @@ module Typography = {
       | `Right => "text-right"
       | `Justify => "text-justify"
       | `Center => "text-center"
-      };
-
-    let _lineHeight =
-      switch (leading) {
-      | `None => "leading-none"
-      | `Tight => "leading-tight"
-      | `Snug => "leading-snug"
-      | `Normal => "leading-normal"
-      | `Relaxed => "leading-relaxed"
-      | `Loose => "leading-loose"
       };
 
     let _fontFamily =
@@ -108,13 +109,13 @@ module Typography = {
         "color: #FAFAFA"
       | `Black =>
         %css
-        "color: #202022"
+        "color: rgb(21, 21, 21);"
       | `Grey =>
         %css
-        "color: #707070"
+        "color: #949495"
       };
 
-    let className = color ++ " " ++ size;
+    let className = color ++ " " ++ size ++ " " ++ weight;
 
     <span className> children </span>;
   };
@@ -135,28 +136,19 @@ let make =
       ~fontFamily=?,
       ~tracking=?,
     ) => {
-  let (size, weight, leading) =
+  let (size, weight) =
     switch (kind) {
-    | `H1 => (`XLarge, `Semibold, `Normal)
-    | `H2 => (`Large, `Semibold, `Normal)
-    | `H3 => (`Medium, `Semibold, `Normal)
-    | `H4 => (`Small, `Semibold, `Normal)
-    | `H5 => (`Small, `Normal, `Normal)
-    | `Body => (`Medium, `Normal, `Normal)
-    | `Label => (`Small, `Medium, `Loose)
+    | `H1 => (`XLarge, `Semibold)
+    | `H2 => (`Large, `Semibold)
+    | `H3 => (`Medium, `Semibold)
+    | `H4 => (`Small, `Semibold)
+    | `H5 => (`Medium, `Extrabold)
+    | `Body => (`Medium, `Normal)
+    | `Label => (`Small, `Medium)
     };
 
   <Typography
-    size
-    weight
-    align
-    inline
-    color
-    truncate
-    uppercase
-    leading
-    ?fontFamily
-    ?tracking>
+    size weight align inline color truncate uppercase ?fontFamily ?tracking>
     {React.string(children)}
   </Typography>;
 };

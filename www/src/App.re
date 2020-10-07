@@ -142,24 +142,45 @@ module Button = [%styled.button
 |}
 ];
 
+module Link = [%styled.a
+  {|
+  text-decoration: none;
+  color: #FAFAFA;
+  cursor: pointer;
+
+  display: inline-flex;
+  align-items: center;
+
+  &:hover {
+    opacity: 0.6;
+  }
+|}
+];
+
 module Header = {
   [@react.component]
   let make = (~onShareClick) => {
     <Menu>
       <Wrapper>
         <Distribute>
-          <Text color=`White> "query-json" </Text>
-          <SpacerLeft />
-          <Text color=`Grey kind=`Body>
-            "Faster and simpler implementation of jq in Reason Native"
-          </Text>
+          <Text color=`White kind=`H2> "query-json" </Text>
         </Distribute>
         <Distribute>
-          <Button onClick=onShareClick> <Text> "Share" </Text> </Button>
+          <Link
+            href="https://twitter.com/davesnx" target="_blank" rel="noopener">
+            <Icons.Twitter />
+          </Link>
           <SpacerLeft />
-          <Text color=`White> "github-logo" </Text>
+          <Link
+            href="https://github.com/davesnx/query-json"
+            target="_blank"
+            rel="noopener">
+            <Icons.Github />
+          </Link>
           <SpacerLeft />
-          <Text color=`White> "twitter-logo" </Text>
+          <Button onClick=onShareClick>
+            <Text> "Share unique URL" </Text>
+          </Button>
         </Distribute>
       </Wrapper>
     </Menu>;

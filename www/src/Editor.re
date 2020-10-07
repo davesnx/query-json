@@ -7,6 +7,7 @@ module Monaco = {
   type minimap = {enabled: bool};
 
   /* Partial list of https://microsoft.github.io/monaco-editor/api/modules/monaco.editor.html */
+  /* https://microsoft.github.io/monaco-editor/playground.html */
   type options = {
     fontSize: int,
     fontFamily: string,
@@ -16,6 +17,8 @@ module Monaco = {
     minimap,
     wordWrap: string,
     selectionHighlight: bool,
+    occurrencesHighlight: bool,
+    matchBrackets: string,
   };
 
   [@react.component] [@bs.module "@monaco-editor/react"]
@@ -48,10 +51,8 @@ let options: Monaco.options = {
   },
   wordWrap: "on",
   selectionHighlight: false,
-  /* scrollbar: {
-       horizontal: 2,
-       vertical: 1,
-     }, */
+  occurrencesHighlight: false,
+  matchBrackets: "never",
 };
 
 [@react.component]
