@@ -125,14 +125,20 @@ module Distribute = [%styled.div
   {|
   display: flex;
   flex-direction: row;
+  align-items: center;
   |}
 ];
 
 module Button = [%styled.button
   {|
   border: none;
-  color: white;
+  color: #FAFAFA;
   background: rgb(50, 100, 255);
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(50, 100, 255, 0.6);
+  }
 |}
 ];
 

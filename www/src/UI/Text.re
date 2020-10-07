@@ -108,7 +108,7 @@ module Typography = {
         "color: #FAFAFA"
       | `Black =>
         %css
-        "color: #030303"
+        "color: #202022"
       | `Grey =>
         %css
         "color: #707070"
