@@ -9,7 +9,7 @@ type inputKind =
 let run =
     (
       query: option(string),
-      json: option(string),
+      payload: option(string),
       kind: inputKind,
       _verbose: bool,
       debug: bool,
@@ -21,7 +21,7 @@ let run =
     |> Result.map(compile)
     |> Result.map(runtime => {
          let input =
-           switch (kind, json) {
+           switch (kind, payload) {
            | (File, Some(j)) => Source.Json.parseFile(j)
            | (Inline, Some(j)) => Source.Json.parseString(j)
            | (_, None) =>
@@ -30,7 +30,7 @@ let run =
            };
 
          switch (input) {
-         | Ok(inp) => runtime(inp)
+         | Ok(json) => runtime(json)
          | Error(err) => Error(err)
          };
        })
