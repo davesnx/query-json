@@ -220,7 +220,7 @@ module Json = {
       onChange(value);
     };
 
-    <Editor value onChange=onChangeHandler />;
+    <Editor mode=Editor.Json value onChange=onChangeHandler />;
   };
 };
 
@@ -262,7 +262,11 @@ module Output = {
         onChange(value);
       };
 
-    <Editor value=text onChange=onChangeHandler />;
+    <Editor
+      mode={hasError ? Editor.Text : Editor.Json}
+      value=text
+      onChange=onChangeHandler
+    />;
   };
 };
 

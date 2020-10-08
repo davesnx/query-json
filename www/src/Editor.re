@@ -55,10 +55,20 @@ let options: Monaco.options = {
   matchBrackets: "never",
 };
 
+type mode =
+  | Text
+  | Json;
+
 [@react.component]
-let make = (~value: string, ~onChange) => {
+let make = (~value: string, ~onChange, ~mode) => {
+  let language =
+    switch (mode) {
+    | Text => "text"
+    | Json => "json"
+    };
+
   <Monaco
-    language="json"
+    language
     height="100%"
     value
     onChange

@@ -4,16 +4,7 @@ module Typography = {
   type leading = [ | `None | `Tight | `Snug | `Normal | `Relaxed | `Loose];
   type align = [ | `Left | `Right | `Center | `Justify];
   type tracking = [ | `Tight | `Normal | `Wide];
-  type weight = [
-    | `Thin
-    | `Light
-    | `Normal
-    | `Medium
-    | `Semibold
-    | `Bold
-    | `Extrabold
-    | `Black
-  ];
+  type weight = [ | `Normal | `Bold];
 
   type fontFamily = [ | `Sans | `Mono];
 
@@ -65,27 +56,12 @@ module Typography = {
 
     let weight =
       switch (weight) {
-      | `Thin =>
-        %css
-        "font-weight: 200"
-      | `Light =>
-        %css
-        "font-weight: 300"
       | `Normal =>
         %css
         "font-weight: 400"
-      | `Medium =>
-        %css
-        "font-weight: 500"
-      | `Semibold =>
-        %css
-        "font-weight: 600"
       | `Bold =>
         %css
         "font-weight: 700"
-      | `Extrabold =>
-        %css
-        "font-weight: 800"
       };
 
     let _align =
@@ -138,13 +114,13 @@ let make =
     ) => {
   let (size, weight) =
     switch (kind) {
-    | `H1 => (`XLarge, `Semibold)
-    | `H2 => (`Large, `Semibold)
-    | `H3 => (`Medium, `Semibold)
-    | `H4 => (`Small, `Semibold)
-    | `H5 => (`Medium, `Extrabold)
+    | `H1 => (`XLarge, `Bold)
+    | `H2 => (`Large, `Normal)
+    | `H3 => (`Medium, `Normal)
+    | `H4 => (`Small, `Normal)
+    | `H5 => (`Medium, `Bold)
     | `Body => (`Medium, `Normal)
-    | `Label => (`Small, `Medium)
+    | `Label => (`Small, `Normal)
     };
 
   <Typography
