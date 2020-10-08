@@ -238,7 +238,7 @@ module EmptyOutput = {
   [@react.component]
   let make = () => {
     let noop = (_, _) => ();
-    <Editor value="" onChange=noop />;
+    <Editor mode=Editor.Text value="" onChange=noop />;
   };
 };
 
