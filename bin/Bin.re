@@ -15,24 +15,24 @@ let run =
       debug: bool,
       noColor: bool,
     ) => {
-  let input =
-    switch (kind, json) {
-    | (File, Some(j)) => Source.Json.parseFile(j)
-    | (Inline, Some(j)) => Source.Json.parseString(j)
-    | (_, None) =>
-      let ic = Unix.(stdin |> in_channel_of_descr);
-      Source.Json.parseChannel(ic);
-    };
-
   switch (query) {
   | Some(q) =>
     Main.parse(~debug, q)
     |> Result.map(compile)
     |> Result.map(runtime => {
+         let input =
+           switch (kind, json) {
+           | (File, Some(j)) => Source.Json.parseFile(j)
+           | (Inline, Some(j)) => Source.Json.parseString(j)
+           | (_, None) =>
+             let ic = Unix.(stdin |> in_channel_of_descr);
+             Source.Json.parseChannel(ic);
+           };
+
          switch (input) {
          | Ok(inp) => runtime(inp)
          | Error(err) => Error(err)
-         }
+         };
        })
     |> Result.map(res =>
          res
