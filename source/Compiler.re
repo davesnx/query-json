@@ -153,11 +153,21 @@ let makeEmptyListError = op => {
   ++ " on an empty array.";
 };
 
+let makeAcessingToMissingItem = (accessIndex, length) => {
+  "Trying to read "
+  ++ Formatting.singleQuotes(
+       "[" ++ Chalk.bold(string_of_int(accessIndex)) ++ "]",
+     )
+  ++ " from an array with "
+  ++ string_of_int(length)
+  ++ " elements only.";
+};
+
 let head = (json: Json.t) => {
   switch (json) {
   | `List(list) =>
     List.length(list) > 0
-      ? Results.return(Json.index(0, `List(list)))
+      ? Results.return(Json.index(0, json))
       : Error(makeEmptyListError("head"))
 
   | _ => Error(makeError("head", json))
@@ -170,9 +180,9 @@ let tail = (json: Json.t) => {
     List.length(list) > 0
       ? {
         let lastIndex = List.length(list) - 1;
-        Results.return(Json.index(lastIndex, `List(list)));
+        Results.return(Json.index(lastIndex, json));
       }
-      : Error(makeEmptyListError("head"))
+      : Error(makeEmptyListError("tail"))
   | _ => Error(makeError("tail", json))
   };
 };
@@ -203,7 +213,10 @@ let member = (key: string, opt: bool, json: Json.t) => {
 
 let index = (value: int, json: Json.t) => {
   switch (json) {
-  | `List(_list) => Results.return(Json.index(value, json))
+  | `List(list) =>
+    List.length(list) > value
+      ? Results.return(Json.index(value, json))
+      : Error(makeAcessingToMissingItem(value, List.length(list)))
   | _ => Error(makeError("[" ++ string_of_int(value) ++ "]", json))
   };
 };
