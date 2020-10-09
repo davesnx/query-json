@@ -97,11 +97,11 @@ Aside from the code, the OCaml stack, menhir has been proved to be really fast w
 
 I will dig more into performance in [here](https://github.com/davesnx/query-json/issues/7) and try to profile both tools in order to improve mine.
 
-#### Resources
-[jq Internals: the interpreter](https://github.com/stedolan/jq/wiki/Internals:-the-interpreter)
-[jq Internals: backtracking](https://github.com/stedolan/jq/wiki/Internals:-backtracking)
-[jq Internals: the linker](https://github.com/stedolan/jq/wiki/Internals:-the-linker)
-[jq Internals: thestack](https://github.com/stedolan/jq/wiki/Internals:-the-stack)
+## Resources
+- [jq Internals: the interpreter](https://github.com/stedolan/jq/wiki/Internals:-the-interpreter)
+- [jq Internals: backtracking](https://github.com/stedolan/jq/wiki/Internals:-backtracking)
+- [jq Internals: the linker](https://github.com/stedolan/jq/wiki/Internals:-the-linker)
+- [jq Internals: thestack](https://github.com/stedolan/jq/wiki/Internals:-the-stack)
 
 #### faq - Format Agnostic jQ
 Written in go
