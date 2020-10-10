@@ -220,7 +220,12 @@ module Json = {
       onChange(value);
     };
 
-    <Editor mode=Editor.Json value onChange=onChangeHandler />;
+    <Editor
+      mode=Editor.Json
+      value
+      onChange=onChangeHandler
+      isReadOnly=false
+    />;
   };
 };
 
@@ -238,13 +243,13 @@ module EmptyOutput = {
   [@react.component]
   let make = () => {
     let noop = (_, _) => ();
-    <Editor mode=Editor.Text value="" onChange=noop />;
+    <Editor mode=Editor.Text value="" onChange=noop isReadOnly=true />;
   };
 };
 
 module Output = {
   [@react.component]
-  let make = (~value: response, ~onChange) => {
+  let make = (~value: response) => {
     let text =
       switch (value) {
       | Ok(o) => o
@@ -255,17 +260,13 @@ module Output = {
         Js.String.replaceByRe([%re "/\[\d+m/g"], "", e)
       };
 
-    let hasError = Result.isOk(value);
-
-    let onChangeHandler = (_event, value) =>
-      if (!hasError) {
-        onChange(value);
-      };
+    let hasError = Result.isError(value);
 
     <Editor
       mode={hasError ? Editor.Text : Editor.Json}
       value=text
-      onChange=onChangeHandler
+      isReadOnly=hasError
+      onChange={(_, _) => ()}
     />;
   };
 };
@@ -279,14 +280,12 @@ type t = {
 type actions =
   | UpdateQuery(string)
   | UpdateJson(string)
-  | UpdateResult(string)
   | ComputeOutput;
 
 let reduce = (state, action) => {
   switch (action) {
   | UpdateQuery(query) => {...state, query}
   | UpdateJson(json) => {...state, json: Some(json)}
-  | UpdateResult(value) => {...state, output: Some(Ok(value))}
   | ComputeOutput =>
     switch (state.json) {
     | Some(json) =>
@@ -358,10 +357,6 @@ let make = () => {
     dispatch(ComputeOutput);
   };
 
-  let onResultChange = value => {
-    dispatch(UpdateResult(value));
-  };
-
   let onShareClick = _ => {
     let seachParams =
       QueryParams.encode({query: state.query, json: state.json});
@@ -395,7 +390,7 @@ let make = () => {
           <div className="non-scroll">
             <SpacerLeft>
               {switch (state.output) {
-               | Some(value) => <Output value onChange=onResultChange />
+               | Some(value) => <Output value />
                | None => <EmptyOutput />
                }}
             </SpacerLeft>

@@ -19,6 +19,7 @@ module Monaco = {
     selectionHighlight: bool,
     occurrencesHighlight: bool,
     matchBrackets: string,
+    readOnly: bool,
   };
 
   [@react.component] [@bs.module "@monaco-editor/react"]
@@ -53,26 +54,37 @@ let options: Monaco.options = {
   selectionHighlight: false,
   occurrencesHighlight: false,
   matchBrackets: "never",
+  readOnly: false,
 };
 
 type mode =
   | Text
   | Json;
 
+let noop2 = (_, _) => ();
+
 [@react.component]
-let make = (~value: string, ~onChange, ~mode) => {
+let make =
+    (
+      ~value: string,
+      ~onChange: (ReactEvent.Form.t, string) => unit,
+      ~mode,
+      ~isReadOnly: bool,
+    ) => {
   let language =
     switch (mode) {
     | Text => "text"
     | Json => "json"
     };
 
+  let onChange = isReadOnly ? noop2 : onChange;
+
   <Monaco
     language
     height="100%"
     value
     onChange
-    options
+    options={...options, readOnly: isReadOnly}
     theme="dark"
     style={ReactDOMRe.Style.make(~padding="8px", ())}
   />;
