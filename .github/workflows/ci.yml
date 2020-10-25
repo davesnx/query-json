@@ -68,7 +68,7 @@ jobs:
           esy b dune exec test/Run.exe --instrument-with bisect_ppx --force
           esy bisect-ppx-report send-to Coveralls *.coverage
         env:
-          BISECT_ENABLE: "yes"
+          BISECT_SILENT: "ERR"
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
 
