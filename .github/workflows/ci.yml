@@ -109,6 +109,12 @@ jobs:
           name: ${{ matrix.os }}-artifact
           path: _build/default/bin/Bin.exe
 
+      - name: Upload JavaScript artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: query-json.js
+          path: _build/default/Js/Js.bc.js
+
   publish:
     needs: build
     name: Publish

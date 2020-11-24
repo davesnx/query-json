@@ -1,9 +1,9 @@
-const { execSync } = require("child_process");
-const Fs = require("fs");
-const Path = require("path");
-const esyJson = require("./../esy.json");
+const { execSync } = require('child_process');
+const Fs = require('fs');
+const Path = require('path');
+const esyJson = require('./../esy.json');
 
-const filesToCopy = ["README.md"];
+const filesToCopy = ['README.md', 'query-json.js'];
 
 function exec(cmd) {
   console.log(`exec: ${cmd}`);
@@ -22,8 +22,8 @@ function removeSync(p) {
   exec(`rm -rf "${p}"`);
 }
 
-const src = Path.resolve(Path.join(__dirname, ".."));
-const dst = Path.resolve(Path.join(__dirname, "..", "_release"));
+const src = Path.resolve(Path.join(__dirname, '..'));
+const dst = Path.resolve(Path.join(__dirname, '..', '_release'));
 
 removeSync(dst);
 mkdirpSync(dst);
@@ -35,35 +35,36 @@ for (const file of filesToCopy) {
 }
 
 Fs.copyFileSync(
-  Path.join(src, "scripts", "release-postinstall.js"),
-  Path.join(dst, "postinstall.js")
+  Path.join(src, 'scripts', 'release-postinstall.js'),
+  Path.join(dst, 'postinstall.js')
 );
 
-const filesToTouch = ["query-json"];
+const filesToTouch = ['query-json'];
 
 for (const file of filesToTouch) {
   const p = Path.join(dst, file);
   mkdirpSync(Path.dirname(p));
-  Fs.writeFileSync(p, "");
+  Fs.writeFileSync(p, '');
 }
 
 const pkgJson = {
   ...esyJson,
   scripts: {
-    postinstall: "node postinstall.js",
+    postinstall: 'node postinstall.js',
   },
-  bin: "query-json",
+  main: 'query-json.js',
+  bin: 'query-json',
   files: [
-    "platform-windows-x64/",
-    "platform-linux-x64/",
-    "platform-darwin-x64/",
-    "postinstall.js",
-    "query-json",
-    "README.md",
+    'platform-windows-x64/',
+    'platform-linux-x64/',
+    'platform-darwin-x64/',
+    'postinstall.js',
+    'query-json',
+    'README.md',
   ],
 };
 
 Fs.writeFileSync(
-  Path.join(dst, "package.json"),
+  Path.join(dst, 'package.json'),
   JSON.stringify(pkgJson, null, 2)
 );
