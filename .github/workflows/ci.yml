@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -121,8 +121,8 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Make NPM release skeleton
-        run: node scripts/release-make-skeleton.js
+      - name: Generate NPM package and release
+        run: node scripts/make-npm-release.js
 
       - name: Download linux artifacts
         if: success()

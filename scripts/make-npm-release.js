@@ -1,7 +1,7 @@
 const { execSync } = require('child_process');
 const Fs = require('fs');
 const Path = require('path');
-const esyJson = require('./../esy.json');
+const esyJson = require('../esy.json');
 
 const filesToCopy = ['README.md'];
 
@@ -36,8 +36,9 @@ for (const file of filesToCopy) {
 }
 
 const bundle = Path.join(buildFolder, 'default', 'js', 'Js.bc.js');
+const index = Path.resolve(releaseFolder, 'index.js');
 mkdirpSync(Path.dirname(bundle));
-Fs.copyFileSync(Path.join(root, 'query-json.js'), bundle);
+Fs.copyFileSync(bundle, index);
 
 Fs.copyFileSync(
   Path.join(root, 'scripts', 'release-postinstall.js'),
@@ -57,7 +58,7 @@ const pkgJson = {
   scripts: {
     postinstall: 'node postinstall.js',
   },
-  main: 'query-json.js',
+  main: 'index.js',
   bin: 'query-json',
   files: [
     'platform-windows-x64/',
