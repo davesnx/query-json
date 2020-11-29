@@ -123,7 +123,9 @@ jobs:
 
       - name: Generate NPM package and release
         run: |
-          tree -L 3;
+          ls;
+          echo "---";
+          ls ..;
           node scripts/make-npm-release.js;
 
       - name: Download linux artifacts
