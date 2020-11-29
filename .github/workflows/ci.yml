@@ -113,7 +113,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: query-json.js
-          path: _build/default/Js/Js.bc.js
+          path: _build/default/js/Js.bc.js
 
   publish:
     needs: build
