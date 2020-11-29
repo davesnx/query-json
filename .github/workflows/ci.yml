@@ -133,10 +133,10 @@ jobs:
         uses: actions/download-artifact@master
         with:
           name: index.js
-          path: _release/index.js
+          path: index.js
 
       - name: Generate NPM package and release
-        run: node scripts/make-npm-release.js;
+        run: node scripts/make-npm-release.js
 
       - name: Download linux artifacts
         if: ${{ success() }}
