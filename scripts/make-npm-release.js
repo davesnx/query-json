@@ -62,6 +62,8 @@ const pkgJson = {
     'query-json',
     'README.md',
   ],
+  dependencies: {},
+  devDependencies: {},
 };
 
 Fs.writeFileSync(
