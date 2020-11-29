@@ -8,7 +8,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -72,8 +72,8 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
 
-      - name: Export dependencies
-        run: esy export-dependencies
+      # - name: Export dependencies
+      #  run: esy export-dependencies
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
