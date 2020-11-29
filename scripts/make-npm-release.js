@@ -3,8 +3,6 @@ const Fs = require('fs');
 const Path = require('path');
 const esyJson = require('../esy.json');
 
-const filesToCopy = ['README.md'];
-
 function exec(cmd) {
   console.log(`exec: ${cmd}`);
   return execSync(cmd).toString();
@@ -28,7 +26,7 @@ const releaseFolder = Path.resolve(root, '_release');
 removeSync(releaseFolder);
 mkdirpSync(releaseFolder);
 
-for (const file of filesToCopy) {
+for (const file of ['README.md', 'LICENSE']) {
   const p = Path.join(releaseFolder, file);
   mkdirpSync(Path.dirname(p));
   Fs.copyFileSync(Path.join(root, file), p);
