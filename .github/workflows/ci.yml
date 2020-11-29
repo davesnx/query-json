@@ -72,8 +72,8 @@ jobs:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
 
-      # - name: Export dependencies
-      #  run: esy export-dependencies
+      - name: Export dependencies
+        run: esy export-dependencies
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -110,6 +110,7 @@ jobs:
           path: _build/default/bin/Bin.exe
 
       - name: Upload JavaScript artifacts for NPM
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@master
         with:
           name: index.js
@@ -128,14 +129,10 @@ jobs:
           node-version: 12.x
 
       - name: Generate NPM package and release
-        run: |
-          ls;
-          echo "---";
-          ls ..;
-          node scripts/make-npm-release.js;
+        run: node scripts/make-npm-release.js;
 
       - name: Download linux artifacts
-        if: success()
+        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: ubuntu-latest-artifact
@@ -194,7 +191,7 @@ jobs:
           IS_CI: true
 
       - name: Publish
-        if: ${{ success() && github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name != 'pull_request' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -216,7 +213,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
-        if: ${{ success() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name == 'pull_request' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
