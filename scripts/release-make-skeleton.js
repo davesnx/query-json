@@ -3,7 +3,7 @@ const Fs = require('fs');
 const Path = require('path');
 const esyJson = require('./../esy.json');
 
-const filesToCopy = ['README.md', 'query-json.js'];
+const filesToCopy = ['README.md'];
 
 function exec(cmd) {
   console.log(`exec: ${cmd}`);
@@ -22,27 +22,32 @@ function removeSync(p) {
   exec(`rm -rf "${p}"`);
 }
 
-const src = Path.resolve(Path.join(__dirname, '..'));
-const dst = Path.resolve(Path.join(__dirname, '..', '_release'));
+const root = Path.resolve(Path.join(__dirname, '..'));
+const releaseFolder = Path.resolve(root, '_release');
+const buildFolder = Path.resolve(root, '_build');
 
-removeSync(dst);
-mkdirpSync(dst);
+removeSync(releaseFolder);
+mkdirpSync(releaseFolder);
 
 for (const file of filesToCopy) {
-  const p = Path.join(dst, file);
+  const p = Path.join(releaseFolder, file);
   mkdirpSync(Path.dirname(p));
-  Fs.copyFileSync(Path.join(src, file), p);
+  Fs.copyFileSync(Path.join(root, file), p);
 }
 
+const bundle = Path.join(buildFolder, 'default', 'js', 'Js.bc.js');
+mkdirpSync(Path.dirname(bundle));
+Fs.copyFileSync(Path.join(root, 'query-json.js'), bundle);
+
 Fs.copyFileSync(
-  Path.join(src, 'scripts', 'release-postinstall.js'),
-  Path.join(dst, 'postinstall.js')
+  Path.join(root, 'scripts', 'release-postinstall.js'),
+  Path.join(releaseFolder, 'postinstall.js')
 );
 
 const filesToTouch = ['query-json'];
 
 for (const file of filesToTouch) {
-  const p = Path.join(dst, file);
+  const p = Path.join(releaseFolder, file);
   mkdirpSync(Path.dirname(p));
   Fs.writeFileSync(p, '');
 }
@@ -65,6 +70,6 @@ const pkgJson = {
 };
 
 Fs.writeFileSync(
-  Path.join(dst, 'package.json'),
+  Path.join(releaseFolder, 'package.json'),
   JSON.stringify(pkgJson, null, 2)
 );
