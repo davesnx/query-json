@@ -128,6 +128,13 @@ jobs:
         with:
           node-version: 12.x
 
+      - name: Download JS artifacts
+        if: ${{ success() }}
+        uses: actions/download-artifact@master
+        with:
+          name: index.js
+          path: _release/index.js
+
       - name: Generate NPM package and release
         run: node scripts/make-npm-release.js;
 
@@ -170,6 +177,7 @@ jobs:
           cd ../..
 
           cd _release/platform-windows-x64
+          mv Bin.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 
