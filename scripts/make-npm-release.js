@@ -24,7 +24,6 @@ function removeSync(p) {
 
 const root = Path.resolve(Path.join(__dirname, '..'));
 const releaseFolder = Path.resolve(root, '_release');
-const buildFolder = Path.resolve(root, '_build');
 
 removeSync(releaseFolder);
 mkdirpSync(releaseFolder);
@@ -34,11 +33,6 @@ for (const file of filesToCopy) {
   mkdirpSync(Path.dirname(p));
   Fs.copyFileSync(Path.join(root, file), p);
 }
-
-const bundle = Path.join(buildFolder, 'default', 'js', 'Js.bc.js');
-const index = Path.resolve(releaseFolder, 'index.js');
-mkdirpSync(Path.dirname(bundle));
-Fs.copyFileSync(bundle, index);
 
 Fs.copyFileSync(
   Path.join(root, 'scripts', 'release-postinstall.js'),
