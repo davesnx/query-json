@@ -109,7 +109,7 @@ jobs:
           name: ${{ matrix.os }}-artifact
           path: _build/default/bin/Bin.exe
 
-       - name: Upload JavaScript artifacts for NPM
+      - name: Upload JavaScript artifacts for NPM
         uses: actions/upload-artifact@master
         with:
           name: index.js
