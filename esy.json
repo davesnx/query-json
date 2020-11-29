@@ -1,6 +1,6 @@
 {
   "name": "@davesnx/query-json",
-  "version": "0.5.13",
+  "version": "0.5.14",
   "description": "faster and simpler re-implementation of jq in Reason Native",
   "author": "davesnx <dsnxmoreno@gmail.com>",
   "license": "MIT",
