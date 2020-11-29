@@ -122,7 +122,9 @@ jobs:
           node-version: 12.x
 
       - name: Generate NPM package and release
-        run: node scripts/make-npm-release.js
+        run: |
+          tree -L 3;
+          node scripts/make-npm-release.js;
 
       - name: Download linux artifacts
         if: success()
