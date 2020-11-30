@@ -58,6 +58,7 @@ const pkgJson = {
     'platform-linux-x64/',
     'platform-darwin-x64/',
     'postinstall.js',
+    'index.js',
     'query-json',
     'README.md',
   ],
