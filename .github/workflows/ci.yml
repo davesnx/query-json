@@ -137,10 +137,8 @@ jobs:
 
       - name: Generate NPM package and release
         run: |
-          ls;
-          echo "---";
-          ls ..;
           node scripts/make-npm-release.js;
+          mv index.js _release/index.js;
 
       - name: Download linux artifacts
         if: ${{ success() }}

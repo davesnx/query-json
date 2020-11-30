@@ -26,7 +26,7 @@ const releaseFolder = Path.resolve(rootFolder, '_release');
 removeSync(releaseFolder);
 mkdirpSync(releaseFolder);
 
-for (const fileName of ['README.md', 'LICENSE', 'index.js']) {
+for (const fileName of ['README.md', 'LICENSE']) {
   const file = Path.join(rootFolder, fileName);
   const destination = Path.join(releaseFolder, fileName);
   Fs.copyFileSync(file, destination);
