@@ -37,6 +37,15 @@ Fs.copyFileSync(
   Path.join(releaseFolder, 'postinstall.js')
 );
 
+const filesToTouch = ['query-json'];
+
+/* Generate an empty binary */
+for (const file of filesToTouch) {
+  const p = Path.join(releaseFolder, file);
+  mkdirpSync(Path.dirname(p));
+  Fs.writeFileSync(p, '');
+}
+
 const pkgJson = {
   ...esyJson,
   scripts: {
