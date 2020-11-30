@@ -139,6 +139,12 @@ jobs:
           name: index.js
           path: _release/index.js
 
+      - name: Generate NPM package and release
+        run: |
+          ls _release;
+          echo "---";
+          ls;
+
       - name: Download linux artifacts
         if: ${{ success() }}
         uses: actions/download-artifact@master
