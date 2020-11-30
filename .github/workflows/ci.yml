@@ -113,7 +113,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@master
         with:
-          name: index.js
+          name: bundled
           path: _build/default/js/Js.bc.js
 
   publish:
@@ -136,14 +136,8 @@ jobs:
         if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
-          name: index.js
-          path: _release/index.js
-
-      - name: Generate NPM package and release
-        run: |
-          ls _release;
-          echo "---";
-          ls;
+          name: bundled
+          path: _release/bundled
 
       - name: Download linux artifacts
         if: ${{ success() }}

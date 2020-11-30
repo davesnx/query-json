@@ -51,14 +51,14 @@ const pkgJson = {
   scripts: {
     postinstall: 'node postinstall.js',
   },
-  main: 'index.js',
+  main: 'bundled/Js.bc.js',
   bin: 'query-json',
   files: [
     'platform-windows-x64/',
     'platform-linux-x64/',
     'platform-darwin-x64/',
     'postinstall.js',
-    'index.js',
+    'bundled',
     'query-json',
     'README.md',
   ],
