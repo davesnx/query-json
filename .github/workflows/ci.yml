@@ -128,17 +128,16 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Download JS artifacts
+      - name: Generate NPM package and release
+        run: |
+          node scripts/make-npm-release.js
+
+      - name: Download JavaScript artifact
         if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: index.js
-          path: index.js
-
-      - name: Generate NPM package and release
-        run: |
-          node scripts/make-npm-release.js;
-          mv index.js _release/index.js;
+          path: _release/index.js
 
       - name: Download linux artifacts
         if: ${{ success() }}
