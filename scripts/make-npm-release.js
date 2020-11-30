@@ -20,20 +20,21 @@ function removeSync(p) {
   exec(`rm -rf "${p}"`);
 }
 
-const root = Path.resolve(Path.join(__dirname, '..'));
-const releaseFolder = Path.resolve(root, '_release');
+const rootFolder = Path.join(__dirname, '..');
+const releaseFolder = Path.resolve(rootFolder, '_release');
 
 removeSync(releaseFolder);
 mkdirpSync(releaseFolder);
 
-for (const file of ['README.md', 'LICENSE']) {
-  const p = Path.join(releaseFolder, file);
-  mkdirpSync(Path.dirname(p));
-  Fs.copyFileSync(Path.join(root, file), p);
+for (const fileName of ['README.md', 'LICENSE', 'index.js']) {
+  const file = Path.join(rootFolder, fileName);
+  const destination = Path.join(releaseFolder, fileName);
+  mkdirpSync(Path.dirname(destination));
+  Fs.copyFileSync(file, destination);
 }
 
 Fs.copyFileSync(
-  Path.join(root, 'scripts', 'release-postinstall.js'),
+  Path.join(rootFolder, 'scripts', 'release-postinstall.js'),
   Path.join(releaseFolder, 'postinstall.js')
 );
 
