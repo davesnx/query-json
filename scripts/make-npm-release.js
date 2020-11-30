@@ -29,7 +29,6 @@ mkdirpSync(releaseFolder);
 for (const fileName of ['README.md', 'LICENSE', 'index.js']) {
   const file = Path.join(rootFolder, fileName);
   const destination = Path.join(releaseFolder, fileName);
-  mkdirpSync(Path.dirname(destination));
   Fs.copyFileSync(file, destination);
 }
 
