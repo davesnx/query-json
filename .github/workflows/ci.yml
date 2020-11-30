@@ -139,8 +139,6 @@ jobs:
         run: |
           ls;
           echo "---";
-          ls _release;
-          echo "---";
           ls ..;
           node scripts/make-npm-release.js;
 
