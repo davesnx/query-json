@@ -25,7 +25,7 @@
     "bin": "esy b dune exec Bin",
     "build": "esy b dune build",
     "start": "esy b dune build --watch",
-    "test": "esy b dune exec test/Run.exe --force",
+    "test": "esy b dune runtest --force",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
   "esy": {
