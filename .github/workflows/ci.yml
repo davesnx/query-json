@@ -66,7 +66,7 @@ jobs:
         run: |
           rm test/__snapshots__/.gitkeep
           esy dune runtest --instrument-with bisect_ppx --force
-          esy bisect-ppx-report send-to Coveralls *.coverage
+          esy bisect-ppx-report send-to Coveralls
         env:
           BISECT_SILENT: "ERR"
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
