@@ -59,5 +59,8 @@
     "@opam/js_of_ocaml": "3.7.1",
     "@opam/js_of_ocaml-compiler": "3.7.1",
     "@opam/js_of_ocaml-ppx": "3.7.1"
+  },
+  "resolutions": {
+    "esy-m4": "esy-packages/esy-m4#f413a10d8992b7ebe4c33b14f3dbf828ef11caae"
   }
 }
