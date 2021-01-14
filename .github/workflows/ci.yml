@@ -61,6 +61,7 @@ jobs:
         run: esy build
 
       - name: Test
+        if: ${{ matrix.os != 'windows-latest' }}
         run: |
           rm test/__snapshots__/.gitkeep
           esy dune runtest --instrument-with bisect_ppx --force
