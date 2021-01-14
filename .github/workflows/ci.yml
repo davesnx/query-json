@@ -33,13 +33,14 @@ jobs:
             ${{ runner.os }}-
 
       - name: Install esy
-        run: npm install -g esy
+        run: npm install -g esy@0.6.7
 
-      - name: Restore esy cache
+      - name: Restore esy source cache
+        id: esy-cache
         uses: actions/cache@v2
         with:
           path: ~/.esy/source
-          key: source-${{ hashFiles('**/index.json') }}
+          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
 
       - name: Install
         run: esy install
@@ -48,16 +49,13 @@ jobs:
         id: print_esy_cache
         run: node scripts/print-esy-cache.js
 
-      - name: Restore build cache
+      - name: Try to restore dependencies cache
         id: deps-cache
         uses: actions/cache@v2
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-
-      - name: Import dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
-        run: esy import-build _export/*
+          key: deps-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: deps-${{ matrix.os }}-
 
       - name: Build
         run: esy build
@@ -79,8 +77,6 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           esy b dune build
-          sudo apt-get install tree
-          tree -L 3 _build
           cd www
           npm install
           npm run build:prod
@@ -109,6 +105,13 @@ jobs:
           name: ${{ matrix.os }}-artifact
           path: _build/default/bin/Bin.exe
 
+      - name: Upload JavaScript artifacts for NPM
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: bundled
+          path: _build/default/js/Js.bc.js
+
   publish:
     needs: build
     name: Publish
@@ -121,11 +124,19 @@ jobs:
         with:
           node-version: 12.x
 
-      - name: Make NPM release skeleton
-        run: node scripts/release-make-skeleton.js
+      - name: Generate NPM package and release
+        run: |
+          node scripts/make-npm-release.js
+
+      - name: Download JavaScript artifact
+        if: ${{ success() }}
+        uses: actions/download-artifact@master
+        with:
+          name: bundled
+          path: _release/bundled
 
       - name: Download linux artifacts
-        if: success()
+        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: ubuntu-latest-artifact
@@ -163,6 +174,7 @@ jobs:
           cd ../..
 
           cd _release/platform-windows-x64
+          mv Bin.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 
@@ -184,7 +196,7 @@ jobs:
           IS_CI: true
 
       - name: Publish
-        if: ${{ success() && github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name != 'pull_request' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -206,7 +218,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
-        if: ${{ success() && github.event_name == 'pull_request' && matrix.os == 'ubuntu-latest' }}
+        if: ${{ success() && github.event_name == 'pull_request' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
