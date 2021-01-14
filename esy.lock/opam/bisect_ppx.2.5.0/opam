@@ -1,7 +1,7 @@
 opam-version: "2.0"
 
 synopsis: "Code coverage for OCaml"
-version: "2.4.1"
+version: "2.5.0"
 license: "MIT"
 homepage: "https://github.com/aantron/bisect_ppx"
 doc: "https://github.com/aantron/bisect_ppx"
@@ -21,7 +21,7 @@ maintainer: [
 depends: [
   "base-unix"
   "cmdliner" {>= "1.0.0"}
-  "dune"
+  "dune" {>= "2.7.0"}
   "ocaml" {>= "4.02.0"}
   "ocaml-migrate-parsetree" {>= "1.7.0" & < "2.0.0"}
   "ppx_tools_versioned" {>= "5.4.0"}
@@ -35,11 +35,6 @@ build: [
   ["dune" "runtest" "-p" name] {with-test}
 ]
 
-post-messages: [
-  "Bisect_ppx 2.0.0 has deprecated some command-line options. See
-  https://github.com/aantron/bisect_ppx/releases/tag/2.0.0"
-]
-
 description: "Bisect_ppx helps you test thoroughly. It is a small preprocessor
 that inserts instrumentation at places in your code, such as if-then-else and
 match expressions. After you run tests, Bisect_ppx gives a nice HTML report
@@ -49,6 +44,6 @@ Usage is simple - add package bisect_ppx when building tests, run your tests,
 then run the Bisect_ppx report tool on the generated visitation files."
 
 url {
-  src: "https://github.com/aantron/bisect_ppx/archive/2.4.1.tar.gz"
-  checksum: "md5=9551a49de6b80aa7caf20ec693387c86"
+  src: "https://github.com/aantron/bisect_ppx/archive/2.5.0.tar.gz"
+  checksum: "md5=2eaf2f24c5d91ff975050db37d8a4cd2"
 }

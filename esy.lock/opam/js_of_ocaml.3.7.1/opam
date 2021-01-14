@@ -21,12 +21,12 @@ depends: [
   "uchar"
   "js_of_ocaml-compiler" {= version}
 ]
-x-commit-hash: "d50221f1cf19f7637dfca7407762a85dcd420f46"
+x-commit-hash: "888697ba6c17051c50839e35d882a8c58fdc69f5"
 url {
   src:
-    "https://github.com/ocsigen/js_of_ocaml/releases/download/3.7.0/js_of_ocaml-3.7.0.tbz"
+    "https://github.com/ocsigen/js_of_ocaml/releases/download/3.7.1/js_of_ocaml-3.7.1.tbz"
   checksum: [
-    "sha256=dcf4ffea23d4a2b2709c75bf5c7e2de355897bcfef7081d1569efe41a7638667"
-    "sha512=de3fcd7b2e0a7fdd074a236efa759178888559d28db35d4431a342567b4a068bb6581545bdfca02bacdf23e08499119879d37e71c5b0e860d79252116430160e"
+    "sha256=36dba988e0ac14e54624da6f36337ad63a8d1f2b5195e7576d5e74a737ac1a44"
+    "sha512=88c01d33c8877ec9488ab8a73e84647a599120c11aa20b2ee06c02ecdf4bbbd6885e17bbf211e63299c5af244f3379f10787deb151930bfd8cb0d97fe8230156"
   ]
 }

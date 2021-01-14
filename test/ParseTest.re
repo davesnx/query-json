@@ -52,7 +52,7 @@ describe("correctly parse value", ({test, _}) => {
       "parse: " ++ string_of_int(index),
       payload => {
         let result =
-          switch (parse(~debug=true, result)) {
+          switch (parse(~debug=false, result)) {
           | Ok(r) => r
           | Error(err) => failwith(err)
           };

@@ -25,7 +25,7 @@
     "bin": "esy b dune exec Bin",
     "build": "esy b dune build",
     "start": "esy b dune build --watch",
-    "test": "esy b dune exec test/Run.exe",
+    "test": "esy b dune runtest --force",
     "format": "esy b dune build @fmt --auto-promote --root ."
   },
   "esy": {
@@ -42,7 +42,7 @@
   },
   "devDependencies": {
     "@esy-ocaml/reason": "~3.6.0",
-    "@opam/bisect_ppx": "2.4.1",
+    "@opam/bisect_ppx": "2.5.0",
     "@opam/dune": "^2.7.0",
     "@opam/menhir": "20200624",
     "@opam/ppx_deriving": "4.5",
@@ -56,8 +56,12 @@
     "bats": "^1.1.0"
   },
   "dependencies": {
-    "@opam/js_of_ocaml": "3.7.0",
-    "@opam/js_of_ocaml-compiler": "3.7.0",
-    "@opam/js_of_ocaml-ppx": "3.7.0"
+    "@opam/js_of_ocaml": "3.7.1",
+    "@opam/js_of_ocaml-compiler": "3.7.1",
+    "@opam/js_of_ocaml-ppx": "3.7.1"
+  },
+  "resolutions": {
+    "esy-m4": "esy-packages/esy-m4#c7cf0ac9221be2b1f9d90e83559ca08397a629e7",
+    "@opam/menhir": "20201216"
   }
 }
