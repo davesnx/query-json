@@ -35,30 +35,27 @@ jobs:
       - name: Install esy
         run: npm install -g esy
 
-      - name: Restore esy cache
+      - name: Restore esy source cache
+        id: esy-cache
         uses: actions/cache@v2
         with:
           path: ~/.esy/source
-          key: source-${{ hashFiles('**/index.json') }}
+          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+
+      - name: Install
+        run: esy install
 
       - name: Print esy cache
         id: print_esy_cache
         run: node scripts/print-esy-cache.js
 
-      - name: Restore build cache
+      - name: Try to restore dependencies cache
         id: deps-cache
         uses: actions/cache@v2
         with:
           path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-
-      - name: Import dependencies
-        if: steps.cache.outputs.deps-cache == 'true'
-        run: esy import-build _export/*
-
-      - name: Install
-        if: steps.cache.outputs.deps-cache == 'true'
-        run: esy install
+          key: deps-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          restore-keys: deps-${{ matrix.os }}-
 
       - name: Build
         run: esy build
