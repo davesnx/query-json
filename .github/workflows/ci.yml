@@ -41,9 +41,6 @@ jobs:
           path: ~/.esy/source
           key: source-${{ hashFiles('**/index.json') }}
 
-      - name: Install
-        run: esy install
-
       - name: Print esy cache
         id: print_esy_cache
         run: node scripts/print-esy-cache.js
@@ -56,8 +53,12 @@ jobs:
           key: build-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
 
       - name: Import dependencies
-        if: steps.cache.outputs.cache-hit == 'true'
+        if: steps.cache.outputs.deps-cache == 'true'
         run: esy import-build _export/*
+
+      - name: Install
+      if: steps.cache.outputs.deps-cache == 'true'
+        run: esy install
 
       - name: Build
         run: esy build
