@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Install esy
-        run: npm install -g esy@0.6.6
+        run: npm install -g esy@0.6.7
 
       - name: Restore esy source cache
         id: esy-cache
@@ -77,6 +77,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           esy b dune build
+          cd www
           npm install
           npm run build:prod
 
