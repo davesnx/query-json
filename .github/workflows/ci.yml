@@ -57,6 +57,10 @@ jobs:
           key: deps-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
           restore-keys: deps-${{ matrix.os }}-
 
+      - name: Build dependencies
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: esy build-dependencies
+
       - name: Build
         run: esy build
 
@@ -70,9 +74,6 @@ jobs:
           BISECT_SILENT: "ERR"
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
           PULL_REQUEST_NUMBER: ${{ github.event.number }}
-
-      - name: Export dependencies
-        run: esy export-dependencies
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -112,6 +113,11 @@ jobs:
         with:
           name: bundled
           path: _build/default/js/Js.bc.js
+
+      # Cleanup build cache if dependencies have changed
+      - name: Clean build cache
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: esy cleanup .
 
   publish:
     needs: build
