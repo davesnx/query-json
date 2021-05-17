@@ -42,26 +42,22 @@
   },
   "devDependencies": {
     "@esy-ocaml/reason": "~3.6.0",
-    "@opam/bisect_ppx": "2.5.0",
-    "@opam/dune": "^2.7.0",
-    "@opam/menhir": "20200624",
-    "@opam/ppx_deriving": "4.5",
-    "@opam/sedlex": "2.2",
+    "@opam/bisect_ppx": "2.6.0",
+    "@opam/dune": ">=2.8.4",
+    "@opam/menhir": "20201216",
+    "@opam/ppx_deriving": "5.2.1",
+    "@opam/sedlex": "2.3",
     "@opam/yojson": "1.7.0",
     "@reason-native/console": "^0.1.0",
     "@reason-native/rely": "^3.2.1",
     "ocaml": "4.10.0",
-    "@opam/ocaml-lsp-server": "github:ocaml/ocaml-lsp:ocaml-lsp-server.opam#c1e51a50a85aacf2bf0479e7c8f8fd1a9fc977c2",
+    "@opam/ocaml-lsp-server": "1.4.1",
     "@opam/cmdliner": "1.0.4",
     "bats": "^1.1.0"
   },
   "dependencies": {
-    "@opam/js_of_ocaml": "3.7.1",
-    "@opam/js_of_ocaml-compiler": "3.7.1",
-    "@opam/js_of_ocaml-ppx": "3.7.1"
-  },
-  "resolutions": {
-    "esy-m4": "esy-packages/esy-m4#c7cf0ac9221be2b1f9d90e83559ca08397a629e7",
-    "@opam/menhir": "20201216"
+    "@opam/js_of_ocaml": "3.9.0",
+    "@opam/js_of_ocaml-compiler": "3.9.0",
+    "@opam/js_of_ocaml-ppx": "3.9.0"
   }
 }

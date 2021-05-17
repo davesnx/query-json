@@ -1,0 +1,37 @@
+opam-version: "2.0"
+synopsis: "An OCaml lexer generator for Unicode"
+description: "
+sedlex is a lexer generator for OCaml. It is similar to ocamllex, but supports
+Unicode. Unlike ocamllex, sedlex allows lexer specifications within regular
+OCaml source files. Lexing specific constructs are provided via a ppx syntax
+extension.
+"
+license: "MIT"
+doc: "https://ocaml-community.github.io/sedlex/index.html"
+maintainer: "Alain Frisch <alain.frisch@lexifi.com>"
+authors: [
+  "Alain Frisch <alain.frisch@lexifi.com>"
+  "https://github.com/ocaml-community/sedlex/graphs/contributors"
+]
+homepage: "https://github.com/ocaml-community/sedlex"
+dev-repo: "git+https://github.com/ocaml-community/sedlex.git"
+bug-reports: "https://github.com/ocaml-community/sedlex/issues"
+build: [
+  ["dune" "build" "-p" name "-j" jobs]
+  ["dune" "runtest" "-p" name "-j" jobs] {with-test}
+  ["dune" "build" "@doc" "-p" name "-j" jobs] {with-doc}
+]
+depends: [
+  "ocaml" {>= "4.04"}
+  "dune" {>= "1.8"}
+  "ppxlib" {>= "0.18.0"}
+  "gen"
+  "uchar"
+]
+url {
+  src: "https://github.com/ocaml-community/sedlex/archive/v2.3.tar.gz"
+  checksum: [
+    "md5=bca8b8844d525f3f200d57fddfd2bcfa"
+    "sha512=f91bbda9e79417e0a7c723a8efd9644404ffc91c60898b8fa07a514c38bc8472eae34419405354ae80966feb8d3203943f78776ad395a16132c7c890e3dbd7d8"
+  ]
+}
