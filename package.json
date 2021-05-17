@@ -1,0 +1,8 @@
+{
+  "browser": {
+    "fs": false,
+    "tty": false,
+    "constants": false,
+    "child_process": false
+  }
+}
