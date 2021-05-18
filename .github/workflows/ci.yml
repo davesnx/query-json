@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Use Node.js 12.x
+      - name: Use Node.js 16.x
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
 
       - name: Restore global node modules cache
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -184,18 +184,15 @@ jobs:
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 
-      - name: Install bats
-        run: npm install -g bats
-
       - name: End to end Test (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: bats ./e2e/test.sh
+        run: npx bats ./e2e/test.sh
         env:
           IS_CI: true
 
       - name: End to end Test (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: sh -c 'bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
+        run: sh -c 'npx bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
         env:
           IS_CI: true
 
