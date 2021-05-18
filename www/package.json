@@ -15,8 +15,7 @@
   "dependencies": {
     "@davesnx/styled-ppx": "^1.5.0",
     "@monaco-editor/react": "^4.1.3",
-    "bs-css": "^14.0.2",
-    "bs-css-emotion": "^3.0.0",
+    "bs-css-emotion": "3.0.0",
     "bs-webapi": "^0.19.1",
     "decco": "^1.4.0",
     "monaco-editor": "^0.21.2",

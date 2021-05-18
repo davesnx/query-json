@@ -2461,7 +2461,7 @@ browserslist@^4.14.5, browserslist@^4.16.6:
     escalade "^3.1.1"
     node-releases "^1.1.71"
 
-bs-css-emotion@^3.0.0:
+bs-css-emotion@3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/bs-css-emotion/-/bs-css-emotion-3.0.0.tgz#666360d83370e7c8908529a5dcb3072a89237e75"
   integrity sha512-YmVU0zFR6XK6LMj/C4I97Pli9IQ6Lv8xQ+O3TE9bngE8nQw4uY++aGZvVOFZFb/C55xGOhit07mWGuE/ehMY3g==
@@ -2470,7 +2470,7 @@ bs-css-emotion@^3.0.0:
     "@emotion/css" "^11.0.0"
     bs-css "14.0.2"
 
-bs-css@14.0.2, bs-css@^14.0.2:
+bs-css@14.0.2:
   version "14.0.2"
   resolved "https://registry.yarnpkg.com/bs-css/-/bs-css-14.0.2.tgz#21786202533b66c0da5bbb3de9d0491b263d7e44"
   integrity sha512-Dr3zr/xgBdxpwZHaYRq2+gf8V1qFDFVU+qLU9P/0zf7/uYhXMwJuvXFA/o1VCV2U5cEu+lywngXHo/BCEBcNpg==
