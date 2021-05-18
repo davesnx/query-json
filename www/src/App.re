@@ -65,7 +65,7 @@ let mockJson = {|{
 }
 |};
 
-module Menu = [%styled
+module Menu = [%styled.div
   {|
   width: 100vw;
   height: 7vh;
@@ -86,12 +86,12 @@ module Wrapper = [%styled.main
 |}
 ];
 
-module SpacerBottom = [%styled "margin-bottom: 16px"];
-module SpacerTop = [%styled "margin-top: 16px"];
-module SpacerRight = [%styled "margin-right: 16px"];
-module SpacerLeft = [%styled "margin-left: 16px; height: 100%;"];
+module SpacerBottom = [%styled.div "margin-bottom: 16px"];
+module SpacerTop = [%styled.div "margin-top: 16px"];
+module SpacerRight = [%styled.div "margin-right: 16px"];
+module SpacerLeft = [%styled.div "margin-left: 16px; height: 100%;"];
 
-module Page = [%styled
+module Page = [%styled.div
   {|
   display: flex;
   flex-direction: column;
@@ -200,7 +200,7 @@ module Query = {
       value
       placeholder
       onChange=onChangeHandler
-      className=[%css
+      className=[%cx
         {|
         width: 100%;
         border: none;
@@ -254,10 +254,12 @@ module Output = {
       switch (value) {
       | Ok(o) => o
       | Error(e) =>
-        /* TODO: Instead of removing the '[m' characters, Console and Compiler
-            shoudn't add those if there's colorize=false. It's a tedious task, to break all the Chalk calls and Compiler calls. That's why we transform the output.
-           */
-        Js.String.replaceByRe([%re "/\[\d+m/g"], "", e)
+        /* TODO:
+            Instead of removing the '[m' characters, Console and Compiler
+            shoudn't add those if there's colorize=false. It's a tedious task,
+            to pass that flag to all Chalk calls and Compiler calls.
+            That's why we transform the output. */
+        Js.String.replaceByRe([%re "/\[\\d+m/g"], "", e)
       };
 
     let hasError = Result.isError(value);

@@ -34,34 +34,18 @@ module Typography = {
 
     let size =
       switch (size) {
-      | `XSmall =>
-        %css
-        "font-size: 14px"
-      | `Small =>
-        %css
-        "font-size: 16px"
-      | `Medium =>
-        %css
-        "font-size: 18px"
-      | `Large =>
-        %css
-        "font-size: 20px"
-      | `XLarge =>
-        %css
-        "font-size: 26px"
-      | `XXLarge =>
-        %css
-        "font-size: 45px"
+      | `XSmall => [%cx "font-size: 14px"]
+      | `Small => [%cx "font-size: 16px"]
+      | `Medium => [%cx "font-size: 18px"]
+      | `Large => [%cx "font-size: 20px"]
+      | `XLarge => [%cx "font-size: 26px"]
+      | `XXLarge => [%cx "font-size: 45px"]
       };
 
     let weight =
       switch (weight) {
-      | `Normal =>
-        %css
-        "font-weight: 400"
-      | `Bold =>
-        %css
-        "font-weight: 700"
+      | `Normal => [%cx "font-weight: 400"]
+      | `Bold => [%cx "font-weight: 700"]
       };
 
     let _align =
@@ -80,15 +64,9 @@ module Typography = {
 
     let color =
       switch (color) {
-      | `White =>
-        %css
-        "color: #FAFAFA"
-      | `Black =>
-        %css
-        "color: rgb(21, 21, 21);"
-      | `Grey =>
-        %css
-        "color: #949495"
+      | `White => [%cx "color: #FAFAFA"]
+      | `Black => [%cx "color: rgb(21, 21, 21);"]
+      | `Grey => [%cx "color: #949495"]
       };
 
     let className = color ++ " " ++ size ++ " " ++ weight;
