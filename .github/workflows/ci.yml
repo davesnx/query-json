@@ -80,7 +80,7 @@ jobs:
         run: |
           esy b dune build
           cd www
-          npm install
+          npm ci
           npm run build:prod
 
       - name: Deploy to prod
@@ -200,9 +200,14 @@ jobs:
         if: ${{ success() && github.event_name != 'pull_request' }}
         id: newVersion
         run: |
-          REMOTE=$(npm view @davesnx/query-json version)
-          CURRENT=$(jq -r '.version' package.json)
-          echo "::set-output name=shouldPublish::$($REMOTE != $CURRENT)";
+          REMOTE=$(npm view @davesnx/query-json version);
+          CURRENT=$(jq -r '.version' esy.json);
+          if [ "$REMOTE" != "$CURRENT" ];
+          then
+            echo "::set-output name=shouldPublish::true";
+          else
+            echo "::set-output name=shouldPublish::false";
+          fi
 
       - name: Publish
         if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish }}
