@@ -202,7 +202,7 @@ jobs:
         run: |
           REMOTE=$(npm view @davesnx/query-json version);
           CURRENT=$(jq -r '.version' esy.json);
-          if [ "$REMOTE" != "$CURRENT" ];
+          if [ "$REMOTE" != "$CURRENT" ]
           then
             echo "::set-output name=shouldPublish::true";
           else
@@ -210,7 +210,7 @@ jobs:
           fi
 
       - name: Publish
-        if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish }}
+        if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish == 'true' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -235,7 +235,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
@@ -247,7 +247,7 @@ jobs:
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -258,7 +258,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-linux-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -269,7 +269,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-windows-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
