@@ -1,4 +1,4 @@
-name: Build
+name: CI
 
 on: [push]
 
@@ -13,11 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Use Node.js 12.x
+      - name: Use Node.js 16.x
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/setup-node@v1
         with:
-          node-version: 12.x
+          node-version: 16.x
 
       - name: Restore global node modules cache
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Install esy
-        run: npm install -g esy@0.6.7
+        run: npm install -g esy@0.6.10
 
       - name: Restore esy source cache
         id: esy-cache
@@ -80,7 +80,7 @@ jobs:
         run: |
           esy b dune build
           cd www
-          npm install
+          npm ci
           npm run build:prod
 
       - name: Deploy to prod
@@ -132,8 +132,7 @@ jobs:
           node-version: 12.x
 
       - name: Generate NPM package and release
-        run: |
-          node scripts/make-npm-release.js
+        run: node scripts/make-npm-release.js
 
       - name: Download JavaScript artifact
         if: ${{ success() }}
@@ -185,37 +184,37 @@ jobs:
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 
-      - name: Install bats
-        run: npm install -g bats
-
       - name: End to end Test (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          bats ./e2e/test.sh
+        run: npx bats ./e2e/test.sh
         env:
           IS_CI: true
 
       - name: End to end Test (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: |
-          sh -c 'bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
+        run: sh -c 'npx bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
         env:
           IS_CI: true
 
-      - name: Publish
+      - name: Check if should be published
         if: ${{ success() && github.event_name != 'pull_request' }}
+        id: newVersion
+        run: |
+          REMOTE=$(npm view @davesnx/query-json version);
+          CURRENT=$(jq -r '.version' esy.json);
+          if [ "$REMOTE" != "$CURRENT" ]
+          then
+            echo "::set-output name=shouldPublish::true";
+          else
+            echo "::set-output name=shouldPublish::false";
+          fi
+
+      - name: Publish
+        if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish == 'true' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
-          REMOTE=$(npm view @davesnx/query-json version)
-          CURRENT=$(jq -r '.version' package.json)
-
-          if [ "$REMOTE" != "$CURRENT" ]
-          then
-              npm publish --access public
-          else
-              echo "New verison and remote version are equal, nothing to publish"
-          fi
+          npm publish --access public
         working-directory: ./_release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
@@ -225,7 +224,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
-        if: ${{ success() && github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -236,7 +235,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
-        if: ${{ success() }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
@@ -248,7 +247,7 @@ jobs:
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
-        if: ${{ success() }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -259,7 +258,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-linux-x64.zip to Github release
-        if: ${{ success() }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -270,7 +269,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-windows-x64.zip to Github release
-        if: ${{ success() }}
+        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

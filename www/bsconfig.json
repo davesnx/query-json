@@ -3,6 +3,9 @@
   "reason": {
     "react-jsx": 3
   },
+  "warnings": {
+    "number": "-3"
+  },
   "sources": {
     "dir": "src",
     "subdirs": true
