@@ -5,5 +5,5 @@ npm-debug.log
 lib/bs
 node_modules
 bundleOutput
-dist
+dist/js
 *.local
