@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "scripts": {
     "start": "run-p --aggregate-output re:watch js:build server",
-    "js:build": "wait-on ./src/Index.bs.js && esbuild ./src/Index.bs.js --platform=browser --outfile=dist/bundle.js --bundle --define:process.env.NODE_ENV='\"development\"'",
-    "js:build:production": "esbuild ./src/Index.bs.js --outfile=dist/bundle.js --minify --bundle --platform=browser --define:process.env.NODE_ENV='\"production\"'",
+    "js:build": "wait-on ./src/Index.bs.js && esbuild ./src/Index.bs.js --platform=browser --outfile=dist/js/bundle.js --bundle --define:process.env.NODE_ENV='\"development\"'",
+    "js:build:production": "esbuild ./src/Index.bs.js --outfile=dist/js/bundle.js --minify --bundle --platform=browser --define:process.env.NODE_ENV='\"production\"'",
     "server": "PORT=5000 live-server . --host=localhost",
     "build": "run-s re:build js:build",
     "build:prod": "run-s re:build js:build:production",
