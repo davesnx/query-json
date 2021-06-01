@@ -10,37 +10,18 @@
 
 ---
 
-**query-json** is a [faster](#Performance) and simpler re-implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason Native](https://reasonml.github.io/docs/en/native) and distributed as a dependency-free binary thanks to the OCaml compiler. **query-json**, allows you to write small programs to operate on top of json files in a cute syntax:
+**query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason](https://reasonml.github.io/docs/en/native) distributed as a dependency-free binary thanks to the OCaml compiler, and distributed to the web with [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml).
+
+**query-json** allows you to write small programs to operate on top of json files with a concise syntax.
 
 ## Purpose
 
-It was created with 2 reasons in mind, learn and fun:
+It was created with mostly two reasons, learning and having fun.
 
-- **Learn how to write a lexer/parser/compiler with the OCaml stack** using `menhir` and `sedlex` while trying to create a compiler with great error messages and possibly recoverability (currently _work in progress_).
-- **Create a CLI tool in Reason Native** and being able to distribute it as a binary, enjoy it's performance and try further with cross-compilation.
+- **Learn how to write a Programming Language with the OCaml stack** using `menhir` and `sedlex` with great error messages.
+- **Create a CLI tool in Reason Native** and being able to distribute it as a binary (for performance) and as a JavaScript library (for portability).
 
-## Intro
-
-```bash
-query-json ".store.books | filter(.price > 10)" stores.json
-```
-
-This would access to `"store"` field inside the **stores.json**, access to `"books"` field, (since it's an array) it will run a filter on each item and if `"price"` field is bigger than 10 will keep that item on the list, and finally print the resultant list.
-
-```json
-[
-  {
-    "title": "War and Peace",
-    "author": "Leo Tolstoy",
-    "price": 12.0
-  },
-  {
-    "title": "Lolita",
-    "author": "Vladimir Nabokov",
-    "price": 13.0
-  }
-]
-```
+[![asciicast](https://asciinema.org/a/Waf1UiiEyGVXbnAq1TOaL0smE.svg)](https://asciinema.org/a/Waf1UiiEyGVXbnAq1TOaL0smE)
 
 ## It brings
 
@@ -199,7 +180,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be, learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me [@twitter](https://twitter.com/davesnx) or email (dsnxmoreno@gmail.com).
+Contributions are what make the open source community such an amazing place to be, learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me [@twitter](https://twitter.com/davesnx) or email dsnxmoreno at gmail dot com.
 
 ### Support
 
