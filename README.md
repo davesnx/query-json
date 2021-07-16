@@ -14,14 +14,14 @@
 
 **query-json** allows you to write small programs to operate on top of json files with a concise syntax.
 
+[![asciicast](https://asciinema.org/a/b6g6ar2cQSAEAyn5qe7ptr98Q.svg)](https://asciinema.org/a/b6g6ar2cQSAEAyn5qe7ptr98Q)
+
 ## Purpose
 
 It was created with mostly two reasons, learning and having fun.
 
 - **Learn how to write a Programming Language with the OCaml stack** using `menhir` and `sedlex` with great error messages.
 - **Create a CLI tool in Reason Native** and being able to distribute it as a binary (for performance) and as a JavaScript library (for portability).
-
-[![asciicast](https://asciinema.org/a/Waf1UiiEyGVXbnAq1TOaL0smE.svg)](https://asciinema.org/a/Waf1UiiEyGVXbnAq1TOaL0smE)
 
 ## It brings
 
