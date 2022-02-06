@@ -39,24 +39,32 @@
       ]
     }
   },
-  "devDependencies": {
+  "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
-    "@opam/bisect_ppx": "2.6.0",
-    "@opam/dune": ">=2.8.4",
     "@opam/menhir": "20201216",
     "@opam/ppx_deriving": "5.2.1",
     "@opam/sedlex": "2.3",
     "@opam/yojson": "1.7.0",
-    "@reason-native/console": "^0.1.0",
-    "@reason-native/rely": "^3.2.1",
-    "ocaml": "4.10.0",
-    "@opam/ocaml-lsp-server": "1.4.1",
-    "@opam/cmdliner": "1.0.4",
-    "bats": "^1.1.0"
+    "ocaml": "4.10.2000",
+    "@opam/cmdliner": "1.0.4"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@opam/bisect_ppx": "2.6.0",
+    "@opam/dune": ">=2.8.4",
+    "@opam/ocaml-lsp-server": "1.4.1",
     "@opam/js_of_ocaml": "3.9.0",
     "@opam/js_of_ocaml-compiler": "3.9.0",
-    "@opam/js_of_ocaml-ppx": "3.9.0"
+    "@reason-native/console": "*",
+    "@opam/rely": "*",
+    "@opam/js_of_ocaml-ppx": "3.9.0",
+    "bats": "^1.1.0",
+    "@opam/jsoo-react": "*",
+    "@opam/jsoo-css": "*"
+  },
+  "resolutions": {
+    "@opam/jsoo-react": "ml-in-barcelona/jsoo-react:jsoo-react.opam#9e86c9f",
+    "@opam/jsoo-css": "ml-in-barcelona/jsoo-css:jsoo-css.opam#daf3228",
+    "@opam/rely": "jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18",
+    "@reason-native/console": "jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18"
   }
 }

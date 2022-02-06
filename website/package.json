@@ -1,0 +1,32 @@
+{
+  "name": "website",
+  "version": "0.0.0",
+  "scripts": {
+    "start": "run-p --aggregate-output re:watch js:build server",
+    "js:build": "wait-on ./src/Index.bs.js && esbuild ./src/Index.bs.js --platform=browser --outfile=dist/js/bundle.js --bundle --define:process.env.NODE_ENV='\"development\"'",
+    "js:build:production": "esbuild ./src/Index.bs.js --outfile=dist/js/bundle.js --minify --bundle --platform=browser --define:process.env.NODE_ENV='\"production\"'",
+    "server": "PORT=5000 live-server . --host=localhost",
+    "build": "run-s re:build js:build",
+    "build:prod": "run-s re:build js:build:production",
+    "re:build": "rescript",
+    "re:watch": "rescript build -w",
+    "re:clean": "rescript clean"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.1.3",
+    "esbuild": "^0.10.2",
+    "gh-pages": "^3.1.0",
+    "live-server": "^1.2.1",
+    "netlify-cli": "^2.65.0",
+    "npm-run-all": "^4.1.5",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "wait-on": "^5.3.0"
+  },
+  "browser": {
+    "fs": false,
+    "tty": false,
+    "constants": false,
+    "child_process": false
+  }
+}
