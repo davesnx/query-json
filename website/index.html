@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>query-json playground</title>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;800&display=swap" rel="stylesheet">
+    <script async src="https://cdn.splitbee.io/sb.js"></script>
+
+    <style type="text/css">
+      * {
+        font-family: "IBM Plex Mono", monospace;
+        box-sizing: border-box;
+      }
+
+      html, body, #root {
+        overflow: hidden;
+        margin: 0;
+        height: 100vh;
+        width: 100vw;
+      }
+
+      .non-scroll {
+        overflow: scroll;
+        height: 100%;
+      }
+
+      input, textarea {
+        padding: 8px;
+      }
+
+      textarea:active,
+      input:active,
+      textarea:focus,
+      input:focus {
+        /* background: rgb(237, 242, 247); */
+        outline: 2px solid rgba(50, 100, 255, 0.6);
+      }
+
+      .monaco-editor {
+        padding: 8px 0;
+      }
+
+      /* Monaco's editor parent element */
+      section {
+        overflow: hidden;
+      }
+
+      button {
+        padding: 8px 12px;
+      }
+
+      svg {
+        fill: currentColor;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./js/bundle.js"></script>
+  </body>
+</html>

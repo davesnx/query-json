@@ -1,5 +1,7 @@
 open Belt;
 
+let noop2 = (_, _) => ();
+
 module Router = {
   include ReasonReactRouter;
 };
@@ -242,8 +244,7 @@ module Box = [%styled.div
 module EmptyOutput = {
   [@react.component]
   let make = () => {
-    let noop = (_, _) => ();
-    <Editor mode=Editor.Text value="" onChange=noop isReadOnly=true />;
+    <Editor mode=Editor.Text value="" onChange=noop2 isReadOnly=true />;
   };
 };
 
@@ -255,10 +256,10 @@ module Output = {
       | Ok(o) => o
       | Error(e) =>
         /* TODO:
-            Instead of removing the '[m' characters, Console and Compiler
-            shoudn't add those if there's colorize=false. It's a tedious task,
-            to pass that flag to all Chalk calls and Compiler calls.
-            That's why we transform the output. */
+            Instead of removing the '[m' characters from Console and Compiler.
+            They shoudn't add those if there's colorize=false.
+            To sovle that, you would need to pass the flag to all Chalk and Compiler
+            calls, which is a tedious task. Instead, we remove them here ^^ */
         Js.String.replaceByRe([%re "/\[\\d+m/g"], "", e)
       };
 
@@ -268,7 +269,7 @@ module Output = {
       mode={hasError ? Editor.Text : Editor.Json}
       value=text
       isReadOnly=hasError
-      onChange={(_, _) => ()}
+      onChange=noop2
     />;
   };
 };
@@ -389,7 +390,7 @@ let make = () => {
           <SpacerRight />
         </ColumnHalf>
         <ColumnHalf>
-          <div className="non-scroll">
+          <div>
             <SpacerLeft>
               {switch (state.output) {
                | Some(value) => <Output value />

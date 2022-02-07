@@ -2,11 +2,7 @@ module Typography = {
   type color = [ | `White | `Dark | `Grey];
   type size = [ | `Small | `Medium | `Large | `XXLarge];
   type leading = [ | `None | `Tight | `Snug | `Normal | `Relaxed | `Loose];
-  type align = [ | `Left | `Right | `Center | `Justify];
-  type tracking = [ | `Tight | `Normal | `Wide];
   type weight = [ | `Normal | `Bold];
-
-  type fontFamily = [ | `Sans | `Mono];
 
   [@react.component]
   let make =
@@ -22,16 +18,6 @@ module Typography = {
         ~fontFamily: fontFamily=`Sans,
         ~children,
       ) => {
-    let _tracking =
-      switch (tracking) {
-      | `Tighter => "tracking-tighter"
-      | `Tight => "tracking-tight"
-      | `Normal => "tracking-normal"
-      | `Wide => "tracking-wide"
-      | `Wider => "tracking-wider"
-      | `Widest => "tracking-widest"
-      };
-
     let size =
       switch (size) {
       | `XSmall => [%cx "font-size: 14px"]
@@ -46,20 +32,6 @@ module Typography = {
       switch (weight) {
       | `Normal => [%cx "font-weight: 400"]
       | `Bold => [%cx "font-weight: 700"]
-      };
-
-    let _align =
-      switch (align) {
-      | `Left => "text-left"
-      | `Right => "text-right"
-      | `Justify => "text-justify"
-      | `Center => "text-center"
-      };
-
-    let _fontFamily =
-      switch (fontFamily) {
-      | `Sans => "font-sans"
-      | `Mono => "font-mono"
       };
 
     let color =
