@@ -1,6 +1,13 @@
 (executable
  (name Website)
  (modes js)
- (libraries console.lib source yojson cmdliner js_of_ocaml jsoo-react.lib)
+ (libraries
+  console.lib
+  source
+  yojson
+  cmdliner
+  js_of_ocaml
+  jsoo-react.lib
+  jsoo-css)
  (preprocess
   (pps jsoo-react.ppx)))
