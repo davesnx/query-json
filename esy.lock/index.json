@@ -1,5 +1,5 @@
 {
-  "checksum": "a9ba3a43be76fe94fe091ec742cf2f6b",
+  "checksum": "a8ebcd019cf6ab9c5df62c615769aa93",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.2000@d41d8cd9": {
@@ -422,6 +422,34 @@
       ],
       "devDependencies": [
         "ocaml@4.10.2000@d41d8cd9", "@opam/yojson@opam:1.7.0@69d87312",
+        "@opam/dune@opam:2.9.3@f57a6d69"
+      ]
+    },
+    "@opam/ppx_jsobject_conv@opam:0.9.0@1746a4b0": {
+      "id": "@opam/ppx_jsobject_conv@opam:0.9.0@1746a4b0",
+      "name": "@opam/ppx_jsobject_conv",
+      "version": "opam:0.9.0",
+      "source": {
+        "type": "install",
+        "source": [
+          "archive:https://opam.ocaml.org/cache/md5/84/84c5da220a181b78faaa6064967c69fc#md5:84c5da220a181b78faaa6064967c69fc",
+          "archive:https://github.com/little-arhat/ppx_jsobject_conv/archive/v0.9.0.tar.gz#md5:84c5da220a181b78faaa6064967c69fc"
+        ],
+        "opam": {
+          "name": "ppx_jsobject_conv",
+          "version": "0.9.0",
+          "path": "esy.lock/opam/ppx_jsobject_conv.0.9.0"
+        }
+      },
+      "overrides": [],
+      "dependencies": [
+        "ocaml@4.10.2000@d41d8cd9", "@opam/ppxlib@opam:0.24.0@4c00d6db",
+        "@opam/js_of_ocaml@opam:3.9.0@db27df96",
+        "@opam/dune@opam:2.9.3@f57a6d69", "@esy-ocaml/substs@0.0.1@d41d8cd9"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.2000@d41d8cd9", "@opam/ppxlib@opam:0.24.0@4c00d6db",
+        "@opam/js_of_ocaml@opam:3.9.0@db27df96",
         "@opam/dune@opam:2.9.3@f57a6d69"
       ]
     },
@@ -1324,6 +1352,7 @@
       "dependencies": [
         "ocaml@4.10.2000@d41d8cd9", "@opam/yojson@opam:1.7.0@69d87312",
         "@opam/sedlex@opam:2.3@20d8fda6",
+        "@opam/ppx_jsobject_conv@opam:0.9.0@1746a4b0",
         "@opam/ppx_deriving@opam:5.2.1@089e5dd3",
         "@opam/ocaml-lsp-server@opam:1.4.1@cd85c376",
         "@opam/menhir@opam:20201216@3fe1873a",
@@ -1334,7 +1363,6 @@
         "bats@1.5.0@d41d8cd9",
         "@reason-native/console@github:jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
         "@opam/rely@github:jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
-        "@opam/ocaml-lsp-server@opam:1.4.1@cd85c376",
         "@opam/jsoo-react@github:ml-in-barcelona/jsoo-react:jsoo-react.opam#9e86c9f@d41d8cd9",
         "@opam/jsoo-css@github:ml-in-barcelona/jsoo-css:jsoo-css.opam#daf3228@d41d8cd9",
         "@opam/js_of_ocaml-ppx@opam:3.9.0@8454b2f9",

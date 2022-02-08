@@ -2,5 +2,5 @@
  (name Bin)
  (modes native)
  (public_name Bin)
- (libraries console.lib source yojson cmdliner unix)
-)
+ (package query-json)
+ (libraries console.lib source yojson cmdliner unix))

@@ -7,7 +7,7 @@
   "license": "MIT",
   "homepage": "https://github.com/davesnx/query-json",
   "keywords": [
-    "reason", "ocaml", "jq", "json", "reason-native", "menhir", "cli"
+    "reason", "ocaml", "jq", "json", "reason-native", "menhir", "sedlex", "cli", "jsoo", "jsoo-react"
   ],
   "bugs": { "url": "https://github.com/davesnx/query-json/issues" },
   "repository": {
@@ -32,6 +32,7 @@
     "@opam/menhir": "20201216",
     "@opam/ocaml-lsp-server": "1.4.1",
     "@opam/ppx_deriving": "5.2.1",
+    "@opam/ppx_jsobject_conv": "0.9.0",
     "@opam/sedlex": "2.3",
     "@opam/yojson": "1.7.0",
     "ocaml": "4.10.2000"
@@ -39,7 +40,6 @@
   "devDependencies": {
     "@opam/bisect_ppx": "2.6.0",
     "@opam/dune": ">=2.8.4",
-    "@opam/ocaml-lsp-server": "*",
     "@opam/js_of_ocaml": "3.9.0",
     "@opam/js_of_ocaml-compiler": "3.9.0",
     "@reason-native/console": "*",
