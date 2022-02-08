@@ -1,22 +1,15 @@
 {
   "name": "@davesnx/query-json",
   "version": "0.5.20",
-  "description": "faster and simpler re-implementation of jq in Reason Native",
+  "description":
+    "faster and simpler re-implementation of jq in Reason Native",
   "author": "davesnx <dsnxmoreno@gmail.com>",
   "license": "MIT",
   "homepage": "https://github.com/davesnx/query-json",
   "keywords": [
-    "reason",
-    "ocaml",
-    "jq",
-    "json",
-    "reason-native",
-    "menhir",
-    "cli"
+    "reason", "ocaml", "jq", "json", "reason-native", "menhir", "cli"
   ],
-  "bugs": {
-    "url": "https://github.com/davesnx/query-json/issues"
-  },
+  "bugs": { "url": "https://github.com/davesnx/query-json/issues" },
   "repository": {
     "type": "git",
     "url": "https://github.com/davesnx/query-json.git"
@@ -30,28 +23,23 @@
   "esy": {
     "build": "dune build -p query-json",
     "buildsInSource": "_build",
-    "buildEnv": {
-      "ODOC_SYNTAX": "re"
-    },
-    "release": {
-      "bin": [
-        "Bin"
-      ]
-    }
+    "buildEnv": { "ODOC_SYNTAX": "re" },
+    "release": { "bin": [ "Bin" ] }
   },
   "dependencies": {
     "@esy-ocaml/reason": "~3.6.0",
+    "@opam/cmdliner": "1.0.4",
     "@opam/menhir": "20201216",
+    "@opam/ocaml-lsp-server": "1.4.1",
     "@opam/ppx_deriving": "5.2.1",
     "@opam/sedlex": "2.3",
     "@opam/yojson": "1.7.0",
-    "ocaml": "4.10.2000",
-    "@opam/cmdliner": "1.0.4"
+    "ocaml": "4.10.2000"
   },
   "devDependencies": {
     "@opam/bisect_ppx": "2.6.0",
     "@opam/dune": ">=2.8.4",
-    "@opam/ocaml-lsp-server": "1.4.1",
+    "@opam/ocaml-lsp-server": "*",
     "@opam/js_of_ocaml": "3.9.0",
     "@opam/js_of_ocaml-compiler": "3.9.0",
     "@reason-native/console": "*",
@@ -64,7 +52,9 @@
   "resolutions": {
     "@opam/jsoo-react": "ml-in-barcelona/jsoo-react:jsoo-react.opam#9e86c9f",
     "@opam/jsoo-css": "ml-in-barcelona/jsoo-css:jsoo-css.opam#daf3228",
-    "@opam/rely": "jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18",
-    "@reason-native/console": "jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18"
+    "@opam/rely":
+      "jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18",
+    "@reason-native/console":
+      "jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18"
   }
 }

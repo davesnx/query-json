@@ -1,5 +1,5 @@
 {
-  "checksum": "e7632eb103c025439956d506fbebe859",
+  "checksum": "a9ba3a43be76fe94fe091ec742cf2f6b",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.2000@d41d8cd9": {
@@ -1325,6 +1325,7 @@
         "ocaml@4.10.2000@d41d8cd9", "@opam/yojson@opam:1.7.0@69d87312",
         "@opam/sedlex@opam:2.3@20d8fda6",
         "@opam/ppx_deriving@opam:5.2.1@089e5dd3",
+        "@opam/ocaml-lsp-server@opam:1.4.1@cd85c376",
         "@opam/menhir@opam:20201216@3fe1873a",
         "@opam/cmdliner@opam:1.0.4@93208aac",
         "@esy-ocaml/reason@3.6.2@d41d8cd9"
