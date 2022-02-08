@@ -1,42 +1,8 @@
-/* module Monaco = {
-  type padding = {
-    bottom: int,
-    top: int,
-  };
+type mode =
+  | Text
+  | Json;
 
-  type minimap = {enabled: bool};
-
-  /* Partial list of https://microsoft.github.io/monaco-editor/api/modules/monaco.editor.html */
-  /* https://microsoft.github.io/monaco-editor/playground.html */
-  type options = {
-    fontSize: int,
-    fontFamily: string,
-    glyphMargin: bool,
-    lineNumbersMinChars: int,
-    padding,
-    minimap,
-    wordWrap: string,
-    selectionHighlight: bool,
-    occurrencesHighlight: bool,
-    matchBrackets: string,
-    readOnly: bool,
-  };
-
-  [@react.component] [@bs.module "@monaco-editor/react"]
-  external make:
-    (
-      ~language: string,
-      ~height: string,
-      ~value: string,
-      ~onChange: (React.Event.Form.t, string) => unit,
-      ~className: string=?,
-      ~style: ReactDOMRe.Style.t=?,
-      ~theme: string,
-      ~options: options
-    ) =>
-    React.element =
-    "default";
-};
+let noop2 = (_, _) => ();
 
 let options: Monaco.options = {
   fontSize: 16,
@@ -57,17 +23,11 @@ let options: Monaco.options = {
   readOnly: false,
 };
 
-type mode =
-  | Text
-  | Json;
-
-let noop2 = (_, _) => ();
-
 [@react.component]
 let make =
     (
       ~value: string,
-      ~onChange: (ReactEvent.Form.t, string) => unit,
+      ~onChange: (React.Event.Form.t, string) => unit,
       ~mode,
       ~isReadOnly: bool,
     ) => {
@@ -86,7 +46,6 @@ let make =
     onChange
     options={...options, readOnly: isReadOnly}
     theme="dark"
-    style={ReactDOMRe.Style.make(~padding="8px", ())}
+    style={React.Dom.Style.(make([|padding("8px")|]))}
   />;
 };
- */

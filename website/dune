@@ -3,11 +3,16 @@
  (modes js)
  (libraries
   console.lib
-  source
+  query-json-js
   yojson
-  cmdliner
   js_of_ocaml
   jsoo-react.lib
   jsoo-css)
  (preprocess
-  (pps jsoo-react.ppx)))
+  (pps jsoo-react.ppx ppx_jsobject_conv)))
+
+(rule
+ (targets Monaco.ml)
+ (deps Monaco.mli)
+ (action
+  (run %{bin:gen_js_api} -o %{targets} %{deps})))

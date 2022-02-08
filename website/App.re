@@ -5,23 +5,49 @@ open Jsoo_css;
 let noop2 = (_, _) => ();
 
 module Router = {
-  /* include ReasonReactRouter; */
+  open Js_of_ocaml;
+  let getHash = (): option(string) => {
+    let url = Url.Current.get();
+    switch (url) {
+      | Some(Http(http_url)) => Some(http_url.hu_fragment)
+      | Some(Https(http_url)) => Some(http_url.hu_fragment)
+      | _ => None
+    }
+  };
+
+  let setHash = (_hash): unit => {
+    ();
+    /* Url.Current.setHash(hash); */
+  };
 };
 
-/* module Base64 = {
-  [@bs.val] external btoa: string => string = "window.btoa";
-  [@bs.val] external atob: string => string = "window.atob";
+module Value = {
+  type t;
+  type prop = string;
+  external pure_js_expr: string => 'a = "caml_pure_js_expr";
+  external get: (t, prop) => t = "caml_js_get";
+  external set: (t, prop, t) => unit = "caml_js_set";
+  external apply: (t, array(t)) => 'a = "caml_js_fun_call";
 
-  let encode = string =>
-    try(Ok(btoa(string))) {
-    | _exn => Error("There was a problem turning string to Base64")
+  external of_string: string => t = "caml_jsstring_of_string";
+  external to_string: t => string = "caml_string_of_jsstring";
+  let global = pure_js_expr("globalThis");
+};
+
+module Base64 = {
+  type data = Value.t;
+  let encode = bs =>
+    switch (Value.apply(Value.get(Value.global, "btoa"), Value.([|of_string(bs)|]))) {
+    | Ok(v) => Ok(Value.to_string(v))
+    | Error(e) => Error(e)
     };
 
-  let decode = string =>
-    try(Ok(atob(string))) {
-    | _exn => Error("There was a problem turning Base64 to string")
+  let decode = s =>
+    switch (Value.apply(Value.get(Value.global, "atob"), Value.([|of_string(s)|]))) {
+    | Ok(v) => Ok(Value.to_string(v))
+    | Error(e) => Error(e)
     };
-}; */
+};
 
 let empty = opt => {
   switch (opt) {
@@ -66,14 +92,14 @@ let mockJson = {|{
 
 module Spacer = {
   type spacer = Top | Bottom | Left | Right;
-  let className = (~direction as _, ~value=0, _) => {
+  let className = (~direction as directionValue, ~value=0, _) => {
     Emotion.(make([|
-      /* switch (direction) {
+      switch (directionValue) {
         | Top => marginTop(px(value * 8))
         | Bottom => marginBottom(px(value * 8))
         | Left => marginLeft(px(value * 8))
         | Right => marginRight(px(value * 8))
-      } */
+      }
     |]))
   };
 
@@ -98,7 +124,7 @@ let container = Emotion.(make([|
   height(`vh(80.))
 |]));
 
-let columnhalf = Emotion.(make([|
+let columnHalf = Emotion.(make([|
   width(`percent(50.)),
   height(`percent(100.))
 |]));
@@ -109,6 +135,33 @@ let row = Emotion.(make([|
   width(`percent(100.)),
   height(`percent(100.))
 |]));
+
+module Query = {
+  let className = Emotion.(make([|
+    width(`percent(100.)),
+    unsafe("border", "none"),
+    background(rgb(32, 33, 36)),
+    fontSize(px(18)),
+    color(rgb(237, 242, 247)),
+  |]));
+
+  [@react.component]
+  let make = (~value, ~placeholder, ~onChange) => {
+    let onChangeHandler = _event => {
+      let value = ""; /* React.Event.Form.target(event)##value; */
+      onChange(value);
+    };
+
+    <input
+      className
+      type_="text"
+      value
+      placeholder
+      onChange=onChangeHandler
+    />;
+  };
+};
+
 
 module Header = {
   let menu = Emotion.(make([|
@@ -144,7 +197,7 @@ module Header = {
     |]),
   |]));
 
-  let button = Emotion.(make([|
+  let button_ = Emotion.(make([|
     unsafe("border", "none"),
     color(hex("FAFAFA")),
     backgroundColor(rgb(43, 75, 175)),
@@ -155,9 +208,9 @@ module Header = {
     |]),
   |]));
 
-
   [@react.component]
   let make = (~onShareClick) => {
+
     <Spacer direction=Bottom value=4>
       <div className=menu>
         <div className=wrapper>
@@ -169,7 +222,7 @@ module Header = {
               href="https://twitter.com/davesnx" target="_blank" rel="noopener">
               <Icons.Twitter />
             </a>
-            <Spacer direction=Left value={2}>
+            <Spacer direction=Left value=2>
               <a className=link
                 href="https://github.com/davesnx/query-json"
                 target="_blank"
@@ -177,8 +230,8 @@ module Header = {
                 <Icons.Github />
               </a>
             </Spacer>
-            <Spacer direction=Left value={2}>
-              <button className=button onClick=onShareClick>
+            <Spacer direction=Left value=2>
+              <button className=button_ onClick=onShareClick>
                 <Text> {"Share unique URL" |> React.string} </Text>
               </button>
             </Spacer>
@@ -189,53 +242,10 @@ module Header = {
   };
 };
 
-module Query = {
-  let className = Emotion.(make([|
-    width(`percent(100)),
-    border(`none),
-    background(`rgb(32, 33, 36)),
-    fontSize(px(18)),
-    color(rgb(237, 242, 247)),
-  |]));
-
-  [@react.component]
-  let make = (~value, ~placeholder, ~onChange) => {
-    let onChangeHandler = event => {
-      let value = React.Event.Form.target(event)##value;
-      onChange(value);
-    };
-
-    <input
-      type_="text"
-      value
-      placeholder
-      onChange=onChangeHandler
-      className
-    />;
-  };
-};
-
-module Json = {
-  [@react.component]
-  let make = (~value as _, ~onChange) => {
-    let _onChangeHandler = (_event, value) => {
-      onChange(value);
-    };
-
-    /* <Editor
-      mode=Editor.Json
-      value
-      onChange=onChangeHandler
-      isReadOnly=false
-    />; */
-    React.null;
-  };
-};
-
 let box = Emotion.(make([|
   backgroundColor(rgb(237, 242, 247)),
-  height(`percent(100)),
-  width(`percent(100)),
+  height(`percent(100.)),
+  width(`percent(100.)),
   borderRadius(px(6)),
 |]));
 
@@ -246,13 +256,29 @@ module EmptyOutput = {
   };
 };
 
+module Json = {
+  [@react.component]
+  let make = (~value, ~onChange) => {
+    let onChangeHandler = (_event, value) => {
+      onChange(value);
+    };
+
+    <Editor
+      mode=Editor.Json
+      value
+      onChange=onChangeHandler
+      isReadOnly=false
+    />;
+  };
+};
+
 module Output = {
   [@react.component]
-  let make = (~value: response) => {
+  let make = (~value) => {
     let text =
       switch (value) {
       | Ok(o) => o
-      | Error(e) =>
+      | Error(_e) =>
         /* TODO:
             Instead of removing the '[m' characters from Console and Compiler.
             They shoudn't add those if there's colorize=false.
@@ -262,7 +288,7 @@ module Output = {
         ""
       };
 
-    let hasError = Result.isError(value);
+    let hasError = Result.is_error(value);
 
     <Editor
       mode={hasError ? Editor.Text : Editor.Json}
@@ -276,7 +302,7 @@ module Output = {
 type t = {
   query: string,
   json: option(string),
-  output: option(response),
+  output: option(result(string, string)),
 };
 
 type actions =
@@ -291,17 +317,16 @@ let reduce = (state, action) => {
   | ComputeOutput =>
     switch (state.json) {
     | Some(json) =>
-      let result = queryJson(state.query, json);
-      Js.log(result);
+      let result = QueryJsonJs.run(state.query, json);
       {...state, output: Some(result)};
     | None => state
     }
   };
 };
 
-module QueryParams = {
-  [@decco]
-  type t = {
+/* module QueryParams = {
+  [@deriving jsobject]
+  type hash = {
     query: string,
     json: option(string),
   };
@@ -309,33 +334,31 @@ module QueryParams = {
     {query: qp.query, json: qp.json, output: None};
   };
 
-  let decode = (json: Js.Json.t) => {
-    switch (t_decode(json)) {
+  let decode = (json) => {
+    switch (hash_of_jsobject(json)) {
     | Ok(o) => Ok(o)
     | Error(_) => Error("Problem decoding QueryParams")
     };
   };
 
-  let encode = (queryParams): Js.Json.t => {
-    t_encode(queryParams);
+  let encode = (queryParams: hash): string => {
+    jsobject_of_hash(queryParams);
   };
-};
+}; */
 
-/* [@react.component]
+[@react.component]
 let make = () => {
-  let url = Router.useUrl();
+  let _hash = Router.getHash();
 
-  let urlState =
-    switch (url.hash) {
-    | data when String.length(data) > 0 =>
-      let base64 = Base64.decode(data);
-      let json = Result.map(base64, Js.Json.parseExn);
-      switch (Result.flatMap(json, QueryParams.decode)) {
-      | Ok(res) => Some(res)
-      | Error(_) => None
+  /* let urlState =
+    switch (hash) {
+    | None => None
+    | Some(data) => {
+        let base64 = Base64.decode(data);
+        let json = Result.map(base64, Js.Json.parseExn);
+        let res = Result.bind(json, QueryParams.decode)
+        res |> Result.to_option;
       };
-    | "" => None
-    | _ => None
     };
 
   let initialState =
@@ -345,8 +368,9 @@ let make = () => {
       let newState = QueryParams.toState(state);
       {...newState, output: Some(result)};
     | None => {query: "", json: Some(mockJson), output: None}
-    };
+    }; */
 
+  let initialState = {query: "", json: Some(mockJson), output: None};
   let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
@@ -360,46 +384,47 @@ let make = () => {
   };
 
   let onShareClick = _ => {
-    let seachParams =
+    ();
+    /* let searchParams =
       QueryParams.encode({query: state.query, json: state.json});
-    let searchString = Js.Json.stringifyWithSpace(seachParams, 2);
-    let encodedSearch = Base64.encode(searchString);
+    let encodedHash = Base64.encode(searchParams);
 
-    switch (encodedSearch) {
-    | Ok(url) => Router.push("#" ++ url)
+    switch (encodedHash) {
+    | Ok(hash) => Router.setHash(hash)
     | Error(_) => ()
-    };
+    }; */
   };
 
-  <Page>
+  <div className=page>
     <Header onShareClick />
-    <Container>
-      <Query
-        value={state.query}
-        placeholder="Type the filter, ex: '.'"
-        onChange=onQueryChange
-      />
-      <Spacer direction=Bottom value={2} />
-      <Row>
-        <ColumnHalf>
-          <Json
-            value={Option.getWithDefault(state.json, "")}
-            onChange=onJsonChange
-          />
-          <Spacer direction=Right value={2} />
-        </ColumnHalf>
-        <ColumnHalf>
+    <div className=container>
+      <Spacer direction=Bottom value=2>
+        <Query
+          value={state.query}
+          placeholder="Type the filter, for example: '.'"
+          onChange=onQueryChange
+        />
+      </Spacer>
+      <div className=row>
+        <div className=columnHalf>
+          <Spacer direction=Right value=2>
+            <Json
+              value={Option.value(state.json, ~default="")}
+              onChange=onJsonChange
+            />
+          </Spacer>
+        </div>
+        <div className=columnHalf>
           <div>
-            <Spacer direction=Left value={2}>
+            <Spacer direction=Left value=2>
               {switch (state.output) {
                | Some(value) => <Output value />
                | None => <EmptyOutput />
                }}
             </Spacer>
           </div>
-        </ColumnHalf>
-      </Row>
-    </Container>
-  </Page>;
+        </div>
+      </div>
+    </div>
+  </div>;
 };
- */
