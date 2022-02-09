@@ -2,8 +2,6 @@ open React.Dom.Dsl;
 open Html;
 open Jsoo_css;
 
-let noop2 = (_, _) => ();
-
 module Router = {
   open Js_of_ocaml;
   let getHash = (): option(string) => {
@@ -90,27 +88,6 @@ let mockJson = {|{
 }
 |};
 
-module Spacer = {
-  type spacer = Top | Bottom | Left | Right;
-  let className = (~direction as directionValue, ~value=0, _) => {
-    Emotion.(make([|
-      switch (directionValue) {
-        | Top => marginTop(px(value * 8))
-        | Bottom => marginBottom(px(value * 8))
-        | Left => marginLeft(px(value * 8))
-        | Right => marginRight(px(value * 8))
-      }
-    |]))
-  };
-
-  [@react.component]
-  let make = (~direction: spacer, ~value: int, ~children) => {
-    <div className={className(~direction, ~value, ())}>
-      ...children
-    </div>
-  }
-};
-
 let page = Emotion.(make([|
   display(`flex),
   flexDirection(`column),
@@ -136,168 +113,12 @@ let row = Emotion.(make([|
   height(`percent(100.))
 |]));
 
-module Query = {
-  let className = Emotion.(make([|
-    width(`percent(100.)),
-    unsafe("border", "none"),
-    background(rgb(32, 33, 36)),
-    fontSize(px(18)),
-    color(rgb(237, 242, 247)),
-  |]));
-
-  [@react.component]
-  let make = (~value, ~placeholder, ~onChange) => {
-    let onChangeHandler = _event => {
-      let value = ""; /* React.Event.Form.target(event)##value; */
-      onChange(value);
-    };
-
-    <input
-      className
-      type_="text"
-      value
-      placeholder
-      onChange=onChangeHandler
-    />;
-  };
-};
-
-
-module Header = {
-  let menu = Emotion.(make([|
-    width(vw(100.)),
-    height(vh(7.)),
-    background(rgb(32, 33, 37)),
-  |]));
-
-  let wrapper = Emotion.(make([|
-    width(vw(75.)),
-    height(`percent(100.)),
-    /* margin2(~h=0, ~w=`auto), */
-    display(`flex),
-    justifyContent(`spaceBetween),
-    alignItems(`center)
-  |]));
-
-  let distribute = Emotion.(make([|
-    display(`flex),
-    flexDirection(`row),
-    alignItems(`center)
-  |]));
-
-  let link = Emotion.(make([|
-    textDecoration(`none),
-    color(hex("FAFAFA")),
-    cursor(`pointer),
-    display(`inlineFlex),
-    alignItems(`center),
-
-    selector("&:hover", [|
-      opacity(0.6)
-    |]),
-  |]));
-
-  let button_ = Emotion.(make([|
-    unsafe("border", "none"),
-    color(hex("FAFAFA")),
-    backgroundColor(rgb(43, 75, 175)),
-    cursor(`pointer),
-
-    selector("&:hover", [|
-      backgroundColor(rgba(43, 75, 175, `percent(80.))),
-    |]),
-  |]));
-
-  [@react.component]
-  let make = (~onShareClick) => {
-
-    <Spacer direction=Bottom value=4>
-      <div className=menu>
-        <div className=wrapper>
-          <div className=distribute>
-            <Text color=`White kind=`H2> {"query-json" |> React.string} </Text>
-          </div>
-          <div className=distribute>
-            <a className=link
-              href="https://twitter.com/davesnx" target="_blank" rel="noopener">
-              <Icons.Twitter />
-            </a>
-            <Spacer direction=Left value=2>
-              <a className=link
-                href="https://github.com/davesnx/query-json"
-                target="_blank"
-                rel="noopener">
-                <Icons.Github />
-              </a>
-            </Spacer>
-            <Spacer direction=Left value=2>
-              <button className=button_ onClick=onShareClick>
-                <Text> {"Share unique URL" |> React.string} </Text>
-              </button>
-            </Spacer>
-          </div>
-        </div>
-      </div>
-    </Spacer>;
-  };
-};
-
 let box = Emotion.(make([|
   backgroundColor(rgb(237, 242, 247)),
   height(`percent(100.)),
   width(`percent(100.)),
   borderRadius(px(6)),
 |]));
-
-module EmptyOutput = {
-  [@react.component]
-  let make = () => {
-    <Editor mode=Editor.Text value="" onChange=noop2 isReadOnly=true />;
-  };
-};
-
-module Json = {
-  [@react.component]
-  let make = (~value, ~onChange) => {
-    let onChangeHandler = (_event, value) => {
-      onChange(value);
-    };
-
-    <Editor
-      mode=Editor.Json
-      value
-      onChange=onChangeHandler
-      isReadOnly=false
-    />;
-  };
-};
-
-module Output = {
-  [@react.component]
-  let make = (~value) => {
-    let text =
-      switch (value) {
-      | Ok(o) => o
-      | Error(_e) =>
-        /* TODO:
-            Instead of removing the '[m' characters from Console and Compiler.
-            They shoudn't add those if there's colorize=false.
-            To sovle that, you would need to pass the flag to all Chalk and Compiler
-            calls, which is a tedious task. Instead, we remove them here ^^ */
-        /* Js.String.replaceByRe([%re "/\[\\d+m/g"], "", e) */
-        ""
-      };
-
-    let hasError = Result.is_error(value);
-
-    <Editor
-      mode={hasError ? Editor.Text : Editor.Json}
-      value=text
-      isReadOnly=hasError
-      onChange=noop2
-    />;
-  };
-};
 
 type t = {
   query: string,
@@ -399,7 +220,7 @@ let make = () => {
     <Header onShareClick />
     <div className=container>
       <Spacer direction=Bottom value=2>
-        <Query
+        <TextInput
           value={state.query}
           placeholder="Type the filter, for example: '.'"
           onChange=onQueryChange
@@ -408,7 +229,7 @@ let make = () => {
       <div className=row>
         <div className=columnHalf>
           <Spacer direction=Right value=2>
-            <Json
+            <Editor.Json
               value={Option.value(state.json, ~default="")}
               onChange=onJsonChange
             />
@@ -418,8 +239,8 @@ let make = () => {
           <div>
             <Spacer direction=Left value=2>
               {switch (state.output) {
-               | Some(value) => <Output value />
-               | None => <EmptyOutput />
+               | Some(value) => <Editor.Output value />
+               | None => <Editor.Empty />
                }}
             </Spacer>
           </div>
