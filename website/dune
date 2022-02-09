@@ -10,9 +10,3 @@
   jsoo-css)
  (preprocess
   (pps jsoo-react.ppx ppx_jsobject_conv)))
-
-(rule
- (targets Monaco.ml)
- (deps Monaco.mli)
- (action
-  (run %{bin:gen_js_api} -o %{targets} %{deps})))
