@@ -32,4 +32,4 @@ external make:
     ~options: options
   ) =>
   React.element =
-  {|require("@monaco-editor/react")|};
+  {|require("@monaco-editor/react").Editor|};
