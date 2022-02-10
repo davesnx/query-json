@@ -6,7 +6,7 @@ let menu =
   Emotion.(
     make([|
       width(vw(100.)),
-      height(vh(7.)),
+      padding2(~h=`zero, ~v=`px(20)),
       background(rgb(32, 33, 37)),
     |])
   );
@@ -16,7 +16,7 @@ let wrapper =
     make([|
       width(vw(75.)),
       height(`percent(100.)),
-      /* margin2(~h=0, ~w=`auto), */
+      margin2(~v=`px(0), ~h=`auto),
       display(`flex),
       justifyContent(`spaceBetween),
       alignItems(`center),
