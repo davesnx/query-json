@@ -1,4 +1,4 @@
-open Source;
+open QueryJsonCore;
 
 let run = (query, json) => {
   let result =

@@ -1,21 +1,18 @@
 (library
  (name Test)
  (ocamlopt_flags -linkall -g)
- (libraries query-json.lib rely.lib)
+ (libraries query-json.core rely.lib)
  (modules
-  (:standard \ Run)
- )
-)
+  (:standard \ Run)))
 
 (executable
  (package query-json)
  (name Run)
  (public_name Run.exe)
  (libraries Test)
- (modules Run)
-)
+ (modules Run))
 
 (rule
  (alias runtest)
- (action (run ./Run.exe))
-)
+ (action
+  (run ./Run.exe)))

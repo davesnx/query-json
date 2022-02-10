@@ -1,4 +1,4 @@
 (library
  (name QueryJsonJs)
  (public_name query-json-js)
- (libraries console.lib source yojson cmdliner js_of_ocaml))
+ (libraries console.lib query-json.core yojson cmdliner js_of_ocaml))
