@@ -24,6 +24,6 @@ let className = (~direction as directionValue, ~value) => {
 };
 
 [@react.component]
-let make = (~direction: spacer, ~value: int=0, ~children) => {
+let make = (~direction: spacer, ~value: int=0, ~children=[React.null]) => {
   <div className={className(~direction, ~value)}> ...children </div>;
 };

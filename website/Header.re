@@ -60,7 +60,7 @@ let make = (~onShareClick) => {
     <div className=menu>
       <div className=wrapper>
         <div className=distribute>
-          <Text color=`White kind=`H2> {"query-json" |> React.string} </Text>
+          <Text color=`White kind=`H2> {"query-json playground" |> React.string} </Text>
         </div>
         <div className=distribute>
           <a
