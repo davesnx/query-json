@@ -1,5 +1,5 @@
 {
-  "checksum": "fd40dca5e16bd86e79ad53e7b3fff3d5",
+  "checksum": "a0fc6d990d710a96d25bb1cccc8a3ebc",
   "root": "@davesnx/query-json@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.2000@d41d8cd9": {
@@ -10,20 +10,6 @@
         "type": "install",
         "source": [
           "archive:https://registry.npmjs.org/ocaml/-/ocaml-4.10.2000.tgz#sha1:9e9a6305340fdcac2b105f26f20de4255686edc0"
-        ]
-      },
-      "overrides": [],
-      "dependencies": [],
-      "devDependencies": []
-    },
-    "brr@1.0.0@d41d8cd9": {
-      "id": "brr@1.0.0@d41d8cd9",
-      "name": "brr",
-      "version": "1.0.0",
-      "source": {
-        "type": "install",
-        "source": [
-          "archive:https://registry.npmjs.org/brr/-/brr-1.0.0.tgz#sha1:178f3d7575514dccc8b1307b8fdd22f39bc091f0"
         ]
       },
       "overrides": [],
@@ -1515,8 +1501,8 @@
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
       "dependencies": [
-        "ocaml@4.10.2000@d41d8cd9", "brr@1.0.0@d41d8cd9",
-        "@opam/yojson@opam:1.7.0@69d87312", "@opam/sedlex@opam:2.3@20d8fda6",
+        "ocaml@4.10.2000@d41d8cd9", "@opam/yojson@opam:1.7.0@69d87312",
+        "@opam/sedlex@opam:2.3@20d8fda6",
         "@opam/ppx_jsobject_conv@opam:0.9.0@1746a4b0",
         "@opam/ppx_deriving@opam:5.2.1@089e5dd3",
         "@opam/ocaml-lsp-server@opam:1.4.1@cd85c376",
