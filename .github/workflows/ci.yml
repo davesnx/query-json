@@ -79,27 +79,27 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           esy b dune build
-          cd www
+          cd website
           npm ci
-          npm run build:prod
+          npm run build-production
 
       - name: Deploy to prod
         if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' }}
-        working-directory: ./www
+        working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dist
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=build
 
       - name: Deploy preview
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        working-directory: ./www
+        working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=dist
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=build
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
@@ -112,7 +112,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: bundled
-          path: _build/default/js/Js.bc.js
+          path: _build/default/js/QueryJsonJs.bc.js
 
       # Cleanup build cache if dependencies have changed
       - name: Clean build cache
