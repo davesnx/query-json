@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Install esy
-        run: npm install -g esy@0.6.10
+        run: npm install -g esy@0.6.12
 
       - name: Restore esy source cache
         id: esy-cache
