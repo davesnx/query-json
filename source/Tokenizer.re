@@ -5,6 +5,7 @@ let digit = [%sedlex.regexp? '0' .. '9'];
 let number = [%sedlex.regexp? (Plus(digit), Opt('.'), Opt(Plus(digit)))];
 let space = [%sedlex.regexp? Plus('\n' | '\t' | ' ')];
 let identifier = [%sedlex.regexp? (alphabetic, Star(alphabetic | digit))];
+let not_double_quotes = [%sedlex.regexp? Compl('"')];
 
 [@deriving show]
 type token =
@@ -48,11 +49,11 @@ let string = buf => {
     | {|\"|} =>
       Buffer.add_char(buffer, '"');
       read_string(buf);
-    | '"' => STRING(Buffer.contents(buffer))
-    | Star(Compl('"')) =>
+    | '"' => Ok(STRING(Buffer.contents(buffer)))
+    | not_double_quotes =>
       Buffer.add_string(buffer, lexeme(buf));
       read_string(buf);
-    | _ => assert(false)
+    | _ => Error("unmatched string")
     };
 
   read_string(buf);
@@ -97,7 +98,7 @@ let rec tokenize = buf => {
   | dot => Ok(DOT)
   | ':' => Ok(DOUBLE_DOT)
   | ".." => Ok(RECURSE)
-  | '"' => Ok(string(buf))
+  | '"' => string(buf)
   | identifier => tokenizeApply(buf)
   | number =>
     let num = lexeme(buf) |> float_of_string;
