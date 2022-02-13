@@ -2,49 +2,46 @@ open React.Dom.Dsl;
 open Html;
 open Jsoo_css;
 
-module Router = {
-  open Js_of_ocaml;
-  let getHash = (): option(string) => {
-    let url = Url.Current.get();
-    switch (url) {
-      | Some(Http(http_url)) => Some(http_url.hu_fragment)
-      | Some(Https(http_url)) => Some(http_url.hu_fragment)
-      | _ => None
+module Base64 = {
+  open Brr;
+  let error_to_string = e => e |> Jv.Error.message |> Jstr.to_string
+
+  let encode = text => {
+    text
+    |> Jstr.v
+    |> Base64.data_utf_8_of_jstr
+    |> Base64.encode
+    |> Result.map(Jstr.to_string)
+    |> Result.to_option
+  };
+
+  let decode = text => {
+    switch (text |> Jstr.of_string |> Base64.decode) {
+      | Ok(dec) => switch(Base64.data_utf_8_to_jstr(dec)) {
+        | Ok(str) => Some(Jstr.to_string(str))
+        | Error(e) => {
+          Printf.eprintf("decode 1 %s", e |> error_to_string)
+          None
+        }
+      }
+      | Error(e) => {
+          Printf.eprintf("decode 2 %s", e |> error_to_string)
+          None
+        }
     }
   };
+};
 
-  let setHash = (_hash): unit => {
-    ();
-    /* Url.Current.setHash(hash); */
+module Router = {
+  open Js_of_ocaml;
+  let getHash = () =>
+    try(Some(Url.Current.get_fragment() |> Url.urldecode)) {
+    | _ => None
+    };
+
+  let setHash = (hash): unit => {
+    Url.Current.set_fragment(hash |> Url.urlencode(~with_plus=true));
   };
-};
-
-module Value = {
-  type t;
-  type prop = string;
-  external pure_js_expr: string => 'a = "caml_pure_js_expr";
-  external get: (t, prop) => t = "caml_js_get";
-  external set: (t, prop, t) => unit = "caml_js_set";
-  external apply: (t, array(t)) => 'a = "caml_js_fun_call";
-
-  external of_string: string => t = "caml_jsstring_of_string";
-  external to_string: t => string = "caml_string_of_jsstring";
-  let global = pure_js_expr("globalThis");
-};
-
-module Base64 = {
-  type data = Value.t;
-  let encode = bs =>
-    switch (Value.apply(Value.get(Value.global, "btoa"), Value.([|of_string(bs)|]))) {
-    | Ok(v) => Ok(Value.to_string(v))
-    | Error(e) => Error(e)
-    };
-
-  let decode = s =>
-    switch (Value.apply(Value.get(Value.global, "atob"), Value.([|of_string(s)|]))) {
-    | Ok(v) => Ok(Value.to_string(v))
-    | Error(e) => Error(e)
-    };
 };
 
 let empty = opt => {
@@ -88,132 +85,138 @@ let mockJson = {|{
 }
 |};
 
-let page = Emotion.(make([|
-  display(`flex),
-  flexDirection(`column),
-  alignItems(`center),
-  height(vh(100.)),
-  backgroundColor(hex("0a0a0a")),
-|]));
+let page =
+  Emotion.(
+    make([|
+      display(`flex),
+      flexDirection(`column),
+      alignItems(`center),
+      height(vh(100.)),
+      backgroundColor(hex("0a0a0a")),
+    |])
+  );
 
-let container = Emotion.(make([|
-  width(`vw(75.)),
-  height(`vh(80.))
-|]));
+let container = Emotion.(make([|width(`vw(75.)), height(`vh(80.))|]));
 
-let columnHalf = Emotion.(make([|
-  width(`percent(50.)),
-  height(`percent(100.))
-|]));
+let columnHalf =
+  Emotion.(
+    make([|
+      width(`percent(50.)),
+      height(`percent(100.)),
+      paddingBottom(px(8)),
+    |])
+  );
 
-let row = Emotion.(make([|
-  display(`flex),
-  flexDirection(`row),
-  width(`percent(100.)),
-  height(`percent(100.))
-|]));
+let row =
+  Emotion.(
+    make([|
+      display(`flex),
+      flexDirection(`row),
+      width(`percent(100.)),
+      height(`percent(100.)),
+    |])
+  );
 
-let box = Emotion.(make([|
-  backgroundColor(rgb(237, 242, 247)),
-  height(`percent(100.)),
-  width(`percent(100.)),
-  borderRadius(px(6)),
-|]));
+let box =
+  Emotion.(
+    make([|
+      backgroundColor(rgb(237, 242, 247)),
+      height(`percent(100.)),
+      width(`percent(100.)),
+      borderRadius(px(6)),
+    |])
+  );
 
 type t = {
   query: string,
   json: option(string),
-  output: option(result(string, string)),
 };
 
 type actions =
   | UpdateQuery(string)
-  | UpdateJson(string)
-  | ComputeOutput;
+  | UpdateJson(string);
 
-let reduce = (state, action) => {
-  switch (action) {
+let reduce = state =>
+  fun
   | UpdateQuery(query) => {...state, query}
-  | UpdateJson(json) => {...state, json: Some(json)}
-  | ComputeOutput =>
-    switch (state.json) {
-    | Some(json) =>
-      let result = QueryJsonJs.run(state.query, json);
-      {...state, output: Some(result)};
-    | None => state
-    }
-  };
-};
+  | UpdateJson(json) => {...state, json: Some(json)};
 
-/* module QueryParams = {
-  [@deriving jsobject]
-  type hash = {
+module QueryParams = {
+  type t = {
     query: string,
     json: option(string),
   };
-  let toState = qp => {
-    {query: qp.query, json: qp.json, output: None};
-  };
 
-  let decode = (json) => {
-    switch (hash_of_jsobject(json)) {
-    | Ok(o) => Ok(o)
-    | Error(_) => Error("Problem decoding QueryParams")
+  let decode = json => {
+    open Jsonoo.Decode;
+    {
+      query: json |> field("query", string),
+      json: json |> nullable(field("json", string))
     };
   };
 
-  let encode = (queryParams: hash): string => {
-    jsobject_of_hash(queryParams);
+  let encode = t => {
+    open Jsonoo.Encode;
+    object_([
+      ("query", string(t.query)),
+      ("json", nullable(string, t.json))
+    ])
   };
-}; */
+
+  let toString = t => {
+    t |> encode |> Jsonoo.stringify;
+  };
+
+  let fromString = str => {
+    str |> Jsonoo.try_parse_opt |> Option.map(decode)
+  };
+
+  let toHash = state => {
+    state |> toString |> Base64.encode;
+  };
+};
+
+/* Option.bind with pipe-last friendly */
+let bind (f, o) = switch (o) {
+  | None => None
+  | Some(v) => f(v)
+};
 
 [@react.component]
 let make = () => {
-  let _hash = Router.getHash();
+  let hash = Router.getHash();
+  Printf.eprintf("%s", hash |> Option.value(~default="hash roto"));
 
-  /* let urlState =
-    switch (hash) {
-    | None => None
-    | Some(data) => {
-        let base64 = Base64.decode(data);
-        let json = Result.map(base64, Js.Json.parseExn);
-        let res = Result.bind(json, QueryParams.decode)
-        res |> Result.to_option;
-      };
-    };
+  let stateFromHash = hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
 
-  let initialState =
-    switch (urlState) {
-    | Some(state) =>
-      let result = queryJson(state.query, empty(state.json));
-      let newState = QueryParams.toState(state);
-      {...newState, output: Some(result)};
-    | None => {query: "", json: Some(mockJson), output: None}
-    }; */
-
-  let initialState = {query: "", json: Some(mockJson), output: None};
+  let initialState = switch (stateFromHash) {
+    | Some({ query, json }) => {query, json}
+    | None => {query: "", json: Some(mockJson)};
+  };
   let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
-    dispatch(ComputeOutput);
   };
 
   let onJsonChange = value => {
     dispatch(UpdateJson(value));
-    dispatch(ComputeOutput);
   };
 
-  let onShareClick = _ => {
-    ();
-    /* let searchParams =
-      QueryParams.encode({query: state.query, json: state.json});
-    let encodedHash = Base64.encode(searchParams);
+  let output =
+    switch (state.json, state.query) {
+    | (Some(_), "")
+    | (None, _) => None
+    | (Some(json), _) => Some(QueryJsonJs.run(state.query, json))
+    };
 
-    switch (encodedHash) {
-    | Ok(hash) => Router.setHash(hash)
-    | Error(_) => ()
-    }; */
+  let onShareClick = _ => {
+    let hash =
+      QueryParams.toHash({query: state.query, json: state.json});
+    switch (hash) {
+    | Some(hash) => Router.setHash(hash)
+    | None => Printf.eprintf("Error decoding")
+    };
   };
 
   <div className=page>
@@ -222,28 +225,23 @@ let make = () => {
       <Spacer direction=Bottom value=2>
         <TextInput
           value={state.query}
-          placeholder="Type the filter, for example: '.'"
           onChange=onQueryChange
+          placeholder="Type the query to filter against the JSON below. For example: '.store'"
         />
       </Spacer>
       <div className=row>
         <div className=columnHalf>
-          <Spacer direction=Right value=2>
-            <Editor.Json
-              value={Option.value(state.json, ~default="")}
-              onChange=onJsonChange
-            />
-          </Spacer>
+          <Editor.Json
+            value={Option.value(state.json, ~default="")}
+            onChange=onJsonChange
+          />
         </div>
+        <Spacer direction=Right value=2 />
         <div className=columnHalf>
-          <div>
-            <Spacer direction=Left value=2>
-              {switch (state.output) {
-               | Some(value) => <Editor.Output value />
-               | None => <Editor.Empty />
-               }}
-            </Spacer>
-          </div>
+          {switch (output) {
+           | Some(value) => <Editor.Output value />
+           | None => <Editor.Empty />
+           }}
         </div>
       </div>
     </div>

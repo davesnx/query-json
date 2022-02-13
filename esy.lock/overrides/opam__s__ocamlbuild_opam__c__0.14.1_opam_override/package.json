@@ -3,7 +3,7 @@
     [
       "bash",
       "-c",
-      "#{os == 'windows' ? 'patch -p1 < ocamlbuild-0.14.0.patch' : 'true'}"
+      "#{os == 'windows' ? 'patch -p1 < winpatch.patch' : 'true'}"
     ],
     [
       "make",
@@ -15,13 +15,15 @@
       "OCAMLBUILD_LIBDIR=#{self.lib}",
       "OCAMLBUILD_MANDIR=#{self.man}",
       "OCAMLBUILD_NATIVE=true",
-      "OCAMLBUILD_NATIVE_TOOLS=true"
+      "OCAMLBUILD_NATIVE_TOOLS=true",
+      "EXE=#{os == 'windows' ? '.exe': ''}"
     ],
     [
       "make",
       "check-if-preinstalled",
       "all",
-      "#{os == 'windows' ? 'install' : 'opam-install'}"
+      "EXE=#{os == 'windows' ? '.exe': ''}",
+      "opam-install"
     ]
   ]
 }

@@ -13,10 +13,12 @@ let className =
     |])
   );
 
+let get = (key, obj) => Ojs.get_prop_ascii(obj, key) |> Ojs.string_of_js;
+
 [@react.component]
 let make = (~value, ~placeholder, ~onChange) => {
-  let onChangeHandler = _event => {
-    let value = ""; /* React.Event.Form.target(event)##value; */
+  let onChangeHandler = event => {
+    let value = React.Event.Form.target(event) |> get("value");
     onChange(value);
   };
 

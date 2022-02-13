@@ -11,13 +11,16 @@ module Mode = {
     | Json => "json";
 };
 
+[@deriving jsobject]
 type padding = {
   bottom: int,
   top: int,
 };
 
+[@deriving jsobject]
 type minimap = {enabled: bool};
 
+[@deriving jsobject]
 type options = {
   fontSize: int,
   fontFamily: string,
@@ -43,13 +46,13 @@ module External = {
       ~className: string=?,
       ~style: React.Dom.Style.t,
       ~theme: string,
-      ~options: options
+      ~options: Js_of_ocaml.Js.t('a)
     ) =>
     React.element =
-    {|require("@monaco-editor/react").Editor|};
+    {|require("@monaco-editor/react").default|};
 };
 
-let options = {
+let options: options = {
   fontSize: 16,
   fontFamily: "IBM Plex Mono",
   glyphMargin: false,
@@ -68,31 +71,33 @@ let options = {
   readOnly: false,
 };
 
-type onChange = | Write((React.Event.Form.t, string) => unit) | ReadOnly;
+type onChange =
+  | Write((React.Event.Form.t, string) => unit)
+  | ReadOnly;
 
-let isReadOnly = fun
+let isReadOnly =
+  fun
   | Write(_) => false
   | ReadOnly => true;
 
 [@react.component]
-let make =
-    (
-      ~value: string,
-      ~onChange as onChangeValue: onChange,
-      ~mode
-    ) => {
-  let onChange = switch (onChangeValue) {
+let make = (~value: string, ~onChange as onChangeValue: onChange, ~mode) => {
+  let onChange =
+    switch (onChangeValue) {
     | ReadOnly => noop2
     | Write(handler) => handler
-  };
+    };
+
+  let options =
+    {...options, readOnly: isReadOnly(onChangeValue)} |> jsobject_of_options;
 
   <External
     language={Mode.to_language(mode)}
     height="100%"
     value
     onChange
-    options={...options, readOnly: isReadOnly(onChangeValue)}
+    options
     theme="dark"
-    style=React.Dom.Style.(make([|padding("8px")|]))
+    style=React.Dom.Style.(make([|padding("8px"), height("100%")|]))
   />;
 };

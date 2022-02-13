@@ -1,0 +1,42 @@
+opam-version: "2.0"
+synopsis: "JSON library for Js_of_ocaml"
+maintainer: ["Max Lantas <mnxndev@outlook.com>"]
+authors: ["Max Lantas <mnxndev@outlook.com>"]
+license: "MIT"
+homepage: "https://github.com/mnxn/jsonoo"
+bug-reports: "https://github.com/mnxn/jsonoo/issues"
+depends: [
+  "dune" {>= "2.7"}
+  "ocaml" {>= "4.08"}
+  "js_of_ocaml"
+  "js_of_ocaml-ppx"
+  "gen_js_api"
+  "webtest" {with-test}
+  "webtest-js" {with-test}
+  "conf-npm" {with-test}
+  "odoc" {with-doc}
+]
+build: [
+  ["dune" "subst"] {dev}
+  [
+    "dune"
+    "build"
+    "-p"
+    name
+    "-j"
+    jobs
+    "@install"
+    "@runtest" {with-test}
+    "@doc" {with-doc}
+  ]
+]
+dev-repo: "git+https://github.com/mnxn/jsonoo.git"
+x-commit-hash: "9d314a91417df106f2357a331fdad57604109b52"
+url {
+  src:
+    "https://github.com/mnxn/jsonoo/releases/download/v0.2.1/jsonoo-v0.2.1.tbz"
+  checksum: [
+    "sha256=dbd2f7a3b1585fa3530c51f68c6b8a8189fd1c05cbefeccc6231be7cccd7d16f"
+    "sha512=54877815d314cb97d33d21c841acdbea88835d40a37a6356878f9b539f79983a14a0f5f56a984d6e6e5ef803f542fd59c17fbba54ec1c9b1d767c63065c92176"
+  ]
+}

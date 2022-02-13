@@ -44,6 +44,7 @@ let button_ =
   Emotion.(
     make([|
       unsafe("border", "none"),
+      padding2(~v=px(8), ~h=px(12)),
       color(hex("FAFAFA")),
       backgroundColor(rgb(43, 75, 175)),
       cursor(`pointer),
