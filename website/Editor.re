@@ -17,7 +17,7 @@ module Output = {
            They shoudn't add those if there's colorize=false.
            To sovle that, you would need to pass the flag to all Chalk and Compiler
            calls, which is a tedious task. Instead, we remove them here ^^ */
-        let re = Js_of_ocaml.Regexp.regexp("\\[\d*m");
+        let re = Js_of_ocaml.Regexp.regexp("\\[\\d*m");
         Js_of_ocaml.Regexp.global_replace(re, e, "");
       };
 
