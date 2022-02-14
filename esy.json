@@ -1,5 +1,5 @@
 {
-  "name": "@davesnx/query-json",
+  "name": "@davesnx/query-json-web",
   "version": "0.5.20",
   "description":
     "faster and simpler re-implementation of jq in Reason Native",
@@ -28,19 +28,18 @@
     "release": { "bin": [ "Bin" ] }
   },
   "dependencies": {
+    "@opam/cmdliner": "1.0.4",
+    "@opam/menhir": "20201216",
+    "@opam/yojson": "1.7.0",
+    "@opam/sedlex": "2.3"
+  },
+  "devDependencies": {
     "@esy-ocaml/reason": "~3.6.0",
     "@opam/brr": "0.0.2",
-    "@opam/cmdliner": "1.0.4",
     "@opam/jsonoo": "0.2.1",
-    "@opam/menhir": "20201216",
     "@opam/ocaml-lsp-server": "1.4.1",
     "@opam/ppx_deriving": "5.2.1",
     "@opam/ppx_jsobject_conv": "0.9.0",
-    "@opam/sedlex": "2.3",
-    "@opam/yojson": "1.7.0",
-    "ocaml": "4.10.2000"
-  },
-  "devDependencies": {
     "@opam/bisect_ppx": "2.6.0",
     "@opam/dune": ">=2.8.4",
     "@opam/js_of_ocaml": "3.9.0",
@@ -48,9 +47,10 @@
     "@reason-native/console": "*",
     "@opam/rely": "*",
     "@opam/js_of_ocaml-ppx": "3.9.0",
-    "bats": "^1.1.0",
     "@opam/jsoo-react": "*",
-    "@opam/jsoo-css": "*"
+    "@opam/jsoo-css": "*",
+    "bats": "^1.1.0",
+    "ocaml": "4.10.2000"
   },
   "resolutions": {
     "@opam/jsoo-react": "ml-in-barcelona/jsoo-react:jsoo-react.opam#9e86c9f",
