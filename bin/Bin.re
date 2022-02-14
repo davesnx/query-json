@@ -39,11 +39,7 @@ let run =
          |> Result.map(os =>
               List.iter(
                 o =>
-                  Json.toString(
-                    o,
-                    ~colorize=!noColor,
-                    ~summarize=false,
-                  )
+                  Json.toString(o, ~colorize=!noColor, ~summarize=false)
                   |> print_endline,
                 os,
               )

@@ -23,11 +23,7 @@ module Output = {
 
     let hasError = Result.is_error(value);
 
-    <Monaco
-      mode={hasError ? Text : Json}
-      value=text
-      onChange=ReadOnly
-    />;
+    <Monaco mode={hasError ? Text : Json} value=text onChange=ReadOnly />;
   };
 };
 
@@ -38,6 +34,6 @@ module Json = {
       onChange(value);
     };
 
-    <Monaco mode=Json value onChange=Write(onChangeHandler) />;
+    <Monaco mode=Json value onChange={Write(onChangeHandler)} />;
   };
 };

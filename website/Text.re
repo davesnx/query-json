@@ -10,13 +10,7 @@ module Typography = {
   type weight = [ | `Normal | `Bold];
 
   [@react.component]
-  let make =
-      (
-        ~color as colorValue,
-        ~size=`Medium,
-        ~weight=`Normal,
-        ~children,
-      ) => {
+  let make = (~color as colorValue, ~size=`Medium, ~weight=`Normal, ~children) => {
     let size =
       switch (size) {
       | `XSmall => fontSize(px(14))
@@ -36,27 +30,20 @@ module Typography = {
     let color =
       switch (colorValue) {
       | `White => color(hex("FAFAFA"))
-      | `Black => color(`rgb(21, 21, 21))
+      | `Black => color(`rgb((21, 21, 21)))
       | `Grey => color(hex("949495"))
       };
 
     let className = Emotion.make([|color, size, weight|]);
 
-    <span className>
-      ...children
-    </span>
+    <span className> ...children </span>;
   };
 };
 
 type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label];
 
 [@react.component]
-let make =
-    (
-      ~color=`White,
-      ~kind=`Body,
-      ~children,
-    ) => {
+let make = (~color=`White, ~kind=`Body, ~children) => {
   let (size, weight) =
     switch (kind) {
     | `H1 => (`XLarge, `Bold)
@@ -68,7 +55,5 @@ let make =
     | `Label => (`Small, `Normal)
     };
 
-  <Typography size weight color>
-    ...children
-  </Typography>
+  <Typography size weight color> ...children </Typography>;
 };
