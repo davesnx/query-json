@@ -106,19 +106,19 @@ module QueryParams = {
   };
 
   let decode = json => {
-    open Jsonoo.Decode;
-    {
+    Jsonoo.Decode.{
       query: json |> field("query", string),
-      json: json |> nullable(field("json", string))
+      json: json |> nullable(field("json", string)),
     };
   };
 
   let encode = t => {
-    open Jsonoo.Encode;
-    object_([
-      ("query", string(t.query)),
-      ("json", nullable(string, t.json))
-    ])
+    Jsonoo.Encode.(
+      object_([
+        ("query", string(t.query)),
+        ("json", nullable(string, t.json)),
+      ])
+    );
   };
 
   let toString = t => {
@@ -126,7 +126,7 @@ module QueryParams = {
   };
 
   let fromString = str => {
-    str |> Jsonoo.try_parse_opt |> Option.map(decode)
+    str |> Jsonoo.try_parse_opt |> Option.map(decode);
   };
 
   let toHash = state => {
@@ -135,22 +135,25 @@ module QueryParams = {
 };
 
 /* Option.bind with pipe-last friendly */
-let bind (f, o) = switch (o) {
+let bind = (f, o) =>
+  switch (o) {
   | None => None
   | Some(v) => f(v)
-};
+  };
 
 [@react.component]
 let make = () => {
   let hash = Router.getHash();
   Printf.eprintf("%s", hash |> Option.value(~default="hash roto"));
 
-  let stateFromHash = hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
+  let stateFromHash =
+    hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
 
-  let initialState = switch (stateFromHash) {
-    | Some({ query, json }) => {query, json}
-    | None => {query: "", json: Some(mockJson)};
-  };
+  let initialState =
+    switch (stateFromHash) {
+    | Some({query, json}) => {query, json}
+    | None => {query: "", json: Some(mockJson)}
+    };
   let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
@@ -169,8 +172,7 @@ let make = () => {
     };
 
   let onShareClick = _ => {
-    let hash =
-      QueryParams.toHash({query: state.query, json: state.json});
+    let hash = QueryParams.toHash({query: state.query, json: state.json});
     switch (hash) {
     | Some(hash) => Router.setHash(hash)
     | None => Printf.eprintf("Error decoding")
@@ -179,6 +181,7 @@ let make = () => {
 
   <div className=page>
     <Header onShareClick />
+    <Spacer direction=Bottom value=2 />
     <div className=container>
       <Spacer direction=Bottom value=2>
         <TextInput
