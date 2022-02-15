@@ -17,5 +17,5 @@ _coverage
 *.coverage
 coverage.json
 
-# BuckleScript artifacts
-*.bs.js
+# Website artifacts
+website/build

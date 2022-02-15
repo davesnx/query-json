@@ -1,0 +1,31 @@
+opam-version: "2.0"
+synopsis: "Runtime Library for gen_js_api generated libraries"
+description: "To be used in conjunction with gen_js_api"
+maintainer: ["Alain Frisch <alain.frisch@lexifi.com>"]
+authors: [
+  "Alain Frisch <alain.frisch@lexifi.com>"
+  "Sebastien Briais <sebastien.briais@lexifi.com>"
+]
+license: "MIT"
+homepage: "https://github.com/LexiFi/gen_js_api"
+bug-reports: "https://github.com/LexiFi/gen_js_api/issues"
+depends: [
+  "dune" {>= "2.7"}
+  "ocaml" {>= "4.08"}
+  "odoc" {with-doc}
+]
+conflicts: [
+  "js_of_ocaml-compiler" {< "3.0.0"}
+]
+dev-repo: "git+https://github.com/LexiFi/gen_js_api.git"
+build: [
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs "@install" "@doc" {with-doc}]
+]
+url {
+  src: "https://github.com/LexiFi/gen_js_api/archive/v1.0.9.tar.gz"
+  checksum: [
+    "md5=4cc996401ecfd63b24edca6b75ebef56"
+    "sha512=ed066c0e18d3a5412536f7ded18bb2056c1e9c1a3d1dbd4e914baa730fc7bbc286d93ffe2db2bb4db2e8961e79a4e1fceee9bb301e7984179e3442b762bd01f5"
+  ]
+}

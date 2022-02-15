@@ -1,6 +1,6 @@
 open Framework;
-open Source.Ast;
-open Source.Main;
+open QueryJsonCore.Ast;
+open QueryJsonCore.Main;
 
 let compare = (expected, result, {expect, _}) => {
   let expected = show_expression(expected);

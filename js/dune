@@ -1,5 +1,11 @@
+(library
+ (name QueryJsonJs)
+ (public_name query-json-js)
+ (modules QueryJsonJs)
+ (libraries console.lib query-json.core yojson cmdliner js_of_ocaml))
+
 (executable
  (name Js)
  (modes js)
- (libraries console.lib source yojson cmdliner js_of_ocaml)
-)
+ (modules Js)
+ (libraries query-json-js console.lib yojson cmdliner js_of_ocaml))

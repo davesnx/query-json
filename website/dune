@@ -1,0 +1,16 @@
+(executable
+ (name Website)
+ (modes js)
+ (libraries query-json-js js_of_ocaml jsoo-react.lib jsoo-css brr jsonoo)
+ (preprocess
+  (pps jsoo-react.ppx ppx_jsobject_conv)))
+
+; @monaco-editor/react uses `rollupjs` to build
+; which creates a folder with underscore `_virtual`
+; dune by default ignores any prefixed with underscore folder.
+; This hardcodes the path dune ignores.
+; If we update the lib, this might break
+
+(dirs
+ node_modules/@monaco-editor/react/lib/cjs/_virtual
+ node_modules/@monaco-editor/loader/lib/cjs/_virtual)

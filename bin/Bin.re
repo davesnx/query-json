@@ -1,6 +1,6 @@
-open Source;
-open Source.Compiler;
-open Source.Console;
+open QueryJsonCore;
+open QueryJsonCore.Compiler;
+open QueryJsonCore.Console;
 
 type inputKind =
   | File
@@ -22,11 +22,11 @@ let run =
     |> Result.map(runtime => {
          let input =
            switch (kind, payload) {
-           | (File, Some(j)) => Source.Json.parseFile(j)
-           | (Inline, Some(j)) => Source.Json.parseString(j)
+           | (File, Some(j)) => Json.parseFile(j)
+           | (Inline, Some(j)) => Json.parseString(j)
            | (_, None) =>
              let ic = Unix.(stdin |> in_channel_of_descr);
-             Source.Json.parseChannel(ic);
+             Json.parseChannel(ic);
            };
 
          switch (input) {
@@ -39,11 +39,7 @@ let run =
          |> Result.map(os =>
               List.iter(
                 o =>
-                  Source.Json.toString(
-                    o,
-                    ~colorize=!noColor,
-                    ~summarize=false,
-                  )
+                  Json.toString(o, ~colorize=!noColor, ~summarize=false)
                   |> print_endline,
                 os,
               )
