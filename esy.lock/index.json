@@ -1,6 +1,6 @@
 {
   "checksum": "a0fc6d990d710a96d25bb1cccc8a3ebc",
-  "root": "@davesnx/query-json@link-dev:./esy.json",
+  "root": "@davesnx/query-json-web@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.2000@d41d8cd9": {
       "id": "ocaml@4.10.2000@d41d8cd9",
@@ -1494,34 +1494,33 @@
       ],
       "devDependencies": []
     },
-    "@davesnx/query-json@link-dev:./esy.json": {
-      "id": "@davesnx/query-json@link-dev:./esy.json",
-      "name": "@davesnx/query-json",
+    "@davesnx/query-json-web@link-dev:./esy.json": {
+      "id": "@davesnx/query-json-web@link-dev:./esy.json",
+      "name": "@davesnx/query-json-web",
       "version": "link-dev:./esy.json",
       "source": { "type": "link-dev", "path": ".", "manifest": "esy.json" },
       "overrides": [],
       "dependencies": [
-        "ocaml@4.10.2000@d41d8cd9", "@opam/yojson@opam:1.7.0@69d87312",
-        "@opam/sedlex@opam:2.3@20d8fda6",
+        "@opam/yojson@opam:1.7.0@69d87312", "@opam/sedlex@opam:2.3@20d8fda6",
+        "@opam/menhir@opam:20201216@3fe1873a",
+        "@opam/cmdliner@opam:1.0.4@93208aac"
+      ],
+      "devDependencies": [
+        "ocaml@4.10.2000@d41d8cd9", "bats@1.5.0@d41d8cd9",
+        "@reason-native/console@github:jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
+        "@opam/rely@github:jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
         "@opam/ppx_jsobject_conv@opam:0.9.0@1746a4b0",
         "@opam/ppx_deriving@opam:5.2.1@089e5dd3",
         "@opam/ocaml-lsp-server@opam:1.4.1@cd85c376",
-        "@opam/menhir@opam:20201216@3fe1873a",
-        "@opam/jsonoo@opam:0.2.1@49269dc8",
-        "@opam/cmdliner@opam:1.0.4@93208aac",
-        "@opam/brr@opam:0.0.2@9513627d", "@esy-ocaml/reason@3.6.2@d41d8cd9"
-      ],
-      "devDependencies": [
-        "bats@1.5.0@d41d8cd9",
-        "@reason-native/console@github:jfrolich/reason-native:console.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
-        "@opam/rely@github:jfrolich/reason-native:rely.json#08085a4048974b06aaf3aab918b677b39dea3d18@d41d8cd9",
         "@opam/jsoo-react@github:ml-in-barcelona/jsoo-react:jsoo-react.opam#9e86c9f@d41d8cd9",
         "@opam/jsoo-css@github:ml-in-barcelona/jsoo-css:jsoo-css.opam#daf3228@d41d8cd9",
+        "@opam/jsonoo@opam:0.2.1@49269dc8",
         "@opam/js_of_ocaml-ppx@opam:3.9.0@8454b2f9",
         "@opam/js_of_ocaml-compiler@opam:3.9.0@4ff016ca",
         "@opam/js_of_ocaml@opam:3.9.0@db27df96",
-        "@opam/dune@opam:2.9.3@f57a6d69",
-        "@opam/bisect_ppx@opam:2.6.0@9ae064f4"
+        "@opam/dune@opam:2.9.3@f57a6d69", "@opam/brr@opam:0.0.2@9513627d",
+        "@opam/bisect_ppx@opam:2.6.0@9ae064f4",
+        "@esy-ocaml/reason@3.6.2@d41d8cd9"
       ]
     }
   }
