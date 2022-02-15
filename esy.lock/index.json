@@ -1,5 +1,5 @@
 {
-  "checksum": "a0fc6d990d710a96d25bb1cccc8a3ebc",
+  "checksum": "1ffe4062d15c7332547dfcf56a66e7d9",
   "root": "@davesnx/query-json-web@link-dev:./esy.json",
   "node": {
     "ocaml@4.10.2000@d41d8cd9": {
@@ -161,7 +161,7 @@
         }
       ],
       "dependencies": [
-        "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlbuild@opam:0.14.1@ead10f40",
+        "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlbuild@opam:0.14.0@0dee4078",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [ "ocaml@4.10.2000@d41d8cd9" ]
@@ -185,11 +185,11 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlfind@opam:1.9.3@5b691822",
-        "@opam/ocamlbuild@opam:0.14.1@ead10f40",
+        "@opam/ocamlbuild@opam:0.14.0@0dee4078",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [
-        "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlbuild@opam:0.14.1@ead10f40"
+        "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlbuild@opam:0.14.0@0dee4078"
       ]
     },
     "@opam/stdlib-shims@opam:0.3.0@0d088929": {
@@ -594,26 +594,26 @@
       ],
       "devDependencies": [ "ocaml@4.10.2000@d41d8cd9" ]
     },
-    "@opam/ocamlbuild@opam:0.14.1@ead10f40": {
-      "id": "@opam/ocamlbuild@opam:0.14.1@ead10f40",
+    "@opam/ocamlbuild@opam:0.14.0@0dee4078": {
+      "id": "@opam/ocamlbuild@opam:0.14.0@0dee4078",
       "name": "@opam/ocamlbuild",
-      "version": "opam:0.14.1",
+      "version": "opam:0.14.0",
       "source": {
         "type": "install",
         "source": [
-          "archive:https://opam.ocaml.org/cache/md5/70/7027e507ed85f290923ad198f3d2cd1c#md5:7027e507ed85f290923ad198f3d2cd1c",
-          "archive:https://github.com/ocaml/ocamlbuild/archive/refs/tags/0.14.1.tar.gz#md5:7027e507ed85f290923ad198f3d2cd1c"
+          "archive:https://opam.ocaml.org/cache/sha256/87/87b29ce96958096c0a1a8eeafeb6268077b2d11e1bf2b3de0f5ebc9cf8d42e78#sha256:87b29ce96958096c0a1a8eeafeb6268077b2d11e1bf2b3de0f5ebc9cf8d42e78",
+          "archive:https://github.com/ocaml/ocamlbuild/archive/0.14.0.tar.gz#sha256:87b29ce96958096c0a1a8eeafeb6268077b2d11e1bf2b3de0f5ebc9cf8d42e78"
         ],
         "opam": {
           "name": "ocamlbuild",
-          "version": "0.14.1",
-          "path": "esy.lock/opam/ocamlbuild.0.14.1"
+          "version": "0.14.0",
+          "path": "esy.lock/opam/ocamlbuild.0.14.0"
         }
       },
       "overrides": [
         {
           "opamoverride":
-            "esy.lock/overrides/opam__s__ocamlbuild_opam__c__0.14.1_opam_override"
+            "esy.lock/overrides/opam__s__ocamlbuild_opam__c__0.14.0_opam_override"
         }
       ],
       "dependencies": [
@@ -706,7 +706,7 @@
       "dependencies": [
         "ocaml@4.10.2000@d41d8cd9", "@opam/topkg@opam:1.0.5@0aa59f51",
         "@opam/ocamlfind@opam:1.9.3@5b691822",
-        "@opam/ocamlbuild@opam:0.14.1@ead10f40",
+        "@opam/ocamlbuild@opam:0.14.0@0dee4078",
         "@esy-ocaml/substs@0.0.1@d41d8cd9"
       ],
       "devDependencies": [ "ocaml@4.10.2000@d41d8cd9" ]
@@ -1334,7 +1334,7 @@
       "overrides": [],
       "dependencies": [
         "ocaml@4.10.2000@d41d8cd9", "@opam/ocamlfind@opam:1.9.3@5b691822",
-        "@opam/ocamlbuild@opam:0.14.1@ead10f40",
+        "@opam/ocamlbuild@opam:0.14.0@0dee4078",
         "@opam/note@opam:0.0.2@f916d3ec",
         "@opam/js_of_ocaml-toplevel@opam:3.9.0@88175ae6",
         "@opam/js_of_ocaml-compiler@opam:3.9.0@4ff016ca",
