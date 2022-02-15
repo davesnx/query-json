@@ -104,7 +104,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 
 ##### Based on jq 1.6
 
-- #### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
+#### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
   - `--version` ✅
   - `--kind`. This is different than jq ✅
     - `--kind=file` and the 2nd argument can be a json file
@@ -112,7 +112,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - `--no-color`. This disables colors ✅
   - ...rest ⚠️
 
-- #### [Basic filters](https://stedolan.github.io/jq/manual/v1.6/#Basicfilters)
+#### [Basic filters](https://stedolan.github.io/jq/manual/v1.6/#Basicfilters)
   - Identity: `.` ✅
   - Object Identifier-Index: `.foo`, `.foo.bar` ✅
   - Optional Object Identifier-Index: `.foo?` ✅
@@ -124,9 +124,9 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Comma: `,` ✅
   - Parenthesis: `()` ✅️
 
-- #### [Types and Values](https://stedolan.github.io/jq/manual/v1.6/#TypesandValues) ⚠️
+#### [Types and Values](https://stedolan.github.io/jq/manual/v1.6/#TypesandValues) ⚠️
 
-- #### [Builtin operators and functions](https://stedolan.github.io/jq/manual/v1.6/#Builtinoperatorsandfunctions)
+#### [Builtin operators and functions](https://stedolan.github.io/jq/manual/v1.6/#Builtinoperatorsandfunctions)
 
   - Addition: `+` ✅
   - Subtraction: `-` ✅
