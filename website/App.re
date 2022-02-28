@@ -154,7 +154,7 @@ let make = () => {
     | Some({query, json}) => {query, json}
     | None => {query: "", json: Some(mockJson)}
     };
-  let (state, dispatch) = React.useReducer(reduce, initialState);
+  let (state, dispatch) = React.use_reducer(reduce, initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));

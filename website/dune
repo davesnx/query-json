@@ -14,3 +14,13 @@
 (dirs
  node_modules/@monaco-editor/react/lib/cjs/_virtual
  node_modules/@monaco-editor/loader/lib/cjs/_virtual)
+
+(rule
+ (targets Console.ml)
+ (deps Console.rei)
+ (action
+  (progn
+   (with-stdout-to
+    Console.ml.tmp
+    (run %{bin:refmt} --parse=re -i true --print=ml %{deps}))
+   (run %{bin:gen_js_api} -o %{targets} Console.ml.tmp))))

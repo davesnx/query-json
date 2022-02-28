@@ -30,10 +30,6 @@ module Output = {
 module Json = {
   [@react.component]
   let make = (~value, ~onChange) => {
-    let onChangeHandler = (_event, value) => {
-      onChange(value);
-    };
-
-    <Monaco mode=Json value onChange={Write(onChangeHandler)} />;
+    <Monaco mode=Json value onChange={Write(onChange)} />;
   };
 };

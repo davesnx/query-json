@@ -1,4 +1,5 @@
 open Js_of_ocaml;
+
 let getHash = () =>
   try(Some(Url.Current.get_fragment() |> Url.urldecode)) {
   | _ => None

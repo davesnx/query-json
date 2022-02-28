@@ -1,4 +1,4 @@
-let noop2 = (_, _) => ();
+let noop = _ => ();
 
 module Mode = {
   type t =
@@ -42,11 +42,11 @@ module External = {
       ~language: string,
       ~height: string,
       ~value: string,
-      ~onChange: (React.Event.Form.t, string) => unit,
+      ~onChange: Js_of_ocaml.Js.t(Js_of_ocaml.Js.js_string) => unit,
       ~className: string=?,
       ~style: React.Dom.Style.t,
       ~theme: string,
-      ~options: Js_of_ocaml.Js.t('a)
+      ~options: Js_of_ocaml.Js.t(options)
     ) =>
     React.element =
     {|require("@monaco-editor/react").default|};
@@ -72,7 +72,7 @@ let options: options = {
 };
 
 type onChange =
-  | Write((React.Event.Form.t, string) => unit)
+  | Write(string => unit)
   | ReadOnly;
 
 let isReadOnly =
@@ -84,20 +84,22 @@ let isReadOnly =
 let make = (~value: string, ~onChange as onChangeValue: onChange, ~mode) => {
   let onChange =
     switch (onChangeValue) {
-    | ReadOnly => noop2
-    | Write(handler) => handler
+    | ReadOnly => noop
+    | Write(handler) => (
+        jsstring => handler(Js_of_ocaml.Js.to_string(jsstring))
+      )
     };
 
   let options =
     {...options, readOnly: isReadOnly(onChangeValue)} |> jsobject_of_options;
 
   <External
-    language={Mode.to_language(mode)}
-    height="100%"
     value
     onChange
     options
     theme="dark"
+    language={Mode.to_language(mode)}
+    height="100%"
     style=React.Dom.Style.(make([|padding("8px"), height("100%")|]))
   />;
 };

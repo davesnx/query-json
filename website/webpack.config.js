@@ -30,6 +30,7 @@ module.exports = {
     })] : [])
   ],
   devServer: {
+    open: 'firefox',
     compress: true,
     contentBase: outputDir,
     port: 7000,
