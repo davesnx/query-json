@@ -33,7 +33,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: Install esy
-        run: npm install -g esy@0.6.12
+        run: npm install -g esy@0.6.13-dev
 
       - name: Restore esy source cache
         id: esy-cache
@@ -186,13 +186,13 @@ jobs:
 
       - name: End to end Test (Linux)
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: npx bats ./e2e/test.sh
+        run: esy x bats ./e2e/test.sh
         env:
           IS_CI: true
 
       - name: End to end Test (Windows)
         if: ${{ matrix.os == 'windows-latest' }}
-        run: sh -c 'npx bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
+        run: sh -c 'esy x bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
         env:
           IS_CI: true
 
