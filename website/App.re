@@ -144,7 +144,6 @@ let bind = (f, o) =>
 [@react.component]
 let make = () => {
   let hash = Router.getHash();
-  Printf.eprintf("%s", hash |> Option.value(~default="hash roto"));
 
   let stateFromHash =
     hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
