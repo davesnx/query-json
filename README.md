@@ -1,5 +1,6 @@
 <p>
-  <img width="450" alt="query-json logo" src="docs/logo.svg" />
+  <img width="450" alt="query-json logo" src="docs/dark-logo.svg#gh-light-mode-only" />
+  <img width="450" alt="query-json logo" src="docs/white-logo.svg#gh-dark-mode-only" />
   <br>
   <br>
   <br>
