@@ -23,6 +23,6 @@ let tests = [
   ),
   case(
     {| { "overflow": 12345678999999999999 } |},
-    `Assoc([("overflow", `String("12345678999999999999"))]),
+    `Assoc([("overflow", `Intlit("12345678999999999999"))]),
   ),
 ];

@@ -40,6 +40,10 @@ let getFieldName = json => {
   | `Int(_i) => "int"
   | `Null => "null"
   | `String(_identifier) => "string"
+  /* Those 3 are added by Yojson.Safe */
+  | `Variant(_) => "variant"
+  | `Tuple(_) => "list"
+  | `Intlit(_) => "int"
   };
 };
 
@@ -234,8 +238,7 @@ let index = (value: int, json: Json.t) => {
   };
 };
 
-let rec compile =
-        (expression: expression, json): result(list(Json.t), string) => {
+let rec compile = (expression, json): result(list(Json.t), string) => {
   switch (expression) {
   | Identity => Results.return(json)
   | Empty => empty
@@ -290,13 +293,10 @@ and operation = (leftR, rightR, op, json) => {
 }
 and map = (expr: expression, json: Json.t) => {
   switch (json) {
-  | `List(list) =>
-    List.length(list) > 0
-      ? {
-        Results.collect(List.map(item => compile(expr, item), list))
-        |> Result.map(x => [`List(x)]);
-      }
-      : Error(makeEmptyListError("map"))
+  | `List(list) when List.length(list) > 0 =>
+    Results.collect(List.map(item => compile(expr, item), list))
+    |> Result.map(x => [`List(x)])
+  | `List(_list) => Error(makeEmptyListError("map"))
   | _ => Error(makeError("map", json))
   };
 };
