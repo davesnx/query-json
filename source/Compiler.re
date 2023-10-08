@@ -1,40 +1,51 @@
 open Ast;
 open Console;
 
-type noun =
-  | StartsWithVocal(string)
-  | StartsWithConsonant(string);
+let appendArticle = (noun: string) => {
+  let starts_with_any = (str: string, chars: list(string)) => {
+    let rec loop = (chars: list(string)) => {
+      switch (chars) {
+      | [] => false
+      | [x, ...xs] =>
+        if (String.starts_with(~prefix=str, x)) {
+          true;
+        } else {
+          loop(xs);
+        }
+      };
+    };
+    loop(chars);
+  };
+
+  starts_with_any(noun, ["a", "e", "i", "o", "u"])
+    ? "an " ++ noun : "a " ++ noun;
+};
 
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
   "Trying to "
   ++ Formatting.singleQuotes(Chalk.bold(op))
   ++ " on "
-  ++ (
-    switch (memberKind) {
-    | StartsWithVocal(m) => "an " ++ Chalk.bold(m)
-    | StartsWithConsonant(m) => "a " ++ Chalk.bold(m)
-    }
-  )
+  ++ (appendArticle(memberKind) |> Chalk.bold)
   ++ ":"
   ++ Formatting.enter(1)
   ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
 };
 
-let makeError = (name: string, json: Json.t) => {
+let getFieldName = json => {
   switch (json) {
-  | `List(_list) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("list"), json)
-  | `Assoc(_assoc) =>
-    makeErrorWrongOperation(name, StartsWithVocal("object"), json)
-  | `Bool(_b) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("bool"), json)
-  | `Float(_f) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("float"), json)
-  | `Int(_i) => makeErrorWrongOperation(name, StartsWithVocal("int"), json)
-  | `Null => makeErrorWrongOperation(name, StartsWithConsonant("null"), json)
-  | `String(_identifier) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("string"), json)
+  | `List(_list) => "list"
+  | `Assoc(_assoc) => "object"
+  | `Bool(_b) => "bool"
+  | `Float(_f) => "float"
+  | `Int(_i) => "int"
+  | `Null => "null"
+  | `String(_identifier) => "string"
   };
+};
+
+let makeError = (name: string, json: Json.t) => {
+  let itemName = getFieldName(json);
+  makeErrorWrongOperation(name, itemName, json);
 };
 
 let empty = Ok([]);
@@ -68,6 +79,8 @@ module Results = {
     };
   };
 };
+
+let ( let* ) = Results.bind;
 
 let keys = (json: Json.t) => {
   switch (json) {
@@ -271,9 +284,9 @@ let rec compile =
   };
 }
 and operation = (leftR, rightR, op, json) => {
-  Results.bind(compile(leftR, json), left =>
-    Results.bind(compile(rightR, json), right => op(left, right))
-  );
+  let* left = compile(leftR, json);
+  let* right = compile(rightR, json);
+  op(left, right);
 }
 and map = (expr: expression, json: Json.t) => {
   switch (json) {
