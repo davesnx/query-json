@@ -148,12 +148,12 @@ let make = () => {
   let stateFromHash =
     hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
 
-  let initialState =
+  let initialState = () =>
     switch (stateFromHash) {
     | Some({query, json}) => {query, json}
     | None => {query: "", json: Some(mockJson)}
     };
-  let (state, dispatch) = React.use_reducer(reduce, initialState);
+  let (state, dispatch) = React.use_reducer(reduce, ~init=initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
