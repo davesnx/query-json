@@ -64,6 +64,5 @@
   js_of_ocaml-compiler
   js_of_ocaml-ppx
   jsonoo
-  jsoo-react
   ppx_jsobject_conv
 ))
