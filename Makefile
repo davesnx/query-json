@@ -57,7 +57,7 @@ setup-githooks: ## Setup githooks
 .PHONY: pin
 pin: ## Pin dependencies
 	opam pin add jsoo-react.dev "git+https://github.com/ml-in-barcelona/jsoo-react.git#8fda15c39665ac27841c7659422f82ac331e0a01" -y
-	opam pin add jsoo-css.dev "git+https://github.com/ml-in-barcelona/jsoo-css.git#c5945cff4555c3ab4cd3f9f215aa0a96af871c2c" -y --update-invariant
+	opam pin add jsoo-css.dev "git+https://github.com/ml-in-barcelona/jsoo-css.git#d1b4a70766a7e1e5df9493d3c0e4c47e8dc4e41c" -y
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
