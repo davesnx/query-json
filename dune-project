@@ -19,8 +19,12 @@
 
 (package
  (name query-json)
- (synopsis "")
- (description "")
+ (synopsis "Faster, simpler and more portable implementation of `jq` in Reason")
+ (description "query-json is a faster and simpler re-implementation of jq's language in Reason, compiled to a native binary and as a JavaScript library.
+
+  It's a CLI to run small programs against JSON, the same idea as sed but for JSON files.
+
+  Play around with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
   reason
@@ -38,8 +42,12 @@
 
 (package
  (name query-json-js)
- (synopsis "")
- (description "")
+ (synopsis "Faster, simpler and more portable implementation of `jq` in Reason. Shipped as a JavaScript library.")
+ (description "query-json is a faster and simpler re-implementation of jq's language in Reason, compiled to a native binary and as a JavaScript library.
+
+  It's a CLI to run small programs against JSON, the same idea as sed but for JSON files.
+
+  Play around with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
   reason
@@ -53,16 +61,19 @@
 (package
  (name query-json-web)
  (allow_empty)
- (synopsis "")
- (description "")
+ (synopsis "query-json-web is the web playground for query-json, written in jsoo and jsoo-react.")
+ (description "query-json is a faster and simpler re-implementation of jq's language in Reason, compiled to a native binary and as a JavaScript library.
+
+  It's a CLI to run small programs against JSON, the same idea as sed but for JSON files.
+
+  Play around with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
   reason
-
-  brr
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
-  jsonoo
   ppx_jsobject_conv
+  brr
+  jsonoo
 ))

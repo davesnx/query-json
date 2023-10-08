@@ -46,7 +46,6 @@ jobs:
           path: ~/.opam
           key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
 
-
       - name: Load opam cache when Windows
         if: runner.os == 'Windows'
         id: opam-cache-windows
