@@ -29,6 +29,7 @@ conflicts: [
   "ocamlfind"   {< "1.5.1"}
   "js_of_ocaml" {< "3.0"}
   "base-domains"
+  "ocaml-option-bytecode-only"
 ]
 x-commit-hash: "95bc95d31122bae5764022f878d8a6dd95ceb169"
 url {

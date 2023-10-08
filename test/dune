@@ -1,18 +1,6 @@
-(library
- (name Test)
- (ocamlopt_flags -linkall -g)
- (libraries query-json.core rely.lib)
- (modules
-  (:standard \ Run)))
-
-(executable
- (package query-json)
- (name Run)
- (public_name Run.exe)
- (libraries Test)
- (modules Run))
-
-(rule
- (alias runtest)
- (action
-  (run ./Run.exe)))
+(test
+ (name test)
+ (libraries
+  alcotest
+  query-json.core
+  ppx_deriving.runtime))

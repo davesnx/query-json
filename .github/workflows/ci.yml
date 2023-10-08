@@ -32,53 +32,47 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
-      - name: Install esy
-        run: npm install -g esy@0.6.12
-
-      - name: Restore esy source cache
-        id: esy-cache
-        uses: actions/cache@v2
+       - name: Load opam cache when not Windows
+        if: runner.os != 'Windows'
+        id: opam-cache
+        uses: actions/cache/restore@v3
         with:
-          path: ~/.esy/source
-          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+          path: ~/.opam
+          key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
 
-      - name: Install
-        run: esy install
-
-      - name: Print esy cache
-        id: print_esy_cache
-        run: node scripts/print-esy-cache.js
-
-      - name: Try to restore dependencies cache
-        id: deps-cache
-        uses: actions/cache@v2
+      - name: Load opam cache when Windows
+        if: runner.os == 'Windows'
+        id: opam-cache-windows
+        uses: actions/cache/restore@v3
         with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: deps-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-          restore-keys: deps-${{ matrix.os }}-
+          path: _opam
+          key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
 
-      - name: Build dependencies
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: esy build-dependencies
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          dune-cache: true
+          opam-disable-sandboxing: true
+
+      - name: Install deps
+        run: opam install . --deps-only --with-doc --with-test
+
+      - name: Pin dune and melange
+        run: make pin
 
       - name: Build
-        run: esy build
+        run: make build
 
-      - name: Test
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          rm test/__snapshots__/.gitkeep
-          esy dune runtest --instrument-with bisect_ppx --force
-          esy bisect-ppx-report send-to Coveralls
-        env:
-          BISECT_SILENT: "ERR"
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          PULL_REQUEST_NUMBER: ${{ github.event.number }}
+      - name: Check formatting
+        run: make format-check
+
+      - name: Run tests
+        run: make test
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          esy b dune build
           cd website
           npm ci
           npm run build-production
@@ -113,11 +107,6 @@ jobs:
         with:
           name: bundled
           path: _build/default/js/Js.bc.js
-
-      # Cleanup build cache if dependencies have changed
-      - name: Clean build cache
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: esy cleanup .
 
   publish:
     needs: build
@@ -201,7 +190,7 @@ jobs:
         id: newVersion
         run: |
           REMOTE=$(npm view @davesnx/query-json version);
-          CURRENT=$(jq -r '.version' esy.json);
+          CURRENT=$(cat dune-project | grep -oE '\(version [0-9]+\.[0-9]+\.[0-9]+\)' | grep -o '\d\+.\d\+.\d\+');
           if [ "$REMOTE" != "$CURRENT" ]
           then
             echo "::set-output name=shouldPublish::true";

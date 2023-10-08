@@ -137,8 +137,8 @@ let notEq = (l, r) => Results.return(`Bool(l != r));
 
 let add = apply("+", (l, r) => l +. r);
 let sub = apply("-", (l, r) => l -. r);
-let mult = apply("-", (l, r) => l *. r);
-let div = apply("-", (l, r) => l /. r);
+let mult = apply("*", (l, r) => l *. r);
+let div = apply("/", (l, r) => l /. r);
 
 let filter = (fn: Json.t => bool, json: Json.t) => {
   switch (json) {

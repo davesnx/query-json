@@ -88,11 +88,10 @@ let noColor = {
 let cmd = {
   (
     Term.(const(run) $ query $ json $ kind $ verbose $ debug $ noColor),
-    Term.info(
+    Cmd.info(
       "query-json",
       ~version=Info.version,
       ~doc="Run operations on JSON",
-      ~exits=Term.default_exits,
       ~man=[
         `S(Manpage.s_description),
         `P(Info.description),
@@ -104,4 +103,4 @@ let cmd = {
   );
 };
 
-exit(eval(cmd));
+Stdlib.exit(Cmd.eval(cmd));

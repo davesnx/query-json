@@ -22,9 +22,9 @@ build: [
   ["dune" "build" "@doc" "-p" name "-j" jobs] {with-doc}
 ]
 depends: [
-  "ocaml" {>= "4.04"}
+  "ocaml" {>= "4.04" & < "5.0"}
   "dune" {>= "1.8"}
-  "ppxlib" {>= "0.18.0"}
+  "ppxlib" {>= "0.18.0" & < "0.26.0"}
   "gen"
   "uchar"
 ]

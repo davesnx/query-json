@@ -1,4 +1,4 @@
-open Ast;
+include Ast;
 open Tokenizer;
 open Console.Errors;
 
@@ -9,7 +9,7 @@ let last_position = ref(Location.none);
 exception LexerError(string);
 
 let provider =
-    (~debug, buf): (token, Stdlib__lexing.position, Stdlib__lexing.position) => {
+    (~debug, buf): (token, Lexing.position, Lexing.position) => {
   let (start, stop) = Sedlexing.lexing_positions(buf);
   let token =
     switch (tokenize(buf)) {

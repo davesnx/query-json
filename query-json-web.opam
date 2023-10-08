@@ -9,13 +9,16 @@ license: "MIT"
 homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
+  "dune" {>= "3.0"}
   "ocaml"
   "reason"
-  "dune" {>= "3.0"}
-  "yojson"
-  "cmdliner"
+  "brr"
   "js_of_ocaml"
   "js_of_ocaml-compiler"
+  "js_of_ocaml-ppx"
+  "jsonoo"
+  "jsoo-react"
+  "ppx_jsobject_conv"
   "odoc" {with-doc}
 ]
 build: [

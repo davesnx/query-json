@@ -18,11 +18,11 @@ type token =
   | CLOSE_PARENT
   | OPEN_BRACKET
   | CLOSE_BRACKET
-  | OPEN_BRACE
+  /* | OPEN_BRACE */
   | SEMICOLON
-  | CLOSE_BRACE
+  /* | CLOSE_BRACE */
   | DOT
-  | DOUBLE_DOT
+  /* | DOUBLE_DOT */
   | RECURSE
   | PIPE
   | QUESTION_MARK
@@ -84,8 +84,8 @@ let rec tokenize = buf => {
   | "/" => Ok(DIV)
   | "[" => Ok(OPEN_BRACKET)
   | "]" => Ok(CLOSE_BRACKET)
-  | "{" => Ok(OPEN_BRACE)
-  | "}" => Ok(CLOSE_BRACE)
+  /* | "{" => Ok(OPEN_BRACE) */
+  /* | "}" => Ok(CLOSE_BRACE) */
   | "|" => Ok(PIPE)
   | ";" => Ok(SEMICOLON)
   | "," => Ok(COMMA)
@@ -96,7 +96,7 @@ let rec tokenize = buf => {
   | "(" => Ok(OPEN_PARENT)
   | ")" => Ok(CLOSE_PARENT)
   | dot => Ok(DOT)
-  | ':' => Ok(DOUBLE_DOT)
+  /* | ':' => Ok(DOUBLE_DOT) */
   | ".." => Ok(RECURSE)
   | '"' => string(buf)
   | identifier => tokenizeApply(buf)

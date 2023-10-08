@@ -1,0 +1,49 @@
+opam-version: "2.0"
+synopsis: "Declarative events and signals for OCaml"
+description: """\
+Note is an OCaml library for functional reactive programming (FRP). It
+provides support to program with time varying values: declarative
+events and signals.
+
+Note also has (optional and experimental) support for reactive browser
+programming with the [brr] library.
+
+Note is distributed under the ISC license.
+
+Homepage: <http://erratique.ch/software/note>  
+
+[brr]: https://erratique.ch/software/brr"""
+maintainer: "Daniel Bünzli <daniel.buenzl i@erratique.ch>"
+authors: "The note programmers"
+license: "ISC"
+tags: [
+  "reactive" "declarative" "signal" "event" "frp" "org:erratique" "browser"
+]
+homepage: "https://erratique.ch/software/note"
+doc: "https://erratique.ch/software/note/doc/"
+bug-reports: "https://github.com/dbuenzli/note/issues"
+depends: [
+  "ocaml" {>= "4.08.0"}
+  "ocamlfind" {build}
+  "ocamlbuild" {build}
+  "topkg" {build & >= "1.0.3"}
+]
+depopts: ["brr"]
+conflicts: [
+  "brr" {< "0.0.6"}
+]
+build: [
+  "ocaml"
+  "pkg/pkg.ml"
+  "build"
+  "--dev-pkg"
+  "%{dev}%"
+  "--with-brr"
+  "%{brr:installed}%"
+]
+dev-repo: "git+https://erratique.ch/repos/note.git"
+url {
+  src: "https://erratique.ch/software/note/releases/note-0.0.3.tbz"
+  checksum:
+    "sha512=cd972d9066fc712625fd143f5bfe94f66d0c8c47adcd0c0dcde698cf7a88a4b8065bc6a39252916f7f2dd763d5c525a0826be9b33d564af5e260e1577b3e6d31"
+}
