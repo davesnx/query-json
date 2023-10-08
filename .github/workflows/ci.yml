@@ -32,7 +32,7 @@ jobs:
             ${{ runner.os }}-build-
             ${{ runner.os }}-
 
-       - name: Load opam cache when not Windows
+      - name: Load opam cache when not Windows
         if: runner.os != 'Windows'
         id: opam-cache
         uses: actions/cache/restore@v3
