@@ -46,6 +46,7 @@ jobs:
           path: ~/.opam
           key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
 
+
       - name: Load opam cache when Windows
         if: runner.os == 'Windows'
         id: opam-cache-windows
@@ -55,7 +56,7 @@ jobs:
           key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+        uses: ocaml/setup-ocaml@d7e9ba90ba3b08308d8379b401c1317dbd443782
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true
