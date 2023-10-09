@@ -6,6 +6,8 @@
 
 (license MIT)
 
+(cram enable)
+
 (maintainers "David Sancho <dsnxmoreno@gmail.com>")
 
 (authors "David Sancho <dsnxmoreno@gmail.com>")
