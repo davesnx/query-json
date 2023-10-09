@@ -230,10 +230,10 @@ let member = (key: string, opt: bool, json: Json.t) => {
 
 let index = (value: int, json: Json.t) => {
   switch (json) {
+  | `List(list) when List.length(list) > value =>
+    Results.return(Json.index(value, json))
   | `List(list) =>
-    List.length(list) > value
-      ? Results.return(Json.index(value, json))
-      : Error(makeAcessingToMissingItem(value, List.length(list)))
+    Error(makeAcessingToMissingItem(value, List.length(list)))
   | _ => Error(makeError("[" ++ string_of_int(value) ++ "]", json))
   };
 };

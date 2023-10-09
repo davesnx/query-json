@@ -4,6 +4,8 @@
 
 (generate_opam_files true)
 
+(cram enable)
+
 (license MIT)
 
 (maintainers "David Sancho <dsnxmoreno@gmail.com>")
