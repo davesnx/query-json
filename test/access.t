@@ -8,16 +8,14 @@ Empty query makes the identity
   $ Bin '.flores' <<< '{ "flores": 12 }'
   12
 
+Literals should return themselves
   $ Bin '23' <<< '{}'
   23
-
-non defined field gives back null
-  $ Bin '.wat?' mock.json
-  null
 
   $ Bin '.foo.bar' <<< '{ "foo": { "bar": 23 }}'
   23
 
+non defined field gives back null when "?"
   $ Bin '.foo.bar.baz?' <<< '{ "foo": { "bar": {} }}'
   null
 
