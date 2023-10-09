@@ -1,30 +1,32 @@
 open QueryJsonCore;
 open QueryJsonCore.Console;
 
-type inputKind =
-  | File
-  | Inline;
+module Runtime = {
+  type inputKind =
+    | File
+    | Inline;
 
-let run = (~kind, ~payload, ~noColor, runtime) => {
-  let input =
-    switch (kind, payload) {
-    | (File, Some(file)) => Json.parseFile(file)
-    | (Inline, Some(str)) => Json.parseString(str)
-    | (_, None) =>
-      let ic = Unix.(stdin |> in_channel_of_descr);
-      Json.parseChannel(ic);
-    };
+  let run = (~kind, ~payload, ~noColor, runtime) => {
+    let input =
+      switch (kind, payload) {
+      | (File, Some(file)) => Json.parseFile(file)
+      | (Inline, Some(str)) => Json.parseString(str)
+      | (_, None) =>
+        let ic = Unix.(stdin |> in_channel_of_descr);
+        Json.parseChannel(ic);
+      };
 
-  switch (input) {
-  | Ok(json) =>
-    switch (runtime(json)) {
+    switch (input) {
     | Ok(json) =>
-      json
-      |> List.map(Json.toString(~colorize=!noColor, ~summarize=false))
-      |> List.iter(print_endline)
-    | Error(err) => print_endline(Errors.printError(err))
-    }
-  | Error(err) => print_endline(Errors.printError(err))
+      switch (runtime(json)) {
+      | Ok(json) =>
+        json
+        |> List.map(Json.toString(~colorize=!noColor, ~summarize=false))
+        |> List.iter(print_endline)
+      | Error(err) => print_endline(Console.Errors.printError(err))
+      }
+    | Error(err) => print_endline(Console.Errors.printError(err))
+    };
   };
 };
 
@@ -32,16 +34,16 @@ let execution =
     (
       query: option(string),
       payload: option(string),
-      kind: inputKind,
-      _verbose: bool,
+      kind: Runtime.inputKind,
+      verbose: bool,
       debug: bool,
       noColor: bool,
     ) => {
   switch (query) {
   | Some(q) =>
-    Main.parse(~debug, q)
+    Main.parse(~debug, ~verbose, q)
     |> Result.map(Compiler.compile)
-    |> Result.iter(run(~payload, ~kind, ~noColor))
+    |> Result.iter(Runtime.run(~payload, ~kind, ~noColor))
   | None => print_endline(usage())
   };
 };
@@ -60,8 +62,12 @@ let json = {
 
 let kind = {
   let doc = "input kind";
-  let kindEnum = Arg.enum([("file", File), ("inline", Inline)]);
-  Arg.(value & opt(kindEnum, ~vopt=File, File) & info(["k", "kind"], ~doc));
+  let kindEnum = Arg.enum([("file", Runtime.File), ("inline", Inline)]);
+  Arg.(
+    value
+    & opt(kindEnum, ~vopt=Runtime.File, File)
+    & info(["k", "kind"], ~doc)
+  );
 };
 
 let verbose = {

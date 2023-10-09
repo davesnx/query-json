@@ -105,6 +105,6 @@ let rec tokenize = buf => {
     Ok(NUMBER(num));
   | space => tokenize(buf)
   | any => Error("Unexpected character '" ++ lexeme(buf) ++ "'")
-  | _ => Error("Unexpected character")
+  | _ => Error("Unexpected character '" ++ lexeme(buf) ++ "'")
   };
 };

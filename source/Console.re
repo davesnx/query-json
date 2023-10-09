@@ -75,13 +75,10 @@ module Errors = {
     };
   };
 
-  let make = (~input, ~start: Lexing.position, ~end_: Lexing.position, exn) => {
-    let exnToString = extractExn(Printexc.to_string(exn));
+  let make = (~input, ~start: Lexing.position, ~end_: Lexing.position) => {
     let pointerRange = String.make(end_.pos_cnum - start.pos_cnum, '^');
 
-    Chalk.red(Chalk.bold(exnToString))
-    ++ Formatting.enter(1)
-    ++ Formatting.indent(4)
+    Chalk.red(Chalk.bold("Parse error: "))
     ++ "Problem parsing at position "
     ++ positionToString(start, end_)
     ++ Formatting.enter(2)

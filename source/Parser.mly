@@ -1,6 +1,6 @@
 %{
-  open Ast;;
-  open Console.Errors;;
+  open Ast
+  open Console.Errors
 %}
 
 %token <string> STRING
@@ -86,20 +86,20 @@ term:
   | RECURSE;
     { Recurse }
   | s = STRING;
-    { Literal(String(s)) }
+    { Literal (String s) }
   | n = NUMBER;
-    { Literal(Number(n)) }
+    { Literal (Number n) }
   | b = BOOL;
-    { Literal(Bool(b)) }
+    { Literal (Bool b) }
   | NULL
-    { Literal(Null) }
+    { Literal Null }
   | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
     { match f with
       | "range" -> Range(int_of_float(from), int_of_float(upto))
-      | _ -> failwith(f ^ " is not a valid function")
+      | _ -> Error(f ^ " is not a valid function")
      }
   | f = FUNCTION; CLOSE_PARENT;
-    { failwith(f ^ "(), should contain a body") }
+    { Error(f ^ "(), should contain a body") }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
       | "filter" -> Map(Select(cb)) (* for backward compatibility *)
@@ -124,17 +124,17 @@ term:
       | "split" -> Split(cb)
       | "join" -> Join(cb)
       | "contains" -> Contains(cb)
-      | "startswith" -> failwith(renamed f "starts_with")
-      | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(missing f)
+      | "startswith" -> Error(renamed f "starts_with")
+      | "endswith" -> Error(renamed f "ends_with")
+      | _ -> Error(missing f)
     }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty
-      | "if" -> failwith(notImplemented f)
-      | "then" -> failwith(notImplemented f)
-      | "else" -> failwith(notImplemented f)
-      | "break" -> failwith(notImplemented f)
+      | "if" -> Error(notImplemented f)
+      | "then" -> Error(notImplemented f)
+      | "else" -> Error(notImplemented f)
+      | "break" -> Error(notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -164,21 +164,25 @@ term:
       | "nan" -> Nan
       | "is_nan" -> IsNan
       | "not" -> Not
-      | "isnan" -> failwith(renamed f "is_nan")
-      | "reduce" -> failwith(renamed f "reduce()")
-      | "tonumber" -> failwith(renamed f "to_number")
-      | "isinfinite" -> failwith(renamed f "is_infinite")
-      | "isfinite" -> failwith(renamed f "is_finite")
-      | "isnormal" -> failwith(renamed f "is_normal")
-      | "tostring" -> failwith(renamed f "to_string")
-      | _ -> failwith(missing f)
+      | "isnan" -> Error(renamed f "is_nan")
+      | "reduce" -> Error(renamed f "reduce()")
+      | "tonumber" -> Error(renamed f "to_number")
+      | "isinfinite" -> Error(renamed f "is_infinite")
+      | "isfinite" -> Error(renamed f "is_finite")
+      | "isnormal" -> Error(renamed f "is_normal")
+      | "tostring" -> Error(renamed f "to_string")
+      | _ -> Error(missing f)
     }
-  | OPEN_BRACKET; CLOSE_BRACKET;
-    { List(Empty) }
+
+/*   | OPEN_BRACKET; CLOSE_BRACKET;
+    { List(Empty) } */
+
   | OPEN_BRACKET; e = expr; CLOSE_BRACKET;
     { List(e) }
-  | OPEN_PARENT; e = expr; CLOSE_PARENT;
-    { e }
+
+  /* | OPEN_PARENT; e = expr; CLOSE_PARENT;
+    { e } */
+
   | e = term; OPEN_BRACKET; i = NUMBER; CLOSE_BRACKET
     { Pipe(e, Index(int_of_float(i))) }
 

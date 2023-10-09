@@ -4,11 +4,12 @@ let assert_string = (left, right) =>
   Alcotest.check(Alcotest.string, "should be equal", right, left);
 
 let debug = false;
+let verbose = false;
 
 let case = (input, expected) => {
   let fn = () => {
     let result =
-      switch (parse(~debug, input)) {
+      switch (parse(~debug, ~verbose, input)) {
       | Ok(r) => r
       | Error(err) => Alcotest.fail(err)
       };
@@ -21,6 +22,7 @@ let case = (input, expected) => {
 
 let tests = [
   case(".[1]", Pipe(Identity, Index(1))),
+  /* case(".[]", Pipe(Identity, Index(1))), */
   case("[1]", List(Literal(Number(1.)))),
   case(".store.books", Pipe(Key("store", false), Key("books", false))),
   case(".books[1]", Pipe(Key("books", false), Index(1))),
