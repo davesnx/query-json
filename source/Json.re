@@ -53,6 +53,13 @@ let record = Easy_format.list;
 
 let id = (i: string): string => i;
 
+let pp_float = float =>
+  if (Stdlib.Float.equal(Stdlib.Float.round(float), float)) {
+    float |> int_of_float |> string_of_int;
+  } else {
+    Printf.sprintf("%g", float);
+  };
+
 module Color = {
   let rec format = (json: t) =>
     switch (json) {
@@ -62,7 +69,7 @@ module Color = {
     | `Int(i) =>
       Easy_format.Atom(i |> string_of_int |> Chalk.green, Easy_format.atom)
     | `Float(f) =>
-      Easy_format.Atom(f |> string_of_float |> Chalk.green, Easy_format.atom)
+      Easy_format.Atom(f |> pp_float |> Chalk.green, Easy_format.atom)
     | `String(s) =>
       Easy_format.Atom(encode(s) |> quotes |> Chalk.green, Easy_format.atom)
     | `Intlit(s) => Easy_format.Atom(s |> Chalk.green, Easy_format.atom)
@@ -95,7 +102,7 @@ module Summarize = {
     | `Bool(b) => Easy_format.Atom(string_of_bool(b), Easy_format.atom)
     | `Int(i) => Easy_format.Atom(i |> string_of_int, Easy_format.atom)
     | `Intlit(s) => Easy_format.Atom(s, Easy_format.atom)
-    | `Float(f) => Easy_format.Atom(f |> string_of_float, Easy_format.atom)
+    | `Float(f) => Easy_format.Atom(f |> pp_float, Easy_format.atom)
     | `String(s) => Easy_format.Atom(encode(s) |> quotes, Easy_format.atom)
     | `List([]) => Easy_format.Atom("[]", Easy_format.atom)
     | `Variant(s, _opt) => Easy_format.Atom(s, Easy_format.atom)
@@ -123,7 +130,7 @@ module NoColor = {
     | `Bool(b) => Easy_format.Atom(string_of_bool(b), Easy_format.atom)
     | `Int(i) => Easy_format.Atom(i |> string_of_int, Easy_format.atom)
     | `Intlit(s) => Easy_format.Atom(s, Easy_format.atom)
-    | `Float(f) => Easy_format.Atom(f |> string_of_float, Easy_format.atom)
+    | `Float(f) => Easy_format.Atom(f |> pp_float, Easy_format.atom)
     | `String(s) => Easy_format.Atom(encode(s) |> quotes, Easy_format.atom)
     | `Variant(s, _opt) =>
       Easy_format.Atom(encode(s) |> quotes, Easy_format.atom)

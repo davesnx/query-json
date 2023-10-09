@@ -1,14 +1,14 @@
-[@deriving show]
+[@deriving show({with_path: false})]
 type regex = string;
 
-[@deriving show]
+[@deriving show({with_path: false})]
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
   | Number(float) /* 123 or 123.0 */
   | Null; /* null */
 
-[@deriving show]
+[@deriving show({with_path: false})]
 type expression =
   | Identity /* . */
   | Empty /* empty */

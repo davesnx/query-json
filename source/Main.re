@@ -8,8 +8,7 @@ let last_position = ref(Location.none);
 
 exception LexerError(string);
 
-let provider =
-    (~debug, buf): (token, Lexing.position, Lexing.position) => {
+let provider = (~debug, buf): (token, Lexing.position, Lexing.position) => {
   let (start, stop) = Sedlexing.lexing_positions(buf);
   let token =
     switch (tokenize(buf)) {
@@ -27,17 +26,18 @@ let provider =
   (token, start, stop);
 };
 
-let parse = (input: string, ~debug: bool): result(expression, string) => {
+let parse = (~debug=false, input): result(expression, string) => {
   let buf = Sedlexing.Utf8.from_string(input);
   let lexer = () => provider(~debug, buf);
 
-  if (debug) {
-    print_endline("");
-  };
-
-  try(Ok(menhir(lexer))) {
-  | exn =>
+  switch (menhir(lexer)) {
+  | ast =>
+    if (debug) {
+      print_endline(show_expression(ast));
+    };
+    Ok(ast);
+  | exception _exn =>
     let Location.{loc_start, loc_end, _} = last_position^;
-    Error(make(~input, ~start=loc_start, ~end_=loc_end, exn));
+    Error(make(~input, ~start=loc_start, ~end_=loc_end));
   };
 };
