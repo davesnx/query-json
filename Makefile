@@ -50,10 +50,6 @@ format: ## Format the codebase with ocamlformat
 format-check: ## Checks if format is correct
 	$(DUNE) build @fmt
 
-.PHONY: init
-setup-githooks: ## Setup githooks
-	git config core.hooksPath .githooks
-
 .PHONY: pin
 pin: ## Pin dependencies
 	opam pin add jsoo-react.dev "git+https://github.com/ml-in-barcelona/jsoo-react.git#8fda15c39665ac27841c7659422f82ac331e0a01" -y
@@ -67,49 +63,11 @@ create-switch: ## Create opam switch
 install: create-switch pin ## Install dependencies
 
 .PHONY: init
-init: setup-githooks install ## Create a local dev enviroment
-
-.PHONY: ppx-test
-ppx-test: ## Run ppx tests
-	$(DUNE) runtest ppx
-
-.PHONY: ppx-test-watch
-ppx-test-watch: ## Run ppx tests in watch mode
-	$(DUNE) runtest ppx --watch
-
-.PHONY: lib-test
-lib-test: ## Run library tests
-	$(DUNE) exec test/test.exe
-
-.PHONY: demo
-demo: ## Run demo executable
-	$(DUNE) exec demo/index.exe
-
-.PHONY: demo-watch
-demo-watch: ## Run demo executable
-	$(DUNE) exec -w demo/index.exe
+init: install ## Create a local dev enviroment
 
 .PHONY: subst
 subst: ## Run dune substitute
 	$(DUNE) subst
-
-.PHONY: documentation
-documentation: ## Generate odoc documentation
-# Since odoc fails when 2 wrapped libraries have the same name,
-# we need to ignore "promise" by adding an underscode in front of it
-	mv $(CURDIR)/packages/promise $(CURDIR)/packages/_promise
-	$(DUNE) build --root . @doc
-# and rollback the rename, so the build continues to work
-	mv $(CURDIR)/packages/_promise $(CURDIR)/packages/promise
-
-# Because if the hack above, we can't have watch mode
-## .PHONY: documentation-watch
-## documentation-watch: ## Generate odoc documentation
-##	$(DUNE) build --root . -w @doc
-
-.PHONY: documentation-serve
-documentation-serve: documentation ## Open odoc documentation with default web browser
-	open _build/default/_doc/_html/index.html
 
 $(opam_file): dune-project ## Update the package dependencies when new deps are added to dune-project
 	$(DUNE) build @install
