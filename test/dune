@@ -3,5 +3,4 @@
  (libraries alcotest query-json.core fmt yojson ppx_deriving.runtime))
 
 (cram
- (package query-json)
  (deps %{bin:Bin} ./mock.json))
