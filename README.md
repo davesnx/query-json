@@ -28,7 +28,7 @@ It was created with mostly two reasons, learning and having fun.
 
 ## It brings
 
-- **Great Performance**: Fast, small footprint and minimum run-time. Check [Performance section](#Performance) for a longer explanation.
+- **Great Performance**: Fast, small footprint and minimum runtime. Check [Performance section](#Performance) for a longer explanation, but it can be 2x to 5x faster than jq.
 - **Delightful errors**:
   - Better errors when json types and operation don't match:
     ```bash
@@ -53,12 +53,10 @@ Check the content of [scripts/install.sh](./scripts/install.sh) before running a
 curl -sfL https://raw.githubusercontent.com/davesnx/query-json/master/scripts/install.sh | bash
 ```
 
-### Using npm/yarn
+### Using npm
 
 ```bash
 npm install --global @davesnx/query-json
-# or
-yarn global add @davesnx/query-json
 ```
 
 ### Download zip files from [GitHub](https://github.com/davesnx/query-json/releases)
@@ -67,7 +65,7 @@ yarn global add @davesnx/query-json
 
 I recommend to write the query in single-quotes inside the terminal, since writting JSON requires double-quotes for accessing properties.
 
-> NOTE: I have aliased query-json to be "q" for short, you can set it in your dotfiles. `alias q="query-json"`.
+> NOTE: I have aliased query-json to "q" for short, you can set it in your dotfiles with `alias q="query-json"`.
 
 #### query a json file
 ```bash
@@ -77,6 +75,7 @@ q '.' pokemons.json
 #### query from stdin
 ```bash
 cat pokemons.json | q '.'
+q '.' <<< '{ "bulvasur": { "id": 1, "power": 20 } }'
 ```
 
 #### query a json inlined
@@ -91,7 +90,7 @@ q '.' pokemons.json --no-colors
 
 ## Performance
 
-[This report](./benchmarks/report.md) is not an exhaustive performance report of both tools, it's a overview for the percieved performance of the user. Here I don't profile each tool and try to see what are the bootlenecks, since I assume that both tools have the penalty of parsing a JSON file. Simply run a bash script and analyze the results.
+[This report](./benchmarks/report.md) is not an exhaustive performance report of both tools, it's a overview for the percieved performance of the user. I don't profile each tool and try to see what are the bootlenecks, since I assume that both tools have the penalty of parsing a JSON file.
 
 Aside from that, **query-json** doesn't have feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses. Adding the missing operations on **query-json** won't affect the performance of it, that could not be true for features like "modules" or "tests", which they will not be implemented in **query-json**.
 
@@ -123,7 +122,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Array Index: `.[2]` ✅
   - Pipe: `|` ✅
   - Array/String Slice: `.[10:15]` ⚠️
-  - Array/Object Value Iterator: `.[]` ✅
+  - Array/Object Value Iterator: `.[]` ⚠️
   - Comma: `,` ✅
   - Parenthesis: `()` ✅️
 
