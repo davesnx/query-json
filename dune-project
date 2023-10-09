@@ -36,10 +36,13 @@
   yojson
   sedlex
   ppx_deriving
+  easy-format
 
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
+
+  (alcotest :with-test)
 ))
 
 (package
