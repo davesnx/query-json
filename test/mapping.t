@@ -20,3 +20,9 @@
       "url": "http://example.com/398eb027/4"
     }
   ]
+
+  $ Bin '.doesntexist' ./mock.json
+  
+  Error:  Trying to ".doesntexist" on an object, that don't have the field "doesntexist":
+  { "first": ..., "second": ... }
+  
