@@ -5,9 +5,6 @@
   <img width="250" alt="query-json logo" src="docs/white-logo.svg#gh-dark-mode-only" />
   <br>
   <br>
-  <br>
-  <a href="https://github.com/davesnx/query-json/actions"><img src="https://github.com/davesnx/query-json/workflows/Build%20master/badge.svg" /></a>
-  <a href='https://app.netlify.com/sites/query-json/deploys'><img src="https://api.netlify.com/api/v1/badges/4671b5d7-5734-45d8-9967-26e3ac6704cc/deploy-status" alt="Netlify Badge"/></a>
 </p>
 
 ---
