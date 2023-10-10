@@ -18,4 +18,4 @@ _coverage
 coverage.json
 
 # Website artifacts
-website/build
+dist

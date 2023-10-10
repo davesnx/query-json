@@ -11,10 +11,6 @@
 ; This hardcodes the path dune ignores.
 ; If we update the lib, this might break
 
-(dirs
- node_modules/@monaco-editor/react/lib/cjs/_virtual
- node_modules/@monaco-editor/loader/lib/cjs/_virtual)
-
 (rule
  (targets Console.ml)
  (deps Console.rei)
