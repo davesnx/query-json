@@ -7,8 +7,6 @@
   <br>
 </p>
 
----
-
 **query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason](https://reasonml.github.io/docs/en/native) distributed as a dependency-free binary thanks to the OCaml compiler, and distributed to the web with [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml).
 
 **query-json** allows you to write small programs to operate on top of json files with a concise syntax.
