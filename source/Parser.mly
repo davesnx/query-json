@@ -24,10 +24,8 @@
 
 %token OPEN_BRACKET
 %token CLOSE_BRACKET
-/*
-%token OPEN_BRACE
-%token CLOSE_BRACE
- */
+/* %token OPEN_BRACE
+%token CLOSE_BRACE */
 %token EOF
 
 /* %left OPEN_BRACKET */

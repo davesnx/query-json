@@ -1,1 +1,2 @@
-let run = QueryJsonJs.run
+[@warning "-32"]
+let run = QueryJsonJs.run;

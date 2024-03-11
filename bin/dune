@@ -3,4 +3,4 @@
  (modes native)
  (public_name Bin)
  (package query-json)
- (libraries console.lib query-json.core yojson cmdliner unix))
+ (libraries query-json.core yojson cmdliner unix))

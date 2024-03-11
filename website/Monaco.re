@@ -49,7 +49,7 @@ module External = {
       ~options: Js_of_ocaml.Js.t(options)
     ) =>
     React.element =
-    {|require("@monaco-editor/react").default|};
+    {|require("@monaco-editor/react")|};
 };
 
 let options: options = {

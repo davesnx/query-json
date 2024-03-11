@@ -1,11 +1,9 @@
 (library
  (name QueryJsonCore)
  (public_name query-json.core)
- (libraries menhirLib yojson sedlex console.lib compiler-libs.common)
+ (libraries menhirLib yojson sedlex easy-format compiler-libs.common)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
- (flags
-  (:standard -w +A-4-9-44-48-40-42 -warn-error -3-4-9-44-48 -safe-string))
  (instrumentation
   (backend bisect_ppx)))
 

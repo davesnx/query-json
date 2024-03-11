@@ -1,7 +1,7 @@
 # Benchmark Report
 The benchmarks run on a 13" MacBook Pro (2020) with a 1.4 GHz Quad-Core i5 and 16GB 2133MHz RAM.
 
-This benchmark consists twoo different steps, the boot time and a timer on a few operations over different (json) file sizes.
+This benchmark consists two steps, the boot time and a timer on a few operations over different (json) file sizes.
 
 Executing `$ ./benchmarks/hyper.sh` runs hyperfile.
 Executing `$ ./benchmarks/run.sh` runs the timers.
@@ -83,7 +83,9 @@ fx                6.80 real        10.38 user         0.54 sys
 
 ## Explanation
 
-There are a few good asumtions about why **query-json** is faster, there are just speculations since I didn't profile any of the tools listed here, neither query-json.
+There are a few good asumptions about why **query-json** is faster, here there's are speculations. I didn't profile any of the tools listed here, neither query-json.
+
+The main reason is that query-json is compiled to native code with OCaml.
 
 Thoughts about jq:
 

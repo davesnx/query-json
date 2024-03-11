@@ -1,16 +1,40 @@
 open QueryJsonCore;
-open QueryJsonCore.Compiler;
 open QueryJsonCore.Console;
 
-type inputKind =
-  | File
-  | Inline;
+module Runtime = {
+  type inputKind =
+    | File
+    | Inline;
 
-let run =
+  let run = (~kind, ~payload, ~noColor, runtime) => {
+    let input =
+      switch (kind, payload) {
+      | (File, Some(file)) => Json.parseFile(file)
+      | (Inline, Some(str)) => Json.parseString(str)
+      | (_, None) =>
+        let ic = Unix.(stdin |> in_channel_of_descr);
+        Json.parseChannel(ic);
+      };
+
+    switch (input) {
+    | Ok(json) =>
+      switch (runtime(json)) {
+      | Ok(json) =>
+        json
+        |> List.map(Json.toString(~colorize=!noColor, ~summarize=false))
+        |> List.iter(print_endline)
+      | Error(err) => print_endline(Console.Errors.printError(err))
+      }
+    | Error(err) => print_endline(Console.Errors.printError(err))
+    };
+  };
+};
+
+let execution =
     (
       query: option(string),
       payload: option(string),
-      kind: inputKind,
+      kind: Runtime.inputKind,
       _verbose: bool,
       debug: bool,
       noColor: bool,
@@ -18,90 +42,75 @@ let run =
   switch (query) {
   | Some(q) =>
     Main.parse(~debug, q)
-    |> Result.map(compile)
-    |> Result.map(runtime => {
-         let input =
-           switch (kind, payload) {
-           | (File, Some(j)) => Json.parseFile(j)
-           | (Inline, Some(j)) => Json.parseString(j)
-           | (_, None) =>
-             let ic = Unix.(stdin |> in_channel_of_descr);
-             Json.parseChannel(ic);
-           };
-
-         switch (input) {
-         | Ok(json) => runtime(json)
-         | Error(err) => Error(err)
-         };
-       })
-    |> Result.map(res =>
-         res
-         |> Result.map(os =>
-              List.iter(
-                o =>
-                  Json.toString(o, ~colorize=!noColor, ~summarize=false)
-                  |> print_endline,
-                os,
-              )
-            )
-         |> Result.map_error(e => print_endline(Errors.printError(e)))
-       )
-    |> Result.map_error(e => print_endline(Errors.printError(e)))
-  | None => Ok(Ok(print_endline(usage())))
+    |> Result.map(Compiler.compile)
+    |> Result.iter(Runtime.run(~payload, ~kind, ~noColor))
+  | None => print_endline(usage())
   };
 };
 
 open Cmdliner;
-open Term;
 
-let query = {
-  let doc = "Query to run";
-  Arg.(value & pos(0, some(string), None) & info([], ~doc));
-};
+let query =
+  Arg.(value & pos(0, some(string), None) & info([], ~doc="Query to run"));
 
-let json = {
-  let doc = "JSON file";
-  Arg.(value & pos(1, some(string), None) & info([], ~doc));
-};
+let json =
+  Arg.(value & pos(1, some(string), None) & info([], ~doc="JSON file"));
 
 let kind = {
-  let doc = "input kind";
-  let kindEnum = Arg.enum([("file", File), ("inline", Inline)]);
-  Arg.(value & opt(kindEnum, ~vopt=File, File) & info(["k", "kind"], ~doc));
+  let kindEnum = Arg.enum([("file", Runtime.File), ("inline", Inline)]);
+  Arg.(
+    value
+    & opt(kindEnum, ~vopt=Runtime.File, File)
+    & info(
+        ["k", "kind"],
+        ~doc="Input kind, either a JSON file or inline JSON",
+      )
+  );
 };
 
-let verbose = {
-  let doc = "Activate verbossity";
-  Arg.(value & flag & info(["v", "verbose"], ~doc));
-};
+let verbose =
+  Arg.value(
+    Arg.flag(
+      Arg.info(
+        ["v", "verbose"],
+        ~doc="Activate verbossity. Not used for now",
+      ),
+    ),
+  );
 
-let debug = {
-  let doc = "Activate debug mode";
-  Arg.(value & flag & info(["d", "debug"], ~doc));
-};
+let debug =
+  Arg.value(
+    Arg.flag(Arg.info(~doc="Activate debug mode", ["d", "debug"])),
+  );
 
-let noColor = {
-  let doc = "Enable or disable color in the output";
-  Arg.(value & flag & info(["c", "no-color"], ~doc));
-};
-
-let cmd = {
-  (
-    Term.(const(run) $ query $ json $ kind $ verbose $ debug $ noColor),
-    Term.info(
-      "query-json",
-      ~version=Info.version,
-      ~doc="Run operations on JSON",
-      ~exits=Term.default_exits,
-      ~man=[
-        `S(Manpage.s_description),
-        `P(Info.description),
-        `P("query-json '.dependencies' package.json"),
-        `S(Manpage.s_bugs),
-        `P("Report them to " ++ Info.bugUrl),
-      ],
+let color = {
+  Arg.value(
+    Arg.flag(
+      Arg.info(
+        ~doc="Enable or disable color in the output",
+        ["c", "no-color"],
+      ),
     ),
   );
 };
 
-exit(eval(cmd));
+let term =
+  Term.(const(execution) $ query $ json $ kind $ verbose $ debug $ color);
+
+let info =
+  Cmd.info(
+    "query-json",
+    ~version=Info.version,
+    ~doc="Run operations on JSON",
+    ~man=[
+      `S(Manpage.s_description),
+      `P(Info.description),
+      `P("query-json '.dependencies' package.json"),
+      `S(Manpage.s_bugs),
+      `P("Report them to " ++ Info.bugUrl),
+    ],
+  );
+
+let cmd = Cmd.v(info, term);
+
+let _ = Stdlib.exit(Cmd.eval(cmd));

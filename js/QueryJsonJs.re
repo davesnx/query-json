@@ -2,7 +2,7 @@ open QueryJsonCore;
 
 let run = (query, json) => {
   let result =
-    Main.parse(~debug=false, query)
+    Main.parse(query)
     |> Result.map(Compiler.compile)
     |> Result.map(runtime => {
          switch (Json.parseString(json)) {
