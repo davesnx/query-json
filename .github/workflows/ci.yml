@@ -17,45 +17,16 @@ jobs:
           - 5.1.0
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Use Node.js 16.x
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16.x
 
-      - name: Restore global node modules cache
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/cache@v1
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: Load opam cache when not Windows
-        if: runner.os != 'Windows'
-        id: opam-cache
-        uses: actions/cache/restore@v3
-        with:
-          path: ~/.opam
-          key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
-
-      - name: Load opam cache when Windows
-        if: runner.os == 'Windows'
-        id: opam-cache-windows
-        uses: actions/cache/restore@v3
-        with:
-          path: _opam
-          key: opam-${{ matrix.os }}-${{ matrix.ocaml-compiler }}-${{ hashFiles('**.opam') }}
-
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@d7e9ba90ba3b08308d8379b401c1317dbd443782
+        uses: ocaml/setup-ocaml@v3.3.1
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true
