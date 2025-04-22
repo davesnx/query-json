@@ -179,7 +179,7 @@ let make = () => {
     switch (state.json, state.query) {
     | (Some(_), "")
     | (None, _) => None
-    | (Some(json), _) => Some(QueryJsonJs.run(state.query, json))
+    | (Some(json), _) => Some(QueryJsonCore.Main.run(state.query, json))
     };
 
   let onShareClick = _ => {

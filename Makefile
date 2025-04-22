@@ -64,8 +64,12 @@ create-switch: ## Create opam switch
 	opam switch create . 5.1.0 --deps-only --with-test -y
 
 .PHONY: install
-install:
+install: ## Install opam deps
 	opam install . --deps-only --with-test --with-doc --with-dev-setup -y
+
+.PHONY: npm-install
+npm-install: ## Install npm dependencies
+	npm install
 
 .PHONY: init
 init: setup-githooks create-switch pin install install-npm ## Create a local dev enviroment

@@ -1,7 +1,14 @@
 (executable
  (name Website)
  (modes js)
- (libraries query-json-js js_of_ocaml jsoo-react.lib ojs jsoo-css brr jsonoo)
+ (libraries
+  query-json.core
+  js_of_ocaml
+  jsoo-react.lib
+  ojs
+  jsoo-css
+  brr
+  jsonoo)
  (preprocess
   (pps jsoo-react.ppx ppx_jsobject_conv)))
 

@@ -2,11 +2,9 @@
   "name": "query-json-website",
   "version": "0.0.0",
   "scripts": {
-    "start": "run-p --aggregate-output dev serve",
-    "dev": "webpack -w",
-    "build": "webpack",
-    "build-production": "vite build",
-    "serve": "vite preview"
+    "start": "run-p --aggregate-output build preview",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@emotion/css": "^11.7.1",

@@ -50,7 +50,6 @@ jobs:
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          cd website
           npm ci
           npm run build-production
 
@@ -136,17 +135,17 @@ jobs:
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
-          mv Bin.exe query-json
+          mv query-json.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv Bin.exe query-json
+          mv query-json.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
           cd _release/platform-windows-x64
-          mv Bin.exe query-json
+          mv query-json.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 

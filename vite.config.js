@@ -7,6 +7,7 @@ import polyfillNode from "rollup-plugin-polyfill-node"
 import vitePluginRequire from "vite-plugin-require"
 
 const isProd = process.env.NODE_ENV === 'production';
+
 const monacoEditorPlugin = MonacoEditorPlugin({
   languages: ['json'],
   languageWorkers: ['json']

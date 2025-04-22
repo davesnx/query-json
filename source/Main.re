@@ -46,3 +46,25 @@ let parse = (~debug=false, input): result(Ast.expression, string) => {
     Error(make(~input, ~start=loc_start, ~end_=loc_end));
   };
 };
+
+let run = (query, json) => {
+  let result =
+    parse(query)
+    |> Result.map(Compiler.compile)
+    |> Result.bind(_, runtime => {
+         switch (Json.parseString(json)) {
+         | Ok(input) => runtime(input)
+         | Error(err) => Error(err)
+         }
+       });
+
+  switch (result) {
+  | Ok(res) =>
+    Ok(
+      res
+      |> List.map(Json.toString(~colorize=false, ~summarize=false))
+      |> String.concat("\n"),
+    )
+  | Error(e) => Error(e)
+  };
+};

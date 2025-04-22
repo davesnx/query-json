@@ -2,7 +2,7 @@
 opam-version: "2.0"
 version: "0.5.10"
 synopsis:
-  "query-json-web is the web playground for query-json, written in jsoo and jsoo-react."
+  "query-json-playground is the web playground for query-json, written in jsoo and jsoo-react."
 description: """
 query-json is a faster and simpler re-implementation of jq's language in Reason, compiled to a native binary and as a JavaScript library.
 
