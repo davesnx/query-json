@@ -1,2 +1,2 @@
-  $ Bin 'keys' ./mock.json
+  $ query-json 'keys' ./mock.json
   [ "first", "second" ]

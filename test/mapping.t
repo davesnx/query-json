@@ -1,4 +1,4 @@
-  $ Bin '.first.pages' ./mock.json
+  $ query-json '.first.pages' ./mock.json
   [
     {
       "id": 1,
@@ -21,14 +21,14 @@
     }
   ]
 
-  $ Bin '.doesntexist' ./mock.json
+  $ query-json '.doesntexist' ./mock.json
   
   Error:  Trying to ".doesntexist" on an object, that don't have the field "doesntexist":
   { "first": ..., "second": ... }
   
 
-TODO: This should trigger the same as above
-  $ Bin '.doesnt_exist' ./mock.json
+# TODO: This should trigger the same as above
+  $ query-json '.doesnt_exist' ./mock.json
 
 Error:  Trying to ".doesntexist" on an object, that don't have the field "doesntexist":
 { "first": ..., "second": ... }

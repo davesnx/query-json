@@ -1,3 +1,4 @@
 Prints ints properly
-  $ echo '[]' | Bin '[1, 2, 3]'
+
+  $ echo '[]' | query-json '[1, 2, 3]'
   [ 1, 2, 3 ]

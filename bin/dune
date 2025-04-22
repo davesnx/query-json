@@ -1,6 +1,6 @@
 (executable
- (name Bin)
+ (name bin)
  (modes native)
- (public_name Bin)
+ (public_name query-json)
  (package query-json)
- (libraries query-json.core yojson cmdliner unix))
+ (libraries query-json.core cmdliner unix))

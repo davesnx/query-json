@@ -1,6 +1,12 @@
 open QueryJsonCore;
 open QueryJsonCore.Console;
 
+module Info = {
+  let version = "0.5.20";
+  let description = "query-json is a faster and simpler re-implementation of jq in Reason Native";
+  let issues_url = "https://github.com/davesnx/query-json/issues";
+};
+
 module Runtime = {
   type inputKind =
     | File
@@ -107,7 +113,7 @@ let info =
       `P(Info.description),
       `P("query-json '.dependencies' package.json"),
       `S(Manpage.s_bugs),
-      `P("Report them to " ++ Info.bugUrl),
+      `P("Report them to " ++ Info.issues_url),
     ],
   );
 
