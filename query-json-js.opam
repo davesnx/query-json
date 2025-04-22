@@ -17,7 +17,7 @@ bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "ocaml"
   "reason"
-  "dune" {>= "3.0"}
+  "dune" {>= "3.12"}
   "yojson"
   "cmdliner"
   "js_of_ocaml"

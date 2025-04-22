@@ -4,10 +4,29 @@ open Jsoo_css;
 open Emotion;
 
 module Typography = {
-  type color = [ | `White | `Dark | `Grey];
-  type size = [ | `Small | `Medium | `Large | `XXLarge];
-  type leading = [ | `None | `Tight | `Snug | `Normal | `Relaxed | `Loose];
-  type weight = [ | `Normal | `Bold];
+  type color = [
+    | `White
+    | `Dark
+    | `Grey
+  ];
+  type size = [
+    | `Small
+    | `Medium
+    | `Large
+    | `XXLarge
+  ];
+  type leading = [
+    | `None
+    | `Tight
+    | `Snug
+    | `Normal
+    | `Relaxed
+    | `Loose
+  ];
+  type weight = [
+    | `Normal
+    | `Bold
+  ];
 
   [@react.component]
   let make = (~color as colorValue, ~size=`Medium, ~weight=`Normal, ~children) => {
@@ -40,7 +59,15 @@ module Typography = {
   };
 };
 
-type kinds = [ | `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label];
+type kinds = [
+  | `H1
+  | `H2
+  | `H3
+  | `H4
+  | `H5
+  | `Body
+  | `Label
+];
 
 [@react.component]
 let make = (~color=`White, ~kind=`Body, ~children) => {

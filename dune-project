@@ -1,6 +1,7 @@
-(lang dune 3.0)
+(lang dune 3.12)
 
 (using menhir 2.0)
+(using melange 0.1)
 
 (generate_opam_files true)
 
@@ -21,8 +22,8 @@
 
 (package
  (name query-json)
- (synopsis "Faster, simpler and more portable implementation of `jq` in Reason")
- (description "query-json is a faster and simpler re-implementation of jq's language in Reason, compiled to a native binary and as a JavaScript library.
+ (synopsis "Faster, simpler and more portable implementation of `jq` in OCaml")
+ (description "query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary and as a JavaScript library.
 
   It's a CLI to run small programs against JSON, the same idea as sed but for JSON files.
 

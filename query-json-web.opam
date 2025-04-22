@@ -15,7 +15,7 @@ license: "MIT"
 homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
-  "dune" {>= "3.0"}
+  "dune" {>= "3.12"}
   "ocaml"
   "reason"
   "js_of_ocaml"

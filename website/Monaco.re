@@ -91,7 +91,11 @@ let make = (~value: string, ~onChange as onChangeValue: onChange, ~mode) => {
     };
 
   let options =
-    {...options, readOnly: isReadOnly(onChangeValue)} |> jsobject_of_options;
+    {
+      ...options,
+      readOnly: isReadOnly(onChangeValue),
+    }
+    |> jsobject_of_options;
 
   <External
     value

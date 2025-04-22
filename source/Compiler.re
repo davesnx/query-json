@@ -1,5 +1,4 @@
 open Ast;
-open Console;
 
 let appendArticle = (noun: string) => {
   let starts_with_any = (str: string, chars: list(string)) => {
@@ -22,13 +21,15 @@ let appendArticle = (noun: string) => {
 };
 
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
-  "Trying to "
-  ++ Formatting.singleQuotes(Chalk.bold(op))
-  ++ " on "
-  ++ (appendArticle(memberKind) |> Chalk.bold)
-  ++ ":"
-  ++ Formatting.enter(1)
-  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
+  Console.(
+    "Trying to "
+    ++ Formatting.singleQuotes(Chalk.bold(op))
+    ++ " on "
+    ++ (appendArticle(memberKind) |> Chalk.bold)
+    ++ ":"
+    ++ Formatting.enter(1)
+    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true))
+  );
 };
 
 let getFieldName = json => {
@@ -165,19 +166,23 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 };
 
 let makeEmptyListError = op => {
-  "Trying to "
-  ++ Formatting.singleQuotes(Chalk.bold(op))
-  ++ " on an empty array.";
+  Console.(
+    "Trying to "
+    ++ Formatting.singleQuotes(Chalk.bold(op))
+    ++ " on an empty array."
+  );
 };
 
 let makeAcessingToMissingItem = (accessIndex, length) => {
-  "Trying to read "
-  ++ Formatting.singleQuotes(
-       "[" ++ Chalk.bold(string_of_int(accessIndex)) ++ "]",
-     )
-  ++ " from an array with "
-  ++ string_of_int(length)
-  ++ " elements only.";
+  Console.(
+    "Trying to read "
+    ++ Formatting.singleQuotes(
+         "[" ++ Chalk.bold(string_of_int(accessIndex)) ++ "]",
+       )
+    ++ " from an array with "
+    ++ string_of_int(length)
+    ++ " elements only."
+  );
 };
 
 let head = (json: Json.t) => {
@@ -205,13 +210,15 @@ let tail = (json: Json.t) => {
 };
 
 let makeErrorMissingMember = (op, key, value: Json.t) => {
-  "Trying to "
-  ++ Formatting.doubleQuotes(Chalk.bold(op))
-  ++ " on an object, that don't have the field "
-  ++ Formatting.doubleQuotes(key)
-  ++ ":"
-  ++ Formatting.enter(1)
-  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
+  Console.(
+    "Trying to "
+    ++ Formatting.doubleQuotes(Chalk.bold(op))
+    ++ " on an object, that don't have the field "
+    ++ Formatting.doubleQuotes(key)
+    ++ ":"
+    ++ Formatting.enter(1)
+    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true))
+  );
 };
 
 let member = (key: string, opt: bool, json: Json.t) => {

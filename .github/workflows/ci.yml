@@ -62,7 +62,7 @@ jobs:
           opam-disable-sandboxing: true
 
       - name: Install deps
-        run: opam install . --deps-only --with-doc --with-test
+        run: make install
 
       - name: Pin some deps
         run: make pin

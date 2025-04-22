@@ -39,16 +39,20 @@ test-watch: ## Run the unit tests in watch mode
 test-promote: ## Updates snapshots and promotes it to correct
 	$(DUNE) build @runtest --auto-promote
 
+.PHONY: setup-githooks
+setup-githooks: ## Setup githooks
+	git config core.hooksPath .githooks
+
 .PHONY: deps
 deps: $(opam_file) ## Alias to update the opam file and install the needed deps
 
 .PHONY: format
 format: ## Format the codebase with ocamlformat
-	$(DUNE) build @fmt --auto-promote
+	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build @fmt --auto-promote
 
 .PHONY: format-check
 format-check: ## Checks if format is correct
-	$(DUNE) build @fmt
+	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build @fmt
 
 .PHONY: pin
 pin: ## Pin dependencies
@@ -60,15 +64,8 @@ create-switch: ## Create opam switch
 	opam switch create . 5.1.0 --deps-only --with-test -y
 
 .PHONY: install
-install: create-switch pin ## Install dependencies
+install:
+	opam install . --deps-only --with-test --with-doc --with-dev-setup -y
 
 .PHONY: init
-init: install ## Create a local dev enviroment
-
-.PHONY: subst
-subst: ## Run dune substitute
-	$(DUNE) subst
-
-$(opam_file): dune-project ## Update the package dependencies when new deps are added to dune-project
-	$(DUNE) build @install
-	opam install . --deps-only --with-test # Install the new dependencies
+init: setup-githooks create-switch pin install install-npm ## Create a local dev enviroment

@@ -1,4 +1,4 @@
 .github
 .vscode
-esy.lock/*
-esy.lock
+_opam
+_build

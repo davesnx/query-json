@@ -1,4 +1,5 @@
 include Ast;
+
 open Tokenizer;
 open Console.Errors;
 
@@ -17,7 +18,11 @@ let provider = (~debug, buf): (token, Lexing.position, Lexing.position) => {
     };
 
   last_position :=
-    Location.{loc_start: start, loc_end: stop, loc_ghost: false};
+    Location.{
+      loc_start: start,
+      loc_end: stop,
+      loc_ghost: false,
+    };
 
   if (debug) {
     print_endline(token |> show_token);
@@ -26,14 +31,14 @@ let provider = (~debug, buf): (token, Lexing.position, Lexing.position) => {
   (token, start, stop);
 };
 
-let parse = (~debug=false, input): result(expression, string) => {
+let parse = (~debug=false, input): result(Ast.expression, string) => {
   let buf = Sedlexing.Utf8.from_string(input);
   let lexer = () => provider(~debug, buf);
 
   switch (menhir(lexer)) {
   | ast =>
     if (debug) {
-      print_endline(show_expression(ast));
+      print_endline(Ast.show_expression(ast));
     };
     Ok(ast);
   | exception _exn =>

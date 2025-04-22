@@ -96,8 +96,14 @@ type actions =
 
 let reduce = state =>
   fun
-  | UpdateQuery(query) => {...state, query}
-  | UpdateJson(json) => {...state, json: Some(json)};
+  | UpdateQuery(query) => {
+      ...state,
+      query,
+    }
+  | UpdateJson(json) => {
+      ...state,
+      json: Some(json),
+    };
 
 module QueryParams = {
   type t = {
@@ -150,8 +156,14 @@ let make = () => {
 
   let initialState = () =>
     switch (stateFromHash) {
-    | Some({query, json}) => {query, json}
-    | None => {query: "", json: Some(mockJson)}
+    | Some({query, json}) => {
+        query,
+        json,
+      }
+    | None => {
+        query: "",
+        json: Some(mockJson),
+      }
     };
   let (state, dispatch) = React.use_reducer(reduce, ~init=initialState);
 
@@ -171,7 +183,11 @@ let make = () => {
     };
 
   let onShareClick = _ => {
-    let hash = QueryParams.toHash({query: state.query, json: state.json});
+    let hash =
+      QueryParams.toHash({
+        query: state.query,
+        json: state.json,
+      });
     switch (hash) {
     | Some(hash) => Router.setHash(hash)
     | None => Printf.eprintf("Error decoding")
