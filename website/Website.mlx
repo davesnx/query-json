@@ -1,0 +1,8 @@
+let () =
+  let element = Webapi.Dom.Document.querySelector "#root" Webapi.Dom.document in
+  match element with
+  | Some el ->
+      let root = ReactDOM.Client.createRoot el in
+      let _ = ReactDOM.Client.render root <App /> in
+      ()
+  | None -> Js.log "No root element found"

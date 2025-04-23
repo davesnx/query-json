@@ -1,0 +1,18 @@
+type spacer = Top | Bottom | Left | Right | All
+
+let className ~direction:_ ~value:_ =
+  "Emotion.(\n\
+  \    make([|\n\
+  \      switch (directionValue) {\n\
+  \      | Top => marginTop(px(value * 8))\n\
+  \      | Bottom => marginBottom(px(value * 8))\n\
+  \      | Left => marginLeft(px(value * 8))\n\
+  \      | Right => marginRight(px(value * 8))\n\
+  \      | All => margin(px(value * 8))\n\
+  \      },\n\
+  \    |])\n\
+  \  )"
+
+let[@react.component] make ~(direction : spacer) ?(value = 0)
+    ?(children = React.null) =
+  <div className=(className ~direction ~value)>children</div>

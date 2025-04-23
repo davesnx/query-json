@@ -1,0 +1,167 @@
+let mockJson =
+  {|{
+  "store": {
+    "books": [
+      {
+        "category": "reference",
+        "author": "Nigel Rees",
+        "title": "Sayings of the Century",
+        "price": 8.95
+      },
+      {
+        "category": "fiction",
+        "author": "Evelyn Waugh",
+        "title": "Sword of Honour",
+        "price": 12.99
+      },
+      {
+        "category": "fiction",
+        "author": "Herman Melville",
+        "title": "Moby Dick",
+        "isbn": "0-553-21311-3",
+        "price": 8.99
+      },
+      {
+        "category": "fiction",
+        "author": "J. R. R. Tolkien",
+        "title": "The Lord of the Rings",
+        "isbn": "0-395-19395-8",
+        "price": 22.99
+      }
+    ]
+  }
+}
+|}
+
+let page =
+  "Emotion.(\n\
+  \    make([|\n\
+  \      display(`flex),\n\
+  \      flexDirection(`column),\n\
+  \      alignItems(`center),\n\
+  \      height(vh(100.)),\n\
+  \      backgroundColor(hex('0a0a0a')),\n\
+  \    |])\n\
+  \  )"
+
+let container = "Emotion.(make([|width(`vw(75.)), height(`vh(80.))|]))"
+
+let columnHalf =
+  "Emotion.(\n\
+  \    make([|\n\
+  \      width(`percent(50.)),\n\
+  \      height(`percent(100.)),\n\
+  \      paddingBottom(px(8)),\n\
+  \    |])\n\
+  \  )"
+
+let row =
+  "Emotion.(\n\
+  \    make([|\n\
+  \      display(`flex),\n\
+  \      flexDirection(`row),\n\
+  \      width(`percent(100.)),\n\
+  \      height(`percent(100.)),\n\
+  \    |])\n\
+  \  )"
+
+let box =
+  "Emotion.(\n\
+  \    make([|\n\
+  \      backgroundColor(rgb(237, 242, 247)),\n\
+  \      height(`percent(100.)),\n\
+  \      width(`percent(100.)),\n\
+  \      borderRadius(px(6)),\n\
+  \    |])\n\
+  \  )"
+
+type t = { query : string; json : string option }
+type actions = UpdateQuery of string | UpdateJson of string
+
+let reduce state = function
+  | UpdateQuery query -> { state with query }
+  | UpdateJson json -> { state with json = Some json }
+
+module QueryParams = struct
+  open Melange_json.Primitives
+
+  type t = { query : string; json : string option } [@@deriving json]
+
+  let decode json = of_json json
+  let encode t = to_json t
+  let toString t = t |> encode |> Melange_json.to_string
+  let fromString str = str |> Melange_json.of_string |> decode
+  let toHash state = state |> toString |> Base64.encode
+end
+
+module Option = struct
+  include Option
+
+  (* Option.bind with pipe-last friendly *)
+  let bind f o = match o with None -> None | Some v -> f v
+end
+
+module QueryJson = struct
+  let run : string -> string -> (string, string) result =
+    [%mel.raw
+      "function (query, json) {\n\
+      \      return window['query-json'].run(query, json);\n\
+      \    }"]
+end
+
+let[@react.component] make () =
+  let hash = Router.getHash () in
+
+  let stateFromHash =
+    hash |> Option.bind Base64.decode |> Option.map QueryParams.fromString
+  in
+
+  let initialState =
+    match stateFromHash with
+    | Some { query; json } -> { query; json }
+    | None -> { query = ""; json = Some mockJson }
+  in
+
+  let state, dispatch = React.useReducer reduce initialState in
+
+  let onQueryChange value = dispatch (UpdateQuery value) in
+
+  let onJsonChange value = dispatch (UpdateJson value) in
+
+  let output =
+    match (state.json, state.query) with
+    | Some _, "" | None, _ -> None
+    | Some json, _ -> Some (QueryJson.run state.query json)
+  in
+
+  let onShareClick _ =
+    let hash = QueryParams.toHash { query = state.query; json = state.json } in
+    match hash with
+    | Some hash -> Router.setHash hash
+    | None -> Printf.eprintf "Error decoding"
+  in
+
+  <div className=page>
+    <Header onShareClick />
+    <Spacer direction=Bottom value=2 />
+    <div className=container>
+      <Spacer direction=Bottom value=2>
+        <TextInput value=state.query
+                   onChange=onQueryChange
+                   placeholder="Type the query to filter against the JSON \
+                                below. For example: '.store'" />
+      </Spacer>
+      <div className=row>
+        <div className=columnHalf>
+          <Editor.Json value=(Option.value state.json ~default:"")
+                       onChange=onJsonChange />
+        </div>
+        <Spacer direction=Right value=2 />
+        <div className=columnHalf>
+          (match output with
+          | Some value -> <Editor.Output value />
+          | None -> <Editor.Empty />)
+        </div>
+      </div>
+    </div>
+  </div>

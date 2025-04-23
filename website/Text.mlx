@@ -1,0 +1,26 @@
+module Typography = struct
+  type color = [ `White | `Dark | `Grey ]
+  type size = [ `Small | `Medium | `Large | `XXLarge ]
+  type leading = [ `None | `Tight | `Snug | `Normal | `Relaxed | `Loose ]
+  type weight = [ `Normal | `Bold ]
+
+  let[@react.component] make ~color:_ ?size:(_ = `Medium) ?weight:(_ = `Normal)
+      ~children =
+    let className = "Emotion.make([|color, size, weight|])" in
+    <span className>children</span>
+end
+
+type kinds = [ `H1 | `H2 | `H3 | `H4 | `H5 | `Body | `Label ]
+
+let[@react.component] make ?(color = `White) ?(kind = `Body) ~children =
+  let size, weight =
+    match kind with
+    | `H1 -> (`XLarge, `Bold)
+    | `H2 -> (`Large, `Normal)
+    | `H3 -> (`Medium, `Normal)
+    | `H4 -> (`Small, `Normal)
+    | `H5 -> (`Medium, `Bold)
+    | `Body -> (`Medium, `Normal)
+    | `Label -> (`Small, `Normal)
+  in
+  <Typography size weight color>children</Typography>
