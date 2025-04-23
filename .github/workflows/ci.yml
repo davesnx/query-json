@@ -35,6 +35,9 @@ jobs:
       - name: Install deps
         run: make install
 
+      - name: Install npm deps
+        run: npm install
+
       - name: Pin some deps
         run: make pin
 
@@ -49,9 +52,7 @@ jobs:
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          npm install
-          npm run build
+        run: npm run build
 
       - name: Deploy to prod
         if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' }}
