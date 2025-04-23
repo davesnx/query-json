@@ -80,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: query-json-js
-          path: _build/default/js/query-json.bc.js
+          path: _build/default/js/QueryJsonJs.bc.js
 
   publish:
     needs: build
