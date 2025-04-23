@@ -118,11 +118,11 @@ jobs:
           name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
-      - name: Download windows artifacts
-        uses: actions/download-artifact@master
-        with:
-          name: windows-latest-artifact
-          path: _release/platform-windows-x64
+      # - name: Download windows artifacts
+        # uses: actions/download-artifact@master
+        # with:
+          # name: windows-latest-artifact
+          # path: _release/platform-windows-x64
 
       - name: Create archives for Github release
         run: |
@@ -136,10 +136,10 @@ jobs:
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
-          cd _release/platform-windows-x64
-          mv bin.exe query-json
-          zip -r ../../query-json-windows-x64.zip .
-          cd ../..
+        # cd _release/platform-windows-x64
+        # mv bin.exe query-json
+        # zip -r ../../query-json-windows-x64.zip .
+        # cd ../..
 
       - name: Check if should be published
         if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
@@ -213,13 +213,13 @@ jobs:
           asset_name: query-json-linux-x64.zip
           asset_content_type: application/gzip
 
-      - name: Upload query-json-windows-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: query-json-windows-x64.zip
-          asset_name: query-json-windows-x64.zip
-          asset_content_type: application/gzip
+      # - name: Upload query-json-windows-x64.zip to Github release
+        # if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        # uses: actions/upload-release-asset@v1.0.1
+        # env:
+          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # with:
+          # upload_url: ${{ steps.create_release.outputs.upload_url }}
+          # asset_path: query-json-windows-x64.zip
+          # asset_name: query-json-windows-x64.zip
+          # asset_content_type: application/gzip
