@@ -50,7 +50,7 @@ jobs:
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          npm ci
+          npm install
           npm run build
 
       - name: Deploy to prod
