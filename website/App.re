@@ -1,13 +1,10 @@
-open React.Dom.Dsl;
-open Html;
-open Jsoo_css;
-
-let empty = opt => {
-  switch (opt) {
-  | Some(o) => o
-  | None => ""
-  };
-};
+/* let empty = opt => {
+     switch (opt) {
+     | Some(o) => o
+     | None => ""
+     };
+   };
+    */
 
 let mockJson = {|{
   "store": {
@@ -43,47 +40,43 @@ let mockJson = {|{
 }
 |};
 
-let page =
-  Emotion.(
+let page = "Emotion.(
     make([|
       display(`flex),
       flexDirection(`column),
       alignItems(`center),
       height(vh(100.)),
-      backgroundColor(hex("0a0a0a")),
+      backgroundColor(hex('0a0a0a')),
     |])
-  );
+  )";
 
-let container = Emotion.(make([|width(`vw(75.)), height(`vh(80.))|]));
+let container = "Emotion.(make([|width(`vw(75.)), height(`vh(80.))|]))";
 
-let columnHalf =
-  Emotion.(
+let columnHalf = "Emotion.(
     make([|
       width(`percent(50.)),
       height(`percent(100.)),
       paddingBottom(px(8)),
     |])
-  );
+  )";
 
-let row =
-  Emotion.(
+let row = "Emotion.(
     make([|
       display(`flex),
       flexDirection(`row),
       width(`percent(100.)),
       height(`percent(100.)),
     |])
-  );
+  )";
 
-let box =
-  Emotion.(
+let box = "Emotion.(
     make([|
       backgroundColor(rgb(237, 242, 247)),
       height(`percent(100.)),
       width(`percent(100.)),
       borderRadius(px(6)),
     |])
-  );
+  )";
 
 type t = {
   query: string,
@@ -106,33 +99,23 @@ let reduce = state =>
     };
 
 module QueryParams = {
+  open Melange_json.Primitives;
+
+  [@deriving json]
   type t = {
     query: string,
     json: option(string),
   };
 
-  let decode = json => {
-    Jsonoo.Decode.{
-      query: json |> field("query", string),
-      json: json |> nullable(field("json", string)),
-    };
-  };
-
-  let encode = t => {
-    Jsonoo.Encode.(
-      object_([
-        ("query", string(t.query)),
-        ("json", nullable(string, t.json)),
-      ])
-    );
-  };
+  let decode = json => of_json(json);
+  let encode = t => to_json(t);
 
   let toString = t => {
-    t |> encode |> Jsonoo.stringify;
+    t |> encode |> Melange_json.to_string;
   };
 
   let fromString = str => {
-    str |> Jsonoo.try_parse_opt |> Option.map(decode);
+    str |> Melange_json.of_string |> decode;
   };
 
   let toHash = state => {
@@ -140,21 +123,32 @@ module QueryParams = {
   };
 };
 
-/* Option.bind with pipe-last friendly */
-let bind = (f, o) =>
-  switch (o) {
-  | None => None
-  | Some(v) => f(v)
-  };
+module Option = {
+  include Option;
+  /* Option.bind with pipe-last friendly */
+  let bind = (f, o) =>
+    switch (o) {
+    | None => None
+    | Some(v) => f(v)
+    };
+};
+
+module QueryJson = {
+  let run: (string, string) => result(string, string) = [%mel.raw
+    "function (query, json) {
+      return window['query-json'].run(query, json);
+    }"
+  ];
+};
 
 [@react.component]
 let make = () => {
   let hash = Router.getHash();
 
   let stateFromHash =
-    hash |> bind(Base64.decode) |> bind(QueryParams.fromString);
+    hash |> Option.bind(Base64.decode) |> Option.map(QueryParams.fromString);
 
-  let initialState = () =>
+  let initialState =
     switch (stateFromHash) {
     | Some({query, json}) => {
         query,
@@ -165,7 +159,8 @@ let make = () => {
         json: Some(mockJson),
       }
     };
-  let (state, dispatch) = React.use_reducer(reduce, ~init=initialState);
+
+  let (state, dispatch) = React.useReducer(reduce, initialState);
 
   let onQueryChange = value => {
     dispatch(UpdateQuery(value));
@@ -179,7 +174,7 @@ let make = () => {
     switch (state.json, state.query) {
     | (Some(_), "")
     | (None, _) => None
-    | (Some(json), _) => Some(QueryJsonCore.Main.run(state.query, json))
+    | (Some(json), _) => Some(QueryJson.run(state.query, json))
     };
 
   let onShareClick = _ => {

@@ -1,5 +1,3 @@
-open QueryJsonCore.Main;
-
 let assert_string = (left, right) =>
   Alcotest.check(Alcotest.string, "should be equal", right, left);
 
@@ -8,12 +6,12 @@ let debug = false;
 let case = (input, expected) => {
   let fn = () => {
     let result =
-      switch (parse(~debug, input)) {
+      switch (QueryJsonCore.parse(~debug, input)) {
       | Ok(r) => r
       | Error(err) => Alcotest.fail(err)
       };
-    let expected = show_expression(expected);
-    let result = show_expression(result);
+    let expected = Ast.show_expression(expected);
+    let result = Ast.show_expression(result);
     assert_string(result, expected);
   };
   Alcotest.test_case(input, `Quick, fn);

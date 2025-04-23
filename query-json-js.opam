@@ -2,7 +2,7 @@
 opam-version: "2.0"
 version: "0.5.10"
 synopsis:
-  "query-json-playground is the web playground for query-json, written in reason-react and compiled by Melange."
+  "query-json-js is the JavaScript library for query-json, compiled by js_of_ocaml"
 description: """
 query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
@@ -16,11 +16,9 @@ depends: [
   "dune" {>= "3.17"}
   "ocaml"
   "reason"
-  "melange"
-  "melange-json"
-  "melange-webapi"
-  "reason-react"
-  "reason-react-ppx"
+  "js_of_ocaml"
+  "js_of_ocaml-compiler"
+  "js_of_ocaml-ppx"
   "odoc" {with-doc}
 ]
 build: [

@@ -1,5 +1,20 @@
 (executable
- (name Js)
- (modes js)
- (modules Js)
- (libraries query-json.core))
+ (name QueryJsonJs)
+ (public_name query-json-js)
+ (package query-json-js)
+ (libraries query-json.core js_of_ocaml)
+ (preprocess
+  (pps js_of_ocaml-ppx))
+ (js_of_ocaml
+  (sourcemap no))
+ (modes
+  js
+  native ; native is required because this error happens
+         ;
+         ; Error: No installable mode found for this executable
+         ; When public_name is set, one of the following modes is required:
+         ; - exe
+         ; - native
+         ; - byte
+         ; - byte_complete
+  ))

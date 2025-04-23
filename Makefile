@@ -56,12 +56,11 @@ format-check: ## Checks if format is correct
 
 .PHONY: pin
 pin: ## Pin dependencies
-	opam pin add jsoo-react.dev "git+https://github.com/ml-in-barcelona/jsoo-react.git#8fda15c39665ac27841c7659422f82ac331e0a01" -y
-	opam pin add jsoo-css.dev "git+https://github.com/ml-in-barcelona/jsoo-css.git#8169b6764eab18d4cb98ce8f791cd47a54b1e954" -y
+	echo "Nothing to pin"
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.1.0 --deps-only --with-test -y
+	opam switch create . 5.2.1 --deps-only --with-test -y
 
 .PHONY: install
 install: ## Install opam deps

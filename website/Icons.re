@@ -1,5 +1,3 @@
-open React.Dom.Dsl.Svg;
-
 module Twitter = {
   [@react.component]
   let make = () =>

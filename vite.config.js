@@ -5,6 +5,7 @@ import { createHtmlPlugin } from 'vite-plugin-html'
 import MonacoEditorPlugin from 'vite-plugin-monaco-editor';
 import polyfillNode from "rollup-plugin-polyfill-node"
 import vitePluginRequire from "vite-plugin-require"
+import replace from '@rollup/plugin-replace'
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -17,11 +18,15 @@ const monacoEditorPlugin = MonacoEditorPlugin({
  * @type { import('vite').UserConfig }
  */
 const config = {
-  entry: "_build/default/website/Website.bc.js",
-  jsx: 'react',
+  entry: "_build/default/website/website/website/Website.re.js",
   mode: isProd ? 'production' : 'development',
   optimizeDeps: {
-    include: ["@monaco-editor/react", "@emotion/css", "react", "react-dom"],
+    include: ["@monaco-editor/react", "react", "react-dom", "react-dom/client"],
+  },
+  build: {
+    rollupOptions: {
+      external: ["react-dom/client", "react"],
+    },
   },
   /* build: {
     commonjsOptions: {
@@ -30,15 +35,15 @@ const config = {
   }, */
   plugins: [
     reactPlugin(),
+    replace({
+      preventAssignment: true,
+      "process.env.NODE_ENV": JSON.stringify("development")
+    }),
     polyfillNode(),
-    /* viteCommonjs(), */
     vitePluginRequire({
       translateType: "importMetaUrl"
     }),
-    /* requireSupport(), */
-    /* requireTransform(), */
-    /* commonjsPlugin(), */
-    /* monacoEditorPlugin, */
+    monacoEditorPlugin,
     resolve({
       browser : true,
     }),

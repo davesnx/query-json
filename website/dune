@@ -1,29 +1,30 @@
-(executable
- (name Website)
- (modes js)
- (libraries
-  query-json.core
-  js_of_ocaml
-  jsoo-react.lib
-  ojs
-  jsoo-css
-  brr
-  jsonoo)
+(library
+ (name app)
+ (modes melange)
+ (modules :standard \ Website)
+ (libraries reason-react melange.dom melange.js melange-json melange-webapi)
  (preprocess
-  (pps jsoo-react.ppx ppx_jsobject_conv)))
+  (pps melange.ppx reason-react-ppx melange-json.ppx)))
 
-; @monaco-editor/react uses `rollupjs` to build
-; which creates a folder with underscore `_virtual`
-; dune by default ignores any prefixed with underscore folder.
-; This hardcodes the path dune ignores.
-; If we update the lib, this might break
+(melange.emit
+ (target website)
+ (modules Website)
+ (module_systems
+  (es6 re.js))
+ (libraries reason-react app)
+ (preprocess
+  (pps melange.ppx reason-react-ppx)))
+
+(install
+ (section bin)
+ (package query-json-playground)
+ (files
+  ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwind)))
 
 (rule
- (targets Console.ml)
- (deps Console.rei)
+ (target output.css)
+ (deps
+  (:config ./tailwind.config.js)
+  (:input ./styles.css))
  (action
-  (progn
-   (with-stdout-to
-    Console.ml.tmp
-    (run %{bin:refmt} --parse=re -i true --print=ml %{deps}))
-   (run %{bin:gen_js_api} -o %{targets} Console.ml.tmp))))
+  (run tailwind -c %{config} -i %{input} -o %{target})))

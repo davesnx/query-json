@@ -1,20 +1,17 @@
-open React.Dom.Dsl;
-open Html;
-open Jsoo_css;
-open Emotion;
-
 module Typography = {
   type color = [
     | `White
     | `Dark
     | `Grey
   ];
+
   type size = [
     | `Small
     | `Medium
     | `Large
     | `XXLarge
   ];
+
   type leading = [
     | `None
     | `Tight
@@ -23,39 +20,41 @@ module Typography = {
     | `Relaxed
     | `Loose
   ];
+
   type weight = [
     | `Normal
     | `Bold
   ];
 
   [@react.component]
-  let make = (~color as colorValue, ~size=`Medium, ~weight=`Normal, ~children) => {
-    let size =
-      switch (size) {
-      | `XSmall => fontSize(px(14))
-      | `Small => fontSize(px(16))
-      | `Medium => fontSize(px(18))
-      | `Large => fontSize(px(20))
-      | `XLarge => fontSize(px(26))
-      | `XXLarge => fontSize(px(45))
-      };
+  let make =
+      (~color as _, ~size as _=`Medium, ~weight as _=`Normal, ~children) => {
+    /* let size =
+         switch (size) {
+         | `XSmall => fontSize(px(14))
+         | `Small => fontSize(px(16))
+         | `Medium => fontSize(px(18))
+         | `Large => fontSize(px(20))
+         | `XLarge => fontSize(px(26))
+         | `XXLarge => fontSize(px(45))
+         };
 
-    let weight =
-      switch (weight) {
-      | `Normal => fontWeight(`num(400))
-      | `Bold => fontWeight(`num(700))
-      };
+       let weight =
+         switch (weight) {
+         | `Normal => fontWeight(`num(400))
+         | `Bold => fontWeight(`num(700))
+         };
 
-    let color =
-      switch (colorValue) {
-      | `White => color(hex("FAFAFA"))
-      | `Black => color(`rgb((21, 21, 21)))
-      | `Grey => color(hex("949495"))
-      };
+       let color =
+         switch (colorValue) {
+         | `White => color(hex("FAFAFA"))
+         | `Black => color(`rgb((21, 21, 21)))
+         | `Grey => color(hex("949495"))
+         }; */
 
-    let className = Emotion.make([|color, size, weight|]);
+    let className = "Emotion.make([|color, size, weight|])";
 
-    <span className> ...children </span>;
+    <span className> children </span>;
   };
 };
 
@@ -82,5 +81,5 @@ let make = (~color=`White, ~kind=`Body, ~children) => {
     | `Label => (`Small, `Normal)
     };
 
-  <Typography size weight color> ...children </Typography>;
+  <Typography size weight color> children </Typography>;
 };

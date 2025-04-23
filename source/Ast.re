@@ -1,7 +1,4 @@
 [@deriving show({with_path: false})]
-type regex = string;
-
-[@deriving show({with_path: false})]
 type literal =
   | Bool(bool) /* true */
   | String(string) /* "TEXT" */
@@ -73,7 +70,9 @@ type expression =
   | Length /* length */
   | Contains(expression)
   /* Strings */
-  | Test(regex)
+  | Test(
+      string /* this string is a regex, we could validate it in the parser and have a Regexp.t type here */,
+    )
   | ToNumber /* to_num */
   | StartsWith(expression) /* starts_with */
   | EndsWith(expression) /* ends_with */

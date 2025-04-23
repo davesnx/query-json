@@ -1,7 +1,6 @@
 const { execSync } = require('child_process');
 const Fs = require('fs');
 const Path = require('path');
-const esyJson = require('../esy.json');
 
 function exec(cmd) {
   console.log(`exec: ${cmd}`);
@@ -47,18 +46,18 @@ for (const file of filesToTouch) {
 }
 
 const pkgJson = {
-  ...esyJson,
+  name: 'query-json-js',
   scripts: {
     postinstall: 'node postinstall.js',
   },
-  main: 'bundled/Js.bc.js',
+  main: 'query-json-js/QueryJsonJs.bc.js',
   bin: 'query-json',
   files: [
     'platform-windows-x64/',
     'platform-linux-x64/',
     'platform-darwin-x64/',
     'postinstall.js',
-    'bundled',
+    'query-json-js',
     'query-json',
     'README.md',
   ],
