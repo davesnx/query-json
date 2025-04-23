@@ -73,7 +73,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-artifact
-          path: _build/default/bin/query-json.exe
+          path: _build/default/bin/bin.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -127,22 +127,22 @@ jobs:
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
-          mv query-json.exe query-json
+          mv bin.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv query-json.exe query-json
+          mv bin.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
           cd _release/platform-windows-x64
-          mv query-json.exe query-json
+          mv bin.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 
       - name: Check if should be published
-        if: ${{ success() && github.event_name != 'pull_request' }}
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         id: newVersion
         run: |
           REMOTE=$(npm view @davesnx/query-json version);
@@ -155,7 +155,7 @@ jobs:
           fi
 
       - name: Publish
-        if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
