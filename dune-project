@@ -30,7 +30,6 @@
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
-  reason
   dune
   menhir
   cmdliner
@@ -51,7 +50,6 @@
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
-  reason
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
@@ -66,7 +64,9 @@
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
   ocaml
-  reason
+  mlx
+  ocamlformat-mlx
+  ocamlmerlin-mlx
   melange
   melange-json
   melange-webapi

@@ -15,7 +15,6 @@ bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "dune" {>= "3.17"}
   "ocaml"
-  "reason"
   "js_of_ocaml"
   "js_of_ocaml-compiler"
   "js_of_ocaml-ppx"

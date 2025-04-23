@@ -15,7 +15,6 @@ homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "ocaml"
-  "reason"
   "dune" {>= "3.17"}
   "menhir"
   "cmdliner"
