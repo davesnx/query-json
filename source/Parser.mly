@@ -50,33 +50,33 @@ program:
 
 expr:
   | left = expr; COMMA; right = expr;
-    { Comma(left, right) }
+    { Comma (left, right) }
   | left = expr; PIPE; right = expr;
-    { Pipe(left, right) }
+    { Pipe (left, right) }
   | left = expr; ADD; right = expr;
-    { Addition(left, right) }
+    { Addition (left, right) }
   | left = expr; SUB; right = expr;
-    { Subtraction(left, right) }
+    { Subtraction (left, right) }
   | left = expr; MULT; right = expr;
-    { Multiply(left, right) }
+    { Multiply (left, right) }
   | left = expr; DIV; right = expr;
-    { Division(left, right) }
+    { Division (left, right) }
   | left = expr; EQUAL; right = expr;
-    { Equal(left, right) }
+    { Equal (left, right) }
   | left = expr; NOT_EQUAL; right = expr;
-    { NotEqual(left, right) }
+    { NotEqual (left, right) }
   | left = expr; GREATER; right = expr;
-    { Greater(left, right) }
+    { Greater (left, right) }
   | left = expr; LOWER; right = expr;
-    { Lower(left, right) }
+    { Lower (left, right) }
   | left = expr; GREATER_EQUAL; right = expr;
-    { GreaterEqual(left, right) }
+    { GreaterEqual (left, right) }
   | left = expr; LOWER_EQUAL; right = expr;
-    { LowerEqual(left, right) }
+    { LowerEqual (left, right) }
   | left = expr; AND; right = expr;
-    { And(left, right) }
+    { And (left, right) }
   | left = expr; OR; right = expr;
-    { Or(left, right) }
+    { Or (left, right) }
   | e = term
     { e }
 
@@ -86,55 +86,51 @@ term:
   | RECURSE;
     { Recurse }
   | s = STRING;
-    { Literal(String(s)) }
+    { Literal (String s) }
   | n = NUMBER;
-    { Literal(Number(n)) }
+    { Literal (Number n) }
   | b = BOOL;
-    { Literal(Bool(b)) }
+    { Literal (Bool b) }
   | NULL
     { Literal(Null) }
   | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
     { match f with
-      | "range" -> Range(int_of_float(from), int_of_float(upto))
-      | _ -> failwith(f ^ " is not a valid function")
+      | "range" -> Range (int_of_float from, int_of_float upto)
+      | _ -> failwith (f ^ " is not a valid function")
      }
   | f = FUNCTION; CLOSE_PARENT;
-    { failwith(f ^ "(), should contain a body") }
+    { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = expr; CLOSE_PARENT;
     { match f with
-      | "filter" -> Map(Select(cb)) (* for backward compatibility *)
-      | "map" -> Map(cb)
-      | "flat_map" -> FlatMap(cb)
-      | "select" -> Select(cb)
-      | "sort_by" -> SortBy(cb)
-      | "min_by" -> MinBy(cb)
-      | "max_by" -> MaxBy(cb)
-      | "group_by" -> GroupBy(cb)
-      | "unique_by" -> UniqueBy(cb)
-      | "find" -> Find(cb)
-      | "some" -> Some_(cb)
-      | "path" -> Path(cb)
-      | "any" -> AnyWithCondition(cb)
-      | "all" -> AllWithCondition(cb)
-      | "walk" -> Walk(cb)
-      | "transpose" -> Transpose(cb)
-      | "has" -> Has(cb)
-      | "starts_with" -> StartsWith(cb)
-      | "ends_with" -> EndsWith(cb)
-      | "split" -> Split(cb)
-      | "join" -> Join(cb)
-      | "contains" -> Contains(cb)
-      | "startswith" -> failwith(renamed f "starts_with")
-      | "endswith" -> failwith(renamed f "ends_with")
-      | _ -> failwith(missing f)
+      | "filter" -> Map (Select cb) (* for backward compatibility *)
+      | "map" -> Map cb
+      | "flat_map" -> FlatMap cb
+      | "select" -> Select cb
+      | "sort_by" -> SortBy cb
+      | "min_by" -> MinBy cb
+      | "max_by" -> MaxBy cb
+      | "group_by" -> GroupBy cb
+      | "unique_by" -> UniqueBy cb
+      | "find" -> Find cb
+      | "some" -> Some_ cb
+      | "path" -> Path cb
+      | "any" -> AnyWithCondition cb
+      | "all" -> AllWithCondition cb
+      | "walk" -> Walk cb
+      | "transpose" -> Transpose cb
+      | "has" -> Has cb
+      | "starts_with" -> StartsWith cb
+      | "ends_with" -> EndsWith cb
+      | "split" -> Split cb
+      | "join" -> Join cb
+      | "contains" -> Contains cb
+      | "startswith" -> failwith @@ renamed f "starts_with"
+      | "endswith" -> failwith @@ renamed f "ends_with"
+      | _ -> failwith @@ missing f
     }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty
-      | "if" -> failwith(notImplemented f)
-      | "then" -> failwith(notImplemented f)
-      | "else" -> failwith(notImplemented f)
-      | "break" -> failwith(notImplemented f)
       | "keys" -> Keys
       | "flatten" -> Flatten
       | "head" -> Head
@@ -164,33 +160,38 @@ term:
       | "nan" -> Nan
       | "is_nan" -> IsNan
       | "not" -> Not
-      | "isnan" -> failwith(renamed f "is_nan")
-      | "reduce" -> failwith(renamed f "reduce()")
-      | "tonumber" -> failwith(renamed f "to_number")
-      | "isinfinite" -> failwith(renamed f "is_infinite")
-      | "isfinite" -> failwith(renamed f "is_finite")
-      | "isnormal" -> failwith(renamed f "is_normal")
-      | "tostring" -> failwith(renamed f "to_string")
-      | _ -> failwith(missing f)
+      (* TODO: remove failwiths once we have implemented the functions *)
+      | "if" -> failwith @@ notImplemented f
+      | "then" -> failwith @@ notImplemented f
+      | "else" -> failwith @@ notImplemented f
+      | "break" -> failwith @@ notImplemented f
+      (* TODO: remove failwiths once we have implemented the functions *)
+      | "isnan" -> failwith @@ renamed f "is_nan"
+      | "reduce" -> failwith @@ renamed f "reduce()"
+      | "tonumber" -> failwith @@ renamed f "to_number"
+      | "isinfinite" -> failwith @@ renamed f "is_infinite"
+      | "isfinite" -> failwith @@ renamed f "is_finite"
+      | "isnormal" -> failwith @@ renamed f "is_normal"
+      | "tostring" -> failwith @@ renamed f "to_string"
+      | _ -> failwith @@ missing f
     }
   | OPEN_BRACKET; CLOSE_BRACKET;
-    { List(Empty) }
+    { List Empty }
   | OPEN_BRACKET; e = expr; CLOSE_BRACKET;
-    { List(e) }
+    { List e }
   | OPEN_PARENT; e = expr; CLOSE_PARENT;
     { e }
   | e = term; OPEN_BRACKET; i = NUMBER; CLOSE_BRACKET
-    { Pipe(e, Index(int_of_float(i))) }
+    { Pipe (e, Index (int_of_float i)) }
 
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
+    { Key (k, opt) }
 
   | e = term; DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Pipe(e, Key(k, opt)) }
+    { Pipe (e, Key (k, opt)) }
 
   | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key(k, opt) }
+    { Key (k, opt) }
 
   | e = term; DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Pipe(e, Key(k, opt)) }
-  ;
+    { Pipe (e, Key (k, opt)) }
