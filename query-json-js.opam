@@ -19,9 +19,6 @@ depends: [
   "js_of_ocaml"
   "js_of_ocaml-compiler"
   "js_of_ocaml-ppx"
-  "ppx_jsobject_conv"
-  "brr"
-  "jsonoo"
   "odoc" {with-doc}
 ]
 build: [

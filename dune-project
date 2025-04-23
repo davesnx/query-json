@@ -38,12 +38,8 @@
   sedlex
   ppx_deriving
   easy-format
-
-  js_of_ocaml
-  js_of_ocaml-compiler
-  js_of_ocaml-ppx
-
   (alcotest :with-test)
+  (ocamlformat :with-dev-setup)
 ))
 
 (package
@@ -59,9 +55,6 @@
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
-  ppx_jsobject_conv
-  brr
-  jsonoo
 ))
 
 (package
