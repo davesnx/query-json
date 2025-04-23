@@ -3,11 +3,11 @@ opam-version: "2.0"
 version: "0.5.10"
 synopsis: "Faster, simpler and more portable implementation of `jq` in OCaml"
 description: """
-query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary and as a JavaScript library.
+query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
-  It's a CLI to run small programs against JSON, the same idea as sed but for JSON files.
+  query-json is a CLI to run small programs against JSON, the same idea as sed but for JSON files.
 
-  Play around with it in the online playground: https://query-json.netlify.app"""
+  Play with it in the online playground: https://query-json.netlify.app"""
 maintainer: ["David Sancho <dsnxmoreno@gmail.com>"]
 authors: ["David Sancho <dsnxmoreno@gmail.com>"]
 license: "MIT"
@@ -16,7 +16,7 @@ bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "ocaml"
   "reason"
-  "dune" {>= "3.12"}
+  "dune" {>= "3.17"}
   "menhir"
   "cmdliner"
   "yojson"
