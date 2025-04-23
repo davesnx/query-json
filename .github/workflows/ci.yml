@@ -11,7 +11,7 @@ jobs:
         os: [
           ubuntu-latest,
           macos-latest,
-          windows-latest
+          # windows-latest https://github.com/ocaml/dune/issues/11645
         ]
         ocaml-compiler:
           - 5.2.1
