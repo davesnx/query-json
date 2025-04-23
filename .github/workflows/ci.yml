@@ -58,7 +58,7 @@ jobs:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=dist
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=../dist
 
       - name: Deploy preview
         if: ${{ matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request' }}
@@ -67,7 +67,7 @@ jobs:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=dist
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=../dist
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
