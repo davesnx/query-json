@@ -15,10 +15,16 @@
  (preprocess
   (pps melange.ppx reason-react-ppx)))
 
+(install
+ (section bin)
+ (package query-json-playground)
+ (files
+  ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwindcss)))
+
 (rule
  (target output.css)
  (deps
   (:config ./tailwind.config.js)
   (:input ./styles.css))
  (action
-  (run npx tailwindcss -c %{config} -i %{input} -o %{target})))
+  (run tailwindcss -c %{config} -i %{input} -o %{target})))
