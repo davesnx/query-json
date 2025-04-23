@@ -47,7 +47,6 @@ for (const file of filesToTouch) {
 
 const pkgJson = {
   name: 'query-json-js',
-  version: '0.0.0',
   scripts: {
     postinstall: 'node postinstall.js',
   },
