@@ -1,26 +1,21 @@
 let noop = _ => ();
 
-module Mode = {
-  type t =
-    | Text
-    | Json;
+type mode =
+  | Text
+  | Json;
 
-  let to_language =
-    fun
-    | Text => "text"
-    | Json => "json";
-};
+let mode_to_string =
+  fun
+  | Text => "text"
+  | Json => "json";
 
-[@deriving jsobject]
 type padding = {
   bottom: int,
   top: int,
 };
 
-[@deriving jsobject]
 type minimap = {enabled: bool};
 
-[@deriving jsobject]
 type options = {
   fontSize: int,
   fontFamily: string,
@@ -36,20 +31,20 @@ type options = {
 };
 
 module External = {
-  [@react.component]
+  [@mel.module "@monaco-editor/react"] [@react.component]
   external make:
     (
       ~language: string,
       ~height: string,
       ~value: string,
-      ~onChange: Js_of_ocaml.Js.t(Js_of_ocaml.Js.js_string) => unit,
+      ~onChange: string => unit,
       ~className: string=?,
-      ~style: React.Dom.Style.t,
+      ~style: ReactDOM.Style.t,
       ~theme: string,
-      ~options: Js_of_ocaml.Js.t(options)
+      ~options: options
     ) =>
     React.element =
-    {|require("@monaco-editor/react")|};
+    "default";
 };
 
 let options: options = {
@@ -81,29 +76,25 @@ let isReadOnly =
   | ReadOnly => true;
 
 [@react.component]
-let make = (~value: string, ~onChange as onChangeValue: onChange, ~mode) => {
+let make = (~value: string, ~onChange as onChangeValue: onChange, ~mode: mode) => {
   let onChange =
     switch (onChangeValue) {
     | ReadOnly => noop
-    | Write(handler) => (
-        jsstring => handler(Js_of_ocaml.Js.to_string(jsstring))
-      )
+    | Write(handler) => handler
     };
 
-  let options =
-    {
-      ...options,
-      readOnly: isReadOnly(onChangeValue),
-    }
-    |> jsobject_of_options;
+  let options = {
+    ...options,
+    readOnly: isReadOnly(onChangeValue),
+  };
 
   <External
     value
     onChange
     options
     theme="dark"
-    language={Mode.to_language(mode)}
+    language={mode_to_string(mode)}
     height="100%"
-    style=React.Dom.Style.(make([|padding("8px"), height("100%")|]))
+    style=ReactDOM.Style.(make(~padding="8px", ~height="100%", ()))
   />;
 };

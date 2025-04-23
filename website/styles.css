@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+* {
+  font-family: "IBM Plex Mono", monospace;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  overflow: hidden;
+  margin: 0;
+  height: 100vh;
+  width: 100vw;
+}
+
+svg {
+  fill: currentColor;
+}
