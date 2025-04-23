@@ -19,7 +19,7 @@
  (section bin)
  (package query-json-playground)
  (files
-  ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwindcss)))
+  ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwind)))
 
 (rule
  (target output.css)
@@ -27,4 +27,4 @@
   (:config ./tailwind.config.js)
   (:input ./styles.css))
  (action
-  (run tailwindcss -c %{config} -i %{input} -o %{target})))
+  (run tailwind -c %{config} -i %{input} -o %{target})))

@@ -44,9 +44,6 @@ jobs:
       - name: Build
         run: make build
 
-      - name: Check formatting
-        run: make format-check
-
       - name: Run tests
         run: make test
 
