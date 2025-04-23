@@ -1,3 +1,6 @@
+let _ = Webapi.Base64.atob("foo");
+let _ = Webapi.Base64.btoa("gibberish");
+
 let encode = text => {
   /* text
      |> Jstr.v

@@ -1,9 +1,10 @@
-let empty = opt => {
-  switch (opt) {
-  | Some(o) => o
-  | None => ""
-  };
-};
+/* let empty = opt => {
+     switch (opt) {
+     | Some(o) => o
+     | None => ""
+     };
+   };
+    */
 
 let mockJson = {|{
   "store": {
@@ -133,9 +134,11 @@ module Option = {
 };
 
 module QueryJson = {
-  /* TODO: Expose query-json as window? */
-  [@mel.module "query-json"]
-  external run: (string, string) => result(string, string) = "run";
+  let run: (string, string) => result(string, string) = [%mel.raw
+    "function (query, json) {
+      return window['query-json'].run(query, json);
+    }"
+  ];
 };
 
 [@react.component]
