@@ -1,74 +1,18 @@
-let menu =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      width(vw(100.)),\n\
-  \      padding2(~h=`zero, ~v=`px(20)),\n\
-  \      background(rgb(32, 33, 37)),\n\
-  \    |])\n\
-  \  )"
-
-let wrapper =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      width(vw(75.)),\n\
-  \      height(`percent(100.)),\n\
-  \      margin2(~v=`px(0), ~h=`auto),\n\
-  \      display(`flex),\n\
-  \      justifyContent(`spaceBetween),\n\
-  \      alignItems(`center),\n\
-  \    |])\n\
-  \  )"
-
-let distribute =
-  "Emotion.(\n\
-  \    make([|display(`flex), flexDirection(`row), alignItems(`center)|])\n\
-  \  )"
+let menu = "w-screen py-5 bg-zinc-800"
+let wrapper = "w-3/4 h-full mx-auto flex justify-between items-center"
+let distribute = "flex flex-row items-center"
 
 let link =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      textDecoration(`none),\n\
-  \      color(hex('FAFAFA')),\n\
-  \      cursor(`pointer),\n\
-  \      transition('opacity', ~duration=200, ~timingFunction=`easeInOut),\n\
-  \      selector('&:hover', [|opacity(0.6)|]),\n\
-  \    |])\n\
-  \  )"
+  "no-underline text-gray-100 cursor-pointer transition-opacity duration-200 \
+   ease-in-out hover:opacity-60"
 
 let iconlink =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      width(px(26)),\n\
-  \      height(px(26)),\n\
-  \      textDecoration(`none),\n\
-  \      color(hex('FAFAFA')),\n\
-  \      cursor(`pointer),\n\
-  \      display(`inlineFlex),\n\
-  \      alignItems(`center),\n\
-  \      transition('opacity', ~duration=200, ~timingFunction=`easeInOut),\n\
-  \      selector('&:hover', [|opacity(0.6)|]),\n\
-  \    |])\n\
-  \  )"
+  "w-[26px] h-[26px] no-underline text-gray-100 cursor-pointer inline-flex \
+   items-center transition-opacity duration-200 ease-in-out hover:opacity-60"
 
-let button_ =
-  "border-none Emotion.(\n\
-  \    make([|\n\
-  \      borderRadius(px(6)),\n\
-  \      padding2(~v=px(8), ~h=px(12)),\n\
-  \      color(hex('FAFAFA')),\n\
-  \      backgroundColor(rgb(43, 75, 175)),\n\
-  \      cursor(`pointer),\n\
-  \      transition(\n\
-  \        'background-color',\n\
-  \        ~duration=200,\n\
-  \        ~timingFunction=`easeInOut,\n\
-  \      ),\n\
-  \      selector(\n\
-  \        '&:hover',\n\
-  \        [|backgroundColor(rgba(43, 75, 175, `percent(80.)))|],\n\
-  \      ),\n\
-  \    |])\n\
-  \  )"
+let button =
+  "border-none rounded-md py-2 px-3 text-gray-100 bg-blue-700 cursor-pointer \
+   transition-colors duration-200 ease-in-out hover:bg-blue-700/80"
 
 let[@react.component] make ~onShareClick =
   <div className=menu>
@@ -85,27 +29,26 @@ let[@react.component] make ~onShareClick =
       </div>
       <div className=distribute>
         <Text color=`Grey kind=`Label>(React.string "Made by")</Text>
-        <Spacer direction=Left value=1 />
+        <div className="w-full ml-2" />
         <a className=iconlink
            href="https://twitter.com/davesnx"
            target="_blank"
            rel="noopener">
           <Icons.Twitter />
         </a>
-        <Spacer direction=Left value=4 />
+        <div className="w-full ml-2" />
         <Text color=`Grey kind=`Label>(React.string "Code in")</Text>
-        <Spacer direction=Left value=1 />
+        <div className="w-full ml-2" />
         <a className=iconlink
            href="https://github.com/davesnx/query-json"
            target="_blank"
            rel="noopener">
           <Icons.Github />
         </a>
-        <Spacer direction=Left value=4>
-          <button className=button_ onClick=onShareClick>
-            <Text kind=`H4>(React.string "Generate unique URL")</Text>
-          </button>
-        </Spacer>
+        <div className="w-full ml-2" />
+        <button className=button onClick=onShareClick>
+          <Text kind=`H4>(React.string "Generate unique URL")</Text>
+        </button>
       </div>
     </div>
   </div>
