@@ -126,12 +126,6 @@ jobs:
           name: windows-latest-artifact
           path: _release/platform-windows-x64
 
-      - name: Publish query-json from linux artifcats
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          cp _release/platform-linux-x64/query-json.exe ./query-json
-          chmod +x query-json
-
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
