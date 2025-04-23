@@ -1,6 +1,3 @@
-open QueryJsonCore;
-open QueryJsonCore.Console;
-
 module Info = {
   let version = "0.5.20";
   let description = "query-json is a faster and simpler re-implementation of jq in Reason Native";
@@ -47,22 +44,27 @@ let execution =
     ) => {
   switch (query) {
   | Some(q) =>
-    Main.parse(~debug, q)
+    QueryJsonCore.parse(~debug, q)
     |> Result.map(Compiler.compile)
     |> Result.iter(Runtime.run(~payload, ~kind, ~noColor))
-  | None => print_endline(usage())
+  | None => print_endline(QueryJsonCore.usage())
   };
 };
 
-open Cmdliner;
+let query = {
+  Cmdliner.(
+    Arg.(value & pos(0, some(string), None) & info([], ~doc="Query to run"))
+  );
+};
 
-let query =
-  Arg.(value & pos(0, some(string), None) & info([], ~doc="Query to run"));
-
-let json =
-  Arg.(value & pos(1, some(string), None) & info([], ~doc="JSON file"));
+let json = {
+  Cmdliner.(
+    Arg.(value & pos(1, some(string), None) & info([], ~doc="JSON file"))
+  );
+};
 
 let kind = {
+  open Cmdliner;
   let kindEnum = Arg.enum([("file", Runtime.File), ("inline", Inline)]);
   Arg.(
     value
@@ -74,49 +76,62 @@ let kind = {
   );
 };
 
-let verbose =
-  Arg.value(
-    Arg.flag(
-      Arg.info(
-        ["v", "verbose"],
-        ~doc="Activate verbossity. Not used for now",
+let verbose = {
+  Cmdliner.(
+    Arg.value(
+      Arg.flag(
+        Arg.info(
+          ["v", "verbose"],
+          ~doc="Activate verbossity. Not used for now",
+        ),
       ),
-    ),
-  );
-
-let debug =
-  Arg.value(
-    Arg.flag(Arg.info(~doc="Activate debug mode", ["d", "debug"])),
-  );
-
-let color = {
-  Arg.value(
-    Arg.flag(
-      Arg.info(
-        ~doc="Enable or disable color in the output",
-        ["c", "no-color"],
-      ),
-    ),
+    )
   );
 };
 
-let term =
-  Term.(const(execution) $ query $ json $ kind $ verbose $ debug $ color);
+let debug = {
+  Cmdliner.(
+    Arg.value(
+      Arg.flag(Arg.info(~doc="Activate debug mode", ["d", "debug"])),
+    )
+  );
+};
+
+let color = {
+  Cmdliner.(
+    Arg.value(
+      Arg.flag(
+        Arg.info(
+          ~doc="Enable or disable color in the output",
+          ["c", "no-color"],
+        ),
+      ),
+    )
+  );
+};
+
+let term = {
+  Cmdliner.(
+    Term.(const(execution) $ query $ json $ kind $ verbose $ debug $ color)
+  );
+};
 
 let info =
-  Cmd.info(
-    "query-json",
-    ~version=Info.version,
-    ~doc="Run operations on JSON",
-    ~man=[
-      `S(Manpage.s_description),
-      `P(Info.description),
-      `P("query-json '.dependencies' package.json"),
-      `S(Manpage.s_bugs),
-      `P("Report them to " ++ Info.issues_url),
-    ],
+  Cmdliner.(
+    Cmd.info(
+      "query-json",
+      ~version=Info.version,
+      ~doc="Run operations on JSON",
+      ~man=[
+        `S(Manpage.s_description),
+        `P(Info.description),
+        `P("query-json '.dependencies' package.json"),
+        `S(Manpage.s_bugs),
+        `P("Report them to " ++ Info.issues_url),
+      ],
+    )
   );
 
-let cmd = Cmd.v(info, term);
+let cmd = Cmdliner.Cmd.v(info, term);
 
-let _ = Stdlib.exit(Cmd.eval(cmd));
+let _ = Stdlib.exit(Cmdliner.Cmd.eval(cmd));

@@ -1,6 +1,6 @@
 %{
-  open Ast;;
-  open Console.Errors;;
+  open Ast
+  open Console.Errors
 %}
 
 %token <string> STRING

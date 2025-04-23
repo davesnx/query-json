@@ -1,1 +1,1 @@
-let run = QueryJsonCore.Main.run;
+let run = QueryJsonCore.run

@@ -1,7 +1,8 @@
 (library
  (name QueryJsonCore)
+ (wrapped false)
  (public_name query-json.core)
- (libraries menhirLib yojson sedlex easy-format compiler-libs.common)
+ (libraries menhirLib yojson sedlex easy-format)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation

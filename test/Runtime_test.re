@@ -1,5 +1,3 @@
-open QueryJsonCore;
-
 let json_testable = Alcotest.testable(Json.pp, Json.equal);
 
 let case = (input, expected) => {
