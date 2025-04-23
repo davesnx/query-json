@@ -12,14 +12,15 @@ const config = {
   entry: "_build/default/website/website/website/Website.re.js",
   mode: isProd ? "production" : "development",
   optimizeDeps: {
-    include: ["@monaco-editor/react", "react", "react-dom", "react-dom/client"],
+    include: ["@monaco-editor/react", "react", "react-dom", "react-dom/client", "monaco-editor"],
   },
   build: {
     rollupOptions: {
-      external: ["react-dom/client", "react"],
+      external: ["react-dom/client", "react", "monaco-editor"],
     },
     commonjsOptions: {
-      transformMixedEsModules: true,
+      esmExternals: true,
+      /* transformMixedEsModules: true, */
     },
   },
   plugins: [

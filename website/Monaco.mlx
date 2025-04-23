@@ -1,4 +1,42 @@
-let noop _ = ()
+type self
+
+type monaco
+
+type config = {
+  monaco: monaco
+}
+
+type loader = {
+  config: config -> unit;
+  init: unit -> unit Js.Promise.t;
+}
+
+type worker
+type monacoEnv
+
+type environment = {
+  getWorker: unit -> string -> worker
+}
+
+external loader: loader = "loader" [@@mel.module "@monaco-editor/react"]
+external monaco : monaco = "monaco-editor" [@@mel.module]
+external jsonWorker: unit -> worker = "default" [@@mel.module "monaco-editor/esm/vs/language/json/json.worker?worker"] [@@mel.new]
+external editorWorker: unit -> worker = "default" [@@mel.module "monaco-editor/esm/vs/editor/editor.worker?worker"] [@@mel.new]
+
+external createEnv :
+  self -> environment -> monacoEnv = "MonacoEnvironment"
+[@@mel.set]
+
+
+let _ =
+  let getWorker _ label: worker =
+    match label with
+    | "json" -> jsonWorker ()
+    | _ -> editorWorker ()
+  in
+  let _env = createEnv [%mel.raw {|self|}] { getWorker } in
+  let () = loader.config({ monaco = monaco }) in
+  loader.init () |> Js.Promise.then_ (fun _ -> Js.Promise.resolve ()) |> ignore
 
 type mode = Text | Json
 
@@ -57,7 +95,7 @@ let isReadOnly = function Write _ -> false | ReadOnly -> true
 let[@react.component] make ~(value : string)
     ~onChange:(onChangeValue : onChange) ~(mode : mode) =
   let onChange =
-    match onChangeValue with ReadOnly -> noop | Write handler -> handler
+    match onChangeValue with ReadOnly -> (fun _ -> ()) | Write handler -> handler
   in
   let options = { options with readOnly = isReadOnly onChangeValue } in
   <External value

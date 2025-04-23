@@ -1,7 +1,7 @@
 project_name = query-json
-
-DUNE = opam exec -- dune
 opam_file = $(project_name).opam
+DUNE = opam exec -- dune
+NPX = npx
 
 .PHONY: help
 help: ## Print this help message
@@ -22,6 +22,18 @@ build-prod: ## Build for production (--profile=prod)
 .PHONY: dev
 dev: ## Build in watch mode
 	$(DUNE) build -w @all
+
+.PHONY: vite
+vite: ## Build and serve the website via HMR
+	$(NPX) vite --host
+
+.PHONY: vite-build
+vite-build: ## Bundle the website
+	$(NPX) vite build
+
+.PHONY: vite-preview
+vite-preview: ## Preview the website
+	$(NPX) vite preview
 
 .PHONY: clean
 clean: ## Clean artifacts
