@@ -75,14 +75,14 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-artifact
-          path: _build/default/bin/Bin.exe
+          path: _build/default/bin/query-json.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@master
         with:
           name: bundled
-          path: _build/default/js/Js.bc.js
+          path: _build/default/js/query-json.bc.js
 
   publish:
     needs: build
@@ -129,7 +129,7 @@ jobs:
       - name: Publish query-json from linux artifcats
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
-          cp _release/platform-linux-x64/Bin.exe ./query-json
+          cp _release/platform-linux-x64/query-json.exe ./query-json
           chmod +x query-json
 
       - name: Create archives for Github release
