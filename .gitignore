@@ -19,3 +19,6 @@ coverage.json
 
 # Website artifacts
 dist
+
+# Vite build
+build
