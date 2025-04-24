@@ -23,16 +23,16 @@ build-prod: ## Build for production (--profile=prod)
 dev: ## Build in watch mode
 	$(DUNE) build -w @all
 
-.PHONY: vite
-vite: ## Build and serve the website via HMR
+.PHONY: web-dev
+web-dev: ## Build and serve the website via HMR
 	$(NPX) vite --host
 
-.PHONY: vite-build
-vite-build: ## Bundle the website
+.PHONY: web-build
+web-build: ## Bundle the website
 	$(NPX) vite build
 
-.PHONY: vite-preview
-vite-preview: ## Preview the website
+.PHONY: web-preview
+web-preview: ## Preview the website
 	$(NPX) vite preview
 
 .PHONY: clean
