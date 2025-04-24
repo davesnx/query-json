@@ -30,8 +30,11 @@ let parse ?(debug = false) input : (Ast.expression, string) result =
   | ast ->
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
-  | exception Lexer_error _ ->
+  | exception Lexer_error msg ->
       (* TODO: Do we want to show the lexing error differently than the parser error? *)
+      if debug then (
+        print_endline "Lexer error";
+        print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (Console.Errors.make ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
