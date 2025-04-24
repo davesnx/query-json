@@ -3,17 +3,17 @@ include Yojson.Safe.Util
 
 let quotes str = "\"" ^ str ^ "\""
 
-let parseString str =
+let parse_string str =
   try Ok (Yojson.Safe.from_string str)
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the string")
 
-let parseFile file =
+let parse_file file =
   try Ok (Yojson.Safe.from_file file)
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the file")
 
-let parseChannel channel =
+let parse_channel channel =
   try Ok (Yojson.Safe.from_channel channel)
   with e ->
     Error
@@ -60,10 +60,9 @@ module Color = struct
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
-        Easy_format.List
-          (("{", ",", "}", Easy_format.list), List.map format_field l)
+        Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
 
-  and format_field (name, json) =
+  and item (name, json) =
     let s =
       Printf.sprintf "%s:" (name |> encode |> quotes |> Chalk.blue |> Chalk.bold)
     in
@@ -86,10 +85,9 @@ module Summarize = struct
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
-        Easy_format.List
-          (("{", ",", "}", Easy_format.list), List.map format_field l)
+        Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
 
-  and format_field (name, _json) =
+  and item (name, _json) =
     let s = Printf.sprintf "%s:" (encode name |> quotes) in
     Easy_format.Label
       ( (Easy_format.Atom (s, Easy_format.atom), Easy_format.label),
@@ -112,16 +110,15 @@ module NoColor = struct
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
-        Easy_format.List
-          (("{", ",", "}", Easy_format.list), List.map format_field l)
+        Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
 
-  and format_field (name, json) =
+  and item (name, json) =
     let s = Printf.sprintf "%s:" (encode name |> quotes) in
     Easy_format.Label
       ((Easy_format.Atom (s, Easy_format.atom), Easy_format.label), format json)
 end
 
-let toString (json : t) ~colorize ~summarize =
+let to_string (json : t) ~colorize ~summarize =
   match (colorize, summarize) with
   | true, _ -> Easy_format.Pretty.to_string (Color.format json)
   | false, false -> Easy_format.Pretty.to_string (NoColor.format json)

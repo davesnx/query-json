@@ -6,14 +6,14 @@ end
 
 let last_position = ref Location.none
 
-exception LexerError of string
+exception Lexer_error of string
 
 let provider ~debug buf : Tokenizer.token * Lexing.position * Lexing.position =
   let start, stop = Sedlexing.lexing_positions buf in
   let token =
     match Tokenizer.tokenize buf with
     | Ok t -> t
-    | Error e -> raise (LexerError e)
+    | Error e -> raise (Lexer_error e)
   in
   (last_position :=
      let open Location in
@@ -30,15 +30,19 @@ let parse ?(debug = false) input : (Ast.expression, string) result =
   | ast ->
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
+  | exception Lexer_error e ->
+      print_endline e;
+      let Location.{ loc_start; loc_end; _ } = !last_position in
+      Error (Console.Errors.make ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (Console.Errors.make ~input ~start:loc_start ~end_:loc_end)
 
 let run query json =
   let result =
-    parse query |> Result.map Compiler.compile |> fun __x ->
-    Result.bind __x (fun runtime ->
-        match Json.parseString json with
+    parse query |> Result.map Compiler.compile |> fun x ->
+    Result.bind x (fun runtime ->
+        match Json.parse_string json with
         | Ok input -> runtime input
         | Error err -> Error err)
   in
@@ -46,6 +50,6 @@ let run query json =
   | Ok res ->
       Ok
         (res
-        |> List.map (Json.toString ~colorize:false ~summarize:false)
+        |> List.map (Json.to_string ~colorize:false ~summarize:false)
         |> String.concat "\n")
   | Error e -> Error e

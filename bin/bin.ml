@@ -9,39 +9,37 @@ module Info = struct
 end
 
 module Runtime = struct
-  type inputKind = File | Inline
+  type input_kind = File | Inline
 
-  let run ~kind ~payload ~noColor runtime =
+  let run ~kind ~payload ~no_color runtime =
     let input =
       match (kind, payload) with
-      | File, Some file -> Json.parseFile file
-      | Inline, Some str -> Json.parseString str
+      | File, Some file -> Json.parse_file file
+      | Inline, Some str -> Json.parse_string str
       | _, None ->
-          let ic =
-            let open Unix in
-            stdin |> in_channel_of_descr
-          in
-          Json.parseChannel ic
+          let ic = Unix.in_channel_of_descr Unix.stdin in
+          Json.parse_channel ic
     in
     match input with
     | Ok json -> (
         match runtime json with
         | Ok json ->
             json
-            |> List.map (Json.toString ~colorize:(not noColor) ~summarize:false)
+            |> List.map
+                 (Json.to_string ~colorize:(not no_color) ~summarize:false)
             |> List.iter print_endline
-        | Error err -> print_endline (Console.Errors.printError err))
-    | Error err -> print_endline (Console.Errors.printError err)
+        | Error err -> print_endline (Console.Errors.print_error err))
+    | Error err -> print_endline (Console.Errors.print_error err)
 end
 
 let execution (query : string option) (payload : string option)
-    (kind : Runtime.inputKind) (_verbose : bool) (debug : bool) (noColor : bool)
-    =
+    (kind : Runtime.input_kind) (_verbose : bool) (debug : bool)
+    (no_color : bool) =
   match query with
   | Some q ->
       QueryJsonCore.parse ~debug q
       |> Result.map Compiler.compile
-      |> Result.iter (Runtime.run ~payload ~kind ~noColor)
+      |> Result.iter (Runtime.run ~payload ~kind ~no_color)
   | None -> print_endline (Console.usage ())
 
 let () =
@@ -49,9 +47,11 @@ let () =
   let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in
   let json = value & pos 1 (some string) None & info [] ~doc:"JSON file" in
   let kind =
-    let kindEnum = enum [ ("file", Runtime.File); ("inline", Inline) ] in
+    let kind_enum =
+      enum [ ("file", Runtime.File); ("inline", Runtime.Inline) ]
+    in
     value
-    & opt kindEnum ~vopt:Runtime.File File
+    & opt kind_enum ~vopt:Runtime.File Runtime.File
     & info [ "k"; "kind" ] ~doc:"Input kind, either a JSON file or inline JSON"
   in
   let verbose =
