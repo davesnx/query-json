@@ -16,8 +16,8 @@ depends: [
   "dune" {>= "3.17"}
   "ocaml"
   "mlx"
-  "ocamlformat-mlx"
   "ocamlmerlin-mlx"
+  "ocamlformat-mlx"
   "melange"
   "melange-json"
   "melange-webapi"

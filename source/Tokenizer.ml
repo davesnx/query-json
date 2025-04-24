@@ -55,12 +55,11 @@ let string buf =
   in
   read_string buf
 
-let tokenizeApply buf =
+let tokenize_apply buf =
   let identifier = lexeme buf in
-  [%sedlex
-    match buf with
-    | '(' -> Ok (FUNCTION identifier)
-    | _ -> Ok (IDENTIFIER identifier)]
+  match%sedlex buf with
+  | '(' -> Ok (FUNCTION identifier)
+  | _ -> Ok (IDENTIFIER identifier)
 
 let rec tokenize buf =
   match%sedlex buf with
@@ -91,7 +90,7 @@ let rec tokenize buf =
   | dot -> Ok DOT
   | ".." -> Ok RECURSE
   | '"' -> string buf
-  | identifier -> tokenizeApply buf
+  | identifier -> tokenize_apply buf
   | number ->
       let num = lexeme buf |> float_of_string in
       Ok (NUMBER num)

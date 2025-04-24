@@ -65,8 +65,8 @@
  (depends
   ocaml
   mlx
-  ocamlformat-mlx
   ocamlmerlin-mlx
+  ocamlformat-mlx
   melange
   melange-json
   melange-webapi

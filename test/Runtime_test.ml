@@ -1,14 +1,14 @@
-let json_testable = Alcotest.testable Json.pp Json.equal
-
 let case input expected =
   let fn () =
     let result =
-      match Json.parseString input with
+      match Json.parse_string input with
       | Ok r -> r
       | Error err -> Alcotest.fail err
     in
     ();
-    Alcotest.check json_testable "should be equal" result expected
+    Alcotest.check
+      (Alcotest.testable Json.pp Json.equal)
+      "should be equal" result expected
   in
   Alcotest.test_case input `Quick fn
 
