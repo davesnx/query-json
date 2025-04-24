@@ -1,7 +1,9 @@
-let _ = Webapi.Base64.atob("foo");
-let _ = Webapi.Base64.btoa("gibberish");
+let _ = Webapi.Base64.atob "foo"
+let _ = Webapi.Base64.btoa "gibberish"
+let encode text = Some text
+let decode text = Some text
 
-let encode = text => {
+(* let encode = text => {
   /* text
      |> Jstr.v
      |> Base64.data_utf_8_of_jstr
@@ -30,3 +32,4 @@ let decode = text => {
     text,
   );
 };
+ *)

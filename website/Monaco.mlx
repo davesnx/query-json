@@ -1,0 +1,69 @@
+let noop _ = ()
+
+type mode = Text | Json
+
+let mode_to_string = function Text -> "text" | Json -> "json"
+
+type padding = { bottom : int; top : int }
+type minimap = { enabled : bool }
+
+type options = {
+  fontSize : int;
+  fontFamily : string;
+  glyphMargin : bool;
+  lineNumbersMinChars : int;
+  padding : padding;
+  minimap : minimap;
+  wordWrap : string;
+  selectionHighlight : bool;
+  occurrencesHighlight : bool;
+  matchBrackets : string;
+  readOnly : bool;
+}
+
+module External = struct
+  external make :
+    language:string ->
+    height:string ->
+    value:string ->
+    onChange:(string -> unit) ->
+    ?className:string ->
+    style:ReactDOM.Style.t ->
+    theme:string ->
+    options:options ->
+    React.element = "default"
+  [@@mel.module "@monaco-editor/react"] [@@react.component]
+end
+
+let options : options =
+  {
+    fontSize = 16;
+    fontFamily = "IBM Plex Mono";
+    glyphMargin = false;
+    lineNumbersMinChars = 3;
+    padding = { top = 8; bottom = 8 };
+    minimap = { enabled = false };
+    wordWrap = "on";
+    selectionHighlight = false;
+    occurrencesHighlight = false;
+    matchBrackets = "never";
+    readOnly = false;
+  }
+
+type onChange = Write of (string -> unit) | ReadOnly
+
+let isReadOnly = function Write _ -> false | ReadOnly -> true
+
+let[@react.component] make ~(value : string)
+    ~onChange:(onChangeValue : onChange) ~(mode : mode) =
+  let onChange =
+    match onChangeValue with ReadOnly -> noop | Write handler -> handler
+  in
+  let options = { options with readOnly = isReadOnly onChangeValue } in
+  <External value
+            onChange
+            options
+            theme="dark"
+            language=(mode_to_string mode)
+            height="100%"
+            style=(ReactDOM.Style.make ~padding:"8px" ~height:"100%" ()) />

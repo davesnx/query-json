@@ -5,9 +5,8 @@
 *.res text eol=lf
 *.resi text eol=lf
 
-# Recognize all re files as Reason
-*.re linguist-language=Reason
-
 # Recognize all ml files as OCaml
 *.ml linguist-language=OCaml
 *.mly linguist-language=OCaml
+# Recognize all mlx files as OCaml
+*.mlx linguist-language=OCaml

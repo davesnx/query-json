@@ -1,0 +1,30 @@
+module Empty = struct
+  let[@react.component] make () =
+    <Monaco mode=Text value="" onChange=ReadOnly />
+end
+
+module Output = struct
+  let[@react.component] make ~value =
+    let text =
+      match value with
+      | Ok value -> value
+      | Error error ->
+          (* TODO:
+             Instead of removing the '[m' characters from Console and Compiler.
+             They shoudn't add those if there's colorize=false.
+             To sovle that, you would need to pass the flag to all Chalk and Compiler
+             calls, which is a tedious task. Instead, we remove them here ^^ *)
+          let regexp = [%re "/\\[\\d*m/"] in
+          Js.String.replaceByRe ~regexp ~replacement:"" error
+    in
+    let hasError = Result.is_error value in
+    let mode : Monaco.mode =
+      match hasError with true -> Text | false -> Json
+    in
+    <Monaco mode value=text onChange=ReadOnly />
+end
+
+module Json = struct
+  let[@react.component] make ~value ~onChange =
+    <Monaco mode=Json value onChange=(Write onChange) />
+end

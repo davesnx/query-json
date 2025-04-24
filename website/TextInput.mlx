@@ -1,0 +1,28 @@
+let interaction =
+  "Emotion.(outline(px(2), `solid, rgba(50, 100, 255, `num(0.6))))"
+
+let className =
+  "border-none Emotion.(\n\
+  \    make([|\n\
+  \      width(`percent(100.)),\n\
+  \      borderRadius(px(6)),\n\
+  \      background(rgb(32, 33, 36)),\n\
+  \      fontSize(px(18)),\n\
+  \      color(rgb(237, 242, 247)),\n\
+  \      padding(px(8)),\n\
+  \      focus([|interaction|]),\n\
+  \      active([|interaction|]),\n\
+  \    |])\n\
+  \  )"
+
+let[@react.component] make ~value ~placeholder ~onChange =
+  let onChangeHandler event =
+    let target = React.Event.Form.target event in
+    onChange target##value
+  in
+  <input autoFocus=true
+         className
+         type_="text"
+         value
+         placeholder
+         onChange=onChangeHandler />
