@@ -83,10 +83,7 @@ module QueryJson = struct
 
   let query_json_run : string -> string -> js_of_ocaml_result =
     [%mel.raw
-      {|
-    function (query, json) {
-      return window['query-json'].run(query, json);
-    }|}]
+      {| function (query, json) { return window['query-json'].run(query, json); }|}]
 
   let run query json = to_result (query_json_run query json)
 end

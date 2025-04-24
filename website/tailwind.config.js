@@ -1,4 +1,4 @@
 export default {
-  content: ["./index.html", "*.mlx", "./website/**/*.{js,ts,jsx,tsx}"],
+  content: ["./index.html", "*.mlx", "./**/*.mlx", "./**/*.{js,ts,jsx,tsx}"],
   plugins: {},
 }

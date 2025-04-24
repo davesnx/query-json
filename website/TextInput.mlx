@@ -10,7 +10,7 @@ let[@react.component] make ~value ~placeholder ~onChange =
     onChange target##value
   in
 
-  <div className="relative flex flex-row bg-white border-zinc-500 p-2 \
+  <div className="relative flex flex-row bg-zinc-200 border-zinc-500 p-2 \
                   rounded-md focus:ring-2 focus:ring-blue-500">
     <Input type_="text"
            value
