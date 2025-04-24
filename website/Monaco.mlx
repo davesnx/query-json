@@ -92,7 +92,7 @@ let[@react.component] make ~(value : string)
   <External value
             onChange
             options
-            theme="dark"
+            theme="vs-dark"
             language=(mode_to_string mode)
             height="100%"
             style=(ReactDOM.Style.make ~padding:"8px" ~height:"100%" ()) />

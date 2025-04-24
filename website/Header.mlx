@@ -1,6 +1,6 @@
 let menu = "w-screen py-5 bg-zinc-800"
 let wrapper = "w-3/4 h-full mx-auto flex justify-between items-center"
-let distribute = "flex flex-row items-center"
+let distribute = "flex flex-row items-center gap-2"
 
 let link =
   "no-underline text-gray-100 cursor-pointer transition-opacity duration-200 \
@@ -10,45 +10,32 @@ let iconlink =
   "w-[26px] h-[26px] no-underline text-gray-100 cursor-pointer inline-flex \
    items-center transition-opacity duration-200 ease-in-out hover:opacity-60"
 
-let button =
-  "border-none rounded-md py-2 px-3 text-gray-100 bg-blue-700 cursor-pointer \
-   transition-colors duration-200 ease-in-out hover:bg-blue-700/80"
-
 let[@react.component] make ~onShareClick =
   <div className=menu>
     <div className=wrapper>
-      <div className=distribute>
-        <a className=link
-           href="https://query-json.netlify.app"
-           target="_blank"
-           rel="noopener">
-          <Text color=`White kind=`H2>
-            (React.string "query-json playground")
-          </Text>
-        </a>
-      </div>
+      <Text color=`White kind=`H2>(React.string "query-json playground")</Text>
       <div className=distribute>
         <Text color=`Grey kind=`Label>(React.string "Made by")</Text>
-        <div className="w-full ml-2" />
-        <a className=iconlink
+        <a className=link
            href="https://twitter.com/davesnx"
            target="_blank"
            rel="noopener">
-          <Icons.Twitter />
+          <div className=distribute>
+            <Text color=`Grey kind=`Label>(React.string "davesnx")</Text>
+            <Icons.Twitter />
+          </div>
         </a>
-        <div className="w-full ml-2" />
         <Text color=`Grey kind=`Label>(React.string "Code in")</Text>
-        <div className="w-full ml-2" />
         <a className=iconlink
            href="https://github.com/davesnx/query-json"
            target="_blank"
            rel="noopener">
           <Icons.Github />
         </a>
-        <div className="w-full ml-2" />
-        <button className=button onClick=onShareClick>
+        <span className="w-4" />
+        <Button kind=Default onClick=onShareClick>
           <Text kind=`H4>(React.string "Generate unique URL")</Text>
-        </button>
+        </Button>
       </div>
     </div>
   </div>

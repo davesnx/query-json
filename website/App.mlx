@@ -33,12 +33,14 @@ let mockJson =
 }
 |}
 
-let page = "flex flex-col items-center h-full bg-gray-900"
+let page = "flex flex-col items-center h-full bg-zinc-900"
 
 let container =
   "w-3/4 max-w-full h-full mx-auto flex flex-col justify-between items-center"
 
-let columnHalf = "w-1/2 h-full mx-auto flex justify-between items-center"
+let columnHalf =
+  "w-1/2 h-full mx-auto flex flex-col justify-between items-left gap-2"
+
 let box = "bg-gray-800 h-full w-full border-2 border-gray-700 rounded-md"
 
 type t = { query : string; json : string option }
@@ -105,7 +107,6 @@ let[@react.component] make () =
   let state, dispatch = React.useReducer reduce initialState in
 
   let onQueryChange value = dispatch (UpdateQuery value) in
-
   let onJsonChange value = dispatch (UpdateJson value) in
 
   let output =
@@ -121,6 +122,15 @@ let[@react.component] make () =
     | None -> Printf.eprintf "Error decoding"
   in
 
+  (* const downloadJson = () => {
+       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(activeTab === "input" ? jsonInput : result)
+       const downloadAnchorNode = document.createElement("a")
+       downloadAnchorNode.setAttribute("href", dataStr)
+       downloadAnchorNode.setAttribute("download", `json-playground-${activeTab === "input" ? "input" : "result"}.json`)
+       document.body.appendChild(downloadAnchorNode)
+       downloadAnchorNode.click()
+       downloadAnchorNode.remove()
+     } *)
   <div className=page>
     <Header onShareClick />
     <div className="w-full mb-2" />
@@ -134,10 +144,14 @@ let[@react.component] make () =
       <div className="w-full h-full mx-auto flex justify-between items-center \
                       gap-2">
         <div className=columnHalf>
+          <span className="text-white text-xs">
+            (React.string "Input JSON")
+          </span>
           <Editor.Json value=(Option.value state.json ~default:"")
                        onChange=onJsonChange />
         </div>
         <div className=columnHalf>
+          <span className="text-white text-xs">(React.string "Output")</span>
           (match output with
           | Some value -> <Editor.Output value />
           | None -> <Editor.Empty />)

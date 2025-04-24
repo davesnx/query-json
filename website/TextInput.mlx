@@ -1,15 +1,26 @@
-let className =
-  "border-none w-full border-2 border-gray-700 rounded-md bg-gray-900 text-lg \
-   text-white p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+module Input = struct
+  let[@react.component] make ~type_ ~className ~value ~placeholder ~onChange =
+    <input autoFocus=true className type_ value placeholder onChange />
+end
 
 let[@react.component] make ~value ~placeholder ~onChange =
+  let clearInput _ = onChange "" in
   let onChangeHandler event =
     let target = React.Event.Form.target event in
     onChange target##value
   in
-  <input autoFocus=true
-         className
-         type_="text"
-         value
-         placeholder
-         onChange=onChangeHandler />
+
+  <div className="relative flex flex-row bg-white border-zinc-500 p-2 \
+                  rounded-md focus:ring-2 focus:ring-blue-500">
+    <Input type_="text"
+           value
+           onChange=onChangeHandler
+           placeholder
+           className="border-none w-full p-2 text-black focus:outline-none" />
+    <div className="absolute inset-y-0 right-3 flex items-center gap-2">
+      <Button kind=Ghost onClick=clearInput>
+        (* <Icons.Trash /> *)
+        <span className="text-black text-xs">(React.string "Clear")</span>
+      </Button>
+    </div>
+  </div>
