@@ -50,7 +50,7 @@ const pkgJson = {
   scripts: {
     postinstall: 'node postinstall.js',
   },
-  main: 'query-json-js/QueryJsonJs.bc.js',
+  main: 'query-json-js/Js.bc.js',
   bin: 'query-json',
   files: [
     'platform-windows-x64/',

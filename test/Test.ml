@@ -1,3 +1,3 @@
 let _ =
   Alcotest.run "query-json"
-    [ ("Parsing", Parsing_test.tests); ("Runtime", Runtime_test.tests) ]
+    [ ("Parsing", Test_parse.tests); ("Runtime", Test_runtime.tests) ]

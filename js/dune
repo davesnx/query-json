@@ -1,5 +1,5 @@
 (executable
- (name QueryJsonJs)
+ (name Js)
  (public_name query-json-js)
  (package query-json-js)
  (libraries query-json.core js_of_ocaml)

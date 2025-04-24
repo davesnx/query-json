@@ -6,10 +6,11 @@ let debug = false
 let case input expected =
   let fn () =
     let result =
-      match QueryJsonCore.parse ~debug input with
+      match Core.parse ~debug input with
       | Ok r -> r
       | Error err -> Alcotest.fail err
     in
+    (* TODO: Add Ast.compare or Ast.diff via ppx_deriving and use it here *)
     let expected = Ast.show_expression expected in
     let result = Ast.show_expression result in
     assert_string result expected

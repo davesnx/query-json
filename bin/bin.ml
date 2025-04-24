@@ -37,7 +37,7 @@ let execution (query : string option) (payload : string option)
     (no_color : bool) =
   match query with
   | Some q ->
-      QueryJsonCore.parse ~debug q
+      Core.parse ~debug q
       |> Result.map Compiler.compile
       |> Result.iter (Runtime.run ~payload ~kind ~no_color)
   | None -> print_endline (Console.usage ())
