@@ -1,13 +1,15 @@
-let getHash () = None
+let remove_hash hash =
+  Js.String.substring ~start:1 ~end_:(Js.String.length hash) hash
 
-(* let getHash = () =>
-   try(Some(Url.Current.get_fragment() |> Url.urldecode)) {
-   | _ => None
-   }; *)
+let get_hash () =
+  let window = Webapi.Dom.window in
+  let location = Webapi.Dom.Window.location window in
+  match Webapi.Dom.Location.hash location with
+  | "" -> None
+  | hash -> Some (remove_hash hash)
+  | exception _ -> None
 
-let setHash _hash = ()
-
-(* let setHash = (hash): unit => {
-     Url.Current.set_fragment(hash |> Url.urlencode(~with_plus=true));
-   };
-    *)
+let set_hash hash =
+  let window = Webapi.Dom.window in
+  let location = Webapi.Dom.Window.location window in
+  Webapi.Dom.Location.setHash location hash

@@ -90,7 +90,7 @@ module QueryJson = struct
 end
 
 let[@react.component] make () =
-  let hash = Router.getHash () in
+  let hash = Router.get_hash () in
 
   let stateFromHash =
     hash |> Option.bind Base64.decode |> Option.map QueryParams.fromString
@@ -117,7 +117,7 @@ let[@react.component] make () =
   let onShareClick _ =
     let hash = QueryParams.toHash { query = state.query; json = state.json } in
     match hash with
-    | Some hash -> Router.setHash hash
+    | Some hash -> Router.set_hash hash
     | None -> Printf.eprintf "Error decoding"
   in
 
