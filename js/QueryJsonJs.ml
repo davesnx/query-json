@@ -1,4 +1,4 @@
-let run = QueryJsonCore.run
+let run query json = QueryJsonCore.run query json
 
 let () =
   Js_of_ocaml.Js.export "query-json"

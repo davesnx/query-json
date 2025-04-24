@@ -12,7 +12,7 @@ module Output = struct
           (* TODO:
              Instead of removing the '[m' characters from Console and Compiler.
              They shoudn't add those if there's colorize=false.
-             To sovle that, you would need to pass the flag to all Chalk and Compiler
+             To solve that, you would need to pass the flag to all Chalk and Compiler
              calls, which is a tedious task. Instead, we remove them here ^^ *)
           let regexp = [%re "/\\[\\d*m/"] in
           Js.String.replaceByRe ~regexp ~replacement:"" error

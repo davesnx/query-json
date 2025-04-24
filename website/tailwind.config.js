@@ -1,3 +1,4 @@
 export default {
-  plugins: {}
+  content: ["./index.html", "*.mlx", "./**/*.mlx", "./**/*.{js,ts,jsx,tsx}"],
+  plugins: {},
 }
