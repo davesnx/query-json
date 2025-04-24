@@ -77,7 +77,7 @@ module QueryJson = struct
     match res.first with
     | 0 -> Ok res.second
     | 1 -> Error res.second
-    | _ -> failwith "Invalid result from QueryJsonJs"
+    | _ -> Error "Invalid result from QueryJsonJs"
 
   let query_json_run : string -> string -> js_of_ocaml_result =
     [%mel.raw
@@ -131,7 +131,8 @@ let[@react.component] make () =
                    placeholder="Type the query to filter against the JSON \
                                 below. For example: '.store'" />
       </div>
-      <div className="w-full h-full mx-auto flex justify-between items-center gap-2">
+      <div className="w-full h-full mx-auto flex justify-between items-center \
+                      gap-2">
         <div className=columnHalf>
           <Editor.Json value=(Option.value state.json ~default:"")
                        onChange=onJsonChange />
