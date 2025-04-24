@@ -15,7 +15,9 @@ bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "dune" {>= "3.17"}
   "ocaml"
-  "reason"
+  "mlx"
+  "ocamlmerlin-mlx"
+  "ocamlformat-mlx"
   "melange"
   "melange-json"
   "melange-webapi"
