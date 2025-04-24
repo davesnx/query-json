@@ -1,18 +1,6 @@
-(library
- (name Test)
- (ocamlopt_flags -linkall -g)
- (libraries query-json.core rely.lib)
- (modules
-  (:standard \ Run)))
+(test
+ (name test)
+ (libraries alcotest query-json.core fmt yojson ppx_deriving.runtime))
 
-(executable
- (package query-json)
- (name Run)
- (public_name Run.exe)
- (libraries Test)
- (modules Run))
-
-(rule
- (alias runtest)
- (action
-  (run ./Run.exe)))
+(cram
+ (deps %{bin:query-json} ./mock.json))

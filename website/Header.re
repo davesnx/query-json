@@ -1,18 +1,12 @@
-open React.Dom.Dsl;
-open Html;
-open Jsoo_css;
-
-let menu =
-  Emotion.(
+let menu = "Emotion.(
     make([|
       width(vw(100.)),
       padding2(~h=`zero, ~v=`px(20)),
       background(rgb(32, 33, 37)),
     |])
-  );
+  )";
 
-let wrapper =
-  Emotion.(
+let wrapper = "Emotion.(
     make([|
       width(vw(75.)),
       height(`percent(100.)),
@@ -21,59 +15,54 @@ let wrapper =
       justifyContent(`spaceBetween),
       alignItems(`center),
     |])
-  );
+  )";
 
-let distribute =
-  Emotion.(
+let distribute = "Emotion.(
     make([|display(`flex), flexDirection(`row), alignItems(`center)|])
-  );
+  )";
 
-let link =
-  Emotion.(
+let link = "Emotion.(
     make([|
       textDecoration(`none),
-      color(hex("FAFAFA")),
+      color(hex('FAFAFA')),
       cursor(`pointer),
-      transition("opacity", ~duration=200, ~timingFunction=`easeInOut),
-      selector("&:hover", [|opacity(0.6)|]),
+      transition('opacity', ~duration=200, ~timingFunction=`easeInOut),
+      selector('&:hover', [|opacity(0.6)|]),
     |])
-  );
+  )";
 
-let iconlink =
-  Emotion.(
+let iconlink = "Emotion.(
     make([|
       width(px(26)),
       height(px(26)),
       textDecoration(`none),
-      color(hex("FAFAFA")),
+      color(hex('FAFAFA')),
       cursor(`pointer),
       display(`inlineFlex),
       alignItems(`center),
-      transition("opacity", ~duration=200, ~timingFunction=`easeInOut),
-      selector("&:hover", [|opacity(0.6)|]),
+      transition('opacity', ~duration=200, ~timingFunction=`easeInOut),
+      selector('&:hover', [|opacity(0.6)|]),
     |])
-  );
+  )";
 
-let button_ =
-  Emotion.(
+let button_ = "border-none Emotion.(
     make([|
-      unsafe("border", "none"),
       borderRadius(px(6)),
       padding2(~v=px(8), ~h=px(12)),
-      color(hex("FAFAFA")),
+      color(hex('FAFAFA')),
       backgroundColor(rgb(43, 75, 175)),
       cursor(`pointer),
       transition(
-        "background-color",
+        'background-color',
         ~duration=200,
         ~timingFunction=`easeInOut,
       ),
       selector(
-        "&:hover",
+        '&:hover',
         [|backgroundColor(rgba(43, 75, 175, `percent(80.)))|],
       ),
     |])
-  );
+  )";
 
 [@react.component]
 let make = (~onShareClick) => {

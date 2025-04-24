@@ -1,0 +1,30 @@
+{
+  "name": "query-json-website",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "esbuild": "^0.25.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-replace": "^6.0.2",
+    "@tailwindcss/cli": "^4.1.4",
+    "@vitejs/plugin-react": "^4.1.0",
+    "gh-pages": "^3.1.0",
+    "netlify-cli": "^2.65.0",
+    "rollup-plugin-polyfill-node": "^0.12.0",
+    "tailwindcss": "^4.1.4",
+    "vite": "^4.4.11",
+    "vite-plugin-html": "^3.2.0",
+    "vite-plugin-monaco-editor": "^1.1.0",
+    "vite-plugin-react": "^4.0.1",
+    "vite-plugin-require": "^1.1.11"
+  }
+}

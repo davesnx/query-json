@@ -8,128 +8,91 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [
+          ubuntu-latest,
+          macos-latest,
+          # windows-latest https://github.com/ocaml/dune/issues/11645
+        ]
+        ocaml-compiler:
+          - 5.2.1
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Use Node.js 16.x
+      - name: Use Node.js
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16.x
+          node-version: 20.x
 
-      - name: Restore global node modules cache
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/cache@v1
-        env:
-          cache-name: cache-node-modules
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v3.3.1
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          dune-cache: true
+          opam-disable-sandboxing: true
 
-      - name: Install esy
-        run: npm install -g esy@0.6.12
+      - name: Install deps
+        run: make install
 
-      - name: Restore esy source cache
-        id: esy-cache
-        uses: actions/cache@v2
-        with:
-          path: ~/.esy/source
-          key: source-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
+      - name: Install npm deps
+        run: npm install
 
-      - name: Install
-        run: esy install
-
-      - name: Print esy cache
-        id: print_esy_cache
-        run: node scripts/print-esy-cache.js
-
-      - name: Try to restore dependencies cache
-        id: deps-cache
-        uses: actions/cache@v2
-        with:
-          path: ${{ steps.print_esy_cache.outputs.esy_cache }}
-          key: deps-${{ matrix.os }}-${{ hashFiles('**/index.json') }}
-          restore-keys: deps-${{ matrix.os }}-
-
-      - name: Build dependencies
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: esy build-dependencies
+      - name: Pin some deps
+        run: make pin
 
       - name: Build
-        run: esy build
+        run: make build
 
-      - name: Test
-        if: ${{ matrix.os != 'windows-latest' }}
-        run: |
-          rm test/__snapshots__/.gitkeep
-          esy dune runtest --instrument-with bisect_ppx --force
-          esy bisect-ppx-report send-to Coveralls
-        env:
-          BISECT_SILENT: "ERR"
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
-          PULL_REQUEST_NUMBER: ${{ github.event.number }}
+      - name: Run tests
+        run: make test
 
       - name: Web build
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          esy b dune build
-          cd website
-          npm ci
-          npm run build-production
+        run: npm run build
 
       - name: Deploy to prod
-        if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=build
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=../dist
 
       - name: Deploy preview
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: ${{ matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request' }}
         working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
           AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run:
-          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=build
+          npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=../dist
 
       - name: Upload artifacts for ${{ matrix.os }}
         uses: actions/upload-artifact@master
         with:
           name: ${{ matrix.os }}-artifact
-          path: _build/default/bin/Bin.exe
+          path: _build/default/bin/bin.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/upload-artifact@master
         with:
-          name: bundled
-          path: _build/default/js/Js.bc.js
-
-      # Cleanup build cache if dependencies have changed
-      - name: Clean build cache
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: esy cleanup .
+          name: query-json-js
+          path: _build/default/js/QueryJsonJs.bc.js
 
   publish:
     needs: build
     name: Publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Use Node.js 12.x
-        uses: actions/setup-node@v1
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v3
         with:
-          node-version: 12.x
+          node-version: 20.x
 
       - name: Generate NPM package and release
         run: node scripts/make-npm-release.js
@@ -138,8 +101,8 @@ jobs:
         if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
-          name: bundled
-          path: _release/bundled
+          name: query-json-js
+          path: _release/query-json-js
 
       - name: Download linux artifacts
         if: ${{ success() }}
@@ -155,53 +118,35 @@ jobs:
           name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
-      - name: Download windows artifacts
-        uses: actions/download-artifact@master
-        with:
-          name: windows-latest-artifact
-          path: _release/platform-windows-x64
-
-      - name: Publish query-json from linux artifcats
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          cp _release/platform-linux-x64/Bin.exe ./query-json
-          chmod +x query-json
+      # - name: Download windows artifacts
+        # uses: actions/download-artifact@master
+        # with:
+          # name: windows-latest-artifact
+          # path: _release/platform-windows-x64
 
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
-          mv Bin.exe query-json
+          mv bin.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv Bin.exe query-json
+          mv bin.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
-          cd _release/platform-windows-x64
-          mv Bin.exe query-json
-          zip -r ../../query-json-windows-x64.zip .
-          cd ../..
-
-      - name: End to end Test (Linux)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: npx bats ./e2e/test.sh
-        env:
-          IS_CI: true
-
-      - name: End to end Test (Windows)
-        if: ${{ matrix.os == 'windows-latest' }}
-        run: sh -c 'npx bats ./e2e/test.sh' \"$(pwd)/node_modules/bats/bin/bats\"
-        env:
-          IS_CI: true
+        # cd _release/platform-windows-x64
+        # mv bin.exe query-json
+        # zip -r ../../query-json-windows-x64.zip .
+        # cd ../..
 
       - name: Check if should be published
-        if: ${{ success() && github.event_name != 'pull_request' }}
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         id: newVersion
         run: |
           REMOTE=$(npm view @davesnx/query-json version);
-          CURRENT=$(jq -r '.version' esy.json);
+          CURRENT=$(cat dune-project | grep -oE '\(version [0-9]+\.[0-9]+\.[0-9]+\)' | grep -o '\d\+.\d\+.\d\+');
           if [ "$REMOTE" != "$CURRENT" ]
           then
             echo "::set-output name=shouldPublish::true";
@@ -210,7 +155,7 @@ jobs:
           fi
 
       - name: Publish
-        if: ${{ success() && github.event_name != 'pull_request' && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -268,13 +213,13 @@ jobs:
           asset_name: query-json-linux-x64.zip
           asset_content_type: application/gzip
 
-      - name: Upload query-json-windows-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
-        uses: actions/upload-release-asset@v1.0.1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: query-json-windows-x64.zip
-          asset_name: query-json-windows-x64.zip
-          asset_content_type: application/gzip
+      # - name: Upload query-json-windows-x64.zip to Github release
+        # if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        # uses: actions/upload-release-asset@v1.0.1
+        # env:
+          # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # with:
+          # upload_url: ${{ steps.create_release.outputs.upload_url }}
+          # asset_path: query-json-windows-x64.zip
+          # asset_name: query-json-windows-x64.zip
+          # asset_content_type: application/gzip

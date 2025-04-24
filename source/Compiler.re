@@ -1,40 +1,56 @@
 open Ast;
-open Console;
 
-type noun =
-  | StartsWithVocal(string)
-  | StartsWithConsonant(string);
+let appendArticle = (noun: string) => {
+  let starts_with_any = (str: string, chars: list(string)) => {
+    let rec loop = (chars: list(string)) => {
+      switch (chars) {
+      | [] => false
+      | [x, ...xs] =>
+        if (String.starts_with(~prefix=str, x)) {
+          true;
+        } else {
+          loop(xs);
+        }
+      };
+    };
+    loop(chars);
+  };
+
+  starts_with_any(noun, ["a", "e", "i", "o", "u"])
+    ? "an " ++ noun : "a " ++ noun;
+};
 
 let makeErrorWrongOperation = (op, memberKind, value: Json.t) => {
-  "Trying to "
-  ++ Formatting.singleQuotes(Chalk.bold(op))
-  ++ " on "
-  ++ (
-    switch (memberKind) {
-    | StartsWithVocal(m) => "an " ++ Chalk.bold(m)
-    | StartsWithConsonant(m) => "a " ++ Chalk.bold(m)
-    }
-  )
-  ++ ":"
-  ++ Formatting.enter(1)
-  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
+  Console.(
+    "Trying to "
+    ++ Formatting.singleQuotes(Chalk.bold(op))
+    ++ " on "
+    ++ (appendArticle(memberKind) |> Chalk.bold)
+    ++ ":"
+    ++ Formatting.enter(1)
+    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true))
+  );
+};
+
+let getFieldName = json => {
+  switch (json) {
+  | `List(_list) => "list"
+  | `Assoc(_assoc) => "object"
+  | `Bool(_b) => "bool"
+  | `Float(_f) => "float"
+  | `Int(_i) => "int"
+  | `Null => "null"
+  | `String(_identifier) => "string"
+  /* Those 3 are added by Yojson.Safe */
+  | `Variant(_) => "variant"
+  | `Tuple(_) => "list"
+  | `Intlit(_) => "int"
+  };
 };
 
 let makeError = (name: string, json: Json.t) => {
-  switch (json) {
-  | `List(_list) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("list"), json)
-  | `Assoc(_assoc) =>
-    makeErrorWrongOperation(name, StartsWithVocal("object"), json)
-  | `Bool(_b) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("bool"), json)
-  | `Float(_f) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("float"), json)
-  | `Int(_i) => makeErrorWrongOperation(name, StartsWithVocal("int"), json)
-  | `Null => makeErrorWrongOperation(name, StartsWithConsonant("null"), json)
-  | `String(_identifier) =>
-    makeErrorWrongOperation(name, StartsWithConsonant("string"), json)
-  };
+  let itemName = getFieldName(json);
+  makeErrorWrongOperation(name, itemName, json);
 };
 
 let empty = Ok([]);
@@ -68,6 +84,8 @@ module Results = {
     };
   };
 };
+
+let ( let* ) = Results.bind;
 
 let keys = (json: Json.t) => {
   switch (json) {
@@ -137,8 +155,8 @@ let notEq = (l, r) => Results.return(`Bool(l != r));
 
 let add = apply("+", (l, r) => l +. r);
 let sub = apply("-", (l, r) => l -. r);
-let mult = apply("-", (l, r) => l *. r);
-let div = apply("-", (l, r) => l /. r);
+let mult = apply("*", (l, r) => l *. r);
+let div = apply("/", (l, r) => l /. r);
 
 let filter = (fn: Json.t => bool, json: Json.t) => {
   switch (json) {
@@ -148,19 +166,23 @@ let filter = (fn: Json.t => bool, json: Json.t) => {
 };
 
 let makeEmptyListError = op => {
-  "Trying to "
-  ++ Formatting.singleQuotes(Chalk.bold(op))
-  ++ " on an empty array.";
+  Console.(
+    "Trying to "
+    ++ Formatting.singleQuotes(Chalk.bold(op))
+    ++ " on an empty array."
+  );
 };
 
 let makeAcessingToMissingItem = (accessIndex, length) => {
-  "Trying to read "
-  ++ Formatting.singleQuotes(
-       "[" ++ Chalk.bold(string_of_int(accessIndex)) ++ "]",
-     )
-  ++ " from an array with "
-  ++ string_of_int(length)
-  ++ " elements only.";
+  Console.(
+    "Trying to read "
+    ++ Formatting.singleQuotes(
+         "[" ++ Chalk.bold(string_of_int(accessIndex)) ++ "]",
+       )
+    ++ " from an array with "
+    ++ string_of_int(length)
+    ++ " elements only."
+  );
 };
 
 let head = (json: Json.t) => {
@@ -188,13 +210,15 @@ let tail = (json: Json.t) => {
 };
 
 let makeErrorMissingMember = (op, key, value: Json.t) => {
-  "Trying to "
-  ++ Formatting.doubleQuotes(Chalk.bold(op))
-  ++ " on an object, that don't have the field "
-  ++ Formatting.doubleQuotes(key)
-  ++ ":"
-  ++ Formatting.enter(1)
-  ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true));
+  Console.(
+    "Trying to "
+    ++ Formatting.doubleQuotes(Chalk.bold(op))
+    ++ " on an object, that don't have the field "
+    ++ Formatting.doubleQuotes(key)
+    ++ ":"
+    ++ Formatting.enter(1)
+    ++ Chalk.gray(Json.toString(value, ~colorize=false, ~summarize=true))
+  );
 };
 
 let member = (key: string, opt: bool, json: Json.t) => {
@@ -213,16 +237,15 @@ let member = (key: string, opt: bool, json: Json.t) => {
 
 let index = (value: int, json: Json.t) => {
   switch (json) {
+  | `List(list) when List.length(list) > value =>
+    Results.return(Json.index(value, json))
   | `List(list) =>
-    List.length(list) > value
-      ? Results.return(Json.index(value, json))
-      : Error(makeAcessingToMissingItem(value, List.length(list)))
+    Error(makeAcessingToMissingItem(value, List.length(list)))
   | _ => Error(makeError("[" ++ string_of_int(value) ++ "]", json))
   };
 };
 
-let rec compile =
-        (expression: expression, json): result(list(Json.t), string) => {
+let rec compile = (expression, json): result(list(Json.t), string) => {
   switch (expression) {
   | Identity => Results.return(json)
   | Empty => empty
@@ -271,19 +294,16 @@ let rec compile =
   };
 }
 and operation = (leftR, rightR, op, json) => {
-  Results.bind(compile(leftR, json), left =>
-    Results.bind(compile(rightR, json), right => op(left, right))
-  );
+  let* left = compile(leftR, json);
+  let* right = compile(rightR, json);
+  op(left, right);
 }
 and map = (expr: expression, json: Json.t) => {
   switch (json) {
-  | `List(list) =>
-    List.length(list) > 0
-      ? {
-        Results.collect(List.map(item => compile(expr, item), list))
-        |> Result.map(x => [`List(x)]);
-      }
-      : Error(makeEmptyListError("map"))
+  | `List(list) when List.length(list) > 0 =>
+    Results.collect(List.map(item => compile(expr, item), list))
+    |> Result.map(x => [`List(x)])
+  | `List(_list) => Error(makeEmptyListError("map"))
   | _ => Error(makeError("map", json))
   };
 };
