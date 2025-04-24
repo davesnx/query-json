@@ -44,55 +44,38 @@ let execution (query : string option) (payload : string option)
       |> Result.iter (Runtime.run ~payload ~kind ~noColor)
   | None -> print_endline (Console.usage ())
 
-let query =
-  let open Cmdliner in
-  let open Arg in
-  value & pos 0 (some string) None & info [] ~doc:"Query to run"
-
-let json =
-  let open Cmdliner in
-  let open Arg in
-  value & pos 1 (some string) None & info [] ~doc:"JSON file"
-
-let kind =
-  let open Cmdliner in
-  let kindEnum = Arg.enum [ ("file", Runtime.File); ("inline", Inline) ] in
-  let open Arg in
-  value
-  & opt kindEnum ~vopt:Runtime.File File
-  & info [ "k"; "kind" ] ~doc:"Input kind, either a JSON file or inline JSON"
-
-let verbose =
-  let open Cmdliner in
-  Arg.value
-    (Arg.flag
-       (Arg.info [ "v"; "verbose" ] ~doc:"Activate verbossity. Not used for now"))
-
-let debug =
-  let open Cmdliner in
-  Arg.value (Arg.flag (Arg.info ~doc:"Activate debug mode" [ "d"; "debug" ]))
-
-let color =
-  let open Cmdliner in
-  Arg.value
-    (Arg.flag
-       (Arg.info ~doc:"Enable or disable color in the output"
-          [ "c"; "no-color" ]))
-
-let _ =
+let () =
+  let open Cmdliner.Arg in
+  let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in
+  let json = value & pos 1 (some string) None & info [] ~doc:"JSON file" in
+  let kind =
+    let kindEnum = enum [ ("file", Runtime.File); ("inline", Inline) ] in
+    value
+    & opt kindEnum ~vopt:Runtime.File File
+    & info [ "k"; "kind" ] ~doc:"Input kind, either a JSON file or inline JSON"
+  in
+  let verbose =
+    value & flag
+    & info [ "v"; "verbose" ] ~doc:"Activate verbossity. Not used for now"
+  in
+  let debug = value & flag & info [ "d"; "debug" ] ~doc:"Activate debug mode" in
+  let color =
+    value & flag
+    & info [ "c"; "no-color" ] ~doc:"Enable or disable color in the output"
+  in
   let term =
     let open Cmdliner.Term in
     const execution $ query $ json $ kind $ verbose $ debug $ color
   in
   let info =
-    let open Cmdliner in
-    Cmd.info "query-json" ~version:Info.version ~doc:"Run operations on JSON"
+    Cmdliner.Cmd.info "query-json" ~version:Info.version
+      ~doc:"Run operations on JSON"
       ~man:
         [
-          `S Manpage.s_description;
+          `S Cmdliner.Manpage.s_description;
           `P Info.description;
           `P "query-json '.dependencies' package.json";
-          `S Manpage.s_bugs;
+          `S Cmdliner.Manpage.s_bugs;
           `P ("Report them to " ^ Info.issues_url);
         ]
   in
