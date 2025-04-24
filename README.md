@@ -7,7 +7,7 @@
   <br>
 </p>
 
-**query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in [Reason](https://reasonml.github.io/docs/en/native) distributed as a dependency-free binary thanks to the OCaml compiler, and distributed to the web with [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml).
+**query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in OCaml distributed as a binary, but also distributed as a JavaScript package via [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml).
 
 **query-json** allows you to write small programs to operate on top of json files with a concise syntax.
 
@@ -15,12 +15,12 @@
 
 ## Purpose
 
-It was created with mostly two reasons, learning and having fun.
+It was created with mostly two reasons in mind, learning and having fun
 
-- **Learn how to write a Programming Language with the OCaml stack** using `menhir` and `sedlex` with great error messages.
-- **Create a CLI tool in Reason Native** and being able to distribute it as a binary (for performance) and as a JavaScript library (for portability).
+- **Learn how to write a programming language with the OCaml stack** using `menhir`, `sedlex` and friends and try to make great error messages.
+- **Create a CLI tool in OCaml** and being able to distribute it to twoo different platforms: as a binary (for performance) and as a JavaScript library (for portability).
 
-## It brings
+## What it brings
 
 - **Great Performance**: Fast, small footprint and minimum runtime. Check [Performance section](#Performance) for a longer explanation, but it can be 2x to 5x faster than jq.
 - **Delightful errors**:
@@ -63,34 +63,34 @@ I recommend to write the query in single-quotes inside the terminal, since writt
 
 #### query a json file
 ```bash
-q '.' pokemons.json
+query-json '.' pokemons.json
 ```
 
 #### query from stdin
 ```bash
-cat pokemons.json | q '.'
-q '.' <<< '{ "bulvasur": { "id": 1, "power": 20 } }'
+cat pokemons.json | query-json '.'
+query-json '.' <<< '{ "bulvasur": { "id": 1, "power": 20 } }'
 ```
 
 #### query a json inlined
 ```bash
-q --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
+query-json --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
 ```
 
 #### query without colors
 ```bash
-q '.' pokemons.json --no-colors
+query-json '.' pokemons.json --no-colors
 ```
 
 ## Performance
 
 [This report](./benchmarks/report.md) is not an exhaustive performance report of both tools, it's a overview for the percieved performance of the user. I don't profile each tool and try to see what are the bootlenecks, since I assume that both tools have the penalty of parsing a JSON file.
 
-Aside from that, **query-json** doesn't have feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses. Adding the missing operations on **query-json** won't affect the performance of it, that could not be true for features like "modules" or "tests", which they will not be implemented in **query-json**.
+Aside from that, **query-json** doesn't have feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses. Adding the missing operations on **query-json** won't affect the performance of it, that could not be true for features like "modules", "functions" or "tests".
 
 The report shows that **query-json** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
 
-## Currently supported feature set:
+## Currently supported feature set
 
 | Badge | Meaning             |
 | ----- | ------------------- |
@@ -180,20 +180,24 @@ Contributions are what make the open source community such an amazing place to b
 
 ### Support
 
-I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) or [reasonml.chat](https://reasonml.chat) so feel free to ask anything there.
+I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) or [x.com/davesnx](https://x.com/davesnx) so feel free to ask anything.
 
 ### Setup
 
-Requirements: [esy](https://esy.sh)
+Requirements: [opam](https://opam.ocaml.org)
 
 ```bash
 git clone https://github.com/davesnx/query-json
 cd query-json
-esy # installs
-esy test # runs unit tests with [rely](https://reason-native.com/docs/rely), live under test/.
-esy bin # Run binary
+make init # creates opam switch, installs ocaml deps and npm deps
+make dev # compiles
+make test # runs unit tests and snapshots tests
+dune exec query-json # Run binary
 ```
 
-## Acknowledgements
-
-Thanks to [@EduardoRFS](https://github.com/EduardoRFS). Thanks to all the authors of dependencies that this project relies on: [menhir](http://gallium.inria.fr/~fpottier/menhir), [sedlex](https://github.com/ocaml-community/sedlex), [yojson](https://github.com/ocaml-community/yojson). Thanks to the OCaml and Reason Native team.
+Running the playground
+```bash
+# In different terminals
+make dev # Runs bundler
+make web-dev # Runs bundler
+```

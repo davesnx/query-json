@@ -54,7 +54,8 @@ end
 let usage () =
   Formatting.enter 1
   ^ Chalk.bold "query-json [OPTIONS] [QUERY] [JSON]"
-  ^ Formatting.enter 2 ^ "OPTIONS:" ^ Formatting.enter 1 ^ Formatting.indent 2
+  ^ Formatting.enter 2 ^ Chalk.bold "OPTIONS" ^ Formatting.enter 1
+  ^ Formatting.indent 2
   ^ "-c, --no-color: Enable or disable color in the output" ^ Formatting.enter 1
   ^ Formatting.indent 2 ^ "-k [VAL], --kind[=VAL]: input kind. "
   ^ Formatting.doubleQuotes "file"
@@ -64,6 +65,7 @@ let usage () =
   ^ "-v, --verbose: Activate verbossity" ^ Formatting.enter 1
   ^ Formatting.indent 2 ^ "-d, --debug: Print AST" ^ Formatting.enter 1
   ^ Formatting.indent 2 ^ "--version: Show version information."
-  ^ Formatting.enter 2 ^ "EXAMPLE:" ^ " query-json '.dependencies' package.json"
-  ^ Formatting.enter 2 ^ "MORE: https://github.com/davesnx/query-json"
+  ^ Formatting.enter 2 ^ Chalk.bold "EXAMPLE"
+  ^ " query-json '.dependencies' package.json" ^ Formatting.enter 2
+  ^ Chalk.bold "MORE" ^ " https://github.com/davesnx/query-json"
   ^ Formatting.enter 1

@@ -1,6 +1,6 @@
 # Benchmark Report
-The benchmarks run on a 13" MacBook Pro (2020) with a 1.4 GHz Quad-Core i5 and 16GB 2133MHz RAM.
 
+The benchmarks run on a 13" MacBook Pro (2020) with a 1.4 GHz Quad-Core i5 and 16GB 2133MHz RAM.
 This benchmark consists two steps, the boot time and a timer on a few operations over different (json) file sizes.
 
 Executing `$ ./benchmarks/hyper.sh` runs hyperfile.
