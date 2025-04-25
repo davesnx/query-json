@@ -52,20 +52,23 @@ module Errors = struct
 end
 
 let usage () =
-  Formatting.enter 1
-  ^ Chalk.bold "query-json [OPTIONS] [QUERY] [JSON]"
-  ^ Formatting.enter 2 ^ Chalk.bold "OPTIONS" ^ Formatting.enter 1
-  ^ Formatting.indent 2
-  ^ "-c, --no-color: Enable or disable color in the output" ^ Formatting.enter 1
-  ^ Formatting.indent 2 ^ "-k [VAL], --kind[=VAL]: input kind. "
-  ^ Formatting.double_quotes "file"
-  ^ " | "
-  ^ Formatting.double_quotes "inline"
-  ^ Formatting.enter 1 ^ Formatting.indent 2
-  ^ "-v, --verbose: Activate verbossity" ^ Formatting.enter 1
-  ^ Formatting.indent 2 ^ "-d, --debug: Print AST" ^ Formatting.enter 1
-  ^ Formatting.indent 2 ^ "--version: Show version information."
-  ^ Formatting.enter 2 ^ Chalk.bold "EXAMPLE"
-  ^ " query-json '.dependencies' package.json" ^ Formatting.enter 2
-  ^ Chalk.bold "MORE" ^ " https://github.com/davesnx/query-json"
-  ^ Formatting.enter 1
+  let open Formatting in
+  [
+    enter 1;
+    Chalk.yellow "Missing query as argument";
+    enter 1 ^ "Usage:" ^ enter 2 ^ Chalk.bold "query-json"
+    ^ Chalk.gray " [OPTIONS] " ^ "[QUERY] [JSON]" ^ enter 2
+    ^ Chalk.bold "OPTIONS";
+    indent 1 ^ "-c, --no-color: Disable color in the output";
+    indent 1 ^ "-k [VAL], --kind[=VAL]: input kind. " ^ double_quotes "file"
+    ^ " | " ^ double_quotes "inline";
+    indent 1 ^ "-v, --verbose: Activate verbossity";
+    indent 1 ^ "-d, --debug: Print AST";
+    indent 1 ^ "--version: Show version information." ^ enter 2
+    ^ Chalk.bold "EXAMPLES";
+    indent 1 ^ "query-json '.dependencies' package.json";
+    indent 1 ^ "query-json '.' <<< '[1, 2, 3]'" ^ enter 2 ^ Chalk.bold "MORE";
+    indent 1 ^ " https://github.com/davesnx/query-json";
+    enter 1;
+  ]
+  |> String.concat (enter 1)
