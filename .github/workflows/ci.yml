@@ -149,9 +149,9 @@ jobs:
           CURRENT=$(cat dune-project | grep -oE '\(version [0-9]+\.[0-9]+\.[0-9]+\)' | grep -o '\d\+.\d\+.\d\+');
           if [ "$REMOTE" != "$CURRENT" ]
           then
-            echo "::set-output name=shouldPublish::true";
+            echo "shouldPublish=true" >> "$GITHUB_OUTPUT";
           else
-            echo "::set-output name=shouldPublish::false";
+            echo "shouldPublish=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Publish
