@@ -25,15 +25,15 @@ dev: ## Build in watch mode
 
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
-	$(NPX) vite --host
+	$(NPX) vite --host --config website/vite.config.js
 
 .PHONY: web-build
 web-build: ## Bundle the website
-	$(NPX) vite build
+	$(NPX) vite build --config website/vite.config.js
 
 .PHONY: web-preview
 web-preview: ## Preview the website
-	$(NPX) vite preview
+	$(NPX) vite preview --config website/vite.config.js
 
 .PHONY: clean
 clean: ## Clean artifacts
@@ -42,10 +42,6 @@ clean: ## Clean artifacts
 .PHONY: test
 test: ## Run the unit tests
 	$(DUNE) build @runtest
-
-.PHONY: subst
-subst: ## Substitute the version/name in the opam file
-	$(DUNE) subst
 
 .PHONY: test-watch
 test-watch: ## Run the unit tests in watch mode
