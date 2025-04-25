@@ -45,24 +45,28 @@ for (const file of filesToTouch) {
   Fs.writeFileSync(p, '');
 }
 
+const version = exec('./platform-darwin-x64/query-json --version');
+
 const pkgJson = {
-  name: 'query-json-js',
-  scripts: {
-    postinstall: 'node postinstall.js',
+  "name": "query-json-js",
+  "version": version,
+  "scripts": {
+    "postinstall": "node postinstall.js"
   },
-  main: 'query-json-js/Js.bc.js',
-  bin: 'query-json',
-  files: [
-    'platform-windows-x64/',
-    'platform-linux-x64/',
-    'platform-darwin-x64/',
-    'postinstall.js',
-    'query-json-js',
-    'query-json',
-    'README.md',
+  "main": "query-json-js/Js.bc.js",
+  "bin": {
+    "query-json": "query-json"
+  },
+  "files": [
+    "platform-windows-x64/",
+    "platform-linux-x64/",
+    "platform-darwin-x64/",
+    "postinstall.js",
+    "query-json-js",
+    "README.md"
   ],
-  dependencies: {},
-  devDependencies: {},
+  "dependencies": {},
+  "devDependencies": {}
 };
 
 Fs.writeFileSync(
