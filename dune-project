@@ -18,7 +18,7 @@
 
 (implicit_transitive_deps true)
 
-(version 0.5.10)
+; (version 0.5.21)
 
 (package
  (name query-json)
@@ -31,6 +31,7 @@
  (depends
   ocaml
   dune
+  dune-build-info
   menhir
   cmdliner
   yojson
