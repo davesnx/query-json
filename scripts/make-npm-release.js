@@ -45,7 +45,8 @@ for (const file of filesToTouch) {
   Fs.writeFileSync(p, '');
 }
 
-const version = exec('./platform-darwin-x64/query-json --version');
+const version = process.argv[2];
+console.log(`Version: ${version}`);
 
 const pkgJson = {
   "name": "query-json-js",

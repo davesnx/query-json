@@ -36,13 +36,13 @@ jobs:
         run: make install
 
       - name: Install npm deps
-        run: npm install
+        run: make npm-install
 
       - name: Pin some deps
         run: make pin
 
       - name: Build
-        run: make build
+        run: make build-prod
 
       - name: Run tests
         run: make test
@@ -118,6 +118,18 @@ jobs:
           # name: windows-latest-artifact
           # path: _release/platform-windows-x64
 
+      - name: Allow execution of query-json
+        run: chmod +x _release/platform-linux-x64/bin.exe
+
+      - name: Get version
+        id: currentVersion
+        run: |
+          CURRENT=$(_release/platform-linux-x64/bin.exe --version);
+          echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Generate NPM package and release
+        run: node scripts/make-npm-release.js ${{ steps.currentVersion.outputs.version }}
+
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
@@ -135,17 +147,12 @@ jobs:
         # zip -r ../../query-json-windows-x64.zip .
         # cd ../..
 
-      - name: Generate NPM package and release
-        run: node scripts/make-npm-release.js
-
       - name: Check if should be published
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         id: newVersion
         run: |
-          chmod +x _release/platform-linux-x64/query-json;
           REMOTE=$(npm show -s @davesnx/query-json version);
-          CURRENT=$(_release/platform-linux-x64/query-json --version);
-          [[ "$REMOTE" != "$CURRENT" ]] && echo "shouldPublish=true" >> "$GITHUB_OUTPUT" || echo "shouldPublish=false" >> "$GITHUB_OUTPUT"
+          [[ "$REMOTE" != "${{ steps.currentVersion.outputs.version }}" ]] && echo "shouldPublish=true" >> "$GITHUB_OUTPUT" || echo "shouldPublish=false" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
