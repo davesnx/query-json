@@ -142,14 +142,10 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         id: newVersion
         run: |
-          REMOTE=$(npm view @davesnx/query-json version);
-          CURRENT=$(cat dune-project | grep -oE '\(version [0-9]+\.[0-9]+\.[0-9]+\)' | grep -o '\d\+.\d\+.\d\+');
-          if [ "$REMOTE" != "$CURRENT" ]
-          then
-            echo "shouldPublish=true" >> "$GITHUB_OUTPUT";
-          else
-            echo "shouldPublish=false" >> "$GITHUB_OUTPUT"
-          fi
+          REMOTE=$(npm show -s @davesnx/query-json version);
+          CURRENT=$(grep -oE '\(version [0-9]+\.[0-9]+\.[0-9]+\)' dune-project |
+          grep -oE '[0-9]+\.[0-9]+\.[0-9]+');
+          [[ "$REMOTE" != "$CURRENT" ]] && echo "shouldPublish=true" >> "$GITHUB_OUTPUT" || echo "shouldPublish=false" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
