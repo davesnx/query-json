@@ -98,21 +98,18 @@ jobs:
         run: node scripts/make-npm-release.js
 
       - name: Download JavaScript artifact
-        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: query-json-js
           path: _release/query-json-js
 
       - name: Download linux artifacts
-        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: ubuntu-latest-artifact
           path: _release/platform-linux-x64
 
       - name: Download macOS artifacts
-        if: ${{ success() }}
         uses: actions/download-artifact@master
         with:
           name: macos-latest-artifact
@@ -142,7 +139,7 @@ jobs:
         # cd ../..
 
       - name: Check if should be published
-        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         id: newVersion
         run: |
           REMOTE=$(npm view @davesnx/query-json version);
@@ -155,7 +152,7 @@ jobs:
           fi
 
       - name: Publish
-        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.newVersion.outputs.shouldPublish == 'true' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -180,7 +177,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         id: create_release
         uses: actions/create-release@v1.0.0
         env:
@@ -192,7 +189,7 @@ jobs:
           prerelease: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -203,7 +200,7 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Upload query-json-linux-x64.zip to Github release
-        if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -214,7 +211,7 @@ jobs:
           asset_content_type: application/gzip
 
       # - name: Upload query-json-windows-x64.zip to Github release
-        # if: ${{ success() && steps.newVersion.outputs.shouldPublish == 'true' }}
+        # if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         # uses: actions/upload-release-asset@v1.0.1
         # env:
           # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
