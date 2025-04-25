@@ -94,9 +94,6 @@ jobs:
         with:
           node-version: 20.x
 
-      - name: Generate NPM package and release
-        run: node scripts/make-npm-release.js
-
       - name: Download JavaScript artifact
         uses: actions/download-artifact@master
         with:
@@ -137,6 +134,9 @@ jobs:
         # mv bin.exe query-json
         # zip -r ../../query-json-windows-x64.zip .
         # cd ../..
+
+      - name: Generate NPM package and release
+        run: node scripts/make-npm-release.js
 
       - name: Check if should be published
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
