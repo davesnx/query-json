@@ -1,11 +1,13 @@
 module Info = struct
-  let version = "0.5.20"
+  let version =
+    match Build_info.V1.version () with
+    | None -> "n/a"
+    | Some v -> Build_info.V1.Version.to_string v
 
   let description =
-    "query-json is a faster and simpler re-implementation of jq in Reason \
-     Native"
-
-  let issues_url = "https://github.com/davesnx/query-json/issues"
+    "query-json allows to write small programs to operate on top of JSON files \
+     with a concise syntax. It's a faster and simpler re-implementation of jq \
+     in OCaml"
 end
 
 module Runtime = struct
@@ -45,7 +47,7 @@ let execution (query : string option) (payload : string option)
 let () =
   let open Cmdliner.Arg in
   let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in
-  let json = value & pos 1 (some string) None & info [] ~doc:"JSON file" in
+  let json = value & pos 1 (some string) None & info [] ~doc:"JSON" in
   let kind =
     let kind_enum =
       enum [ ("file", Runtime.File); ("inline", Runtime.Inline) ]
@@ -55,8 +57,7 @@ let () =
     & info [ "k"; "kind" ] ~doc:"Input kind, either a JSON file or inline JSON"
   in
   let verbose =
-    value & flag
-    & info [ "v"; "verbose" ] ~doc:"Activate verbossity. Not used for now"
+    value & flag & info [ "v"; "verbose" ] ~doc:"Activate verbossity"
   in
   let debug = value & flag & info [ "d"; "debug" ] ~doc:"Activate debug mode" in
   let color =
@@ -69,14 +70,14 @@ let () =
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version
-      ~doc:"Run operations on JSON"
+      ~doc:"Run operations on JSON" ~docs:"Run operations on JSON"
       ~man:
         [
           `S Cmdliner.Manpage.s_description;
           `P Info.description;
+          `S Cmdliner.Manpage.s_examples;
           `P "query-json '.dependencies' package.json";
-          `S Cmdliner.Manpage.s_bugs;
-          `P ("Report them to " ^ Info.issues_url);
+          `P "query-json '.' <<< '[1, 2, 3]'";
         ]
   in
   Stdlib.exit (Cmdliner.Cmd.eval (Cmdliner.Cmd.v info term))

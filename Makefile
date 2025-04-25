@@ -43,6 +43,10 @@ clean: ## Clean artifacts
 test: ## Run the unit tests
 	$(DUNE) build @runtest
 
+.PHONY: subst
+subst: ## Substitute the version/name in the opam file
+	$(DUNE) subst
+
 .PHONY: test-watch
 test-watch: ## Run the unit tests in watch mode
 	$(DUNE) build @runtest -w
@@ -54,9 +58,6 @@ test-promote: ## Updates snapshots and promotes it to correct
 .PHONY: setup-githooks
 setup-githooks: ## Setup githooks
 	git config core.hooksPath .githooks
-
-.PHONY: deps
-deps: $(opam_file) ## Alias to update the opam file and install the needed deps
 
 .PHONY: format
 format: ## Format the codebase with ocamlformat
