@@ -18,7 +18,7 @@
 
 (implicit_transitive_deps true)
 
-; (version 0.5.21)
+(version 0.5.21)
 
 (package
  (name query-json)
