@@ -1,28 +1,26 @@
-let interaction =
-  "Emotion.(outline(px(2), `solid, rgba(50, 100, 255, `num(0.6))))"
-
-let className =
-  "border-none Emotion.(\n\
-  \    make([|\n\
-  \      width(`percent(100.)),\n\
-  \      borderRadius(px(6)),\n\
-  \      background(rgb(32, 33, 36)),\n\
-  \      fontSize(px(18)),\n\
-  \      color(rgb(237, 242, 247)),\n\
-  \      padding(px(8)),\n\
-  \      focus([|interaction|]),\n\
-  \      active([|interaction|]),\n\
-  \    |])\n\
-  \  )"
+module Input = struct
+  let[@react.component] make ~type_ ~className ~value ~placeholder ~onChange =
+    <input autoFocus=true className type_ value placeholder onChange />
+end
 
 let[@react.component] make ~value ~placeholder ~onChange =
+  let clearInput _ = onChange "" in
   let onChangeHandler event =
     let target = React.Event.Form.target event in
     onChange target##value
   in
-  <input autoFocus=true
-         className
-         type_="text"
-         value
-         placeholder
-         onChange=onChangeHandler />
+
+  <div className="relative flex flex-row bg-zinc-200 border-zinc-500 p-2 \
+                  rounded-md focus:ring-2 focus:ring-blue-500">
+    <Input type_="text"
+           value
+           onChange=onChangeHandler
+           placeholder
+           className="border-none w-full p-2 text-black focus:outline-none" />
+    <div className="absolute inset-y-0 right-3 flex items-center gap-2">
+      <Button kind=Ghost onClick=clearInput>
+        (* <Icons.Trash /> *)
+        <span className="text-black text-xs">(React.string "Clear")</span>
+      </Button>
+    </div>
+  </div>

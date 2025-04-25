@@ -33,47 +33,15 @@ let mockJson =
 }
 |}
 
-let page =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      display(`flex),\n\
-  \      flexDirection(`column),\n\
-  \      alignItems(`center),\n\
-  \      height(vh(100.)),\n\
-  \      backgroundColor(hex('0a0a0a')),\n\
-  \    |])\n\
-  \  )"
+let page = "flex flex-col items-center h-full bg-zinc-900"
 
-let container = "Emotion.(make([|width(`vw(75.)), height(`vh(80.))|]))"
+let container =
+  "w-3/4 max-w-full h-full mx-auto flex flex-col justify-between items-center"
 
 let columnHalf =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      width(`percent(50.)),\n\
-  \      height(`percent(100.)),\n\
-  \      paddingBottom(px(8)),\n\
-  \    |])\n\
-  \  )"
+  "w-1/2 h-full mx-auto flex flex-col justify-between items-left gap-2"
 
-let row =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      display(`flex),\n\
-  \      flexDirection(`row),\n\
-  \      width(`percent(100.)),\n\
-  \      height(`percent(100.)),\n\
-  \    |])\n\
-  \  )"
-
-let box =
-  "Emotion.(\n\
-  \    make([|\n\
-  \      backgroundColor(rgb(237, 242, 247)),\n\
-  \      height(`percent(100.)),\n\
-  \      width(`percent(100.)),\n\
-  \      borderRadius(px(6)),\n\
-  \    |])\n\
-  \  )"
+let box = "bg-gray-800 h-full w-full border-2 border-gray-700 rounded-md"
 
 type t = { query : string; json : string option }
 type actions = UpdateQuery of string | UpdateJson of string
@@ -102,15 +70,26 @@ module Option = struct
 end
 
 module QueryJson = struct
-  let run : string -> string -> (string, string) result =
+  type js_of_ocaml_result = {
+    first : int; [@mel.as "0"]
+    second : string; [@mel.as "1"]
+  }
+
+  let to_result (res : js_of_ocaml_result) =
+    match res.first with
+    | 0 -> Ok res.second
+    | 1 -> Error res.second
+    | _ -> Error "Invalid result from QueryJsonJs"
+
+  let query_json_run : string -> string -> js_of_ocaml_result =
     [%mel.raw
-      "function (query, json) {\n\
-      \      return window['query-json'].run(query, json);\n\
-      \    }"]
+      {| function (query, json) { return window['query-json'].run(query, json); }|}]
+
+  let run query json = to_result (query_json_run query json)
 end
 
 let[@react.component] make () =
-  let hash = Router.getHash () in
+  let hash = Router.get_hash () in
 
   let stateFromHash =
     hash |> Option.bind Base64.decode |> Option.map QueryParams.fromString
@@ -125,7 +104,6 @@ let[@react.component] make () =
   let state, dispatch = React.useReducer reduce initialState in
 
   let onQueryChange value = dispatch (UpdateQuery value) in
-
   let onJsonChange value = dispatch (UpdateJson value) in
 
   let output =
@@ -137,27 +115,40 @@ let[@react.component] make () =
   let onShareClick _ =
     let hash = QueryParams.toHash { query = state.query; json = state.json } in
     match hash with
-    | Some hash -> Router.setHash hash
+    | Some hash -> Router.set_hash hash
     | None -> Printf.eprintf "Error decoding"
   in
 
+  (* const downloadJson = () => {
+       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(activeTab === "input" ? jsonInput : result)
+       const downloadAnchorNode = document.createElement("a")
+       downloadAnchorNode.setAttribute("href", dataStr)
+       downloadAnchorNode.setAttribute("download", `json-playground-${activeTab === "input" ? "input" : "result"}.json`)
+       document.body.appendChild(downloadAnchorNode)
+       downloadAnchorNode.click()
+       downloadAnchorNode.remove()
+     } *)
   <div className=page>
     <Header onShareClick />
-    <Spacer direction=Bottom value=2 />
+    <div className="w-full mb-2" />
     <div className=container>
-      <Spacer direction=Bottom value=2>
+      <div className="w-full mb-2">
         <TextInput value=state.query
                    onChange=onQueryChange
                    placeholder="Type the query to filter against the JSON \
                                 below. For example: '.store'" />
-      </Spacer>
-      <div className=row>
+      </div>
+      <div className="w-full h-full mx-auto flex justify-between items-center \
+                      gap-2">
         <div className=columnHalf>
+          <span className="text-white text-xs">
+            (React.string "Input JSON")
+          </span>
           <Editor.Json value=(Option.value state.json ~default:"")
                        onChange=onJsonChange />
         </div>
-        <Spacer direction=Right value=2 />
         <div className=columnHalf>
+          <span className="text-white text-xs">(React.string "Output")</span>
           (match output with
           | Some value -> <Editor.Output value />
           | None -> <Editor.Empty />)

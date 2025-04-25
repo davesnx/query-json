@@ -1,14 +1,10 @@
 {
   "name": "query-json-website",
   "version": "0.0.0",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "esbuild": "^0.25.3",
+    "lucide-react": "^0.503.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
