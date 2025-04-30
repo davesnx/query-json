@@ -39,9 +39,13 @@ let execution (query : string option) (payload : string option)
     (no_color : bool) =
   match query with
   | Some q ->
-      Core.parse ~debug q
-      |> Result.map Compiler.compile
-      |> Result.iter (Runtime.run ~payload ~kind ~no_color)
+      let r = Core.parse ~debug q |> Result.map Compiler.compile in
+      let () =
+        Result.iter_error
+          (fun err -> print_endline (Console.Errors.print_error err))
+          r
+      in
+      Result.iter (Runtime.run ~payload ~kind ~no_color) r
   | None -> print_endline (Console.usage ())
 
 let () =
