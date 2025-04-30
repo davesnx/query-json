@@ -23,6 +23,10 @@ build-prod: ## Build for production (--profile=prod)
 dev: ## Build in watch mode
 	$(DUNE) build -w @all
 
+.PHONY: dev-core
+dev-core: ## Build in watch mode
+	$(DUNE) build -w source
+
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
 	$(NPX) vite --host --config website/vite.config.js
@@ -80,4 +84,4 @@ npm-install: ## Install npm dependencies
 	npm install
 
 .PHONY: init
-init: setup-githooks create-switch pin install install-npm ## Create a local dev enviroment
+init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
