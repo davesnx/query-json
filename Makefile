@@ -20,7 +20,7 @@ build-prod: ## Build for production (--profile=prod)
 	$(DUNE) build --profile=release @all
 
 .PHONY: dev
-dev: ## Build in watch mode
+dev: ## Build everything in watch mode
 	$(DUNE) build -w @all
 
 .PHONY: dev-core
