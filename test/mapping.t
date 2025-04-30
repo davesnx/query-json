@@ -29,6 +29,12 @@
 
 # TODO: This should trigger the same as above
   $ query-json '.doesnt_exist' ./mock.json
+  
+  Error:  Parse error: Problem parsing at position [line: 1, char: 0-1]
+  
+  Input:  .doesnt_exist
+          ^
+  
 
 Error:  Trying to ".doesntexist" on an object, that don't have the field "doesntexist":
 { "first": ..., "second": ... }
