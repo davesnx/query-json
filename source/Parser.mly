@@ -1,6 +1,8 @@
+/* https://jqlang.org/manual */
+/* https://github.com/jqlang/jq/wiki/jq-Language-Description */
+
 %{
   open Ast
-  open Console.Errors
 %}
 
 %token <string> STRING
@@ -53,8 +55,10 @@ program:
 sequence_expr:
   | left = sequence_expr; COMMA; right = sequence_expr;
     { Comma (left, right) }
+
   | left = sequence_expr; PIPE; right = item_expr; // Pipe binds tighter than comma, but less than others
     { Pipe (left, right) }
+
   | e = item_expr
     { e }
 
@@ -131,9 +135,9 @@ term:
       | "split" -> Split cb
       | "join" -> Join cb
       | "contains" -> Contains cb
-      | "startswith" -> failwith @@ renamed f "starts_with"
-      | "endswith" -> failwith @@ renamed f "ends_with"
-      | _ -> failwith @@ missing f
+      | "startswith" -> failwith @@ Console.Errors.renamed f "starts_with"
+      | "endswith" -> failwith @@ Console.Errors.renamed f "ends_with"
+      | _ -> failwith @@ Console.Errors.missing f
     }
   | f = IDENTIFIER;
     { match f with
@@ -168,19 +172,19 @@ term:
       | "is_nan" -> IsNan
       | "not" -> Not
       (* TODO: remove failwiths once we have implemented the functions *)
-      | "if" -> failwith @@ notImplemented f
-      | "then" -> failwith @@ notImplemented f
-      | "else" -> failwith @@ notImplemented f
-      | "break" -> failwith @@ notImplemented f
+      | "if" -> failwith @@ Console.Errors.not_implemented f
+      | "then" -> failwith @@ Console.Errors.not_implemented f
+      | "else" -> failwith @@ Console.Errors.not_implemented f
+      | "break" -> failwith @@ Console.Errors.not_implemented f
       (* TODO: remove failwiths once we have implemented the functions *)
-      | "isnan" -> failwith @@ renamed f "is_nan"
-      | "reduce" -> failwith @@ renamed f "reduce()"
-      | "tonumber" -> failwith @@ renamed f "to_number"
-      | "isinfinite" -> failwith @@ renamed f "is_infinite"
-      | "isfinite" -> failwith @@ renamed f "is_finite"
-      | "isnormal" -> failwith @@ renamed f "is_normal"
-      | "tostring" -> failwith @@ renamed f "to_string"
-      | _ -> failwith @@ missing f
+      | "isnan" -> failwith @@ Console.Errors.renamed f "is_nan"
+      | "reduce" -> failwith @@ Console.Errors.renamed f "reduce()"
+      | "tonumber" -> failwith @@ Console.Errors.renamed f "to_number"
+      | "isinfinite" -> failwith @@ Console.Errors.renamed f "is_infinite"
+      | "isfinite" -> failwith @@ Console.Errors.renamed f "is_finite"
+      | "isnormal" -> failwith @@ Console.Errors.renamed f "is_normal"
+      | "tostring" -> failwith @@ Console.Errors.renamed f "to_string"
+      | _ -> failwith @@ Console.Errors.missing f
     }
   | OPEN_BRACKET; CLOSE_BRACKET;
     { List [] }

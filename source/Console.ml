@@ -42,7 +42,7 @@ module Errors = struct
     ^ Formatting.single_quotes name
     ^ " instead"
 
-  let notImplemented f = Formatting.single_quotes f ^ " is not implemented"
+  let not_implemented f = Formatting.single_quotes f ^ " is not implemented"
 
   let missing f =
     Formatting.single_quotes f
