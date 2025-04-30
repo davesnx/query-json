@@ -1,5 +1,6 @@
 /* https://jqlang.org/manual */
 /* https://github.com/jqlang/jq/wiki/jq-Language-Description */
+/* https://arxiv.org/pdf/2302.10576 */
 
 %{
   open Ast
