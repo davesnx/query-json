@@ -20,7 +20,7 @@ let case input expected =
 let tests =
   [
     case ".[1]" (Pipe (Identity, Index 1));
-    case "[1]" (List (Literal (Number 1.)));
+    case "[1]" (List [ Literal (Number 1.) ]);
     case ".store.books" (Pipe (Key ("store", false), Key ("books", false)));
     case ".books[1]" (Pipe (Key ("books", false), Index 1));
     case ".books[1].author"
@@ -39,9 +39,9 @@ let tests =
     case "(1, 2) + 3"
       (Addition
          (Comma (Literal (Number 1.), Literal (Number 2.)), Literal (Number 3.)));
-    case "[1, 2]" (List (Comma (Literal (Number 1.), Literal (Number 2.))));
+    case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
     case "select(true)" (Select (Literal (Bool true)));
-    case "[1][0]" (Pipe (List (Literal (Number 1.)), Index 0));
-    case "[1].foo" (Pipe (List (Literal (Number 1.)), Key ("foo", false)));
+    case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index 0));
+    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key ("foo", false)));
     case "(empty).foo?" (Pipe (Empty, Key ("foo", true)));
   ]

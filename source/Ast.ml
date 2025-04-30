@@ -12,7 +12,7 @@ type expression =
   | Comma of expression * expression (* expr1 , expr2 *)
   | Literal of literal
   (* Constructors *)
-  | List of expression (* [ expr ] *)
+  | List of expression list (* [ expr ] *)
   | Object of (string * expression) list (* {} *)
   (* Objects *)
   | Walk of expression (* walk() *)

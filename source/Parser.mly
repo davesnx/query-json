@@ -20,10 +20,11 @@
 %token CLOSE_PARENT
 
 %token QUESTION_MARK
-%token COMMA
 
 %token OPEN_BRACKET
 %token CLOSE_BRACKET
+
+%token COMMA
 /* %token OPEN_BRACE
 %token CLOSE_BRACE */
 %token EOF
@@ -31,7 +32,7 @@
 /* %left OPEN_BRACKET */
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE /* lowest precedence */
-%left COMMA
+%nonassoc COMMA
 %left OR
 %left AND
 %nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
@@ -43,39 +44,45 @@
 %%
 
 program:
-  | e = expr; EOF;
+  | e = sequence_expr; EOF;
     { e }
   | EOF;
     { Identity }
 
-expr:
-  | left = expr; COMMA; right = expr;
+// sequence_expr handles the lowest precedence operators: comma and pipe
+sequence_expr:
+  | left = sequence_expr; COMMA; right = sequence_expr;
     { Comma (left, right) }
-  | left = expr; PIPE; right = expr;
+  | left = sequence_expr; PIPE; right = item_expr; // Pipe binds tighter than comma, but less than others
     { Pipe (left, right) }
-  | left = expr; ADD; right = expr;
+  | e = item_expr
+    { e }
+
+// item_expr handles operators with higher precedence than COMMA and PIPE
+item_expr:
+  | left = item_expr; ADD; right = item_expr;
     { Addition (left, right) }
-  | left = expr; SUB; right = expr;
+  | left = item_expr; SUB; right = item_expr;
     { Subtraction (left, right) }
-  | left = expr; MULT; right = expr;
+  | left = item_expr; MULT; right = item_expr;
     { Multiply (left, right) }
-  | left = expr; DIV; right = expr;
+  | left = item_expr; DIV; right = item_expr;
     { Division (left, right) }
-  | left = expr; EQUAL; right = expr;
+  | left = item_expr; EQUAL; right = item_expr;
     { Equal (left, right) }
-  | left = expr; NOT_EQUAL; right = expr;
+  | left = item_expr; NOT_EQUAL; right = item_expr;
     { NotEqual (left, right) }
-  | left = expr; GREATER; right = expr;
+  | left = item_expr; GREATER; right = item_expr;
     { Greater (left, right) }
-  | left = expr; LOWER; right = expr;
+  | left = item_expr; LOWER; right = item_expr;
     { Lower (left, right) }
-  | left = expr; GREATER_EQUAL; right = expr;
+  | left = item_expr; GREATER_EQUAL; right = item_expr;
     { GreaterEqual (left, right) }
-  | left = expr; LOWER_EQUAL; right = expr;
+  | left = item_expr; LOWER_EQUAL; right = item_expr;
     { LowerEqual (left, right) }
-  | left = expr; AND; right = expr;
+  | left = item_expr; AND; right = item_expr;
     { And (left, right) }
-  | left = expr; OR; right = expr;
+  | left = item_expr; OR; right = item_expr;
     { Or (left, right) }
   | e = term
     { e }
@@ -100,7 +107,7 @@ term:
      }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
-  | f = FUNCTION; cb = expr; CLOSE_PARENT;
+  | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
     { match f with
       | "filter" -> Map (Select cb) (* for backward compatibility *)
       | "map" -> Map cb
@@ -176,10 +183,14 @@ term:
       | _ -> failwith @@ missing f
     }
   | OPEN_BRACKET; CLOSE_BRACKET;
-    { List Empty }
-  | OPEN_BRACKET; e = expr; CLOSE_BRACKET;
+    { List [] }
+
+  // List elements are item_expr, not sequence_expr, separated by COMMA
+  | e = delimited(OPEN_BRACKET, separated_nonempty_list(COMMA, item_expr), CLOSE_BRACKET);
     { List e }
-  | OPEN_PARENT; e = expr; CLOSE_PARENT;
+
+  // Parentheses allow a full sequence_expr inside, reducing to an item_expr
+  | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
     { e }
   | e = term; OPEN_BRACKET; i = NUMBER; CLOSE_BRACKET
     { Pipe (e, Index (int_of_float i)) }

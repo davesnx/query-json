@@ -214,8 +214,9 @@ let rec compile expression json : (Json.t list, string) result =
   | NotEqual (left, right) -> operation left right notEq json
   | And (left, right) -> operation left right and_ json
   | Or (left, right) -> operation left right or_ json
-  | List expr ->
-      Result.bind (compile expr json) (fun xs -> Output.return (`List xs))
+  | List exprs ->
+      Output.collect (List.map (fun expr -> compile expr json) exprs)
+      |> Result.map (fun x -> [ `List x ])
   | Comma (leftR, rightR) ->
       Result.bind (compile leftR json) (fun left ->
           Result.bind (compile rightR json) (fun right -> Ok (left @ right)))
