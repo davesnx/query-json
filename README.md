@@ -190,7 +190,16 @@ Requirements: [opam](https://opam.ocaml.org)
 git clone https://github.com/davesnx/query-json
 cd query-json
 make init # creates opam switch, installs ocaml deps and npm deps
-make dev # compiles
+```
+
+Core query-json setup
+```bash
+make dev-core # compiles query-json only
+```
+
+All packages setup
+```bash
+make dev # compiles all opam packages
 make test # runs unit tests and snapshots tests
 dune exec query-json # Run binary
 ```

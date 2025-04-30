@@ -22,3 +22,6 @@ dist
 
 # Vite build
 build
+
+# local opam switch
+_opam
