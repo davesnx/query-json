@@ -46,9 +46,9 @@ module Output = struct
 
   let lift2 (f : 'a -> 'b -> 'c) (mx : ('a, string) result)
       (my : ('b, string) result) : ('c, string) result =
-    match mx with
-    | Ok x -> ( match my with Ok y -> Ok (f x y) | Error err -> Error err)
-    | Error err -> Error err
+    match (mx, my) with
+    | Ok x, Ok y -> Ok (f x y)
+    | Error err, _ | _, Error err -> Error err
 
   let collect (xs : ('a list, string) result list) : ('a list, string) result =
     List.fold_right (lift2 ( @ )) xs empty
@@ -173,8 +173,49 @@ let index (value : int) (json : Json.t) =
   match json with
   | `List list when List.length list > value ->
       Output.return (Json.index value json)
-  | `List list -> Error (make_acessing_to_missing_item value (List.length list))
+  | `List _ -> Output.return `Null
   | _ -> Error (make_error ("[" ^ string_of_int value ^ "]") json)
+
+let slice (start : int option) (end_ : int option) (json : Json.t) =
+  let start =
+    match (json, start) with
+    | `String s, Some start when start > String.length s -> String.length s
+    | `String s, Some start when start < 0 -> start + String.length s
+    | `List l, Some start when start > List.length l -> List.length l
+    | `List l, Some start when start < 0 -> start + List.length l
+    | (`String _ | `List _), Some start -> start
+    | (`String _ | `List _), None -> 0
+    | _ -> assert false
+  in
+  let end_ =
+    match (json, end_) with
+    | `String s, None -> String.length s
+    | `String s, Some end_ when end_ > String.length s -> String.length s
+    | `String s, Some end_ when end_ < 0 -> end_ + String.length s
+    | `List l, None -> List.length l
+    | `List l, Some end_ when end_ > List.length l -> List.length l
+    | `List l, Some end_ when end_ < 0 -> end_ + List.length l
+    | (`String _ | `List _), Some end_ -> end_
+    | _ -> assert false
+  in
+  match json with
+  | `String _s when end_ < start -> Output.return (`String "")
+  | `String s -> Output.return (`String (String.sub s start (end_ - start)))
+  | `List _l when end_ < start -> Output.return (`List [])
+  | `List l ->
+      let sliced =
+        List.fold_left
+          (fun (acc, i) x ->
+            if i >= start && i < end_ then (x :: acc, i + 1) else (acc, i + 1))
+          ([], 0) l
+        |> fst |> List.rev
+      in
+      Output.return (`List sliced)
+  | _ ->
+      Error
+        (make_error
+           ("[" ^ string_of_int start ^ ":" ^ string_of_int end_ ^ "]")
+           json)
 
 let rec compile expression json : (Json.t list, string) result =
   match expression with
@@ -183,6 +224,7 @@ let rec compile expression json : (Json.t list, string) result =
   | Keys -> keys json
   | Key (key, opt) -> member key opt json
   | Index idx -> index idx json
+  | Slice (start, end_) -> slice start end_ json
   | Head -> head json
   | Tail -> tail json
   | Length -> length json
