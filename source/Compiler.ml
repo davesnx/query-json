@@ -66,6 +66,37 @@ let keys (json : Json.t) =
       Output.return (`List (Json.keys json |> List.map (fun i -> `String i)))
   | _ -> Error (make_error "keys" json)
 
+let has (json : Json.t) key =
+  match key with
+  | String key -> (
+      match json with
+      | `Assoc list -> Output.return (`Bool (List.mem_assoc key list))
+      | _ -> Error (make_error "has" json))
+  | Number n -> (
+      match json with
+      | `List list ->
+          Output.return (`Bool (List.length list - 1 >= int_of_float n))
+      | _ -> Error (make_error "has" json))
+  | _ -> Error (make_error "has" json)
+
+let in_fun (json : Json.t) expr =
+  match json with
+  | `Int n -> (
+      match expr with
+      | List list -> Output.return (`Bool (List.length list - 1 >= n))
+      | _ -> Error (make_error "in" json))
+  | `String key -> (
+      match expr with
+      | Object list ->
+          let cmp_literal_str key = function
+            | Literal (String s) when s = key -> true
+            | _ -> false
+          in
+          let s = List.map fst list |> List.find_opt (cmp_literal_str key) in
+          Output.return (`Bool (Option.is_some s))
+      | _ -> Error (make_error "in" json))
+  | _ -> Error (make_error "in" json)
+
 let length (json : Json.t) =
   match json with
   | `List list -> Output.return (`Int (list |> List.length))
@@ -188,10 +219,20 @@ let rec compile expression json : (Json.t list, string) result =
   | Length -> length json
   | Not -> not json
   | Map expr -> map expr json
-  | Addition (left, right) -> operation left right add json
-  | Subtraction (left, right) -> operation left right sub json
-  | Multiply (left, right) -> operation left right mult json
-  | Division (left, right) -> operation left right div json
+  | Operation (left, op, right) -> (
+      match op with
+      | Add -> operation left right add json
+      | Sub -> operation left right sub json
+      | Mult -> operation left right mult json
+      | Div -> operation left right div json
+      | Gt -> operation left right gt json
+      | Ge -> operation left right gte json
+      | St -> operation left right lt json
+      | Se -> operation left right lte json
+      | Eq -> operation left right eq json
+      | Neq -> operation left right notEq json
+      | And -> operation left right and_ json
+      | Or -> operation left right or_ json)
   | Literal literal -> (
       match literal with
       | Bool b -> Output.return (`Bool b)
@@ -206,20 +247,102 @@ let rec compile expression json : (Json.t list, string) result =
       match res with
       | `Bool b -> ( match b with true -> Output.return json | false -> empty)
       | _ -> Error (make_error "select" res))
-  | Greater (left, right) -> operation left right gt json
-  | GreaterEqual (left, right) -> operation left right gte json
-  | Lower (left, right) -> operation left right lt json
-  | LowerEqual (left, right) -> operation left right lte json
-  | Equal (left, right) -> operation left right eq json
-  | NotEqual (left, right) -> operation left right notEq json
-  | And (left, right) -> operation left right and_ json
-  | Or (left, right) -> operation left right or_ json
   | List exprs ->
       Output.collect (List.map (fun expr -> compile expr json) exprs)
       |> Result.map (fun x -> [ `List x ])
   | Comma (leftR, rightR) ->
       Result.bind (compile leftR json) (fun left ->
           Result.bind (compile rightR json) (fun right -> Ok (left @ right)))
+  | Object list ->
+      List.map
+        (fun (left_expr, right_expr) ->
+          match left_expr with
+          | Literal (String n) when right_expr = None ->
+              (* Search for this key in JSON *)
+              let r =
+                match json with
+                | `Null -> Output.return (`Assoc [ (n, `Null) ])
+                | `Assoc l -> (
+                    match List.assoc_opt n l with
+                    | None -> Output.return (`Assoc [ (n, `Null) ])
+                    | Some v -> Output.return (`Assoc [ (n, v) ]))
+                | _ -> Error (show_expression expression ^ " is not implemented")
+              in
+              r
+          | Literal (String key) -> (
+              match Option.get right_expr with
+              | Key (search_val, _) -> (
+                  match json with
+                  | `Assoc l -> (
+                      match List.assoc_opt search_val l with
+                      | None -> Output.return (`Assoc [ (key, `Null) ])
+                      | Some v -> Output.return (`Assoc [ (key, v) ]))
+                  | _ -> assert false)
+              | rexp ->
+                  Output.bind (compile rexp json) (fun a ->
+                      Output.return (`Assoc [ (key, a) ])))
+          | _ -> Error (show_expression expression ^ " is not implemented"))
+        list
+      |> Output.collect
+  | Has e -> (
+      match e with
+      | Literal ((String _ | Number _) as e) -> has json e
+      | _ -> Error (show_expression e ^ " is not allowed"))
+  | In e -> in_fun json e
+  | Range (from, upto, step) -> (
+      let rec range ?(step = 1) start stop =
+        if step = 0 then invalid_arg "step cannot be 0"
+        else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then
+          []
+        else start :: range ~step (start + step) stop
+      in
+      match upto with
+      | None ->
+          List.map (fun i -> Output.return (`Int i)) (range 1 from)
+          |> Output.collect
+      | Some upto ->
+          List.map (fun i -> Output.return (`Int i)) (range ?step from upto)
+          |> Output.collect)
+  | Reverse -> (
+      match json with
+      | `List l -> Output.return (`List (List.rev l))
+      | _ -> Error (make_error "reverse" json))
+  | Split expr -> (
+      match json with
+      | `String s ->
+          let* rcase =
+            match expr with
+            | Literal (String s) -> Output.return s
+            | _ -> Error "split input should be a string"
+          in
+          Output.return
+            (`List
+               (Str.split (Str.regexp rcase) s |> List.map (fun s -> `String s)))
+      | _ -> Error "input should be a JSON string")
+  | Join expr -> (
+      let* rcase =
+        match expr with
+        | Literal (String s) -> Output.return s
+        | _ -> Error "join input should be a string"
+      in
+      match json with
+      | `List l ->
+          Output.return
+            (`String
+               (List.map (function `String s -> s | _ -> "") l
+               |> String.concat rcase))
+      | _ -> Error "input should be a list")
+  | Abs -> (
+      match json with
+      | `Int n -> Output.return (`Int (if n < 0 then -n else n))
+      | `Float j -> Output.return (`Float (if j < 0. then -.j else j))
+      | _ -> Error (make_error "reverse" json))
+  | IfThen (cond, if_branch, else_branch) -> (
+      let* cond = compile cond json in
+      match cond with
+      | `Bool b ->
+          if b then compile if_branch json else compile else_branch json
+      | json -> Error (make_error "if_then_end" json))
   | _ -> Error (show_expression expression ^ " is not implemented")
 
 and operation leftR rightR op json =

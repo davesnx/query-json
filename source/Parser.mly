@@ -11,10 +11,13 @@
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
+%token RANGE ABS
+%token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
 %token PIPE
 %token SEMICOLON
+%token COLON
 %token ADD SUB MULT DIV
 %token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR
 
@@ -28,8 +31,8 @@
 %token CLOSE_BRACKET
 
 %token COMMA
-/* %token OPEN_BRACE
-%token CLOSE_BRACE */
+%token OPEN_BRACE
+%token CLOSE_BRACE
 %token EOF
 
 /* %left OPEN_BRACKET */
@@ -52,6 +55,22 @@ program:
   | EOF;
     { Identity }
 
+str_or_id:
+  | key = IDENTIFIER { Literal (String key) }
+  | key = STRING { Literal (String key) }
+
+key_val(E):
+  | key = str_or_id
+    { key, None }
+  | OPEN_PARENT; e1 = E CLOSE_PARENT; COLON; e2 = E
+    { e1, Some e2 }
+  | key = str_or_id; COLON; e = E
+    { key, Some e }
+
+elif_term:
+  | ELIF cond = item_expr THEN e = term
+    { cond, e }
+
 // sequence_expr handles the lowest precedence operators: comma and pipe
 sequence_expr:
   | left = sequence_expr; COMMA; right = sequence_expr;
@@ -63,32 +82,24 @@ sequence_expr:
   | e = item_expr
     { e }
 
+%inline operator:
+  | ADD {Add}
+  | SUB {Sub}
+  | MULT {Mult}
+  | DIV {Div}
+  | EQUAL {Eq}
+  | NOT_EQUAL {Neq}
+  | GREATER {Gt}
+  | LOWER {St}
+  | GREATER_EQUAL {Ge}
+  | LOWER_EQUAL {Se}
+  | AND {And}
+  | OR {Or}
+
 // item_expr handles operators with higher precedence than COMMA and PIPE
 item_expr:
-  | left = item_expr; ADD; right = item_expr;
-    { Addition (left, right) }
-  | left = item_expr; SUB; right = item_expr;
-    { Subtraction (left, right) }
-  | left = item_expr; MULT; right = item_expr;
-    { Multiply (left, right) }
-  | left = item_expr; DIV; right = item_expr;
-    { Division (left, right) }
-  | left = item_expr; EQUAL; right = item_expr;
-    { Equal (left, right) }
-  | left = item_expr; NOT_EQUAL; right = item_expr;
-    { NotEqual (left, right) }
-  | left = item_expr; GREATER; right = item_expr;
-    { Greater (left, right) }
-  | left = item_expr; LOWER; right = item_expr;
-    { Lower (left, right) }
-  | left = item_expr; GREATER_EQUAL; right = item_expr;
-    { GreaterEqual (left, right) }
-  | left = item_expr; LOWER_EQUAL; right = item_expr;
-    { LowerEqual (left, right) }
-  | left = item_expr; AND; right = item_expr;
-    { And (left, right) }
-  | left = item_expr; OR; right = item_expr;
-    { Or (left, right) }
+  | left = item_expr; op = operator; right = item_expr;
+    { Operation (left, op, right) }
   | e = term
     { e }
 
@@ -105,11 +116,18 @@ term:
     { Literal (Bool b) }
   | NULL
     { Literal(Null) }
-  | f = FUNCTION; from = NUMBER; SEMICOLON; upto = NUMBER; CLOSE_PARENT;
-    { match f with
-      | "range" -> Range (int_of_float from, int_of_float upto)
-      | _ -> failwith (f ^ " is not a valid function")
-     }
+  | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, NUMBER); CLOSE_PARENT;
+    { 
+      let nl = List.map int_of_float nl in
+      match nl with
+      | [] -> assert false (* nonempty_list *)
+      | x :: [] -> Range (x, None, None)
+      | x :: y :: [] -> Range (x, Some y, None)
+      | x :: y :: z :: [] -> Range (x, Some y, Some z)
+      | _ -> failwith "too many arguments for function range"
+    }
+  | ABS
+    { Abs }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
@@ -131,6 +149,7 @@ term:
       | "walk" -> Walk cb
       | "transpose" -> Transpose cb
       | "has" -> Has cb
+      | "in" -> In cb
       | "starts_with" -> StartsWith cb
       | "ends_with" -> EndsWith cb
       | "split" -> Split cb
@@ -163,7 +182,6 @@ term:
       | "implode" -> Implode
       | "any" -> Any
       | "all" -> All
-      | "in" -> In
       | "recurse" -> Recurse
       | "recurse_down" -> RecurseDown
       | "to_entries" -> ToEntries
@@ -193,6 +211,12 @@ term:
   // List elements are item_expr, not sequence_expr, separated by COMMA
   | e = delimited(OPEN_BRACKET, separated_nonempty_list(COMMA, item_expr), CLOSE_BRACKET);
     { List e }
+  
+  | OPEN_BRACE; CLOSE_BRACE;
+    { Object [] }
+
+  | e = delimited(OPEN_BRACE, separated_nonempty_list(COMMA, key_val(term)), CLOSE_BRACE);
+    { Object e }
 
   // Parentheses allow a full sequence_expr inside, reducing to an item_expr
   | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
@@ -211,3 +235,13 @@ term:
 
   | e = term; DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
     { Pipe (e, Key (k, opt)) }
+
+  | IF; cond = item_expr; THEN e1 = term; elifs = list(elif_term) ELSE; e2 = term; END
+    {
+      let rec fold_elif elifs else_branch =
+        match elifs with
+        | [] -> else_branch
+        | (cond, branch) :: rest -> IfThen(cond, branch, fold_elif rest else_branch)
+      in
+      IfThen(cond, e1, fold_elif elifs e2)
+    }
