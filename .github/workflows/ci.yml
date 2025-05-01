@@ -17,16 +17,16 @@ jobs:
           - 5.2.1
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Use Node.js
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20.x
 
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v3.3.1
+        uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
           dune-cache: true
@@ -70,14 +70,14 @@ jobs:
           npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=../dist
 
       - name: Upload artifacts for ${{ matrix.os }}
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-artifact
           path: _build/default/bin/bin.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v4
         with:
           name: query-json-js
           path: _build/default/js/Js.bc.js
@@ -87,36 +87,39 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Use Node.js 20.x
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20.x
 
       - name: Download JavaScript artifact
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v4
         with:
           name: query-json-js
           path: _release/query-json-js
 
       - name: Download linux artifacts
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v4
         with:
           name: ubuntu-latest-artifact
           path: _release/platform-linux-x64
 
       - name: Download macOS artifacts
-        uses: actions/download-artifact@master
+        uses: actions/download-artifact@v4
         with:
           name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
       # - name: Download windows artifacts
-        # uses: actions/download-artifact@master
+        # uses: actions/download-artifact@v4
         # with:
           # name: windows-latest-artifact
           # path: _release/platform-windows-x64
+
+      - name: Debug downloaded artifacts
+        run: ls -R _release
 
       - name: Allow execution of query-json
         run: chmod +x _release/platform-linux-x64/bin.exe
@@ -182,44 +185,44 @@ jobs:
       - name: Create Github release
         if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         id: create_release
-        uses: actions/create-release@v1.0.0
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.sha.outputs.sha_short }}
-          release_name: Release ${{ steps.sha.outputs.sha_short }}
+          tag_name: ${{ steps.currentVersion.outputs.version }}
+          release_name: Release ${{ steps.currentVersion.outputs.version }}
           draft: false
-          prerelease: true
+          prerelease: false
 
       - name: Upload query-json-darwin-x64.zip to Github release
         if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: query-json-darwin-x64.zip
+          asset_path: ./query-json-darwin-x64.zip
           asset_name: query-json-darwin-x64.zip
-          asset_content_type: application/gzip
+          asset_content_type: application/zip
 
       - name: Upload query-json-linux-x64.zip to Github release
         if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
-        uses: actions/upload-release-asset@v1.0.1
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: query-json-linux-x64.zip
+          asset_path: ./query-json-linux-x64.zip
           asset_name: query-json-linux-x64.zip
-          asset_content_type: application/gzip
+          asset_content_type: application/zip
 
       # - name: Upload query-json-windows-x64.zip to Github release
         # if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
-        # uses: actions/upload-release-asset@v1.0.1
+        # uses: actions/upload-release-asset@v1
         # env:
           # GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # with:
           # upload_url: ${{ steps.create_release.outputs.upload_url }}
-          # asset_path: query-json-windows-x64.zip
+          # asset_path: ./query-json-windows-x64.zip
           # asset_name: query-json-windows-x64.zip
-          # asset_content_type: application/gzip
+          # asset_content_type: application/zip
