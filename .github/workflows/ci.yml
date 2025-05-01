@@ -185,12 +185,11 @@ jobs:
       - name: Create Github release
         if: ${{ steps.newVersion.outputs.shouldPublish == 'true' }}
         id: create_release
-        uses: actions/create-release@v1
+        uses: ncipollo/release-action@v1.16.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.currentVersion.outputs.version }}
-          release_name: Release ${{ steps.currentVersion.outputs.version }}
+          name: ${{ steps.currentVersion.outputs.version }}
           draft: false
           prerelease: false
 
