@@ -49,4 +49,6 @@ let tests =
     case ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     case ".[:3]" (Pipe (Identity, Slice (None, Some 3)));
     case ".[-2:]" (Pipe (Identity, Slice (Some (-2), None)));
+    case ".[]" (Pipe (Identity, Iterator));
+    case ".foo[]" (Pipe (Key ("foo", false), Iterator));
   ]

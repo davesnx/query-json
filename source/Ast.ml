@@ -44,6 +44,7 @@ type expression =
   (* Array *)
   | Index of int (* .[1] *)
   | Range of int * int (* range(1, 10) *)
+  | Iterator
   | Flatten (* flatten *)
   | Head (* head *)
   | Tail (* tail *)

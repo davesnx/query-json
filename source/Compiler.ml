@@ -217,6 +217,13 @@ let slice (start : int option) (finish : int option) (json : Json.t) =
            ("[" ^ string_of_int start ^ ":" ^ string_of_int finish ^ "]")
            json)
 
+let iterator (json : Json.t) =
+  match json with
+  | `List [] -> empty
+  | `List items -> Ok items
+  | `Assoc obj -> Ok (List.map snd obj)
+  | _ -> Error (make_error "[]" json)
+
 let rec compile expression json : (Json.t list, string) result =
   match expression with
   | Identity -> Output.return json
@@ -224,6 +231,7 @@ let rec compile expression json : (Json.t list, string) result =
   | Keys -> keys json
   | Key (key, opt) -> member key opt json
   | Index idx -> index idx json
+  | Iterator -> iterator json
   | Slice (start, finish) -> slice start finish json
   | Head -> head json
   | Tail -> tail json

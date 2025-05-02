@@ -207,6 +207,10 @@ term:
   | e = term; OPEN_BRACKET; i = number; CLOSE_BRACKET
     { Pipe (e, Index (int_of_float i)) }
 
+  /* Iterator: .[] */
+  | e = term; OPEN_BRACKET; CLOSE_BRACKET
+    { Pipe (e, Iterator) }
+
   /* Full slice with both indices: .[1:5] */
   | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
     { Pipe (e, Slice (Some (int_of_float start), Some (int_of_float end_))) }

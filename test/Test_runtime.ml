@@ -54,6 +54,12 @@ let tests =
     test ".[-4:-2]" {|"abcdefghi"|} {|"fg"|};
     test ".[-2:-4]" {|"abcde"|} {|""|};
 
+    (* Iterator tests *)
+    test ".[]" {|["a","b","c"]|} "\"a\"\n\"b\"\n\"c\"";
+    test ".[]" {|[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]|} "{ \"name\": \"JSON\", \"good\": true }\n{ \"name\": \"XML\", \"good\": false }";
+    test ".foo[]" {|{"foo":[1,2,3]}|} "1\n2\n3";
+    test ".[]" {|{"a": 1, "b": 1}|} "1\n1";
+
     test "1,1" "[]" "1\n1";
     test "1,." "[]" "1\n[]";
     test {|.foo | .bar|} {|{"foo": {"bar": 42}, "bar": "badvalue"}|} {|42|};
