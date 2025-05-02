@@ -81,6 +81,7 @@ type expression =
   | Find of expression (* find(x) *)
   (* operations *)
   | Abs
+  | AddFun
   | Operation of expression * op * expression
   (* Generic *)
   | Length (* length *)

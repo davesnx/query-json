@@ -125,6 +125,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 #### [Builtin operators and functions](https://stedolan.github.io/jq/manual/v1.6/#Builtinoperatorsandfunctions)
 
   - Abs: `abs` ✅
+  - Add: `add` ✅
   - Addition: `+` ✅
   - Subtraction: `-` ✅
   - Multiplication, division, modulo: `*`, `/`, and `%` ✅

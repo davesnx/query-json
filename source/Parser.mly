@@ -11,7 +11,7 @@
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
-%token RANGE ABS
+%token RANGE ABS ADDFUN
 %token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
@@ -83,8 +83,8 @@ sequence_expr:
     { e }
 
 %inline operator:
-  | ADD {Add}
   | SUB {Sub}
+  | ADD {Add}
   | MULT {Mult}
   | DIV {Div}
   | EQUAL {Eq}
@@ -122,7 +122,7 @@ term:
     { Literal (Bool b) }
   | NULL
     { Literal(Null) }
-  | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, NUMBER); CLOSE_PARENT;
+  | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, number); CLOSE_PARENT;
     { 
       let nl = List.map int_of_float nl in
       match nl with
@@ -134,6 +134,8 @@ term:
     }
   | ABS
     { Abs }
+  | ADDFUN
+    { AddFun }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;

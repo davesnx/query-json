@@ -39,10 +39,9 @@ let make_error (name : string) (json : Json.t) =
   let itemName = get_field_name json in
   make_error_wrong_operation name itemName json
 
-let empty = Ok []
-
 module Output = struct
   let return x = Ok [ x ]
+  let empty = Ok []
 
   let lift2 (f : 'a -> 'b -> 'c) (mx : ('a, string) result)
       (my : ('b, string) result) : ('c, string) result =
@@ -59,6 +58,93 @@ module Output = struct
 end
 
 let ( let* ) = Output.bind
+
+module Operators = struct
+  type 'a t =
+    | Number of float * float
+    | Str of string * string
+    | Obj of (string * 'a) list * (string * 'a) list
+
+  let not (json : Json.t) =
+    match json with
+    | `Bool false | `Null -> Output.return (`Bool true)
+    | _ -> Output.return (`Bool false)
+
+  let rec merge_map ~(eq_f : 'a -> 'a -> 'b) ~(f : 'a -> 'b)
+      (cmp : 'a -> 'a -> int) (l1 : 'a list) (l2 : 'a list) : 'b list =
+    match (l1, l2) with
+    | [], l2 -> List.map f l2
+    | l1, [] -> List.map f l1
+    | h1 :: t1, h2 :: t2 ->
+        let r = cmp h1 h2 in
+        if r = 0 then eq_f h1 h2 :: merge_map ~eq_f ~f cmp t1 t2
+        else if r < 0 then f h1 :: merge_map ~eq_f ~f cmp t1 l2
+        else f h2 :: merge_map ~eq_f ~f cmp l1 t2
+
+  let rec add str (left : Json.t) (right : Json.t) :
+      (Json.t list, string) result =
+    match (left, right) with
+    | `Float l, `Float r -> Output.return (`Float (l +. r))
+    | `Int l, `Float r -> Output.return (`Float (float_of_int l +. r))
+    | `Float l, `Int r -> Output.return (`Float (l +. float_of_int r))
+    | `Int l, `Int r ->
+        Output.return (`Float (float_of_int l +. float_of_int r))
+    | `Null, `Int r | `Int r, `Null -> Output.return (`Float (float_of_int r))
+    | `Null, `Float r | `Float r, `Null -> Output.return (`Float r)
+    | `String l, `String r -> Output.return (`String (l ^ r))
+    | `Null, `String r | `String r, `Null -> Output.return (`String r)
+    | `Assoc l, `Assoc r -> (
+        let cmp (key1, _) (key2, _) = String.compare key1 key2 in
+        let eq_f (key, v1) (_, v2) =
+          let* result = add str v1 v2 in
+          Output.return (key, result)
+        in
+        match merge_map ~f:Output.return ~eq_f cmp l r |> Output.collect with
+        | Ok l -> Output.return (`Assoc l)
+        | Error e -> Error e)
+    | `Null, `Assoc r | `Assoc r, `Null -> Output.return (`Assoc r)
+    | `List l, `List r -> Output.return (`List (l @ r))
+    | `Null, `List r | `List r, `Null -> Output.return (`List r)
+    | `Null, `Null -> Output.return `Null
+    | _ -> Error (make_error str left)
+
+  let apply_op str fn (left : Json.t) (right : Json.t) =
+    match (left, right) with
+    | `Float l, `Float r -> Output.return (`Float (fn l r))
+    | `Int l, `Float r -> Output.return (`Float (fn (float_of_int l) r))
+    | `Float l, `Int r -> Output.return (`Float (fn l (float_of_int r)))
+    | `Int l, `Int r ->
+        Output.return (`Float (fn (float_of_int l) (float_of_int r)))
+    | _ -> Error (make_error str left)
+
+  let compare str fn (left : Json.t) (right : Json.t) =
+    match (left, right) with
+    | `Float l, `Float r -> Output.return (`Bool (fn l r))
+    | `Int l, `Float r -> Output.return (`Bool (fn (float_of_int l) r))
+    | `Float l, `Int r -> Output.return (`Bool (fn l (float_of_int r)))
+    | `Int l, `Int r ->
+        Output.return (`Bool (fn (float_of_int l) (float_of_int r)))
+    | _ -> Error (make_error str right)
+
+  let condition (str : string) (fn : bool -> bool -> bool) (left : Json.t)
+      (right : Json.t) =
+    match (left, right) with
+    | `Bool l, `Bool r -> Output.return (`Bool (fn l r))
+    | _ -> Error (make_error str right)
+
+  let gt = compare ">" ( > )
+  let gte = compare ">=" ( >= )
+  let lt = compare "<" ( < )
+  let lte = compare "<=" ( <= )
+  let and_ = condition "and" ( && )
+  let or_ = condition "or" ( || )
+  let eq l r = Output.return (`Bool (l = r))
+  let notEq l r = Output.return (`Bool (l <> r))
+  let add = add "+"
+  let sub = apply_op "-" (fun l r -> l -. r)
+  let mult = apply_op "*" (fun l r -> l *. r)
+  let div = apply_op "/" (fun l r -> l /. r)
+end
 
 let keys (json : Json.t) =
   match json with
@@ -101,15 +187,11 @@ let range ?step from upto =
   let rec range ?(step = 1) start stop =
     if step = 0 then []
     else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then []
-    else start :: range ~step (start + step) stop
+    else `Int start :: range ~step (start + step) stop
   in
   match upto with
-  | None ->
-      List.map (fun i -> Output.return (`Int i)) (range 1 from)
-      |> Output.collect
-  | Some upto ->
-      List.map (fun i -> Output.return (`Int i)) (range ?step from upto)
-      |> Output.collect
+  | None -> Output.return (range 1 from)
+  | Some upto -> Output.return (range ?step from upto)
 
 let split expr json =
   match json with
@@ -141,48 +223,6 @@ let length (json : Json.t) =
   match json with
   | `List list -> Output.return (`Int (list |> List.length))
   | _ -> Error (make_error "length" json)
-
-let not (json : Json.t) =
-  match json with
-  | `Bool false | `Null -> Output.return (`Bool true)
-  | _ -> Output.return (`Bool false)
-
-let apply str fn (left : Json.t) (right : Json.t) =
-  match (left, right) with
-  | `Float l, `Float r -> Output.return (`Float (fn l r))
-  | `Int l, `Float r -> Output.return (`Float (fn (float_of_int l) r))
-  | `Float l, `Int r -> Output.return (`Float (fn l (float_of_int r)))
-  | `Int l, `Int r ->
-      Output.return (`Float (fn (float_of_int l) (float_of_int r)))
-  | _ -> Error (make_error str left)
-
-let compare str fn (left : Json.t) (right : Json.t) =
-  match (left, right) with
-  | `Float l, `Float r -> Output.return (`Bool (fn l r))
-  | `Int l, `Float r -> Output.return (`Bool (fn (float_of_int l) r))
-  | `Float l, `Int r -> Output.return (`Bool (fn l (float_of_int r)))
-  | `Int l, `Int r ->
-      Output.return (`Bool (fn (float_of_int l) (float_of_int r)))
-  | _ -> Error (make_error str right)
-
-let condition (str : string) (fn : bool -> bool -> bool) (left : Json.t)
-    (right : Json.t) =
-  match (left, right) with
-  | `Bool l, `Bool r -> Output.return (`Bool (fn l r))
-  | _ -> Error (make_error str right)
-
-let gt = compare ">" ( > )
-let gte = compare ">=" ( >= )
-let lt = compare "<" ( < )
-let lte = compare "<=" ( <= )
-let and_ = condition "and" ( && )
-let or_ = condition "or" ( || )
-let eq l r = Output.return (`Bool (l = r))
-let notEq l r = Output.return (`Bool (l <> r))
-let add = apply "+" (fun l r -> l +. r)
-let sub = apply "-" (fun l r -> l -. r)
-let mult = apply "*" (fun l r -> l *. r)
-let div = apply "/" (fun l r -> l /. r)
 
 let filter (fn : Json.t -> bool) (json : Json.t) =
   match json with
@@ -291,7 +331,7 @@ let slice (start : int option) (finish : int option) (json : Json.t) =
 let rec compile expression json : (Json.t list, string) result =
   match expression with
   | Identity -> Output.return json
-  | Empty -> empty
+  | Empty -> Output.empty
   | Keys -> keys json
   | Key (key, opt) -> member key opt json
   | Index idx -> index idx json
@@ -299,9 +339,10 @@ let rec compile expression json : (Json.t list, string) result =
   | Head -> head json
   | Tail -> tail json
   | Length -> length json
-  | Not -> not json
+  | Not -> Operators.not json
   | Map expr -> map expr json
   | Operation (left, op, right) -> (
+      let open Operators in
       match op with
       | Add -> operation left right add json
       | Sub -> operation left right sub json
@@ -327,7 +368,8 @@ let rec compile expression json : (Json.t list, string) result =
   | Select conditional -> (
       let* res = compile conditional json in
       match res with
-      | `Bool b -> ( match b with true -> Output.return json | false -> empty)
+      | `Bool b -> (
+          match b with true -> Output.return json | false -> Output.empty)
       | _ -> Error (make_error "select" res))
   | List exprs ->
       Output.collect (List.map (fun expr -> compile expr json) exprs)
@@ -335,13 +377,14 @@ let rec compile expression json : (Json.t list, string) result =
   | Comma (leftR, rightR) ->
       Result.bind (compile leftR json) (fun left ->
           Result.bind (compile rightR json) (fun right -> Ok (left @ right)))
+  | Object [] -> Output.return (`Assoc [])
   | Object list -> handle_objects list json
   | Has e -> (
       match e with
       | Literal ((String _ | Number _) as e) -> has json e
       | _ -> Error (show_expression e ^ " is not allowed"))
   | In e -> in_ json e
-  | Range (from, upto, step) -> range ?step from upto
+  | Range (from, upto, step) -> Result.map List.flatten (range ?step from upto)
   | Reverse -> (
       match json with
       | `List l -> Output.return (`List (List.rev l))
@@ -353,6 +396,16 @@ let rec compile expression json : (Json.t list, string) result =
       | `Int n -> Output.return (`Int (if n < 0 then -n else n))
       | `Float j -> Output.return (`Float (if j < 0. then -.j else j))
       | _ -> Error (make_error "reverse" json))
+  | AddFun -> (
+      match json with
+      | `List [] -> Output.return `Null
+      | `List l ->
+          List.fold_left
+            (fun acc el ->
+              let* acc = acc in
+              Operators.add acc el)
+            (Output.return `Null) l
+      | _ -> Error (make_error "add" json))
   | IfThenElse (cond, if_branch, else_branch) -> (
       let* cond = compile cond json in
       match cond with
