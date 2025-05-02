@@ -38,14 +38,11 @@ let execution (query : string option) (payload : string option)
     (kind : Runtime.input_kind) (_verbose : bool) (debug : bool)
     (no_color : bool) =
   match query with
-  | Some q ->
-      let r = Core.parse ~debug q |> Result.map Compiler.compile in
-      let () =
-        Result.iter_error
-          (fun err -> print_endline (Console.Errors.print_error err))
-          r
-      in
-      Result.iter (Runtime.run ~payload ~kind ~no_color) r
+  | Some query -> (
+      let runtime = Core.parse ~debug query |> Result.map Compiler.compile in
+      match runtime with
+      | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
+      | Error err -> print_endline (Console.Errors.print_error err))
   | None -> print_endline (Console.usage ())
 
 let () =
