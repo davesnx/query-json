@@ -2,7 +2,7 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (libraries menhirLib yojson sedlex easy-format)
+ (libraries menhirLib yojson sedlex easy-format str)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation

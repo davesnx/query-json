@@ -17,6 +17,8 @@ type token =
   | CLOSE_PARENT
   | OPEN_BRACKET
   | CLOSE_BRACKET
+  | OPEN_BRACE
+  | CLOSE_BRACE
   | SEMICOLON
   | COLON
   | DOT
@@ -37,6 +39,13 @@ type token =
   | LOWER
   | GREATER_EQUAL
   | LOWER_EQUAL
+  | RANGE
+  | IF
+  | THEN
+  | ELSE
+  | ELIF
+  | END
+  | ABS
   | EOF
 [@@deriving show]
 
@@ -79,6 +88,8 @@ let rec tokenize buf =
   | "/" -> Ok DIV
   | "[" -> Ok OPEN_BRACKET
   | "]" -> Ok CLOSE_BRACKET
+  | "{" -> Ok OPEN_BRACE
+  | "}" -> Ok CLOSE_BRACE
   | "|" -> Ok PIPE
   | ";" -> Ok SEMICOLON
   | ":" -> Ok COLON
@@ -89,6 +100,13 @@ let rec tokenize buf =
   | "false" -> Ok (BOOL false)
   | "(" -> Ok OPEN_PARENT
   | ")" -> Ok CLOSE_PARENT
+  | "range" -> Ok RANGE
+  | "if" -> Ok IF
+  | "then" -> Ok THEN
+  | "else" -> Ok ELSE
+  | "elif" -> Ok ELIF
+  | "end" -> Ok END
+  | "abs" -> Ok ABS
   | dot -> Ok DOT
   | ".." -> Ok RECURSE
   | '"' -> string buf

@@ -124,4 +124,19 @@ let tests =
          {|[ 2, 8, 10, 14 ]|};
     (* test {|25 % 7|} {|null|} {|4|}; *)
     (* test {|49732 % 472|} {|null|} {|172|}; *)
+    test {|has("foo")|} {|{"foo": 42}|} {|true|};
+    test {|map(has("foo"))|} {|[{"foo": 42}, {"only_bar": false}]|} {|[ true, false ]|};
+    test {|map(in({"foo": 42}))|} {|["foo", "bar"]|} {|[ true, false ]|};
+    test {|{user}|} {|null|} {|{ "user": null }|};
+    test {|{user}|} {|{"user": 42}|} {|{ "user": 42 }|};
+    test {|{user: .foo}|} {|{"user": 42, "foo": "something_else"}|} {|{ "user": "something_else" }|};
+    test {|{user: {bar: .foo}}|} {|{"user": 42, "foo": "something_else"}|} {|{ "user": { "bar": "something_else" } }|};
+    test {|range(0)|} {|null|} "";
+    test {|range(10)|} {|null|} "1\n2\n3\n4\n5\n6\n7\n8\n9";
+    test {|range(10;20)|} {|null|} "10\n11\n12\n13\n14\n15\n16\n17\n18\n19";
+    test {|range(10;20;2)|} {|null|} "10\n12\n14\n16\n18";
+    test {|split(",")|} {|"Hello,world,ignore"|} {|[ "Hello", "world", "ignore" ]|};
+    test {|join(",")|} {|[ "Hello", "world", "ignore" ]|} {|"Hello,world,ignore"|};
+    test {|if false then "h" else 42 end|} {|null|} {|42|};
+    test {|if 5 > 10 then 5 elif 5 < 10 then 3 else 2 end|} {|null|} {|3|};
   ]
