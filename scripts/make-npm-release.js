@@ -46,7 +46,7 @@ const version = process.argv[2];
 console.log(`Version: ${version}`);
 
 const pkgJson = {
-  "name": "query-json-js",
+  "name": "@davesnx/query-json",
   "version": version,
   "scripts": {
     "postinstall": "node postinstall.js"
