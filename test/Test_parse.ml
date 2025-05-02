@@ -66,15 +66,15 @@ let tests =
     case "range(1;2)" (Range (1, Some 2, None));
     case "range(1;2;3)" (Range (1, Some 2, Some 3));
     case "if true then \"Hello\" else \"Welcome\" end"
-      (IfThen
+      (IfThenElse
          ( Literal (Bool true),
            Literal (String "Hello"),
            Literal (String "Welcome") ));
     case "if true then \"Hello\" elif false then \"Welcome\" else \"Real\" end"
-      (IfThen
+      (IfThenElse
          ( Literal (Bool true),
            Literal (String "Hello"),
-           IfThen
+           IfThenElse
              ( Literal (Bool false),
                Literal (String "Welcome"),
                Literal (String "Real") ) ));

@@ -241,7 +241,7 @@ term:
       let rec fold_elif elifs else_branch =
         match elifs with
         | [] -> else_branch
-        | (cond, branch) :: rest -> IfThen(cond, branch, fold_elif rest else_branch)
+        | (cond, branch) :: rest -> IfThenElse(cond, branch, fold_elif rest else_branch)
       in
-      IfThen(cond, e1, fold_elif elifs e2)
+      IfThenElse(cond, e1, fold_elif elifs e2)
     }

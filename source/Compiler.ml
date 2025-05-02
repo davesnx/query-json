@@ -79,7 +79,7 @@ let has (json : Json.t) key =
       | _ -> Error (make_error "has" json))
   | _ -> Error (make_error "has" json)
 
-let in_fun (json : Json.t) expr =
+let in_ (json : Json.t) expr =
   match json with
   | `Int n -> (
       match expr with
@@ -96,6 +96,46 @@ let in_fun (json : Json.t) expr =
           Output.return (`Bool (Option.is_some s))
       | _ -> Error (make_error "in" json))
   | _ -> Error (make_error "in" json)
+
+let range ?step from upto =
+  let rec range ?(step = 1) start stop =
+    if step = 0 then []
+    else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then []
+    else start :: range ~step (start + step) stop
+  in
+  match upto with
+  | None ->
+      List.map (fun i -> Output.return (`Int i)) (range 1 from)
+      |> Output.collect
+  | Some upto ->
+      List.map (fun i -> Output.return (`Int i)) (range ?step from upto)
+      |> Output.collect
+
+let split expr json =
+  match json with
+  | `String s ->
+      let* rcase =
+        match expr with
+        | Literal (String s) -> Output.return s
+        | _ -> Error "split input should be a string"
+      in
+      Output.return
+        (`List (Str.split (Str.regexp rcase) s |> List.map (fun s -> `String s)))
+  | _ -> Error "input should be a JSON string"
+
+let join expr json =
+  let* rcase =
+    match expr with
+    | Literal (String s) -> Output.return s
+    | _ -> Error "join input should be a string"
+  in
+  match json with
+  | `List l ->
+      Output.return
+        (`String
+           (List.map (function `String s -> s | _ -> "") l
+           |> String.concat rcase))
+  | _ -> Error "input should be a list"
 
 let length (json : Json.t) =
   match json with
@@ -253,96 +293,30 @@ let rec compile expression json : (Json.t list, string) result =
   | Comma (leftR, rightR) ->
       Result.bind (compile leftR json) (fun left ->
           Result.bind (compile rightR json) (fun right -> Ok (left @ right)))
-  | Object list ->
-      List.map
-        (fun (left_expr, right_expr) ->
-          match left_expr with
-          | Literal (String n) when right_expr = None ->
-              (* Search for this key in JSON *)
-              let r =
-                match json with
-                | `Null -> Output.return (`Assoc [ (n, `Null) ])
-                | `Assoc l -> (
-                    match List.assoc_opt n l with
-                    | None -> Output.return (`Assoc [ (n, `Null) ])
-                    | Some v -> Output.return (`Assoc [ (n, v) ]))
-                | _ -> Error (show_expression expression ^ " is not implemented")
-              in
-              r
-          | Literal (String key) -> (
-              match Option.get right_expr with
-              | Key (search_val, _) -> (
-                  match json with
-                  | `Assoc l -> (
-                      match List.assoc_opt search_val l with
-                      | None -> Output.return (`Assoc [ (key, `Null) ])
-                      | Some v -> Output.return (`Assoc [ (key, v) ]))
-                  | _ -> assert false)
-              | rexp ->
-                  Output.bind (compile rexp json) (fun a ->
-                      Output.return (`Assoc [ (key, a) ])))
-          | _ -> Error (show_expression expression ^ " is not implemented"))
-        list
-      |> Output.collect
+  | Object list -> handle_objects list json
   | Has e -> (
       match e with
       | Literal ((String _ | Number _) as e) -> has json e
       | _ -> Error (show_expression e ^ " is not allowed"))
-  | In e -> in_fun json e
-  | Range (from, upto, step) -> (
-      let rec range ?(step = 1) start stop =
-        if step = 0 then invalid_arg "step cannot be 0"
-        else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then
-          []
-        else start :: range ~step (start + step) stop
-      in
-      match upto with
-      | None ->
-          List.map (fun i -> Output.return (`Int i)) (range 1 from)
-          |> Output.collect
-      | Some upto ->
-          List.map (fun i -> Output.return (`Int i)) (range ?step from upto)
-          |> Output.collect)
+  | In e -> in_ json e
+  | Range (from, upto, step) -> range ?step from upto
   | Reverse -> (
       match json with
       | `List l -> Output.return (`List (List.rev l))
       | _ -> Error (make_error "reverse" json))
-  | Split expr -> (
-      match json with
-      | `String s ->
-          let* rcase =
-            match expr with
-            | Literal (String s) -> Output.return s
-            | _ -> Error "split input should be a string"
-          in
-          Output.return
-            (`List
-               (Str.split (Str.regexp rcase) s |> List.map (fun s -> `String s)))
-      | _ -> Error "input should be a JSON string")
-  | Join expr -> (
-      let* rcase =
-        match expr with
-        | Literal (String s) -> Output.return s
-        | _ -> Error "join input should be a string"
-      in
-      match json with
-      | `List l ->
-          Output.return
-            (`String
-               (List.map (function `String s -> s | _ -> "") l
-               |> String.concat rcase))
-      | _ -> Error "input should be a list")
+  | Split expr -> split expr json
+  | Join expr -> join expr json
   | Abs -> (
       match json with
       | `Int n -> Output.return (`Int (if n < 0 then -n else n))
       | `Float j -> Output.return (`Float (if j < 0. then -.j else j))
       | _ -> Error (make_error "reverse" json))
-  | IfThen (cond, if_branch, else_branch) -> (
+  | IfThenElse (cond, if_branch, else_branch) -> (
       let* cond = compile cond json in
       match cond with
       | `Bool b ->
           if b then compile if_branch json else compile else_branch json
-      | json -> Error (make_error "if_then_end" json))
+      | json -> Error (make_error "if condition should be a bool" json))
   | _ -> Error (show_expression expression ^ " is not implemented")
 
 and operation leftR rightR op json =
@@ -357,3 +331,35 @@ and map (expr : expression) (json : Json.t) =
       |> Result.map (fun x -> [ `List x ])
   | `List _list -> Error (make_empty_list_error "map")
   | _ -> Error (make_error "map" json)
+
+and handle_objects list json =
+  List.map
+    (fun (left_expr, right_expr) ->
+      match (left_expr, right_expr) with
+      | Literal (String n), None ->
+          (* Search for this key in JSON *)
+          let r =
+            match json with
+            | `Null -> Output.return (`Assoc [ (n, `Null) ])
+            | `Assoc l -> (
+                match List.assoc_opt n l with
+                | None -> Output.return (`Assoc [ (n, `Null) ])
+                | Some v -> Output.return (`Assoc [ (n, v) ]))
+            | _ -> Error (Json.show json ^ " is not implemented")
+          in
+          r
+      | Literal (String key), Some right_expr -> (
+          match right_expr with
+          | Key (search_val, _) -> (
+              match json with
+              | `Assoc l -> (
+                  match List.assoc_opt search_val l with
+                  | None -> Output.return (`Assoc [ (key, `Null) ])
+                  | Some v -> Output.return (`Assoc [ (key, v) ]))
+              | _ -> assert false)
+          | rexp ->
+              let* rexp = compile rexp json in
+              Output.return (`Assoc [ (key, rexp) ]))
+      | _ -> Error (show_expression left_expr ^ " is not implemented"))
+    list
+  |> Output.collect

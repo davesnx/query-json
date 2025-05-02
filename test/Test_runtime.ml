@@ -107,6 +107,7 @@ let tests =
     test {|{user}|} {|{"user": 42}|} {|{ "user": 42 }|};
     test {|{user: .foo}|} {|{"user": 42, "foo": "something_else"}|} {|{ "user": "something_else" }|};
     test {|{user: {bar: .foo}}|} {|{"user": 42, "foo": "something_else"}|} {|{ "user": { "bar": "something_else" } }|};
+    test {|range(0)|} {|null|} "";
     test {|range(10)|} {|null|} "1\n2\n3\n4\n5\n6\n7\n8\n9";
     test {|range(10;20)|} {|null|} "10\n11\n12\n13\n14\n15\n16\n17\n18\n19";
     test {|range(10;20;2)|} {|null|} "10\n12\n14\n16\n18";

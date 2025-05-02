@@ -93,7 +93,7 @@ type expression =
   | Join of expression (* join *)
   | Path of expression (* path(x) *)
   (* Logic *)
-  | IfThen of
+  | IfThenElse of
       expression * expression * expression (* If then (elseif) else end *)
   | Break (* break *)
   (* Conditionals *)
