@@ -176,7 +176,7 @@ let index (value : int) (json : Json.t) =
   | `List _ -> Output.return `Null
   | _ -> Error (make_error ("[" ^ string_of_int value ^ "]") json)
 
-let slice (start : int option) (end_ : int option) (json : Json.t) =
+let slice (start : int option) (finish : int option) (json : Json.t) =
   let start =
     match (json, start) with
     | `String s, Some start when start > String.length s -> String.length s
@@ -185,10 +185,10 @@ let slice (start : int option) (end_ : int option) (json : Json.t) =
     | `List l, Some start when start < 0 -> start + List.length l
     | (`String _ | `List _), Some start -> start
     | (`String _ | `List _), None -> 0
-    | _ -> assert false
+    | _ -> (* slice can't be parsed outside of List or String *) assert false
   in
-  let end_ =
-    match (json, end_) with
+  let finish =
+    match (json, finish) with
     | `String s, None -> String.length s
     | `String s, Some end_ when end_ > String.length s -> String.length s
     | `String s, Some end_ when end_ < 0 -> end_ + String.length s
@@ -196,17 +196,17 @@ let slice (start : int option) (end_ : int option) (json : Json.t) =
     | `List l, Some end_ when end_ > List.length l -> List.length l
     | `List l, Some end_ when end_ < 0 -> end_ + List.length l
     | (`String _ | `List _), Some end_ -> end_
-    | _ -> assert false
+    | _ -> (* slice can't be parsed outside of List or String *) assert false
   in
   match json with
-  | `String _s when end_ < start -> Output.return (`String "")
-  | `String s -> Output.return (`String (String.sub s start (end_ - start)))
-  | `List _l when end_ < start -> Output.return (`List [])
+  | `String _s when finish < start -> Output.return (`String "")
+  | `String s -> Output.return (`String (String.sub s start (finish - start)))
+  | `List _l when finish < start -> Output.return (`List [])
   | `List l ->
       let sliced =
         List.fold_left
           (fun (acc, i) x ->
-            if i >= start && i < end_ then (x :: acc, i + 1) else (acc, i + 1))
+            if i >= start && i < finish then (x :: acc, i + 1) else (acc, i + 1))
           ([], 0) l
         |> fst |> List.rev
       in
@@ -214,7 +214,7 @@ let slice (start : int option) (end_ : int option) (json : Json.t) =
   | _ ->
       Error
         (make_error
-           ("[" ^ string_of_int start ^ ":" ^ string_of_int end_ ^ "]")
+           ("[" ^ string_of_int start ^ ":" ^ string_of_int finish ^ "]")
            json)
 
 let rec compile expression json : (Json.t list, string) result =
@@ -224,7 +224,7 @@ let rec compile expression json : (Json.t list, string) result =
   | Keys -> keys json
   | Key (key, opt) -> member key opt json
   | Index idx -> index idx json
-  | Slice (start, end_) -> slice start end_ json
+  | Slice (start, finish) -> slice start finish json
   | Head -> head json
   | Tail -> tail json
   | Length -> length json
