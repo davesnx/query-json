@@ -22,29 +22,32 @@ let tests =
     case ".[-1]" (Pipe (Identity, Index (-1)));
     case ".[1]" (Pipe (Identity, Index 1));
     case "[1]" (List [ Literal (Number 1.) ]);
-    case ".store.books" (Pipe (Key ("store", false), Key ("books", false)));
-    case ".books[1]" (Pipe (Key ("books", false), Index 1));
-    case ".books[1].author"
-      (Pipe (Pipe (Key ("books", false), Index 1), Key ("author", false)));
-    case ".store" (Key ("store", false));
+    case ".store.books" (Pipe (Key "store", Key "books"));
+    case ".books[1]" (Pipe (Key "books", Index 1));
+    case ".books[1].author" (Pipe (Pipe (Key "books", Index 1), Key "author"));
+    case ".store" (Key "store");
     case "." Identity;
-    case ".store | .books" (Pipe (Key ("store", false), Key ("books", false)));
-    case ". | map(.price + 1)"
-      (Pipe
+    case ".store | .books" (Pipe (Key "store", Key "books"));
+    case ".store | .books" (Pipe (Key "store", Key "books"));
+      (Pipe (Identity, Map (Addition (Key "price", Literal (Number 1.)))));
+    case ".WAT" (Key "WAT");
          (Identity, Map (Addition (Key ("price", false), Literal (Number 1.)))));
     case ".WAT" (Key ("WAT", false));
-    case "head" Head;
-    case ".WAT?" (Key ("WAT", true));
-    case "1, 2" (Comma (Literal (Number 1.), Literal (Number 2.)));
+      (Pipe (Identity, Map (Addition (Key "price", Literal (Number 1.)))));
+    case ".WAT" (Key "WAT");
+    case ".WAT?" (Optional (Key "WAT"));
+    case ".WAT?" (Optional (Key "WAT"));
     case "empty" Empty;
     case "(1, 2) + 3"
       (Addition
          (Comma (Literal (Number 1.), Literal (Number 2.)), Literal (Number 3.)));
     case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
     case "select(true)" (Select (Literal (Bool true)));
-    case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index 0));
+    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key "foo"));
+    case "(empty).foo?" (Pipe (Empty, Optional (Key "foo")));
     case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key ("foo", false)));
-    case "(empty).foo?" (Pipe (Empty, Key ("foo", true)));
+    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key "foo"));
+    case "(empty).foo?" (Pipe (Empty, Optional (Key "foo")));
     case ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     case ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     case ".[:3]" (Pipe (Identity, Slice (None, Some 3)));

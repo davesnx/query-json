@@ -229,7 +229,11 @@ let rec compile expression json : (Json.t list, string) result =
   | Identity -> Output.return json
   | Empty -> empty
   | Keys -> keys json
-  | Key (key, opt) -> member key opt json
+  | Key key -> member key json
+  | Optional expr -> (
+      match compile expr json with
+      | Ok values -> Ok values (* If successful, return the values *)
+      | Error _ -> Output.return `Null)
   | Index idx -> index idx json
   | Iterator -> iterator json
   | Slice (start, finish) -> slice start finish json
