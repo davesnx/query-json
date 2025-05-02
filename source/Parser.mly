@@ -103,6 +103,12 @@ item_expr:
   | e = term
     { e }
 
+number:
+  | n = NUMBER;
+    { n }
+  | SUB; n = NUMBER;
+    { -.n }
+
 term:
   | DOT;
     { Identity }
@@ -110,7 +116,7 @@ term:
     { Recurse }
   | s = STRING;
     { Literal (String s) }
-  | n = NUMBER;
+  | n = number;
     { Literal (Number n) }
   | b = BOOL;
     { Literal (Bool b) }
@@ -221,8 +227,20 @@ term:
   // Parentheses allow a full sequence_expr inside, reducing to an item_expr
   | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
     { e }
-  | e = term; OPEN_BRACKET; i = NUMBER; CLOSE_BRACKET
+  | e = term; OPEN_BRACKET; i = number; CLOSE_BRACKET
     { Pipe (e, Index (int_of_float i)) }
+
+  /* Full slice with both indices: .[1:5] */
+  | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
+    { Pipe (e, Slice (Some (int_of_float start), Some (int_of_float end_))) }
+
+  /* Start-only slice: .[3:] */
+  | e = term; OPEN_BRACKET; start = number; COLON; CLOSE_BRACKET
+    { Pipe (e, Slice (Some (int_of_float start), None)) }
+
+  /* End-only slice: .[:3] */
+  | e = term; OPEN_BRACKET; COLON; end_ = number; CLOSE_BRACKET
+    { Pipe (e, Slice (None, Some (int_of_float end_))) }
 
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
     { Key (k, opt) }

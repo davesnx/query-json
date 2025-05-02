@@ -30,6 +30,30 @@ let tests =
     test "[[2]]" "[3]" "[ [ 2 ] ]";
     (* test "[{}]" "[2]" "[{}]"; *)
     (* test "[.[]]" "[\"a\"]" "[\"a\"]"; *)
+
+    (* Array index tests *)
+    test ".[0]" {|["a","b","c","d","e"]|} {|"a"|};
+    test ".[3]" {|["a","b"]|} "null";
+    test ".[-1]" {|["a","b","c","d","e"]|} {|"e"|};
+
+    (* Array / String slice tests *)
+    test ".[2:4]" {|["a","b","c","d","e"]|} {|[ "c", "d" ]|};
+    test ".[2:4]" {|"abcdefghi"|} {|"cd"|};
+    test ".[5:7]" {|["a","b","c"]|} {|[]|};
+    test ".[5:7]" {|"abc"|} {|""|};
+    test ".[:3]" {|["a","b","c","d","e"]|} {|[ "a", "b", "c" ]|};
+    test ".[:-2]" {|["a","b","c","d","e"]|} {|[ "a", "b", "c" ]|};
+    test ".[:3]" {|"abcdefghi"|} {|"abc"|};
+    test ".[:-2]" {|"abcdefghi"|} {|"abcdefg"|};
+    test ".[-2:]" {|["a","b","c","d","e"]|} {|[ "d", "e" ]|};
+    test ".[2:]" {|["a","b","c","d","e"]|} {|[ "c", "d", "e" ]|};
+    test ".[-2:]" {|"abcdefghi"|} {|"hi"|};
+    test ".[2:]" {|"abcdefghi"|} {|"cdefghi"|};
+    test ".[-4:-2]" {|["a","b","c","d","e"]|} {|[ "b", "c" ]|};
+    test ".[-2:-4]" {|["a","b","c","d","e"]|} {|[]|};
+    test ".[-4:-2]" {|"abcdefghi"|} {|"fg"|};
+    test ".[-2:-4]" {|"abcde"|} {|""|};
+
     test "1,1" "[]" "1\n1";
     test "1,." "[]" "1\n[]";
     test {|.foo | .bar|} {|{"foo": {"bar": 42}, "bar": "badvalue"}|} {|42|};

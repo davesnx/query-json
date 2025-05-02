@@ -22,9 +22,6 @@ function removeSync(p) {
 const rootFolder = Path.join(__dirname, '..');
 const releaseFolder = Path.resolve(rootFolder, '_release');
 
-removeSync(releaseFolder);
-mkdirpSync(releaseFolder);
-
 for (const fileName of ['README.md', 'LICENSE']) {
   const file = Path.join(rootFolder, fileName);
   const destination = Path.join(releaseFolder, fileName);
@@ -49,7 +46,7 @@ const version = process.argv[2];
 console.log(`Version: ${version}`);
 
 const pkgJson = {
-  "name": "query-json-js",
+  "name": "@davesnx/query-json",
   "version": version,
   "scripts": {
     "postinstall": "node postinstall.js"
