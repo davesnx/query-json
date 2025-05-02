@@ -172,7 +172,7 @@ jobs:
         run: echo "::set-output name=sha_short::$(git rev-parse --short HEAD)"
 
       - name: Publish Prerelease
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name != 'push' && github.ref != 'refs/heads/main' }}
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
