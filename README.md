@@ -115,7 +115,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Generic Object Index: `.[<string>]` ✅
   - Array Index: `.[2]` ✅
   - Pipe: `|` ✅
-  - Array/String Slice: `.[10:15]` ⚠️
+  - Array/String Slice: `.[10:15]` ✅
   - Array/Object Value Iterator: `.[]` ⚠️
   - Comma: `,` ✅
   - Parenthesis: `()` ✅️
