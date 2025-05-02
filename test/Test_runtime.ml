@@ -31,6 +31,9 @@ let tests =
     (* test "[{}]" "[2]" "[{}]"; *)
     (* test "[.[]]" "[\"a\"]" "[\"a\"]"; *)
 
+    test ".foo?" {|{"foo": 42}|} {|42|};
+    test ".foo?" {|{}|} "null";
+
     (* Array index tests *)
     test ".[0]" {|["a","b","c","d","e"]|} {|"a"|};
     test ".[3]" {|["a","b"]|} "null";

@@ -32,3 +32,15 @@ non defined field gives back null when "?"
   Error:  Trying to ".baz" on an object, that don't have the field "baz":
   {}
   
+  $ echo '{"foo":[1,2,3]}' | query-json '.foo[]'
+  1
+  2
+  3
+
+  $ echo '{"foo":[1,2,3]}' | query-json '.fool[]'
+  
+  Error:  Trying to ".fool" on an object, that don't have the field "fool":
+  { "foo": ... }
+  
+  $ echo '{"foo":[1,2,3]}' | query-json '.fool?[]?'
+  null
