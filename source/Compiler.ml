@@ -328,7 +328,7 @@ let slice (start : int option) (finish : int option) (json : Json.t) =
 
 let iterator (json : Json.t) =
   match json with
-  | `List [] -> empty
+  | `List [] -> Output.empty
   | `List items -> Ok items
   | `Assoc obj -> Ok (List.map snd obj)
   | _ -> Error (make_error "[]" json)
