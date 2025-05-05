@@ -29,15 +29,22 @@ let tests =
     case "." Identity;
     case ".store | .books" (Pipe (Key "store", Key "books"));
     case ". | map(.price + 1)"
-      (Pipe (Identity, Map (Addition (Key "price", Literal (Number 1.)))));
+      (Pipe (Identity, Map (Operation (Key "price", Add, Literal (Number 1.)))));
     case ".WAT" (Key "WAT");
     case "head" Head;
     case ".WAT?" (Optional (Key "WAT"));
     case "1, 2" (Comma (Literal (Number 1.), Literal (Number 2.)));
     case "empty" Empty;
     case "(1, 2) + 3"
-      (Addition
-         (Comma (Literal (Number 1.), Literal (Number 2.)), Literal (Number 3.)));
+      (Operation
+         ( Comma (Literal (Number 1.), Literal (Number 2.)),
+           Add,
+           Literal (Number 3.) ));
+    case "1 + 2 * 3"
+      (Operation
+         ( Literal (Number 1.),
+           Add,
+           Operation (Literal (Number 2.), Mult, Literal (Number 3.)) ));
     case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
     case "select(true)" (Select (Literal (Bool true)));
     case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index 0));
@@ -52,4 +59,30 @@ let tests =
     case ".foo[]?" (Pipe (Key "foo", Optional Iterator));
     case ".foo?[]" (Pipe (Optional (Key "foo"), Iterator));
     case ".foo?[]?" (Pipe (Optional (Key "foo"), Optional Iterator));
+    case "{}" (Object []);
+    case "{\"foo\": 42, bar: [\"hello world\", 42], user}"
+      (Object
+         [
+           (Literal (String "foo"), Some (Literal (Number 42.)));
+           ( Literal (String "bar"),
+             Some
+               (List [ Literal (String "hello world"); Literal (Number 42.) ])
+           );
+           (Literal (String "user"), None);
+         ]);
+    case "range(1;2)" (Range (1, Some 2, None));
+    case "range(1;2;3)" (Range (1, Some 2, Some 3));
+    case "if true then \"Hello\" else \"Welcome\" end"
+      (IfThenElse
+         ( Literal (Bool true),
+           Literal (String "Hello"),
+           Literal (String "Welcome") ));
+    case "if true then \"Hello\" elif false then \"Welcome\" else \"Real\" end"
+      (IfThenElse
+         ( Literal (Bool true),
+           Literal (String "Hello"),
+           IfThenElse
+             ( Literal (Bool false),
+               Literal (String "Welcome"),
+               Literal (String "Real") ) ));
   ]

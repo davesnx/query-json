@@ -5,6 +5,21 @@ type literal =
   | Null (* null *)
 [@@deriving show { with_path = false }]
 
+type op =
+  | Add
+  | Sub
+  | Mult
+  | Div
+  | Eq
+  | Neq
+  | Gt (* > *)
+  | St (* < *)
+  | Ge (* >=*)
+  | Se (* <= *)
+  | And
+  | Or
+[@@deriving show { with_path = false }]
+
 type expression =
   | Identity (* . *)
   | Empty (* empty *)
@@ -13,7 +28,7 @@ type expression =
   | Literal of literal
   (* Constructors *)
   | List of expression list (* [ expr ] *)
-  | Object of (string * expression) list (* {} *)
+  | Object of (expression * expression option) list (* {} *)
   (* Objects *)
   | Walk of expression (* walk() *)
   | Transpose of expression (* transpose() *)
@@ -33,7 +48,7 @@ type expression =
   | Implode (* implode *)
   | Any (* any *)
   | All (* all *)
-  | In (* in *)
+  | In of expression (* in *)
   | Recurse (* recurse *)
   | RecurseDown (* recurse_down *)
   | ToEntries (* to_entries *)
@@ -44,8 +59,8 @@ type expression =
   | IsNan
   (* Array *)
   | Index of int (* .[1] *)
-  | Range of int * int (* range(1, 10) *)
-  | Iterator
+  | Iterator (* .[] *)
+  | Range of int * int option * int option (* range(1, 10) *)
   | Flatten (* flatten *)
   | Head (* head *)
   | Tail (* tail *)
@@ -67,10 +82,8 @@ type expression =
   | Some_ of expression (* some, Some_ to not collide with option *)
   | Find of expression (* find(x) *)
   (* operations *)
-  | Addition of expression * expression (* + *)
-  | Subtraction of expression * expression (* - *)
-  | Division of expression * expression (* / *)
-  | Multiply of expression * expression (* * *)
+  | Abs
+  | Operation of expression * op * expression
   (* Generic *)
   | Length (* length *)
   | Contains of expression (* contains *)
@@ -84,18 +97,9 @@ type expression =
   | Join of expression (* join *)
   | Path of expression (* path(x) *)
   (* Logic *)
-  | If of expression (* if *)
-  | Then of expression (* then *)
-  | Else of expression (* else *)
+  | IfThenElse of
+      expression * expression * expression (* If then (elseif) else end *)
   | Break (* break *)
   (* Conditionals *)
-  | And of expression * expression (* and *)
-  | Or of expression * expression (* or *)
   | Not (* not *)
-  | Greater of expression * expression (* > *)
-  | Lower of expression * expression (* < *)
-  | GreaterEqual of expression * expression (* >= *)
-  | LowerEqual of expression * expression (* <= *)
-  | Equal of expression * expression (* == *)
-  | NotEqual of expression * expression (* != *)
 [@@deriving show { with_path = false }]
