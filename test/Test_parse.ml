@@ -22,20 +22,17 @@ let tests =
     case ".[-1]" (Pipe (Identity, Index (-1)));
     case ".[1]" (Pipe (Identity, Index 1));
     case "[1]" (List [ Literal (Number 1.) ]);
-    case ".store.books" (Pipe (Key ("store", false), Key ("books", false)));
-    case ".books[1]" (Pipe (Key ("books", false), Index 1));
-    case ".books[1].author"
-      (Pipe (Pipe (Key ("books", false), Index 1), Key ("author", false)));
-    case ".store" (Key ("store", false));
+    case ".store.books" (Pipe (Key "store", Key "books"));
+    case ".books[1]" (Pipe (Key "books", Index 1));
+    case ".books[1].author" (Pipe (Pipe (Key "books", Index 1), Key "author"));
+    case ".store" (Key "store");
     case "." Identity;
-    case ".store | .books" (Pipe (Key ("store", false), Key ("books", false)));
+    case ".store | .books" (Pipe (Key "store", Key "books"));
     case ". | map(.price + 1)"
-      (Pipe
-         ( Identity,
-           Map (Operation (Key ("price", false), Add, Literal (Number 1.))) ));
-    case ".WAT" (Key ("WAT", false));
+      (Pipe (Identity, Map (Operation (Key "price", Add, Literal (Number 1.)))));
+    case ".WAT" (Key "WAT");
     case "head" Head;
-    case ".WAT?" (Key ("WAT", true));
+    case ".WAT?" (Optional (Key "WAT"));
     case "1, 2" (Comma (Literal (Number 1.), Literal (Number 2.)));
     case "empty" Empty;
     case "(1, 2) + 3"
@@ -51,12 +48,17 @@ let tests =
     case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
     case "select(true)" (Select (Literal (Bool true)));
     case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index 0));
-    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key ("foo", false)));
-    case "(empty).foo?" (Pipe (Empty, Key ("foo", true)));
+    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key "foo"));
+    case "(empty).foo?" (Pipe (Empty, Optional (Key "foo")));
     case ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     case ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     case ".[:3]" (Pipe (Identity, Slice (None, Some 3)));
     case ".[-2:]" (Pipe (Identity, Slice (Some (-2), None)));
+    case ".[]" (Pipe (Identity, Iterator));
+    case ".foo[]" (Pipe (Key "foo", Iterator));
+    case ".foo[]?" (Pipe (Key "foo", Optional Iterator));
+    case ".foo?[]" (Pipe (Optional (Key "foo"), Iterator));
+    case ".foo?[]?" (Pipe (Optional (Key "foo"), Optional Iterator));
     case "{}" (Object []);
     case "{\"foo\": 42, bar: [\"hello world\", 42], user}"
       (Object
