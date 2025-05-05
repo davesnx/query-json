@@ -34,7 +34,8 @@ type expression =
   (* Objects *)
   | Walk of expression (* walk() *)
   | Transpose of expression (* transpose() *)
-  | Key of string * bool (* .foo *)
+  | Key of string (* .foo *)
+  | Optional of expression (* ? *)
   | Has of expression (* has(x) *)
   | Keys (* keys *)
   | Floor (* floor *)
@@ -60,6 +61,7 @@ type expression =
   | IsNan
   (* Array *)
   | Index of int (* .[1] *)
+  | Iterator (* .[] *)
   | Range of int * int option * int option (* range(1, 10) *)
   | Flatten (* flatten *)
   | Head (* head *)

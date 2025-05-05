@@ -123,7 +123,7 @@ term:
   | NULL
     { Literal(Null) }
   | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, number); CLOSE_PARENT;
-    { 
+    {
       let nl = List.map int_of_float nl in
       match nl with
       | [] -> assert false (* nonempty_list *)
@@ -219,7 +219,7 @@ term:
   // List elements are item_expr, not sequence_expr, separated by COMMA
   | e = delimited(OPEN_BRACKET, separated_nonempty_list(COMMA, item_expr), CLOSE_BRACKET);
     { List e }
-  
+
   | OPEN_BRACE; CLOSE_BRACE;
     { Object [] }
 
@@ -231,6 +231,14 @@ term:
     { e }
   | e = term; OPEN_BRACKET; i = number; CLOSE_BRACKET
     { Pipe (e, Index (int_of_float i)) }
+
+  /* Iterator: .[] */
+  | e = term; OPEN_BRACKET; CLOSE_BRACKET
+    { Pipe (e, Iterator) }
+
+  /* Optiona iterator: .[]? */
+  | e = term; OPEN_BRACKET; CLOSE_BRACKET; QUESTION_MARK
+    { Pipe (e, Optional (Iterator)) }
 
   /* Full slice with both indices: .[1:5] */
   | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
@@ -245,16 +253,18 @@ term:
     { Pipe (e, Slice (None, Some (int_of_float end_))) }
 
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Key (k, opt) }
+  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { match opt with
+      | true -> Optional (Key k)
+      | false -> Key k
+    }
 
   | e = term; DOT; k = STRING; opt = boption(QUESTION_MARK)
-    { Pipe (e, Key (k, opt)) }
-
-  | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Key (k, opt) }
-
   | e = term; DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)
-    { Pipe (e, Key (k, opt)) }
+    { match opt with
+      | true -> Pipe (e, Optional (Key k))
+      | false -> Pipe (e, Key k)
+    }
 
   | IF; cond = item_expr; THEN e1 = term; elifs = list(elif_term) ELSE; e2 = term; END
     {

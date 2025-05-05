@@ -269,15 +269,13 @@ let make_error_missing_member op key (value : Json.t) =
   ^ ":" ^ Formatting.enter 1
   ^ Chalk.gray (Json.to_string value ~colorize:false ~summarize:true)
 
-let member (key : string) (opt : bool) (json : Json.t) =
+let member (key : string) (json : Json.t) =
   match json with
   | `Assoc _assoc -> (
       let access_member = Json.member key json in
-      match (access_member, opt) with
-      | `Null, true -> Output.return access_member
-      | `Null, false -> Error (make_error_missing_member ("." ^ key) key json)
-      | _, false -> Output.return access_member
-      | _, true -> Output.return access_member)
+      match access_member with
+      | `Null -> Error (make_error_missing_member ("." ^ key) key json)
+      | _ -> Output.return access_member)
   | _ -> Error (make_error ("." ^ key) json)
 
 let index (value : int) (json : Json.t) =
@@ -328,13 +326,25 @@ let slice (start : int option) (finish : int option) (json : Json.t) =
            ("[" ^ string_of_int start ^ ":" ^ string_of_int finish ^ "]")
            json)
 
+let iterator (json : Json.t) =
+  match json with
+  | `List [] -> empty
+  | `List items -> Ok items
+  | `Assoc obj -> Ok (List.map snd obj)
+  | _ -> Error (make_error "[]" json)
+
 let rec compile expression json : (Json.t list, string) result =
   match expression with
   | Identity -> Output.return json
   | Empty -> Output.empty
   | Keys -> keys json
-  | Key (key, opt) -> member key opt json
+  | Key key -> member key json
+  | Optional expr -> (
+      match compile expr json with
+      | Ok values -> Ok values (* If successful, return the values *)
+      | Error _ -> Output.return `Null)
   | Index idx -> index idx json
+  | Iterator -> iterator json
   | Slice (start, finish) -> slice start finish json
   | Head -> head json
   | Tail -> tail json
@@ -445,7 +455,7 @@ and handle_objects list json =
           r
       | Literal (String key), Some right_expr -> (
           match right_expr with
-          | Key (search_val, _) -> (
+          | Key search_val -> (
               match json with
               | `Assoc l -> (
                   match List.assoc_opt search_val l with
