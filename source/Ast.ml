@@ -5,6 +5,8 @@ type literal =
   | Null (* null *)
 [@@deriving show { with_path = false }]
 
+type builtin = Add | Abs [@@deriving show { with_path = false }]
+
 type op =
   | Add
   | Sub
@@ -80,8 +82,6 @@ type expression =
   | Some_ of expression (* some, Some_ to not collide with option *)
   | Find of expression (* find(x) *)
   (* operations *)
-  | Abs
-  | AddFun
   | Operation of expression * op * expression
   (* Generic *)
   | Length (* length *)
@@ -101,4 +101,6 @@ type expression =
   | Break (* break *)
   (* Conditionals *)
   | Not (* not *)
+  (* builtin *)
+  | Fun of builtin
 [@@deriving show { with_path = false }]

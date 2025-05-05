@@ -133,9 +133,9 @@ term:
       | _ -> failwith "too many arguments for function range"
     }
   | ABS
-    { Abs }
+    { Fun (Abs) }
   | ADDFUN
-    { AddFun }
+    { Fun (Add) }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;

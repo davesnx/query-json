@@ -391,12 +391,12 @@ let rec compile expression json : (Json.t list, string) result =
       | _ -> Error (make_error "reverse" json))
   | Split expr -> split expr json
   | Join expr -> join expr json
-  | Abs -> (
+  | Fun Abs -> (
       match json with
       | `Int n -> Output.return (`Int (if n < 0 then -n else n))
       | `Float j -> Output.return (`Float (if j < 0. then -.j else j))
       | _ -> Error (make_error "reverse" json))
-  | AddFun -> (
+  | Fun Add -> (
       match json with
       | `List [] -> Output.return `Null
       | `List l ->
