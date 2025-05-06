@@ -11,7 +11,7 @@
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
-%token RANGE ABS ADDFUN
+%token RANGE
 %token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
@@ -132,10 +132,6 @@ term:
       | x :: y :: z :: [] -> Range (x, Some y, Some z)
       | _ -> failwith "too many arguments for function range"
     }
-  | ABS
-    { Fun (Abs) }
-  | ADDFUN
-    { Fun (Add) }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
@@ -198,6 +194,8 @@ term:
       | "nan" -> Nan
       | "is_nan" -> IsNan
       | "not" -> Not
+      | "abs" -> Fun (Abs)
+      | "add" -> Fun (Add)
       (* TODO: remove failwiths once we have implemented the functions *)
       | "if" -> failwith @@ Console.Errors.not_implemented f
       | "then" -> failwith @@ Console.Errors.not_implemented f

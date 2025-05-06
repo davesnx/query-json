@@ -60,11 +60,6 @@ end
 let ( let* ) = Output.bind
 
 module Operators = struct
-  type 'a t =
-    | Number of float * float
-    | Str of string * string
-    | Obj of (string * 'a) list * (string * 'a) list
-
   let not (json : Json.t) =
     match json with
     | `Bool false | `Null -> Output.return (`Bool true)

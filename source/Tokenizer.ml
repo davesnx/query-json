@@ -45,8 +45,6 @@ type token =
   | ELSE
   | ELIF
   | END
-  | ABS
-  | ADDFUN
   | EOF
 [@@deriving show]
 
@@ -107,8 +105,6 @@ let rec tokenize buf =
   | "else" -> Ok ELSE
   | "elif" -> Ok ELIF
   | "end" -> Ok END
-  | "abs" -> Ok ABS
-  | "add" -> Ok ADDFUN
   | dot -> Ok DOT
   | ".." -> Ok RECURSE
   | '"' -> string buf
