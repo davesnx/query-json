@@ -4,7 +4,10 @@ let dot = [%sedlex.regexp? '.']
 let digit = [%sedlex.regexp? '0' .. '9']
 let number = [%sedlex.regexp? Plus digit, Opt '.', Opt (Plus digit)]
 let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
-let identifier = [%sedlex.regexp? (alphabetic | '_'), Star (alphabetic | digit | '_')]
+
+let identifier =
+  [%sedlex.regexp? (alphabetic | '_'), Star (alphabetic | digit | '_')]
+
 let not_double_quotes = [%sedlex.regexp? Compl '"']
 
 type token =
