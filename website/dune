@@ -1,6 +1,8 @@
 (library
  (name app)
  (modes melange)
+ (enabled_if
+  (<> %{os_type} "Win32"))
  (modules :standard \ Website)
  (libraries reason-react melange.dom melange.js melange-json melange-webapi)
  (preprocess
@@ -9,6 +11,8 @@
 (melange.emit
  (target website)
  (modules Website)
+ (enabled_if
+  (<> %{os_type} "Win32"))
  (module_systems
   (es6 re.js))
  (libraries reason-react app)
@@ -17,23 +21,19 @@
 
 (install
  (section bin)
+ (enabled_if
+  (<> %{os_type} "Win32"))
  (package query-json-playground)
  (files
   ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwind)))
 
 (rule
  (target output.css)
+ (enabled_if
+  (<> %{os_type} "Win32"))
  (deps
   (source_tree .)
   (:config ./tailwind.config.js)
   (:input ./styles.css))
  (action
-  (run
-   node
-   ../node_modules/@tailwindcss/cli/dist/index.mjs
-   -c
-   %{config}
-   -i
-   %{input}
-   -o
-   %{target})))
+  (run tailwind -c %{config} -i %{input} -o %{target})))
