@@ -4,7 +4,7 @@ let dot = [%sedlex.regexp? '.']
 let digit = [%sedlex.regexp? '0' .. '9']
 let number = [%sedlex.regexp? Plus digit, Opt '.', Opt (Plus digit)]
 let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
-let identifier = [%sedlex.regexp? alphabetic, Star (alphabetic | digit)]
+let identifier = [%sedlex.regexp? (alphabetic | '_'), Star (alphabetic | digit | '_')]
 let not_double_quotes = [%sedlex.regexp? Compl '"']
 
 type token =
@@ -45,7 +45,6 @@ type token =
   | ELSE
   | ELIF
   | END
-  | ABS
   | EOF
 [@@deriving show]
 
@@ -106,7 +105,6 @@ let rec tokenize buf =
   | "else" -> Ok ELSE
   | "elif" -> Ok ELIF
   | "end" -> Ok END
-  | "abs" -> Ok ABS
   | dot -> Ok DOT
   | ".." -> Ok RECURSE
   | '"' -> string buf

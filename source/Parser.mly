@@ -11,7 +11,7 @@
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
-%token RANGE ABS
+%token RANGE
 %token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
@@ -83,8 +83,8 @@ sequence_expr:
     { e }
 
 %inline operator:
-  | ADD {Add}
   | SUB {Sub}
+  | ADD {Add}
   | MULT {Mult}
   | DIV {Div}
   | EQUAL {Eq}
@@ -122,7 +122,7 @@ term:
     { Literal (Bool b) }
   | NULL
     { Literal(Null) }
-  | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, NUMBER); CLOSE_PARENT;
+  | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, number); CLOSE_PARENT;
     {
       let nl = List.map int_of_float nl in
       match nl with
@@ -132,8 +132,6 @@ term:
       | x :: y :: z :: [] -> Range (x, Some y, Some z)
       | _ -> failwith "too many arguments for function range"
     }
-  | ABS
-    { Abs }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
@@ -196,6 +194,8 @@ term:
       | "nan" -> Nan
       | "is_nan" -> IsNan
       | "not" -> Not
+      | "abs" -> Fun (Abs)
+      | "add" -> Fun (Add)
       (* TODO: remove failwiths once we have implemented the functions *)
       | "if" -> failwith @@ Console.Errors.not_implemented f
       | "then" -> failwith @@ Console.Errors.not_implemented f

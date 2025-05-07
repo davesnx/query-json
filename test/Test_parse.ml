@@ -85,4 +85,5 @@ let tests =
              ( Literal (Bool false),
                Literal (String "Welcome"),
                Literal (String "Real") ) ));
+    case "map(add)" (Map (Fun Add));
   ]
