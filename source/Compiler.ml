@@ -24,13 +24,13 @@ let make_error_wrong_operation op member_kind (value : Json.t) =
 
 let get_field_name json =
   match json with
-  | `List _list -> "list"
-  | `Assoc _assoc -> "object"
-  | `Bool _b -> "bool"
-  | `Float _f -> "float"
-  | `Int _i -> "int"
+  | `List _ -> "list"
+  | `Assoc _ -> "object"
+  | `Bool _ -> "bool"
+  | `Float _ -> "float"
+  | `Int _ -> "int"
   | `Null -> "null"
-  | `String _identifier -> "string"
+  | `String _ -> "string"
   | `Variant _ -> "variant"
   | `Tuple _ -> "list"
   | `Intlit _ -> "int"
@@ -40,6 +40,9 @@ let make_error (name : string) (json : Json.t) =
   make_error_wrong_operation name itemName json
 
 module Output = struct
+  (* type t = (Json.Basic.t list, string) result *)
+
+  let ok x = Ok x
   let return x = Ok [ x ]
   let empty = Ok []
 
@@ -178,15 +181,13 @@ let in_ (json : Json.t) expr =
       | _ -> Error (make_error "in" json))
   | _ -> Error (make_error "in" json)
 
-let range ?step from upto =
+let range ?step from upto : int list =
   let rec range ?(step = 1) start stop =
     if step = 0 then []
     else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then []
-    else `Int start :: range ~step (start + step) stop
+    else start :: range ~step (start + step) stop
   in
-  match upto with
-  | None -> Output.return (range 1 from)
-  | Some upto -> Output.return (range ?step from upto)
+  match upto with None -> range 1 from | Some upto -> range ?step from upto
 
 let split expr json =
   match json with
@@ -389,7 +390,8 @@ let rec compile expression json : (Json.t list, string) result =
       | Literal ((String _ | Number _) as e) -> has json e
       | _ -> Error (show_expression e ^ " is not allowed"))
   | In e -> in_ json e
-  | Range (from, upto, step) -> Result.map List.flatten (range ?step from upto)
+  | Range (from, upto, step) ->
+      Output.ok (range ?step from upto |> List.map (fun i -> `Int i))
   | Reverse -> (
       match json with
       | `List l -> Output.return (`List (List.rev l))
