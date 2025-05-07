@@ -28,4 +28,12 @@
   (:config ./tailwind.config.js)
   (:input ./styles.css))
  (action
-  (run tailwind -c %{config} -i %{input} -o %{target})))
+  (run
+   node
+   ../node_modules/@tailwindcss/cli/dist/index.mjs
+   -c
+   %{config}
+   -i
+   %{input}
+   -o
+   %{target})))
