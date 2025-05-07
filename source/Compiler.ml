@@ -14,26 +14,17 @@ let append_article (noun : string) =
   | false -> "a " ^ noun
 
 let make_error_wrong_operation op member_kind (value : Json.t) =
-  let open Console in
   "Trying to "
-  ^ Formatting.single_quotes (Chalk.bold op)
+  ^ Console.Formatting.single_quotes (Chalk.bold op)
   ^ " on "
-  ^ (append_article member_kind |> Chalk.bold)
-  ^ ":" ^ Formatting.enter 1
+  ^ Chalk.bold (append_article member_kind)
+  ^ ":" ^ Console.Formatting.enter 1
   ^ Chalk.gray (Json.to_string value ~colorize:false ~summarize:true)
 
 let make_empty_list_error op =
-  let open Console in
   "Trying to "
-  ^ Formatting.single_quotes (Chalk.bold op)
+  ^ Console.Formatting.single_quotes (Chalk.bold op)
   ^ " on an empty array."
-
-let make_acessing_to_missing_item access_index length =
-  let open Console in
-  "Trying to read "
-  ^ Formatting.single_quotes
-      ("[" ^ Chalk.bold (Int.to_string access_index) ^ "]")
-  ^ " from an array with " ^ Int.to_string length ^ " elements only."
 
 let get_field_name json =
   match json with
