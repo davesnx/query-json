@@ -69,7 +69,7 @@ format-check: ## Checks if format is correct
 
 .PHONY: pin
 pin: ## Pin dependencies
-	opam pin "dune.dev" "git+https://github.com/ocaml/dune.git#3e6cf8979f0bfd0d5cff556aa02e5115725e09cd" -y
+	echo "Nothing to pin"
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
