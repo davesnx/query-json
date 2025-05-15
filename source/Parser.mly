@@ -138,29 +138,29 @@ term:
     { match f with
       | "filter" -> Map (Select cb) (* for backward compatibility *)
       | "map" -> Map cb
-      | "flat_map" -> FlatMap cb
+      | "flat_map" -> Flat_map cb
       | "select" -> Select cb
-      | "sort_by" -> SortBy cb
-      | "min_by" -> MinBy cb
-      | "max_by" -> MaxBy cb
-      | "group_by" -> GroupBy cb
-      | "unique_by" -> UniqueBy cb
+      | "sort_by" -> Sort_by cb
+      | "min_by" -> Min_by cb
+      | "max_by" -> Max_by cb
+      | "group_by" -> Group_by cb
+      | "unique_by" -> Unique_by cb
       | "find" -> Find cb
       | "some" -> Some_ cb
       | "path" -> Path cb
-      | "any" -> AnyWithCondition cb
-      | "all" -> AllWithCondition cb
+      | "any" -> Any_with_condition cb
+      | "all" -> All_with_condition cb
       | "walk" -> Walk cb
       | "transpose" -> Transpose cb
       | "has" -> Has cb
       | "in" -> In cb
-      | "starts_with" -> StartsWith cb
-      | "ends_with" -> EndsWith cb
+      | "startswith" (* for backward compatibility *)
+      | "starts_with" -> Starts_with cb
+      | "endswith" (* for backward compatibility *)
+      | "ends_with" -> Ends_with cb
       | "split" -> Split cb
       | "join" -> Join cb
       | "contains" -> Contains cb
-      | "startswith" -> failwith @@ Console.Errors.renamed f "starts_with"
-      | "endswith" -> failwith @@ Console.Errors.renamed f "ends_with"
       | _ -> failwith @@ Console.Errors.missing f
     }
   | f = IDENTIFIER;
@@ -171,44 +171,38 @@ term:
       | "head" -> Head
       | "tail" -> Tail
       | "length" -> Length
-      | "to_string" -> ToString
-      | "to_num" -> ToNumber
+      | "tostring" (* for backward compatibility *)
+      | "to_string" -> To_string
+      | "tonumber" (* for backward compatibility *)
+      | "to_num" -> To_number
       | "type" -> Type
       | "sort" -> Sort
-      | "uniq" -> Unique
+      | "uniq"
+      | "unique" -> Unique
       | "reverse" -> Reverse
       | "floor" -> Floor
       | "sqrt" -> Sqrt
       | "min" -> Min
       | "max" -> Max
-      | "unique" -> Unique
       | "explode" -> Explode
       | "implode" -> Implode
       | "any" -> Any
       | "all" -> All
       | "recurse" -> Recurse
-      | "recurse_down" -> RecurseDown
-      | "to_entries" -> ToEntries
-      | "from_entries" -> FromEntries
-      | "with_entries" -> WithEntries
+      | "recurse_down" -> Recurse_down
+      | "to_entries" -> To_entries
+      | "from_entries" -> From_entries
+      | "with_entries" -> With_entries
       | "nan" -> Nan
-      | "is_nan" -> IsNan
+      | "is_nan" -> Is_nan
       | "not" -> Not
-      | "abs" -> Fun (Abs)
+      | "abs" -> Fun (Absolute)
       | "add" -> Fun (Add)
       (* TODO: remove failwiths once we have implemented the functions *)
-      | "if" -> failwith @@ Console.Errors.not_implemented f
-      | "then" -> failwith @@ Console.Errors.not_implemented f
-      | "else" -> failwith @@ Console.Errors.not_implemented f
-      | "break" -> failwith @@ Console.Errors.not_implemented f
-      (* TODO: remove failwiths once we have implemented the functions *)
       | "isnan" -> failwith @@ Console.Errors.renamed f "is_nan"
-      | "reduce" -> failwith @@ Console.Errors.renamed f "reduce()"
-      | "tonumber" -> failwith @@ Console.Errors.renamed f "to_number"
       | "isinfinite" -> failwith @@ Console.Errors.renamed f "is_infinite"
       | "isfinite" -> failwith @@ Console.Errors.renamed f "is_finite"
       | "isnormal" -> failwith @@ Console.Errors.renamed f "is_normal"
-      | "tostring" -> failwith @@ Console.Errors.renamed f "to_string"
       | _ -> failwith @@ Console.Errors.missing f
     }
   | OPEN_BRACKET; CLOSE_BRACKET;
@@ -269,7 +263,7 @@ term:
       let rec fold_elif elifs else_branch =
         match elifs with
         | [] -> else_branch
-        | (cond, branch) :: rest -> IfThenElse(cond, branch, fold_elif rest else_branch)
+        | (cond, branch) :: rest -> If_then_else(cond, branch, fold_elif rest else_branch)
       in
-      IfThenElse(cond, e1, fold_elif elifs e2)
+      If_then_else(cond, e1, fold_elif elifs e2)
     }

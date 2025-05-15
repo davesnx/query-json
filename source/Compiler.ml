@@ -390,7 +390,7 @@ let rec compile expression json : (Json.t list, string) result =
   | Split expr -> split expr json
   | Join expr -> join expr json
   | Fun builtin -> builtin_functions builtin json
-  | IfThenElse (cond, if_branch, else_branch) -> (
+  | If_then_else (cond, if_branch, else_branch) -> (
       let* cond = compile cond json in
       match cond with
       | `Bool b ->
@@ -445,11 +445,11 @@ and objects list json =
 
 and builtin_functions builtin json =
   match builtin with
-  | Abs -> (
+  | Absolute -> (
       match json with
-      | `Int n -> Output.return (`Int (if n < 0 then -n else n))
-      | `Float j -> Output.return (`Float (if j < 0. then -.j else j))
-      | _ -> Error (make_error "reverse" json))
+      | `Int n -> Output.return (`Int (abs n))
+      | `Float j -> Output.return (`Float (abs_float j))
+      | _ -> Error (make_error "absolute" json))
   | Add -> (
       match json with
       | `List [] -> Output.return `Null

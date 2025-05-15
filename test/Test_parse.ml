@@ -1,12 +1,10 @@
 let assert_string left right =
   Alcotest.check Alcotest.string "should be equal" right left
 
-let debug = false
-
 let case input expected =
   let fn () =
     let result =
-      match Core.parse ~debug input with
+      match Core.parse ~debug:false input with
       | Ok r -> r
       | Error err -> Alcotest.fail err
     in
@@ -73,15 +71,15 @@ let tests =
     case "range(1;2)" (Range (1, Some 2, None));
     case "range(1;2;3)" (Range (1, Some 2, Some 3));
     case "if true then \"Hello\" else \"Welcome\" end"
-      (IfThenElse
+      (If_then_else
          ( Literal (Bool true),
            Literal (String "Hello"),
            Literal (String "Welcome") ));
     case "if true then \"Hello\" elif false then \"Welcome\" else \"Real\" end"
-      (IfThenElse
+      (If_then_else
          ( Literal (Bool true),
            Literal (String "Hello"),
-           IfThenElse
+           If_then_else
              ( Literal (Bool false),
                Literal (String "Welcome"),
                Literal (String "Real") ) ));

@@ -5,7 +5,7 @@ type literal =
   | Null (* null *)
 [@@deriving show { with_path = false }]
 
-type builtin = Add | Abs [@@deriving show { with_path = false }]
+type builtin = Add | Absolute [@@deriving show { with_path = false }]
 
 type op =
   | Add
@@ -52,13 +52,13 @@ type expression =
   | All (* all *)
   | In of expression (* in *)
   | Recurse (* recurse *)
-  | RecurseDown (* recurse_down *)
-  | ToEntries (* to_entries *)
-  | ToString (* to_string *)
-  | FromEntries (* from_entries *)
-  | WithEntries
+  | Recurse_down (* recurse_down *)
+  | To_entries (* to_entries *)
+  | To_string (* to_string *)
+  | From_entries (* from_entries *)
+  | With_entries (* with_entries *)
   | Nan
-  | IsNan
+  | Is_nan
   (* Array *)
   | Index of int (* .[1] *)
   | Iterator (* .[] *)
@@ -71,16 +71,16 @@ type expression =
   (* map(x) *)
   | Slice of int option * int option
     (* slice(Some 1, Some 10), slice(None, Some 10), slice(Some 1, None) *)
-  | FlatMap of expression (* flat_map(x) *)
+  | Flat_map of expression (* flat_map(x) *)
   | Reduce of expression (* reduce(x) *)
   | Select of expression (* select(x) *)
-  | SortBy of expression (* sort_by(x) *)
-  | GroupBy of expression (* group_by(x) *)
-  | UniqueBy of expression (* unique_by(x) *)
-  | MinBy of expression (* min_by(x) *)
-  | MaxBy of expression (* max_by(x) *)
-  | AllWithCondition of expression (* all(c) *)
-  | AnyWithCondition of expression (* any(c) *)
+  | Sort_by of expression (* sort_by(x) *)
+  | Group_by of expression (* group_by(x) *)
+  | Unique_by of expression (* unique_by(x) *)
+  | Min_by of expression (* min_by(x) *)
+  | Max_by of expression (* max_by(x) *)
+  | All_with_condition of expression (* all(c) *)
+  | Any_with_condition of expression (* any(c) *)
   | Some_ of expression (* some, Some_ to not collide with option *)
   | Find of expression (* find(x) *)
   (* operations *)
@@ -91,14 +91,14 @@ type expression =
   (* Strings *)
   | Test of string
     (* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
-  | ToNumber (* to_num *)
-  | StartsWith of expression (* starts_with *)
-  | EndsWith of expression (* ends_with *)
+  | To_number (* to_num *)
+  | Starts_with of expression (* starts_with *)
+  | Ends_with of expression (* ends_with *)
   | Split of expression (* split *)
   | Join of expression (* join *)
   | Path of expression (* path(x) *)
   (* Logic *)
-  | IfThenElse of
+  | If_then_else of
       expression * expression * expression (* If then (elseif) else end *)
   | Break (* break *)
   (* Conditionals *)
