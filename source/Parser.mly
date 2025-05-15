@@ -35,7 +35,6 @@
 %token CLOSE_BRACE
 %token EOF
 
-/* %left OPEN_BRACKET */
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE /* lowest precedence */
 %nonassoc COMMA
@@ -55,16 +54,16 @@ program:
   | EOF;
     { Identity }
 
-str_or_id:
+string_or_identifier:
   | key = IDENTIFIER { Literal (String key) }
   | key = STRING { Literal (String key) }
 
-key_val(E):
-  | key = str_or_id
+key_value (E):
+  | key = string_or_identifier
     { key, None }
   | OPEN_PARENT; e1 = E CLOSE_PARENT; COLON; e2 = E
     { e1, Some e2 }
-  | key = str_or_id; COLON; e = E
+  | key = string_or_identifier; COLON; e = E
     { key, Some e }
 
 elif_term:
@@ -72,11 +71,12 @@ elif_term:
     { cond, e }
 
 // sequence_expr handles the lowest precedence operators: comma and pipe
+// while item_expr handles the higher precedence operators
 sequence_expr:
   | left = sequence_expr; COMMA; right = sequence_expr;
     { Comma (left, right) }
 
-  | left = sequence_expr; PIPE; right = item_expr; // Pipe binds tighter than comma, but less than others
+  | left = sequence_expr; PIPE; right = item_expr;
     { Pipe (left, right) }
 
   | e = item_expr
@@ -96,10 +96,10 @@ sequence_expr:
   | AND {And}
   | OR {Or}
 
-// item_expr handles operators with higher precedence than COMMA and PIPE
 item_expr:
   | left = item_expr; op = operator; right = item_expr;
     { Operation (left, op, right) }
+
   | e = term
     { e }
 
@@ -124,8 +124,7 @@ term:
     { Literal(Null) }
   | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, number); CLOSE_PARENT;
     {
-      let nl = List.map int_of_float nl in
-      match nl with
+      match (List.map Int.of_float nl) with
       | [] -> assert false (* nonempty_list *)
       | x :: [] -> Range (x, None, None)
       | x :: y :: [] -> Range (x, Some y, None)
@@ -211,12 +210,13 @@ term:
   | OPEN_BRACE; CLOSE_BRACE;
     { Object [] }
 
-  | e = delimited(OPEN_BRACE, separated_nonempty_list(COMMA, key_val(term)), CLOSE_BRACE);
+  | e = delimited(OPEN_BRACE, separated_nonempty_list(COMMA, key_value (term)), CLOSE_BRACE);
     { Object e }
 
   // Parentheses allow a full sequence_expr inside, reducing to an item_expr
   | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
     { e }
+
   | e = term; OPEN_BRACKET; i = number; CLOSE_BRACKET
     { Pipe (e, Index (int_of_float i)) }
 

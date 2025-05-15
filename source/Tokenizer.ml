@@ -1,6 +1,5 @@
 open Sedlexing.Utf8
 
-let dot = [%sedlex.regexp? '.']
 let digit = [%sedlex.regexp? '0' .. '9']
 let number = [%sedlex.regexp? Plus digit, Opt '.', Opt (Plus digit)]
 let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
@@ -51,7 +50,7 @@ type token =
   | EOF
 [@@deriving show]
 
-let string buf =
+let tokenize_string buf =
   let buffer = Buffer.create 10 in
   let rec read_string buf =
     [%sedlex
@@ -108,13 +107,13 @@ let rec tokenize buf =
   | "else" -> Ok ELSE
   | "elif" -> Ok ELIF
   | "end" -> Ok END
-  | dot -> Ok DOT
+  | "." -> Ok DOT
   | ".." -> Ok RECURSE
-  | '"' -> string buf
+  | '"' -> tokenize_string buf
   | identifier -> tokenize_apply buf
   | number ->
-      let num = lexeme buf |> float_of_string in
-      Ok (NUMBER num)
+      let num = lexeme buf in
+      Ok (NUMBER (Float.of_string num))
   | space -> tokenize buf
   | any -> Error ("Unexpected character '" ^ lexeme buf ^ "'")
   | _ -> Error "Unexpected character"
