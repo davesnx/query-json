@@ -16,20 +16,22 @@ let[@react.component] make ~onShareClick =
       <Text color=`White kind=`H2>(React.string "query-json playground")</Text>
       <div className=distribute>
         <Text color=`Grey kind=`Label>(React.string "Made by")</Text>
-        <a className=link
-           href="https://twitter.com/davesnx"
-           target="_blank"
-           rel="noopener">
+        <a
+          className=link
+          href="https://twitter.com/davesnx"
+          target="_blank"
+          rel="noopener">
           <div className=distribute>
             <Text color=`Grey kind=`Label>(React.string "davesnx")</Text>
             <Icons.Twitter />
           </div>
         </a>
         <Text color=`Grey kind=`Label>(React.string "Code in")</Text>
-        <a className=iconlink
-           href="https://github.com/davesnx/query-json"
-           target="_blank"
-           rel="noopener">
+        <a
+          className=iconlink
+          href="https://github.com/davesnx/query-json"
+          target="_blank"
+          rel="noopener">
           <Icons.Github />
         </a>
         <span className="w-4" />

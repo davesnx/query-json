@@ -89,10 +89,12 @@ let[@react.component] make ~(value : string)
     | Write handler -> handler
   in
   let options = { options with readOnly = isReadOnly onChangeValue } in
-  <External value
-            onChange
-            options
-            theme="vs-dark"
-            language=(mode_to_string mode)
-            height="100%"
-            style=(ReactDOM.Style.make ~padding:"8px" ~height:"100%" ()) />
+  <External
+    value
+    onChange
+    options
+    theme="vs-dark"
+    language=(mode_to_string mode)
+    height="100%"
+    style=(ReactDOM.Style.make ~padding:"8px" ~height:"100%" ())
+  />

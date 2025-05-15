@@ -119,33 +119,28 @@ let[@react.component] make () =
     | None -> Printf.eprintf "Error decoding"
   in
 
-  (* const downloadJson = () => {
-       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(activeTab === "input" ? jsonInput : result)
-       const downloadAnchorNode = document.createElement("a")
-       downloadAnchorNode.setAttribute("href", dataStr)
-       downloadAnchorNode.setAttribute("download", `json-playground-${activeTab === "input" ? "input" : "result"}.json`)
-       document.body.appendChild(downloadAnchorNode)
-       downloadAnchorNode.click()
-       downloadAnchorNode.remove()
-     } *)
   <div className=page>
     <Header onShareClick />
     <div className="w-full mb-2" />
     <div className=container>
       <div className="w-full mb-2">
-        <TextInput value=state.query
-                   onChange=onQueryChange
-                   placeholder="Type the query to filter against the JSON \
-                                below. For example: '.store'" />
+        <TextInput
+          value=state.query
+          onChange=onQueryChange
+          placeholder="Type the query to filter against the JSON below. For \
+                       example: '.store'"
+        />
       </div>
-      <div className="w-full h-full mx-auto flex justify-between items-center \
-                      gap-2">
+      <div
+        className="w-full h-full mx-auto flex justify-between items-center \
+                   gap-2">
         <div className=columnHalf>
           <span className="text-white text-xs">
             (React.string "Input JSON")
           </span>
-          <Editor.Json value=(Option.value state.json ~default:"")
-                       onChange=onJsonChange />
+          <Editor.Json
+            value=(Option.value state.json ~default:"") onChange=onJsonChange
+          />
         </div>
         <div className=columnHalf>
           <span className="text-white text-xs">(React.string "Output")</span>

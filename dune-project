@@ -66,13 +66,13 @@
  (depends
   ocaml
   mlx
-  ocamlmerlin-mlx
-  ocamlformat-mlx
   melange
   melange-json
   melange-webapi
   reason-react
   reason-react-ppx
+  (ocamlmerlin-mlx :with-dev-setup)
+  (ocamlformat-mlx :with-dev-setup)
 ))
 
 (dialect
