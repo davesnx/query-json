@@ -70,7 +70,6 @@ type expression =
   (* .[] *)
   (* map(x) *)
   | Slice of int option * int option
-    (* slice(Some 1, Some 10), slice(None, Some 10), slice(Some 1, None) *)
   | Flat_map of expression (* flat_map(x) *)
   | Reduce of expression (* reduce(x) *)
   | Select of expression (* select(x) *)

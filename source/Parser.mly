@@ -194,15 +194,11 @@ term:
       | "from_entries" -> From_entries
       | "with_entries" -> With_entries
       | "nan" -> Nan
+      | "isnan" (* for backward compatibility *)
       | "is_nan" -> Is_nan
       | "not" -> Not
       | "abs" -> Fun (Absolute)
       | "add" -> Fun (Add)
-      (* TODO: remove failwiths once we have implemented the functions *)
-      | "isnan" -> failwith @@ Console.Errors.renamed f "is_nan"
-      | "isinfinite" -> failwith @@ Console.Errors.renamed f "is_infinite"
-      | "isfinite" -> failwith @@ Console.Errors.renamed f "is_finite"
-      | "isnormal" -> failwith @@ Console.Errors.renamed f "is_normal"
       | _ -> failwith @@ Console.Errors.missing f
     }
   | OPEN_BRACKET; CLOSE_BRACKET;

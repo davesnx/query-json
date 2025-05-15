@@ -37,11 +37,6 @@ module Errors = struct
     ^ String.make start.pos_cnum ' '
     ^ Chalk.gray pointer_range
 
-  let renamed f name =
-    Formatting.single_quotes f ^ " is not valid in q, use "
-    ^ Formatting.single_quotes name
-    ^ " instead"
-
   let not_implemented f = Formatting.single_quotes f ^ " is not implemented"
 
   let missing f =
