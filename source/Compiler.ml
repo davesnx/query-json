@@ -138,14 +138,14 @@ module Operators = struct
   let lte = compare "<=" ( <= )
   let and_ = condition "and" ( && )
   let or_ = condition "or" ( || )
-  let eq l r = Output.return (`Bool (l = r))
-  let notEq l r = Output.return (`Bool (l <> r))
+  let equal l r = Output.return (`Bool (l = r))
+  let not_equal l r = Output.return (`Bool (l <> r))
 
   (* Since + is used to concat strings, objects, lists, we don't use apply_op *)
   let add = add "+"
-  let sub = apply_op "-" (fun l r -> l -. r)
-  let mult = apply_op "*" (fun l r -> l *. r)
-  let div = apply_op "/" (fun l r -> l /. r)
+  let subtract = apply_op "-" (fun l r -> l -. r)
+  let multiply = apply_op "*" (fun l r -> l *. r)
+  let divide = apply_op "/" (fun l r -> l /. r)
 end
 
 let keys (json : Json.t) =
@@ -341,15 +341,15 @@ let rec compile expression json : (Json.t list, string) result =
   | Operation (left, op, right) -> (
       match op with
       | Add -> operation left right Operators.add json
-      | Sub -> operation left right Operators.sub json
-      | Mult -> operation left right Operators.mult json
-      | Div -> operation left right Operators.div json
-      | Gt -> operation left right Operators.gt json
-      | Ge -> operation left right Operators.gte json
-      | St -> operation left right Operators.lt json
-      | Se -> operation left right Operators.lte json
-      | Eq -> operation left right Operators.eq json
-      | Neq -> operation left right Operators.notEq json
+      | Subtract -> operation left right Operators.subtract json
+      | Multiply -> operation left right Operators.multiply json
+      | Divide -> operation left right Operators.divide json
+      | Greater_than -> operation left right Operators.gt json
+      | Greater_than_or_equal -> operation left right Operators.gte json
+      | Less_than -> operation left right Operators.lt json
+      | Less_than_or_equal -> operation left right Operators.lte json
+      | Equal -> operation left right Operators.equal json
+      | Not_equal -> operation left right Operators.not_equal json
       | And -> operation left right Operators.and_ json
       | Or -> operation left right Operators.or_ json)
   | Literal literal -> (

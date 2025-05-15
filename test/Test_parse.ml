@@ -44,7 +44,7 @@ let tests =
       (Operation
          ( Literal (Number 1.),
            Add,
-           Operation (Literal (Number 2.), Mult, Literal (Number 3.)) ));
+           Operation (Literal (Number 2.), Multiply, Literal (Number 3.)) ));
     case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
     case "select(true)" (Select (Literal (Bool true)));
     case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index 0));

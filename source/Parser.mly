@@ -83,16 +83,16 @@ sequence_expr:
     { e }
 
 %inline operator:
-  | SUB {Sub}
+  | SUB {Subtract}
   | ADD {Add}
-  | MULT {Mult}
-  | DIV {Div}
-  | EQUAL {Eq}
-  | NOT_EQUAL {Neq}
-  | GREATER {Gt}
-  | LOWER {St}
-  | GREATER_EQUAL {Ge}
-  | LOWER_EQUAL {Se}
+  | MULT {Multiply}
+  | DIV {Divide}
+  | EQUAL {Equal}
+  | NOT_EQUAL {Not_equal}
+  | GREATER {Greater_than}
+  | LOWER {Less_than}
+  | GREATER_EQUAL {Greater_than_or_equal}
+  | LOWER_EQUAL {Less_than_or_equal}
   | AND {And}
   | OR {Or}
 

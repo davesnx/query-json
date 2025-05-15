@@ -9,15 +9,15 @@ type builtin = Add | Abs [@@deriving show { with_path = false }]
 
 type op =
   | Add
-  | Sub
-  | Mult
-  | Div
-  | Eq
-  | Neq
-  | Gt (* > *)
-  | St (* < *)
-  | Ge (* >=*)
-  | Se (* <= *)
+  | Subtract
+  | Multiply
+  | Divide
+  | Equal
+  | Not_equal
+  | Greater_than
+  | Less_than
+  | Greater_than_or_equal
+  | Less_than_or_equal
   | And
   | Or
 [@@deriving show { with_path = false }]
