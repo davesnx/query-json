@@ -1,7 +1,7 @@
 project_name = query-json
 opam_file = $(project_name).opam
 DUNE = opam exec -- dune
-NPX = npx
+VITE = ./node_modules/.bin/vite
 
 .PHONY: help
 help: ## Print this help message
@@ -29,15 +29,15 @@ dev-core: ## Build in watch mode
 
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
-	$(NPX) vite --host --config website/vite.config.js
+	$(VITE) --host --config website/vite.config.js
 
 .PHONY: web-build
 web-build: ## Bundle the website
-	$(NPX) vite build --config website/vite.config.js
+	$(VITE) build --config website/vite.config.js
 
 .PHONY: web-preview
 web-preview: ## Preview the website
-	$(NPX) vite preview --config website/vite.config.js
+	$(VITE) preview --config website/vite.config.js
 
 .PHONY: clean
 clean: ## Clean artifacts
