@@ -67,6 +67,10 @@ format: ## Format the codebase with ocamlformat
 format-check: ## Checks if format is correct
 	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build @fmt
 
+.PHONY: subst
+subst: ## Run dune substitute
+	$(DUNE) subst
+
 .PHONY: pin
 pin: ## Pin dependencies
 	echo "Nothing to pin"
