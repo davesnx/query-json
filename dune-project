@@ -3,6 +3,8 @@
 (using menhir 2.0)
 (using melange 0.1)
 
+(name query-json)
+
 (generate_opam_files true)
 
 (license MIT)
