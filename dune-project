@@ -47,7 +47,7 @@
 (package
  (name query-json-js)
  (allow_empty)
- (synopsis "query-json-js is the JavaScript library for query-json, compiled by js_of_ocaml")
+ (synopsis "The query-json-js package is the JavaScript library for query-json, compiled by js_of_ocaml")
  (description "query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
   Play with it in the online playground: https://query-json.netlify.app")
@@ -61,7 +61,7 @@
 (package
  (name query-json-playground)
  (allow_empty)
- (synopsis "query-json-playground is the web playground for query-json, written in reason-react and compiled by Melange.")
+ (synopsis "The query-json-playground package is the web playground for query-json, written in reason-react and compiled by Melange")
  (description "query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
   Play with it in the online playground: https://query-json.netlify.app")

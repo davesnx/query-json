@@ -53,10 +53,8 @@ module Color = struct
     | `String s ->
         Easy_format.Atom (Chalk.green (quotes (encode s)), Easy_format.atom)
     | `Intlit s -> Easy_format.Atom (Chalk.green s, Easy_format.atom)
-    | `Variant (s, _opt) ->
-        Easy_format.Atom (Chalk.green (encode s), Easy_format.atom)
-    | `Tuple [] | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
-    | `Tuple l | `List l ->
+    | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
+    | `List l ->
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
@@ -80,8 +78,7 @@ module Summarize = struct
     | `Float f -> Easy_format.Atom (float_to_string f, Easy_format.atom)
     | `String s -> Easy_format.Atom (encode s |> quotes, Easy_format.atom)
     | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
-    | `Variant (s, _opt) -> Easy_format.Atom (s, Easy_format.atom)
-    | `Tuple l | `List l ->
+    | `List l ->
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
@@ -103,10 +100,8 @@ module NoColor = struct
     | `Intlit s -> Easy_format.Atom (s, Easy_format.atom)
     | `Float f -> Easy_format.Atom (float_to_string f, Easy_format.atom)
     | `String s -> Easy_format.Atom (quotes (encode s), Easy_format.atom)
-    | `Variant (s, _opt) ->
-        Easy_format.Atom (quotes (encode s), Easy_format.atom)
     | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
-    | `Tuple l | `List l ->
+    | `List l ->
         Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
