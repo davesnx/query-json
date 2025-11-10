@@ -1,5 +1,5 @@
 (executable
- (name Js)
+ (name js)
  (public_name query-json-js)
  (package query-json-js)
  (libraries query-json.core js_of_ocaml)
@@ -11,7 +11,7 @@
   (sourcemap no))
  (modes
   js
-  native ; native is required to avoid the following error:
+  native ; native is required since to avoid the following error:
          ; Error: No installable mode found for this executable
          ; When public_name is set, one of the following modes is required:
          ; - exe

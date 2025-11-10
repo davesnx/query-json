@@ -51,7 +51,7 @@ const pkgJson = {
   "scripts": {
     "postinstall": "node postinstall.js"
   },
-  "main": "query-json-js/Js.bc.js",
+  "main": "query-json-js/js.bc.js",
   "bin": {
     "query-json": "query-json"
   },

@@ -21,7 +21,7 @@ const config = {
     },
     rollupOptions: {
       external: (id) => {
-        return id.includes('Js.bc.js');
+        return id.includes('js.bc.js');
       },
       output: {
         manualChunks: undefined,
@@ -32,7 +32,7 @@ const config = {
     copy({
       targets: [
         {
-          src: "_build/default/js/Js.bc.js",
+          src: "_build/default/js/js.bc.js",
           dest: "_build/default/js",
         },
       ],

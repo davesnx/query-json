@@ -1,0 +1,162 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    name: Publish to NPM and GitHub
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Download JavaScript artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          commit: ${{ github.sha }}
+          name: js.bc.js
+          path: _build/default/js
+
+      - name: Download linux artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          commit: ${{ github.sha }}
+          name: ubuntu-latest-artifact
+          path: _release/platform-linux-x64
+
+      - name: Download macOS artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          commit: ${{ github.sha }}
+          name: macos-latest-artifact
+          path: _release/platform-darwin-x64
+
+      - name: Download windows artifacts
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          commit: ${{ github.sha }}
+          name: windows-latest-artifact
+          path: _release/platform-windows-x64
+
+      - name: Allow execution of query-json
+        run: chmod +x _release/platform-linux-x64/bin.exe
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(_release/platform-linux-x64/bin.exe --version)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate NPM package
+        run: node scripts/make-npm-release.js ${{ steps.version.outputs.version }}
+
+      - name: Create archives for Github release
+        run: |
+          cd _release/platform-darwin-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-linux-x64.zip .
+          cd ../..
+
+          cd _release/platform-windows-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-windows-x64.zip .
+          cd ../..
+
+      - name: Publish to NPM
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm publish --access public
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Create Github release
+        id: create_release
+        uses: ncipollo/release-action@v1.16.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+
+      - name: Upload query-json-darwin-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload query-json-linux-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload query-json-windows-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-windows-x64.zip
+          asset_name: query-json-windows-x64.zip
+          asset_content_type: application/zip
+
+  opam:
+    needs: publish
+    name: Publish to opam
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+
+      - name: Install dependencies
+        run: |
+          opam install . --deps-only
+          opam install dune-release -y
+
+      - uses: davesnx/dune-release-action@main
+        with:
+          package-name: 'query-json'
+          changelog: './CHANGES.md'
+          github-token: ${{ secrets.GH_TOKEN }}
+          to-opam-repository: true
+          to-github-releases: false
