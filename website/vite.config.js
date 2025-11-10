@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import NodeResolution from "@rollup/plugin-node-resolve";
 import { createHtmlPlugin } from "vite-plugin-html";
 import replace from "@rollup/plugin-replace";
+import { viteStaticCopy as copy } from "vite-plugin-static-copy";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -18,16 +19,24 @@ const config = {
     commonjsOptions: {
       esmExternals: true,
     },
-/*     rollupOptions: {
+    rollupOptions: {
       external: (id) => {
-        return id.includes('Js.bc.js') || id.includes('/_build/default/js/');
+        return id.includes('Js.bc.js');
       },
       output: {
         manualChunks: undefined,
       },
     },
- */  },
+  },
   plugins: [
+    copy({
+      targets: [
+        {
+          src: "_build/default/js/Js.bc.js",
+          dest: "_build/default/js",
+        },
+      ],
+    }),
     replace({
       preventAssignment: true,
       "process.env.NODE_ENV": JSON.stringify("development"),
@@ -35,9 +44,6 @@ const config = {
     NodeResolution(),
     createHtmlPlugin({
       inject: {
-        data: {
-          title: "query-json playground",
-        },
         tags: [
           {
             injectTo: "body-prepend",
