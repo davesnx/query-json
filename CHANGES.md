@@ -1,5 +1,9 @@
 # Unreleased
 
+## 0.5.24
+
+- Fix #36: Implement indexes correctly (https://github.com/davesnx/query-json/issues/36)
+
 ## 0.5.23
 
 - Refactor to use Safe.from_string
