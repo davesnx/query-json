@@ -6,6 +6,8 @@
  (preprocess
   (pps js_of_ocaml-ppx))
  (js_of_ocaml
+  (flags
+   (:standard --target-env=browser))
   (sourcemap no))
  (modes
   js

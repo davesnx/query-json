@@ -3,12 +3,11 @@
   "version": "0.0.0",
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
-    "esbuild": "^0.25.3",
-    "lucide-react": "^0.503.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "esbuild": "^0.25.3",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@rollup/plugin-replace": "^6.0.2",
     "@tailwindcss/cli": "^4.1.4",

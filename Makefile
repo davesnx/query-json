@@ -32,7 +32,7 @@ web-dev: ## Build and serve the website via HMR
 	$(VITE) --host --config website/vite.config.js
 
 .PHONY: web-build
-web-build: ## Bundle the website
+web-build: build ## Bundle the website
 	$(VITE) build --config website/vite.config.js
 
 .PHONY: web-preview

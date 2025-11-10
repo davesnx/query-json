@@ -18,7 +18,15 @@ const config = {
     commonjsOptions: {
       esmExternals: true,
     },
-  },
+/*     rollupOptions: {
+      external: (id) => {
+        return id.includes('Js.bc.js') || id.includes('/_build/default/js/');
+      },
+      output: {
+        manualChunks: undefined,
+      },
+    },
+ */  },
   plugins: [
     replace({
       preventAssignment: true,
