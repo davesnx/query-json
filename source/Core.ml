@@ -35,16 +35,16 @@ let parse ?(debug = false) ?(colorize = true) input :
         print_endline "Lexer error";
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
+      Error
+        (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
+      Error
+        (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
 
 let run ?(colorize = false) query json =
   let result =
-    parse ~colorize query
-    |> Result.map (Compiler.compile ~colorize)
-    |> fun x ->
+    parse ~colorize query |> Result.map (Compiler.compile ~colorize) |> fun x ->
     Result.bind x (fun runtime ->
         match Json.parse_string json with
         | Ok input -> runtime input

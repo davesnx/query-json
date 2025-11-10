@@ -3,7 +3,7 @@ module Input = struct
     <input autoFocus=true className type_ value placeholder onChange />
 end
 
-let [@react.component] make ~value ~placeholder ~onChange =
+let[@react.component] make ~value ~placeholder ~onChange =
   let clearInput _ = onChange "" in
   let onChangeHandler event =
     let target = React.Event.Form.target event in

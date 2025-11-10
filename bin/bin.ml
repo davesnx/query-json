@@ -30,8 +30,7 @@ module Runtime = struct
             json
             |> List.map (Json.to_string ~colorize ~summarize:false)
             |> List.iter print_endline
-        | Error err ->
-            print_endline (Console.Errors.print_error ~colorize err))
+        | Error err -> print_endline (Console.Errors.print_error ~colorize err))
     | Error err -> print_endline (Console.Errors.print_error ~colorize err)
 end
 
@@ -47,8 +46,7 @@ let execution (query : string option) (payload : string option)
       in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
-      | Error err ->
-          print_endline (Console.Errors.print_error ~colorize err))
+      | Error err -> print_endline (Console.Errors.print_error ~colorize err))
   | None -> print_endline (Console.usage ())
 
 let () =

@@ -19,7 +19,8 @@ let make_error_wrong_operation ~colorize op member_kind (value : Json.t) =
   end) in
   "Trying to "
   ^ Console.Formatting.single_quotes (Chalk.bold op)
-  ^ " on " ^ Chalk.bold (append_article member_kind)
+  ^ " on "
+  ^ Chalk.bold (append_article member_kind)
   ^ ":" ^ Console.Formatting.enter 1
   ^ Chalk.gray (Json.to_string value ~colorize ~summarize:true)
 
@@ -269,7 +270,8 @@ let member ~colorize (key : string) (json : Json.t) =
   | `Assoc _assoc -> (
       let access_member = Json.member key json in
       match access_member with
-      | `Null -> Error (make_error_missing_member ~colorize ("." ^ key) key json)
+      | `Null ->
+          Error (make_error_missing_member ~colorize ("." ^ key) key json)
       | _ -> Output.return access_member)
   | _ -> Error (make_error ~colorize ("." ^ key) json)
 
@@ -353,11 +355,14 @@ let rec compile ~colorize expression json : (Json.t list, string) result =
           operation ~colorize left right (Operators.subtract ~colorize) json
       | Multiply ->
           operation ~colorize left right (Operators.multiply ~colorize) json
-      | Divide -> operation ~colorize left right (Operators.divide ~colorize) json
-      | Greater_than -> operation ~colorize left right (Operators.gt ~colorize) json
+      | Divide ->
+          operation ~colorize left right (Operators.divide ~colorize) json
+      | Greater_than ->
+          operation ~colorize left right (Operators.gt ~colorize) json
       | Greater_than_or_equal ->
           operation ~colorize left right (Operators.gte ~colorize) json
-      | Less_than -> operation ~colorize left right (Operators.lt ~colorize) json
+      | Less_than ->
+          operation ~colorize left right (Operators.lt ~colorize) json
       | Less_than_or_equal ->
           operation ~colorize left right (Operators.lte ~colorize) json
       | Equal -> operation ~colorize left right Operators.equal json
@@ -409,7 +414,8 @@ let rec compile ~colorize expression json : (Json.t list, string) result =
       | `Bool b ->
           if b then compile ~colorize if_branch json
           else compile ~colorize else_branch json
-      | json -> Error (make_error ~colorize "if condition should be a bool" json))
+      | json ->
+          Error (make_error ~colorize "if condition should be a bool" json))
   | _ -> Error (show_expression expression ^ " is not implemented")
 
 and operation ~colorize left_expr right_expr op json =
