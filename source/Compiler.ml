@@ -275,12 +275,26 @@ let member ~colorize (key : string) (json : Json.t) =
       | _ -> Output.return access_member)
   | _ -> Error (make_error ~colorize ("." ^ key) json)
 
-let index ~colorize (value : int) (json : Json.t) =
+let iterator ~colorize (json : Json.t) =
   match json with
-  | `List list when List.length list > value ->
-      Output.return (Json.index value json)
-  | `List _ -> Output.return `Null
-  | _ -> Error (make_error ~colorize ("[" ^ Int.to_string value ^ "]") json)
+  | `List [] -> Output.empty
+  | `List items -> Ok items
+  | `Assoc obj -> Ok (List.map snd obj)
+  | _ -> Error (make_error ~colorize "[]" json)
+
+let rec index ~colorize (indices : int list) (json : Json.t) =
+  match indices with
+  | [] -> iterator ~colorize json
+  | [ value ] -> (
+      match json with
+      | `List list when List.length list > value ->
+          Output.return (Json.index value json)
+      | `List _ -> Output.return `Null
+      | _ -> Error (make_error ~colorize ("[" ^ Int.to_string value ^ "]") json)
+      )
+  | multiple ->
+      List.map (fun idx -> index ~colorize [ idx ] json) multiple
+      |> Output.collect
 
 let slice ~colorize (start : int option) (finish : int option) (json : Json.t) =
   let start =
@@ -322,13 +336,6 @@ let slice ~colorize (start : int option) (finish : int option) (json : Json.t) =
         (make_error ~colorize
            ("[" ^ Int.to_string start ^ ":" ^ Int.to_string finish ^ "]")
            json)
-
-let iterator ~colorize (json : Json.t) =
-  match json with
-  | `List [] -> Output.empty
-  | `List items -> Ok items
-  | `Assoc obj -> Ok (List.map snd obj)
-  | _ -> Error (make_error ~colorize "[]" json)
 
 let rec compile ~colorize expression json : (Json.t list, string) result =
   match expression with

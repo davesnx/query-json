@@ -60,8 +60,8 @@ type expression =
   | Nan
   | Is_nan
   (* Array *)
-  | Index of int (* .[1] *)
-  | Iterator (* .[] *)
+  | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
+  | Iterator (* .[] - currently represented as Index [], kept for future use *)
   | Range of int * int option * int option (* range(1, 10) *)
   | Flatten (* flatten *)
   | Head (* head *)

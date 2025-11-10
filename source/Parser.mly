@@ -217,16 +217,17 @@ term:
   | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
     { e }
 
-  | e = term; OPEN_BRACKET; i = number; CLOSE_BRACKET
-    { Pipe (e, Index (int_of_float i)) }
+  /* Index: .[0] or .[0,1,2] */
+  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET
+    { Pipe (e, Index (List.map int_of_float indices)) }
 
-  /* Iterator: .[] */
+  /* Empty brackets: .[] */
   | e = term; OPEN_BRACKET; CLOSE_BRACKET
-    { Pipe (e, Iterator) }
+    { Pipe (e, Index []) }
 
-  /* Optiona iterator: .[]? */
+  /* Optional iterator: .[]? */
   | e = term; OPEN_BRACKET; CLOSE_BRACKET; QUESTION_MARK
-    { Pipe (e, Optional (Iterator)) }
+    { Pipe (e, Optional (Index [])) }
 
   /* Full slice with both indices: .[1:5] */
   | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
