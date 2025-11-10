@@ -93,3 +93,20 @@ npm-install: ## Install npm dependencies
 
 .PHONY: init
 init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
+
+.PHONY: release
+release: ## Create a new release (usage: make release VERSION=1.2.3)
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION is required. Usage: make release VERSION=1.2.3"; \
+		exit 1; \
+	fi
+	@echo "Creating release $(VERSION)..."
+	@sed -i.bak 's/(version .*$$/(version $(VERSION))/' dune-project && rm dune-project.bak
+	@git add dune-project
+	@git commit -m "Bump version to $(VERSION)"
+	@git push origin main
+	@git tag -d $(VERSION) 2>/dev/null || true
+	@git push origin :refs/tags/$(VERSION) 2>/dev/null || true
+	@git tag $(VERSION)
+	@git push origin $(VERSION)
+	@echo "Release $(VERSION) created and pushed!"
