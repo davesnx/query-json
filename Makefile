@@ -100,8 +100,8 @@ release: ## Create a new release (usage: make release VERSION=1.2.3)
 		echo "Error: VERSION is required. Usage: make release VERSION=1.2.3"; \
 		exit 1; \
 	fi
-	@echo "Creating release $(VERSION)..."
-	@sed -i.bak 's/(version .*$$/(version $(VERSION))/' dune-project && rm dune-project.bak
+	@echo "Creating release $(VERSION)"
+	@sed -i.bak "s/^(version .*)/(version $(VERSION))/" dune-project && rm -f dune-project.bak
 	@git add dune-project
 	@git commit -m "Bump version to $(VERSION)"
 	@git push origin main
