@@ -3,31 +3,18 @@ include Yojson.Safe.Util
 
 let quotes str = "\"" ^ str ^ "\""
 
-let read_json lexbuf =
-  let lexer_state = init_lexer () in
-  read_t lexer_state lexbuf
-
 let parse_string str =
-  try
-    let lexbuf = Lexing.from_string str in
-    Ok (read_json lexbuf)
+  try Ok (Yojson.Safe.from_string str)
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the string")
 
 let parse_file file =
-  try
-    let ic = open_in file in
-    let lexbuf = Lexing.from_channel ic in
-    let result = read_json lexbuf in
-    close_in ic;
-    Ok result
+  try Ok (Yojson.Safe.from_file file)
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the file")
 
 let parse_channel channel =
-  try
-    let lexbuf = Lexing.from_channel channel in
-    Ok (read_json lexbuf)
+  try Ok (Yojson.Safe.from_channel channel)
   with e ->
     Error
       (Printexc.to_string e ^ " There was an error reading from standard input")
