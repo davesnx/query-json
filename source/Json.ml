@@ -40,40 +40,38 @@ let float_to_string float =
     float |> Float.to_int |> Int.to_string
   else Printf.sprintf "%g" float
 
-module Format = struct
-  let rec format ~disable (json : t) =
+module Format (Chalk : sig
+  val green : string -> string
+  val blue : string -> string
+  val bold : string -> string
+end) =
+struct
+  let rec format (json : t) =
     match json with
-    | `Null -> Easy_format.Atom (Chalk.green ~disable "null", Easy_format.atom)
+    | `Null -> Easy_format.Atom (Chalk.green "null", Easy_format.atom)
     | `Bool b ->
-        Easy_format.Atom
-          (Chalk.green ~disable (Bool.to_string b), Easy_format.atom)
+        Easy_format.Atom (Chalk.green (Bool.to_string b), Easy_format.atom)
     | `Int i ->
-        Easy_format.Atom (Chalk.green ~disable (Int.to_string i), Easy_format.atom)
+        Easy_format.Atom (Chalk.green (Int.to_string i), Easy_format.atom)
     | `Float f ->
-        Easy_format.Atom
-          (Chalk.green ~disable (float_to_string f), Easy_format.atom)
+        Easy_format.Atom (Chalk.green (float_to_string f), Easy_format.atom)
     | `String s ->
-        Easy_format.Atom
-          (Chalk.green ~disable (quotes (encode s)), Easy_format.atom)
-    | `Intlit s -> Easy_format.Atom (Chalk.green ~disable s, Easy_format.atom)
+        Easy_format.Atom (Chalk.green (quotes (encode s)), Easy_format.atom)
+    | `Intlit s -> Easy_format.Atom (Chalk.green s, Easy_format.atom)
     | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
     | `List l ->
-        Easy_format.List
-          (("[", ",", "]", Easy_format.list), List.map (format ~disable) l)
+        Easy_format.List (("[", ",", "]", Easy_format.list), List.map format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc l ->
-        Easy_format.List
-          (("{", ",", "}", Easy_format.list), List.map (item ~disable) l)
+        Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
 
-  and item ~disable (name, json) =
+  and item (name, json) =
     let s =
       Printf.sprintf "%s:"
-        (name |> encode |> quotes |> Chalk.blue ~disable
-       |> Chalk.bold ~disable)
+        (name |> encode |> quotes |> Chalk.blue |> Chalk.bold)
     in
     Easy_format.Label
-      ( (Easy_format.Atom (s, Easy_format.atom), Easy_format.label),
-        format ~disable json )
+      ((Easy_format.Atom (s, Easy_format.atom), Easy_format.label), format json)
 end
 
 module Summarize = struct
@@ -101,7 +99,11 @@ end
 
 
 let to_string (json : t) ~colorize ~summarize =
-  let disable = not colorize in
   match summarize with
-  | false -> Easy_format.Pretty.to_string (Format.format ~disable json)
+  | false ->
+      let module Chalk = Chalk.Make (struct
+        let disable = not colorize
+      end) in
+      let module F = Format (Chalk) in
+      Easy_format.Pretty.to_string (F.format json)
   | true -> Easy_format.Pretty.to_string (Summarize.format json)
