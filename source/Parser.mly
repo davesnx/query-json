@@ -12,13 +12,14 @@
 %token NULL
 %token <string> IDENTIFIER
 %token RANGE
+%token FLATTEN
 %token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
 %token PIPE
 %token SEMICOLON
 %token COLON
-%token ADD SUB MULT DIV
+%token ADD SUB MULT DIV MODULO
 %token EQUAL NOT_EQUAL GREATER LOWER GREATER_EQUAL LOWER_EQUAL AND OR
 
 %token <string> FUNCTION
@@ -42,7 +43,7 @@
 %left AND
 %nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
 %left ADD SUB
-%left MULT DIV /* highest precedence */
+%left MULT DIV MODULO /* highest precedence */
 
 %start <expression> program
 
@@ -67,7 +68,7 @@ key_value (E):
     { key, Some e }
 
 elif_term:
-  | ELIF cond = item_expr THEN e = term
+  | ELIF cond = item_expr THEN e = sequence_expr
     { cond, e }
 
 // sequence_expr handles the lowest precedence operators: comma and pipe
@@ -87,6 +88,7 @@ sequence_expr:
   | ADD {Add}
   | MULT {Multiply}
   | DIV {Divide}
+  | MODULO {Modulo}
   | EQUAL {Equal}
   | NOT_EQUAL {Not_equal}
   | GREATER {Greater_than}
@@ -131,6 +133,19 @@ term:
       | x :: y :: z :: [] -> Range (x, Some y, Some z)
       | _ -> failwith "too many arguments for function range"
     }
+  | FLATTEN;
+    { Flatten (Some 1) }
+  | FLATTEN; OPEN_PARENT; CLOSE_PARENT;
+    { Flatten (Some 1) }
+  | FLATTEN; OPEN_PARENT; n = number; CLOSE_PARENT;
+    { Flatten (Some (int_of_float n)) }
+  | f = FUNCTION; cond = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
+    { match f with
+      | "while" -> While (cond, update)
+      | "until" -> Until (cond, update)
+      | "recurse" -> Recurse_with (cond, update)
+      | _ -> failwith @@ Console.Errors.missing f
+    }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
   | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
@@ -153,10 +168,14 @@ term:
       | "transpose" -> Transpose cb
       | "has" -> Has cb
       | "in" -> In cb
-      | "startswith" (* for backward compatibility *)
+      | "startwith" -> Startwith cb (* for backward compatibility *)
+      | "startswith" -> Startwith cb (* for backward compatibility *)
       | "starts_with" -> Starts_with cb
-      | "endswith" (* for backward compatibility *)
+      | "endwith" -> Endwith cb (* for backward compatibility *)
+      | "endswith" -> Endwith cb (* for backward compatibility *)
       | "ends_with" -> Ends_with cb
+      | "index" -> Index_of cb
+      | "rindex" -> Rindex_of cb
       | "split" -> Split cb
       | "join" -> Join cb
       | "contains" -> Contains cb
@@ -166,14 +185,13 @@ term:
     { match f with
       | "empty" -> Empty
       | "keys" -> Keys
-      | "flatten" -> Flatten
       | "head" -> Head
       | "tail" -> Tail
       | "length" -> Length
-      | "tostring" (* for backward compatibility *)
+      | "tostring" -> Tostring (* for backward compatibility *)
       | "to_string" -> To_string
-      | "tonumber" (* for backward compatibility *)
-      | "to_num" -> To_number
+      | "tonumber" -> Tonumber (* for backward compatibility *)
+      | "to_number" -> To_number
       | "type" -> Type
       | "sort" -> Sort
       | "uniq"
@@ -255,7 +273,7 @@ term:
       | false -> Pipe (e, Key k)
     }
 
-  | IF; cond = item_expr; THEN e1 = term; elifs = list(elif_term) ELSE; e2 = term; END
+  | IF; cond = item_expr; THEN e1 = sequence_expr; elifs = list(elif_term) ELSE; e2 = sequence_expr; END
     {
       let rec fold_elif elifs else_branch =
         match elifs with

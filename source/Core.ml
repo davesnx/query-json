@@ -21,8 +21,10 @@ let provider ~debug buf =
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
 
-let parse ?(debug = false) ?(colorize = true) input :
+let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
     (Ast.expression, string) result =
+  let _ = verbose in
+  (* verbose will be used for parser warnings in the future *)
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
   match menhir next_token with
@@ -42,9 +44,10 @@ let parse ?(debug = false) ?(colorize = true) input :
       Error
         (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run ?(colorize = false) query json =
+let run ?(colorize = false) ?(verbose = false) query json =
   let result =
-    parse ~colorize query |> Result.map (Compiler.compile ~colorize) |> fun x ->
+    parse ~colorize query |> Result.map (Compiler.compile ~colorize ~verbose)
+    |> fun x ->
     Result.bind x (fun runtime ->
         match Json.parse_string json with
         | Ok input -> runtime input

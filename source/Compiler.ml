@@ -114,7 +114,7 @@ module Operators = struct
     | `Null, `Null -> Output.return `Null
     | _ -> Error (make_error ~colorize str left)
 
-  let apply_op ~colorize str fn (left : Json.t) (right : Json.t) =
+  let apply_operation ~colorize str fn (left : Json.t) (right : Json.t) =
     match (left, right) with
     | `Float l, `Float r -> Output.return (`Float (fn l r))
     | `Int l, `Float r -> Output.return (`Float (fn (Int.to_float l) r))
@@ -147,11 +147,14 @@ module Operators = struct
   let equal l r = Output.return (`Bool (l = r))
   let not_equal l r = Output.return (`Bool (l <> r))
 
-  (* Since + is used to concat strings, objects, lists, we don't use apply_op *)
+  (* Since + is used to concat strings, objects, lists, we don't use apply_operation *)
   let add ~colorize = add ~colorize "+"
-  let subtract ~colorize = apply_op ~colorize "-" (fun l r -> l -. r)
-  let multiply ~colorize = apply_op ~colorize "*" (fun l r -> l *. r)
-  let divide ~colorize = apply_op ~colorize "/" (fun l r -> l /. r)
+  let subtract ~colorize = apply_operation ~colorize "-" (fun l r -> l -. r)
+  let multiply ~colorize = apply_operation ~colorize "*" (fun l r -> l *. r)
+  let divide ~colorize = apply_operation ~colorize "/" (fun l r -> l /. r)
+
+  let modulo ~colorize =
+    apply_operation ~colorize "%" (fun l r -> mod_float l r)
 end
 
 let keys ~colorize (json : Json.t) =
@@ -229,6 +232,359 @@ let length ~colorize (json : Json.t) =
   match json with
   | `List list -> Output.return (`Int (List.length list))
   | _ -> Error (make_error ~colorize "length" json)
+
+let emit_warning ~verbose message =
+  if verbose then Printf.eprintf "Warning: %s\n%!" message else ()
+
+let type_of (json : Json.t) =
+  let type_name =
+    match json with
+    | `List _ -> "array"
+    | `Assoc _ -> "object"
+    | `Bool _ -> "boolean"
+    | `Float _ | `Int _ | `Intlit _ -> "number"
+    | `Null -> "null"
+    | `String _ -> "string"
+  in
+  Output.return (`String type_name)
+
+let floor ~colorize (json : Json.t) =
+  match json with
+  | `Float f -> Output.return (`Int (int_of_float (floor f)))
+  | `Int n -> Output.return (`Int n)
+  | _ -> Error (make_error ~colorize "floor" json)
+
+let sqrt ~colorize (json : Json.t) =
+  match json with
+  | `Float f -> Output.return (`Float (sqrt f))
+  | `Int n -> Output.return (`Float (sqrt (float_of_int n)))
+  | _ -> Error (make_error ~colorize "sqrt" json)
+
+let to_number ~colorize ~verbose ~deprecated (json : Json.t) =
+  let name = if deprecated then "tonumber" else "to_number" in
+  if deprecated then
+    emit_warning ~verbose
+      "Using deprecated 'tonumber'. Use 'to_number' instead. This may not be \
+       supported in future versions.";
+  match json with
+  | `String s -> (
+      try Output.return (`Float (float_of_string s))
+      with Failure _ -> Error (make_error ~colorize name json))
+  | `Int _ | `Float _ -> Output.return json
+  | _ -> Error (make_error ~colorize name json)
+
+let to_string ~verbose ~deprecated (json : Json.t) =
+  if deprecated then
+    emit_warning ~verbose
+      "Using deprecated 'tostring'. Use 'to_string' instead. This may not be \
+       supported in future versions.";
+  Output.return (`String (Json.to_string ~colorize:false ~summarize:false json))
+
+let min ~colorize (json : Json.t) =
+  match json with
+  | `List [] -> Error (make_empty_list_error ~colorize "min")
+  | `List l ->
+      let compare_json a b =
+        match (a, b) with
+        | `Int x, `Int y -> compare x y
+        | `Float x, `Float y -> compare x y
+        | `Int x, `Float y -> compare (float_of_int x) y
+        | `Float x, `Int y -> compare x (float_of_int y)
+        | _ -> 0
+      in
+      Output.return
+        (List.fold_left
+           (fun acc x -> if compare_json x acc < 0 then x else acc)
+           (List.hd l) (List.tl l))
+  | _ -> Error (make_error ~colorize "min" json)
+
+let max ~colorize (json : Json.t) =
+  match json with
+  | `List [] -> Error (make_empty_list_error ~colorize "max")
+  | `List l ->
+      let compare_json a b =
+        match (a, b) with
+        | `Int x, `Int y -> compare x y
+        | `Float x, `Float y -> compare x y
+        | `Int x, `Float y -> compare (float_of_int x) y
+        | `Float x, `Int y -> compare x (float_of_int y)
+        | _ -> 0
+      in
+      Output.return
+        (List.fold_left
+           (fun acc x -> if compare_json x acc > 0 then x else acc)
+           (List.hd l) (List.tl l))
+  | _ -> Error (make_error ~colorize "max" json)
+
+let flatten ~colorize depth_opt (json : Json.t) =
+  match json with
+  | `List l ->
+      let depth = match depth_opt with Some d -> d | None -> 1 in
+      let rec flatten_n n lst =
+        if n <= 0 then lst
+        else
+          List.fold_left
+            (fun acc item ->
+              match item with
+              | `List inner -> acc @ flatten_n (n - 1) inner
+              | other -> acc @ [ other ])
+            [] lst
+      in
+      Output.return (`List (flatten_n depth l))
+  | _ -> Error (make_error ~colorize "flatten" json)
+
+let sort ~colorize (json : Json.t) =
+  match json with
+  | `List l ->
+      let compare_json a b =
+        match (a, b) with
+        | `Int x, `Int y -> compare x y
+        | `Float x, `Float y -> compare x y
+        | `Int x, `Float y -> compare (float_of_int x) y
+        | `Float x, `Int y -> compare x (float_of_int y)
+        | `String x, `String y -> compare x y
+        | _ -> 0
+      in
+      Output.return (`List (List.sort compare_json l))
+  | _ -> Error (make_error ~colorize "sort" json)
+
+let unique ~colorize (json : Json.t) =
+  match json with
+  | `List l ->
+      let rec unique acc = function
+        | [] -> List.rev acc
+        | x :: xs ->
+            if List.mem x acc then unique acc xs else unique (x :: acc) xs
+      in
+      Output.return (`List (unique [] l))
+  | _ -> Error (make_error ~colorize "unique" json)
+
+let any ~colorize (json : Json.t) =
+  match json with
+  | `List l ->
+      let is_truthy = function `Bool false | `Null -> false | _ -> true in
+      Output.return (`Bool (List.exists is_truthy l))
+  | _ -> Error (make_error ~colorize "any" json)
+
+let all ~colorize (json : Json.t) =
+  match json with
+  | `List l ->
+      let is_truthy = function `Bool false | `Null -> false | _ -> true in
+      Output.return (`Bool (List.for_all is_truthy l))
+  | _ -> Error (make_error ~colorize "all" json)
+
+let starts_with ~colorize ~verbose ~is_deprecated expr json compile_fn =
+  let name = if is_deprecated then "startwith/startswith" else "starts_with" in
+  if is_deprecated then
+    emit_warning ~verbose
+      "Using deprecated 'startwith' or 'startswith'. Use 'starts_with' \
+       instead. This may not be supported in future versions.";
+  let* pattern = compile_fn expr json in
+  match (json, pattern) with
+  | `String s, `String prefix ->
+      Output.return (`Bool (String.starts_with ~prefix s))
+  | _ -> Error (make_error ~colorize name json)
+
+let ends_with ~colorize ~verbose ~is_deprecated expr json compile_fn =
+  let name = if is_deprecated then "endwith/endswith" else "ends_with" in
+  if is_deprecated then
+    emit_warning ~verbose
+      "Using deprecated 'endwith' or 'endswith'. Use 'ends_with' instead. This \
+       may not be supported in future versions.";
+  let* pattern = compile_fn expr json in
+  match (json, pattern) with
+  | `String s, `String suffix ->
+      Output.return (`Bool (String.ends_with ~suffix s))
+  | _ -> Error (make_error ~colorize name json)
+
+let to_entries ~colorize (json : Json.t) =
+  match json with
+  | `Assoc obj ->
+      let entries =
+        List.map
+          (fun (key, value) ->
+            `Assoc [ ("key", `String key); ("value", value) ])
+          obj
+      in
+      Output.return (`List entries)
+  | _ -> Error (make_error ~colorize "to_entries" json)
+
+let from_entries ~colorize (json : Json.t) =
+  match json with
+  | `List entries -> (
+      let rec convert acc = function
+        | [] -> Ok (List.rev acc)
+        | entry :: rest -> (
+            match entry with
+            | `Assoc fields -> (
+                let key = List.assoc_opt "key" fields in
+                let value = List.assoc_opt "value" fields in
+                match (key, value) with
+                | Some (`String k), Some v -> convert ((k, v) :: acc) rest
+                | _ ->
+                    Error
+                      "from_entries requires objects with 'key' (string) and \
+                       'value' fields")
+            | _ -> Error "from_entries requires an array of objects")
+      in
+      match convert [] entries with
+      | Ok obj -> Output.return (`Assoc obj)
+      | Error e -> Error e)
+  | _ -> Error (make_error ~colorize "from_entries" json)
+
+let contains ~colorize expr json compile_fn =
+  let* needle = compile_fn expr json in
+  let json_equal a b =
+    match (a, b) with
+    | `Int x, `Int y -> x = y
+    | `Float x, `Float y -> x = y
+    | `Int x, `Float y -> float_of_int x = y
+    | `Float x, `Int y -> x = float_of_int y
+    | _ -> a = b
+  in
+  match (json, needle) with
+  | `String s, `String sub -> (
+      try
+        let _ = Str.search_forward (Str.regexp_string sub) s 0 in
+        Output.return (`Bool true)
+      with Not_found -> Output.return (`Bool false))
+  | `List haystack, `List needles ->
+      Output.return
+        (`Bool
+           (List.for_all (fun n -> List.exists (json_equal n) haystack) needles))
+  | _ -> Error (make_error ~colorize "contains" json)
+
+let explode ~colorize (json : Json.t) =
+  match json with
+  | `String s ->
+      let codepoints =
+        List.init (String.length s) (fun i -> `Int (Char.code (String.get s i)))
+      in
+      Output.return (`List codepoints)
+  | _ -> Error (make_error ~colorize "explode" json)
+
+let implode ~colorize (json : Json.t) =
+  match json with
+  | `List l ->
+      let chars =
+        List.map (function `Int n -> Char.chr n | _ -> Char.chr 0) l
+      in
+      Output.return (`String (String.of_seq (List.to_seq chars)))
+  | _ -> Error (make_error ~colorize "implode" json)
+
+let index_of ~colorize expr json compile_fn =
+  let* needle = compile_fn expr json in
+  match (json, needle) with
+  | `String haystack, `String needle -> (
+      try
+        let pos = Str.search_forward (Str.regexp_string needle) haystack 0 in
+        Output.return (`Int pos)
+      with Not_found -> Output.return `Null)
+  | _ -> Error (make_error ~colorize "index" json)
+
+let rindex_of ~colorize expr json compile_fn =
+  let* needle = compile_fn expr json in
+  match (json, needle) with
+  | `String haystack, `String needle -> (
+      let rec search_backward pos =
+        try
+          let found_pos =
+            Str.search_forward (Str.regexp_string needle) haystack pos
+          in
+          search_backward (found_pos + 1)
+        with Not_found -> if pos = 0 then None else Some (pos - 1)
+      in
+      match search_backward 0 with
+      | Some pos -> Output.return (`Int pos)
+      | None -> Output.return `Null)
+  | _ -> Error (make_error ~colorize "rindex" json)
+
+let group_by ~colorize ~verbose:_ expr json compile_fn =
+  match json with
+  | `List l ->
+      let groups = Hashtbl.create 10 in
+      List.iter
+        (fun item ->
+          match compile_fn expr item with
+          | Ok [ key ] ->
+              let key_str =
+                Json.to_string ~colorize:false ~summarize:false key
+              in
+              let existing =
+                try Hashtbl.find groups key_str with Not_found -> []
+              in
+              Hashtbl.replace groups key_str (item :: existing)
+          | _ -> ())
+        l;
+      let result =
+        Hashtbl.fold (fun _ items acc -> List.rev items :: acc) groups []
+      in
+      Output.return (`List (List.map (fun items -> `List items) result))
+  | _ -> Error (make_error ~colorize "group_by" json)
+
+let while_loop ~colorize:_ ~verbose:_ cond update json compile_fn =
+  let rec loop acc current =
+    match compile_fn cond current with
+    | Ok [ `Bool true ] -> (
+        match compile_fn update current with
+        | Ok [ next ] -> loop (current :: acc) next
+        | _ -> List.rev acc)
+    | Ok [ `Bool false ] -> List.rev acc
+    | _ -> List.rev acc
+  in
+  Ok (loop [] json)
+
+let until_loop ~colorize:_ ~verbose:_ cond update json compile_fn =
+  let rec loop acc current =
+    let acc_with_current = current :: acc in
+    match compile_fn cond current with
+    | Ok [ `Bool true ] -> List.rev acc_with_current
+    | Ok [ `Bool false ] -> (
+        match compile_fn update current with
+        | Ok [ next ] -> loop acc_with_current next
+        | _ -> List.rev acc_with_current)
+    | _ -> List.rev acc_with_current
+  in
+  Ok (loop [] json)
+
+let recurse_simple (json : Json.t) =
+  let rec recurse acc current compile_fn =
+    match compile_fn (Key "children") current with
+    | Ok children ->
+        let new_acc = current :: acc in
+        List.fold_left
+          (fun a child -> recurse a child compile_fn)
+          new_acc children
+    | Error _ -> current :: acc
+  in
+  fun compile_fn -> Ok (recurse [] json compile_fn)
+
+let recurse_with_cond ~colorize:_ ~verbose:_ f cond json compile_fn =
+  let rec loop acc current =
+    match compile_fn cond current with
+    | Ok [ `Bool true ] -> (
+        let acc_with_current = current :: acc in
+        match compile_fn f current with
+        | Ok [ next ] -> loop acc_with_current next
+        | _ -> List.rev acc_with_current)
+    | Ok [ `Bool false ] -> List.rev acc
+    | _ -> List.rev acc
+  in
+  Ok (loop [] json)
+
+let walk_tree ~colorize:_ ~verbose:_ expr json compile_fn =
+  let rec walk json =
+    let walked_json =
+      match json with
+      | `List l -> `List (List.map walk l)
+      | `Assoc obj -> `Assoc (List.map (fun (k, v) -> (k, walk v)) obj)
+      | other -> other
+    in
+    match compile_fn expr walked_json with
+    | Ok [ result ] -> result
+    | _ -> walked_json
+  in
+  Output.return (walk json)
 
 let filter ~colorize (fn : Json.t -> bool) (json : Json.t) =
   match json with
@@ -337,14 +693,16 @@ let slice ~colorize (start : int option) (finish : int option) (json : Json.t) =
            ("[" ^ Int.to_string start ^ ":" ^ Int.to_string finish ^ "]")
            json)
 
-let rec compile ~colorize expression json : (Json.t list, string) result =
+let rec compile ~colorize ~verbose expression json :
+    (Json.t list, string) result =
+  let compile_expr = compile ~colorize ~verbose in
   match expression with
   | Identity -> Output.return json
   | Empty -> Output.empty
   | Keys -> keys ~colorize json
   | Key key -> member ~colorize key json
   | Optional expr -> (
-      match compile ~colorize expr json with
+      match compile ~colorize ~verbose expr json with
       | Ok values -> Output.ok values
       | Error _ -> Output.return `Null)
   | Index idx -> index ~colorize idx json
@@ -354,28 +712,71 @@ let rec compile ~colorize expression json : (Json.t list, string) result =
   | Tail -> tail ~colorize json
   | Length -> length ~colorize json
   | Not -> Operators.not json
-  | Map expr -> map ~colorize expr json
+  | Type -> type_of json
+  | Floor -> floor ~colorize json
+  | Sqrt -> sqrt ~colorize json
+  | To_number -> to_number ~colorize ~verbose ~deprecated:false json
+  | Tonumber -> to_number ~colorize ~verbose ~deprecated:true json
+  | To_string -> to_string ~verbose ~deprecated:false json
+  | Tostring -> to_string ~verbose ~deprecated:true json
+  | Min -> min ~colorize json
+  | Max -> max ~colorize json
+  | Flatten depth_opt -> flatten ~colorize depth_opt json
+  | Sort -> sort ~colorize json
+  | Unique -> unique ~colorize json
+  | Any -> any ~colorize json
+  | All -> all ~colorize json
+  | Starts_with expr ->
+      starts_with ~colorize ~verbose ~is_deprecated:false expr json compile_expr
+  | Startwith expr ->
+      starts_with ~colorize ~verbose ~is_deprecated:true expr json compile_expr
+  | Ends_with expr ->
+      ends_with ~colorize ~verbose ~is_deprecated:false expr json compile_expr
+  | Endwith expr ->
+      ends_with ~colorize ~verbose ~is_deprecated:true expr json compile_expr
+  | To_entries -> to_entries ~colorize json
+  | From_entries -> from_entries ~colorize json
+  | Contains expr -> contains ~colorize expr json compile_expr
+  | Explode -> explode ~colorize json
+  | Implode -> implode ~colorize json
+  | Map expr -> map ~colorize ~verbose expr json
   | Operation (left, op, right) -> (
       match op with
-      | Add -> operation ~colorize left right (Operators.add ~colorize) json
+      | Add ->
+          operation ~colorize ~verbose left right (Operators.add ~colorize) json
       | Subtract ->
-          operation ~colorize left right (Operators.subtract ~colorize) json
+          operation ~colorize ~verbose left right
+            (Operators.subtract ~colorize)
+            json
       | Multiply ->
-          operation ~colorize left right (Operators.multiply ~colorize) json
+          operation ~colorize ~verbose left right
+            (Operators.multiply ~colorize)
+            json
       | Divide ->
-          operation ~colorize left right (Operators.divide ~colorize) json
+          operation ~colorize ~verbose left right
+            (Operators.divide ~colorize)
+            json
+      | Modulo ->
+          operation ~colorize ~verbose left right
+            (Operators.modulo ~colorize)
+            json
       | Greater_than ->
-          operation ~colorize left right (Operators.gt ~colorize) json
+          operation ~colorize ~verbose left right (Operators.gt ~colorize) json
       | Greater_than_or_equal ->
-          operation ~colorize left right (Operators.gte ~colorize) json
+          operation ~colorize ~verbose left right (Operators.gte ~colorize) json
       | Less_than ->
-          operation ~colorize left right (Operators.lt ~colorize) json
+          operation ~colorize ~verbose left right (Operators.lt ~colorize) json
       | Less_than_or_equal ->
-          operation ~colorize left right (Operators.lte ~colorize) json
-      | Equal -> operation ~colorize left right Operators.equal json
-      | Not_equal -> operation ~colorize left right Operators.not_equal json
-      | And -> operation ~colorize left right (Operators.and_ ~colorize) json
-      | Or -> operation ~colorize left right (Operators.or_ ~colorize) json)
+          operation ~colorize ~verbose left right (Operators.lte ~colorize) json
+      | Equal -> operation ~colorize ~verbose left right Operators.equal json
+      | Not_equal ->
+          operation ~colorize ~verbose left right Operators.not_equal json
+      | And ->
+          operation ~colorize ~verbose left right (Operators.and_ ~colorize)
+            json
+      | Or ->
+          operation ~colorize ~verbose left right (Operators.or_ ~colorize) json
+      )
   | Literal literal -> (
       match literal with
       | Bool b -> Output.return (`Bool b)
@@ -383,24 +784,24 @@ let rec compile ~colorize expression json : (Json.t list, string) result =
       | String s -> Output.return (`String s)
       | Null -> Output.return `Null)
   | Pipe (left, right) ->
-      let* left = compile ~colorize left json in
-      compile ~colorize right left
+      let* left = compile ~colorize ~verbose left json in
+      compile ~colorize ~verbose right left
   | Select conditional -> (
-      let* res = compile ~colorize conditional json in
+      let* res = compile ~colorize ~verbose conditional json in
       match res with
       | `Bool b -> (
           match b with true -> Output.return json | false -> Output.empty)
       | _ -> Error (make_error ~colorize "select" res))
   | List exprs ->
-      List.map (fun expr -> compile ~colorize expr json) exprs
+      List.map (fun expr -> compile ~colorize ~verbose expr json) exprs
       |> Output.collect
       |> Result.map (fun x -> [ `List x ])
   | Comma (left_expr, right_expr) ->
-      Result.bind (compile ~colorize left_expr json) (fun left ->
-          Result.bind (compile ~colorize right_expr json) (fun right ->
+      Result.bind (compile ~colorize ~verbose left_expr json) (fun left ->
+          Result.bind (compile ~colorize ~verbose right_expr json) (fun right ->
               Ok (left @ right)))
   | Object [] -> Output.return (`Assoc [])
-  | Object list -> objects ~colorize list json
+  | Object list -> objects ~colorize ~verbose list json
   | Has expr -> (
       match expr with
       | Literal ((String _ | Number _) as expr) -> has ~colorize json expr
@@ -416,29 +817,129 @@ let rec compile ~colorize expression json : (Json.t list, string) result =
   | Join expr -> join expr json
   | Fun builtin -> builtin_functions ~colorize builtin json
   | If_then_else (cond, if_branch, else_branch) -> (
-      let* cond = compile ~colorize cond json in
+      let* cond = compile ~colorize ~verbose cond json in
       match cond with
       | `Bool b ->
-          if b then compile ~colorize if_branch json
-          else compile ~colorize else_branch json
+          if b then compile ~colorize ~verbose if_branch json
+          else compile ~colorize ~verbose else_branch json
       | json ->
           Error (make_error ~colorize "if condition should be a bool" json))
+  | Sort_by expr -> sort_by ~colorize ~verbose expr json
+  | Min_by expr -> min_by ~colorize ~verbose expr json
+  | Max_by expr -> max_by ~colorize ~verbose expr json
+  | Unique_by expr -> unique_by ~colorize ~verbose expr json
+  | Index_of expr -> index_of ~colorize expr json compile_expr
+  | Rindex_of expr -> rindex_of ~colorize expr json compile_expr
+  | Group_by expr -> group_by ~colorize ~verbose expr json compile_expr
+  | While (cond, update) ->
+      while_loop ~colorize ~verbose cond update json compile_expr
+  | Until (cond, update) ->
+      until_loop ~colorize ~verbose cond update json compile_expr
+  | Recurse -> recurse_simple json compile_expr
+  | Recurse_with (f, cond) ->
+      recurse_with_cond ~colorize ~verbose f cond json compile_expr
+  | Walk expr -> walk_tree ~colorize ~verbose expr json compile_expr
   | _ -> Error (show_expression expression ^ " is not implemented")
 
-and operation ~colorize left_expr right_expr op json =
-  let* left = compile ~colorize left_expr json in
-  let* right = compile ~colorize right_expr json in
+and operation ~colorize ~verbose left_expr right_expr op json =
+  let* left = compile ~colorize ~verbose left_expr json in
+  let* right = compile ~colorize ~verbose right_expr json in
   op left right
 
-and map ~colorize (expr : expression) (json : Json.t) =
+and map ~colorize ~verbose (expr : expression) (json : Json.t) =
   match json with
   | `List list when List.length list > 0 ->
-      Output.collect (List.map (compile ~colorize expr) list)
+      Output.collect (List.map (compile ~colorize ~verbose expr) list)
       |> Result.map (fun x -> [ `List x ])
   | `List _ -> Error (make_empty_list_error ~colorize "map")
   | _ -> Error (make_error ~colorize "map" json)
 
-and objects ~colorize list json =
+and sort_by ~colorize ~verbose expr json =
+  match json with
+  | `List l ->
+      let compare_by a b =
+        match
+          (compile ~colorize ~verbose expr a, compile ~colorize ~verbose expr b)
+        with
+        | Ok [ av ], Ok [ bv ] -> (
+            match (av, bv) with
+            | `Int x, `Int y -> compare x y
+            | `Float x, `Float y -> compare x y
+            | `Int x, `Float y -> compare (float_of_int x) y
+            | `Float x, `Int y -> compare x (float_of_int y)
+            | `String x, `String y -> compare x y
+            | _ -> 0)
+        | _ -> 0
+      in
+      Output.return (`List (List.sort compare_by l))
+  | _ -> Error (make_error ~colorize "sort_by" json)
+
+and min_by ~colorize ~verbose expr json =
+  match json with
+  | `List [] -> Error (make_empty_list_error ~colorize "min_by")
+  | `List l ->
+      let compare_by a b =
+        match
+          (compile ~colorize ~verbose expr a, compile ~colorize ~verbose expr b)
+        with
+        | Ok [ av ], Ok [ bv ] -> (
+            match (av, bv) with
+            | `Int x, `Int y -> compare x y
+            | `Float x, `Float y -> compare x y
+            | `Int x, `Float y -> compare (float_of_int x) y
+            | `Float x, `Int y -> compare x (float_of_int y)
+            | _ -> 0)
+        | _ -> 0
+      in
+      let min_elem =
+        List.fold_left
+          (fun acc x -> if compare_by x acc < 0 then x else acc)
+          (List.hd l) (List.tl l)
+      in
+      Output.return min_elem
+  | _ -> Error (make_error ~colorize "min_by" json)
+
+and max_by ~colorize ~verbose expr json =
+  match json with
+  | `List [] -> Error (make_empty_list_error ~colorize "max_by")
+  | `List l ->
+      let compare_by a b =
+        match
+          (compile ~colorize ~verbose expr a, compile ~colorize ~verbose expr b)
+        with
+        | Ok [ av ], Ok [ bv ] -> (
+            match (av, bv) with
+            | `Int x, `Int y -> compare x y
+            | `Float x, `Float y -> compare x y
+            | `Int x, `Float y -> compare (float_of_int x) y
+            | `Float x, `Int y -> compare x (float_of_int y)
+            | _ -> 0)
+        | _ -> 0
+      in
+      let max_elem =
+        List.fold_left
+          (fun acc x -> if compare_by x acc > 0 then x else acc)
+          (List.hd l) (List.tl l)
+      in
+      Output.return max_elem
+  | _ -> Error (make_error ~colorize "max_by" json)
+
+and unique_by ~colorize ~verbose expr json =
+  match json with
+  | `List l ->
+      let rec unique acc seen = function
+        | [] -> List.rev acc
+        | x :: xs -> (
+            match compile ~colorize ~verbose expr x with
+            | Ok [ key ] ->
+                if List.mem key seen then unique acc seen xs
+                else unique (x :: acc) (key :: seen) xs
+            | _ -> unique (x :: acc) seen xs)
+      in
+      Output.return (`List (unique [] [] l))
+  | _ -> Error (make_error ~colorize "unique_by" json)
+
+and objects ~colorize ~verbose list json =
   List.map
     (fun (left_expr, right_expr) ->
       match (left_expr, right_expr) with
@@ -464,7 +965,7 @@ and objects ~colorize list json =
                   | Some v -> Output.return (`Assoc [ (key, v) ]))
               | _ -> assert false)
           | rexp ->
-              let* rexp = compile ~colorize rexp json in
+              let* rexp = compile ~colorize ~verbose rexp json in
               Output.return (`Assoc [ (key, rexp) ]))
       | _ -> Error (show_expression left_expr ^ " is not implemented"))
     list

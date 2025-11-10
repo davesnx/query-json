@@ -1,4 +1,9 @@
 val parse :
-  ?debug:bool -> ?colorize:bool -> string -> (Ast.expression, string) result
+  ?debug:bool ->
+  ?colorize:bool ->
+  ?verbose:bool ->
+  string ->
+  (Ast.expression, string) result
 
-val run : ?colorize:bool -> string -> string -> (string, string) result
+val run :
+  ?colorize:bool -> ?verbose:bool -> string -> string -> (string, string) result

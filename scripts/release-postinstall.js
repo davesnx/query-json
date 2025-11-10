@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const Path = require('path');
-const { execSync } = require('child_process');
+const Child_process = require('child_process');
 const Fs = require('fs');
 
 const platform = process.platform;
@@ -12,6 +12,11 @@ function find_arch() {
   // The running binary is 64-bit, so the OS is clearly 64-bit.
   if (process.arch === 'x64') {
     return 'x64';
+  }
+
+  // Check for arm64 (Apple Silicon)
+  if (process.arch === 'arm64') {
+    return 'arm64';
   }
 
   // All recent versions of Mac OS are 64-bit.
@@ -28,7 +33,7 @@ function find_arch() {
       useEnv = !!(
         process.env.SYSTEMROOT && Fs.statSync(process.env.SYSTEMROOT)
       );
-    } catch (err) {}
+    } catch (err) { }
 
     const sysRoot = useEnv ? process.env.SYSTEMROOT : 'C:\\Windows';
 
@@ -36,13 +41,13 @@ function find_arch() {
     const isWOW64 = false;
     try {
       isWOW64 = !!Fs.statSync(Path.join(sysRoot, 'sysnative'));
-    } catch (err) {}
+    } catch (err) { }
 
     return isWOW64 ? 'x64' : 'x86';
   }
 
   if (process.platform === 'linux') {
-    const output = execSync('getconf LONG_BIT', { encoding: 'utf8' });
+    const output = Child_process.execSync('getconf LONG_BIT', { encoding: 'utf8' });
     return output === '64\n' ? 'x64' : 'x86';
   }
 

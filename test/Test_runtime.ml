@@ -131,8 +131,8 @@ let tests =
     test {|[16 / 4 / 2, 16 / 4 * 2, 16 - 4 - 2, 16 - 4 + 2]|}
          {|null|}
          {|[ 2, 8, 10, 14 ]|};
-    (* test {|25 % 7|} {|null|} {|4|}; *)
-    (* test {|49732 % 472|} {|null|} {|172|}; *)
+    test {|25 % 7|} {|null|} {|4|};
+    test {|49732 % 472|} {|null|} {|172|};
     test {|has("foo")|} {|{"foo": 42}|} {|true|};
     test {|map(has("foo"))|} {|[{"foo": 42}, {"only_bar": false}]|} {|[ true, false ]|};
     test {|map(in({"foo": 42}))|} {|["foo", "bar"]|} {|[ true, false ]|};
@@ -164,4 +164,77 @@ let tests =
     test ".[0,1]" {|[1,2,3]|} "1\n2";
     test ".[1,2]" {|["a","b","c"]|} "\"b\"\n\"c\"";
     test ".[0,2,4]" {|[10,20,30,40,50]|} "10\n30\n50";
+
+    test "abs" "-42" "42";
+    test ".[] | abs" "[-1, -2, 3]" "1\n2\n3";
+
+    test "length" {|[1,2,3]|} "3";
+    test "map(length)" {|[[], [1,2]]|} {|[ 0, 2 ]|};
+
+    test "map(select(. > 2))" "[1,2,3,4,5]" {|[ 3, 4, 5 ]|};
+
+    test "reverse" "[1,2,3]" {|[ 3, 2, 1 ]|};
+
+    test "true and false" "null" "false";
+    test "true or false" "null" "true";
+    test "not" "true" "false";
+    test "not" "false" "true";
+
+    test "type" "42" {|"number"|};
+    test "type" {|"string"|} {|"string"|};
+    test "map(type)" {|[1, "a", null]|} {|[ "number", "string", "null" ]|};
+
+    test "floor" "3.7" "3";
+    test "sqrt" "16" "4";
+
+    test "to_number" {|"42"|} "42";
+    test "tonumber" {|"42"|} "42";
+
+    test "to_string" "42" {|"42"|};
+    test "tostring" "42" {|"42"|};
+
+    test "min" "[1,2,3]" "1";
+    test "max" "[1,2,3]" "3";
+
+    test "flatten" {|[[1,2],[3,4]]|} {|[ 1, 2, 3, 4 ]|};
+    test "flatten(1)" {|[[[1,2]],[[3,4]]]|} {|[ [ 1, 2 ], [ 3, 4 ] ]|};
+
+    test "sort" "[3,1,2]" {|[ 1, 2, 3 ]|};
+    test "unique" "[1,2,1,3,2]" {|[ 1, 2, 3 ]|};
+    test "any" "[true, false]" "true";
+    test "all" "[true, true]" "true";
+    test "all" "[true, false]" "false";
+
+    test {|starts_with("Hello")|} {|"Hello, world"|} "true";
+    test {|startswith("Hello")|} {|"Hello, world"|} "true";
+    test {|startwith("Hello")|} {|"Hello, world"|} "true";
+    test {|ends_with("world")|} {|"Hello, world"|} "true";
+    test {|endswith("world")|} {|"Hello, world"|} "true";
+    test {|endwith("world")|} {|"Hello, world"|} "true";
+
+    test "to_entries" {|{"a":1,"b":2}|} {|[ { "key": "a", "value": 1 }, { "key": "b", "value": 2 } ]|};
+    test "from_entries" {|[{"key":"a","value":1}]|} {|{ "a": 1 }|};
+
+    test {|contains("foo")|} {|"foobar"|} "true";
+    test "contains([2])" "[1,2,3]" "true";
+    test "explode" {|"hello"|} {|[ 104, 101, 108, 108, 111 ]|};
+    test "implode" "[72,101,108,108,111]" {|"Hello"|};
+
+    test "25 % 7" "null" "4";
+    test "10 % 3" "null" "1";
+
+    test "sort_by(.name)" {|[{"name":"z"},{"name":"a"}]|} {|[ { "name": "a" }, { "name": "z" } ]|};
+    test "min_by(.x)" {|[{"x":2},{"x":1}]|} {|{ "x": 1 }|};
+    test "unique_by(.x)" {|[{"x":1},{"x":2},{"x":1}]|} {|[ { "x": 1 }, { "x": 2 } ]|};
+
+    test {|index("b")|} {|"abc"|} "1";
+    test {|rindex("b")|} {|"abcb"|} "3";
+
+    test "group_by(.x)" {|[{"x":1},{"x":2},{"x":1}]|} {|[ [ { "x": 1 }, { "x": 1 } ], [ { "x": 2 } ] ]|};
+
+    test "[while(.<100; .*2)]" "1" {|[ 1, 2, 4, 8, 16, 32, 64 ]|};
+    test "[until(.>100; .*2)]" "1" {|[ 1, 2, 4, 8, 16, 32, 64, 128 ]|};
+
+    test "[recurse(.+1; . < 5)]" "0" {|[ 0, 1, 2, 3, 4 ]|};
+    test {|walk(if type == "number" then . + 1 else . end)|} {|{"a":1}|} {|{ "a": 2 }|};
   ]

@@ -35,14 +35,14 @@ module Runtime = struct
 end
 
 let execution (query : string option) (payload : string option)
-    (kind : Runtime.input_kind) (_verbose : bool) (debug : bool)
+    (kind : Runtime.input_kind) (verbose : bool) (debug : bool)
     (no_color : bool) =
   let colorize = not no_color in
   match query with
   | Some query -> (
       let runtime =
-        Core.parse ~debug ~colorize query
-        |> Result.map (Compiler.compile ~colorize)
+        Core.parse ~debug ~colorize ~verbose query
+        |> Result.map (Compiler.compile ~colorize ~verbose)
       in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime

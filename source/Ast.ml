@@ -12,6 +12,7 @@ type op =
   | Subtract
   | Multiply
   | Divide
+  | Modulo
   | Equal
   | Not_equal
   | Greater_than
@@ -52,9 +53,11 @@ type expression =
   | All (* all *)
   | In of expression (* in *)
   | Recurse (* recurse *)
+  | Recurse_with of expression * expression (* recurse(f; condition) *)
   | Recurse_down (* recurse_down *)
   | To_entries (* to_entries *)
   | To_string (* to_string *)
+  | Tostring (* tostring - deprecated *)
   | From_entries (* from_entries *)
   | With_entries (* with_entries *)
   | Nan
@@ -63,7 +66,7 @@ type expression =
   | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
   | Iterator (* .[] - currently represented as Index [], kept for future use *)
   | Range of int * int option * int option (* range(1, 10) *)
-  | Flatten (* flatten *)
+  | Flatten of int option (* flatten or flatten(n) *)
   | Head (* head *)
   | Tail (* tail *)
   | Map of expression
@@ -90,15 +93,22 @@ type expression =
   (* Strings *)
   | Test of string
     (* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
-  | To_number (* to_num *)
-  | Starts_with of expression (* starts_with *)
-  | Ends_with of expression (* ends_with *)
+  | To_number (* to_number *)
+  | Tonumber (* tonumber - deprecated *)
+  | Starts_with of expression (* startswith *)
+  | Startwith of expression (* startwith - deprecated *)
+  | Ends_with of expression (* endswith *)
+  | Endwith of expression (* endwith - deprecated *)
+  | Index_of of expression (* index *)
+  | Rindex_of of expression (* rindex *)
   | Split of expression (* split *)
   | Join of expression (* join *)
   | Path of expression (* path(x) *)
   (* Logic *)
   | If_then_else of
       expression * expression * expression (* If then (elseif) else end *)
+  | While of expression * expression (* while(condition; update) *)
+  | Until of expression * expression (* until(condition; update) *)
   | Break (* break *)
   (* Conditionals *)
   | Not (* not *)

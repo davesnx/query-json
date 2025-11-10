@@ -33,6 +33,7 @@ type token =
   | SUB
   | DIV
   | MULT
+  | MODULO
   | AND
   | OR
   | EQUAL
@@ -42,6 +43,7 @@ type token =
   | GREATER_EQUAL
   | LOWER_EQUAL
   | RANGE
+  | FLATTEN
   | IF
   | THEN
   | ELSE
@@ -87,6 +89,7 @@ let rec tokenize buf =
   | "-" -> Ok SUB
   | "*" -> Ok MULT
   | "/" -> Ok DIV
+  | "%" -> Ok MODULO
   | "[" -> Ok OPEN_BRACKET
   | "]" -> Ok CLOSE_BRACKET
   | "{" -> Ok OPEN_BRACE
@@ -102,6 +105,7 @@ let rec tokenize buf =
   | "(" -> Ok OPEN_PARENT
   | ")" -> Ok CLOSE_PARENT
   | "range" -> Ok RANGE
+  | "flatten" -> Ok FLATTEN
   | "if" -> Ok IF
   | "then" -> Ok THEN
   | "else" -> Ok ELSE

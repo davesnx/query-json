@@ -114,11 +114,13 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Optional Object Identifier-Index: `.foo?` ✅
   - Generic Object Index: `.[<string>]` ✅
   - Array Index: `.[2]` ✅
+  - Array Multi-Index: `.[0,2,4]` ✅
   - Pipe: `|` ✅
   - Array/String Slice: `.[10:15]` ✅
-  - Array/Object Value Iterator: `.[]` ⚠️
+  - Array/Object Value Iterator: `.[]` ✅
   - Comma: `,` ✅
   - Parenthesis: `()` ✅️
+  - Dictionary Construction: `{key: value}` ✅
 
 #### [Types and Values](https://stedolan.github.io/jq/manual/v1.6/#TypesandValues) ⚠️
 
@@ -128,7 +130,8 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - Add: `add` ✅
   - Addition: `+` ✅
   - Subtraction: `-` ✅
-  - Multiplication, division, modulo: `*`, `/`, and `%` ✅
+  - Multiplication, division: `*`, `/` ✅
+  - Modulo: `%` ✅
   - `length` ✅
   - `keys` ✅
   - `map` ✅
@@ -139,13 +142,13 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - `to_entries`, `from_entries`, `with_entries` ⚠️
   - `any`, `any(condition)`, `any(generator; condition)` ⚠️
   - `all`, `all(condition)`, `all(generator; condition)` ⚠️
-  - `flatten` ✅
+  - `flatten` ⚠️
   - `range(upto)`, `range(from;upto)` `range(from;upto;by)` ✅
   - `floor`, `sqrt` ⚠️
   - `tonumber`, `tostring` ⚠️
   - `type` ⚠️
   - `infinite`, `nan`, `isinfinite`, `isnan`, `isfinite`, `isnormal` ⚠️
-  - `sort`, `sort_by(path_expression)` ✅
+  - `sort`, `sort_by(path_expression)` ⚠️
   - `group_by(path_expression)` ⚠️
   - `min, max, min_by(path_exp), max_by(path_exp)` ⚠️
   - `unique, unique_by(path_exp)` ⚠️
@@ -165,7 +168,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
   - `==`, `!=` ✅
   - `if-then-else` ✅
   - `>`, `>=`, `<=`, `<` ✅
-  - `and`, `or`, `not` ⚠️
+  - `and`, `or`, `not` ✅
   - `break` 🔴
 
 #### [Regular expressions (PCRE)](https://stedolan.github.io/jq/manual/v1.6/#RegularexpressionsPCRE) ⚠️
@@ -178,7 +181,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to be, learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me [@twitter](https://twitter.com/davesnx) or email dsnxmoreno at gmail dot com.
+Contributions are what make the open source community such an amazing place to be, learn, inspire, and create. Any contributions you make are greatly appreciated. If you have any questions just contact me on [x](https://x.com/davesnx) or email dsnxmoreno at gmail dot com.
 
 ### Support
 

@@ -1,5 +1,26 @@
 # Unreleased
 
+- Add verbose flag support for deprecation warnings
+- Implement type function
+- Implement floor function
+- Implement sqrt function
+- Implement to_number/tonumber with deprecation warning
+- Implement to_string/tostring with deprecation warning
+- Implement min and max functions
+- Implement flatten and flatten(n) functions
+- Implement sort, unique, any, and all functions
+- Implement starts_with/startswith/startwith and ends_with/endswith/endwith with deprecation warnings
+- Implement to_entries and from_entries functions
+- Implement contains, explode, and implode functions
+- Implement modulo (%) operator
+- Implement sort_by, min_by, max_by, and unique_by functions
+- Implement index and rindex string functions
+- Implement group_by function
+- Implement while and until control flow
+- Implement recurse with parameters
+- Implement walk function
+- Add cram tests for deprecation warnings (test/warnings.t)
+
 ## 0.5.24
 
 - Fix #36: Implement indexes correctly (https://github.com/davesnx/query-json/issues/36)

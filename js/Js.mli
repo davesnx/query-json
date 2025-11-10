@@ -1,1 +1,2 @@
-val run : ?colorize:bool -> string -> string -> (string, string) result
+val run :
+  ?colorize:bool -> ?verbose:bool -> string -> string -> (string, string) result
