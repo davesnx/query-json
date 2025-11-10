@@ -14,6 +14,7 @@ module Runtime = struct
   type input_kind = File | Inline
 
   let run ~kind ~payload ~no_color runtime =
+    let colorize = not no_color in
     let input =
       match (kind, payload) with
       | File, Some file -> Json.parse_file file
@@ -27,22 +28,27 @@ module Runtime = struct
         match runtime json with
         | Ok json ->
             json
-            |> List.map
-                 (Json.to_string ~colorize:(not no_color) ~summarize:false)
+            |> List.map (Json.to_string ~colorize ~summarize:false)
             |> List.iter print_endline
-        | Error err -> print_endline (Console.Errors.print_error err))
-    | Error err -> print_endline (Console.Errors.print_error err)
+        | Error err ->
+            print_endline (Console.Errors.print_error ~colorize err))
+    | Error err -> print_endline (Console.Errors.print_error ~colorize err)
 end
 
 let execution (query : string option) (payload : string option)
     (kind : Runtime.input_kind) (_verbose : bool) (debug : bool)
     (no_color : bool) =
+  let colorize = not no_color in
   match query with
   | Some query -> (
-      let runtime = Core.parse ~debug query |> Result.map Compiler.compile in
+      let runtime =
+        Core.parse ~debug ~colorize query
+        |> Result.map (Compiler.compile ~colorize)
+      in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
-      | Error err -> print_endline (Console.Errors.print_error err))
+      | Error err ->
+          print_endline (Console.Errors.print_error ~colorize err))
   | None -> print_endline (Console.usage ())
 
 let () =

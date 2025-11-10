@@ -6,7 +6,10 @@ module Formatting = struct
 end
 
 module Errors = struct
-  let print_error str =
+  let print_error ~colorize str =
+    let module Chalk = Chalk.Make (struct
+      let disable = not colorize
+    end) in
     Formatting.enter 1
     ^ Chalk.red (Chalk.bold "Error")
     ^ Chalk.red ":" ^ Formatting.indent 1 ^ str ^ Formatting.enter 1
@@ -26,7 +29,11 @@ module Errors = struct
         String.sub str first length
     | _, _ -> str
 
-  let make ~input ~(start : Lexing.position) ~(end_ : Lexing.position) =
+  let make ~colorize ~input ~(start : Lexing.position) ~(end_ : Lexing.position)
+      =
+    let module Chalk = Chalk.Make (struct
+      let disable = not colorize
+    end) in
     let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
     Chalk.red (Chalk.bold "Parse error: ")
     ^ "Problem parsing at position "
@@ -46,8 +53,11 @@ module Errors = struct
        'https://github.com/davesnx/query-json/issues/new'"
 end
 
-let usage () =
+let usage ?(colorize = true) () =
   let open Formatting in
+  let module Chalk = Chalk.Make (struct
+    let disable = not colorize
+  end) in
   [
     enter 1;
     Chalk.yellow "Missing query as argument";

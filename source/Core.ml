@@ -21,7 +21,8 @@ let provider ~debug buf =
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
 
-let parse ?(debug = false) input : (Ast.expression, string) result =
+let parse ?(debug = false) ?(colorize = true) input :
+    (Ast.expression, string) result =
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
   match menhir next_token with
@@ -34,14 +35,16 @@ let parse ?(debug = false) input : (Ast.expression, string) result =
         print_endline "Lexer error";
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (Console.Errors.make ~input ~start:loc_start ~end_:loc_end)
+      Error (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (Console.Errors.make ~input ~start:loc_start ~end_:loc_end)
+      Error (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run query json =
+let run ?(colorize = false) query json =
   let result =
-    parse query |> Result.map Compiler.compile |> fun x ->
+    parse ~colorize query
+    |> Result.map (Compiler.compile ~colorize)
+    |> fun x ->
     Result.bind x (fun runtime ->
         match Json.parse_string json with
         | Ok input -> runtime input
@@ -51,6 +54,6 @@ let run query json =
   | Ok res ->
       Ok
         (res
-        |> List.map (Json.to_string ~colorize:false ~summarize:false)
+        |> List.map (Json.to_string ~colorize ~summarize:false)
         |> String.concat "\n")
   | Error e -> Error e

@@ -3,7 +3,7 @@ module Input = struct
     <input autoFocus=true className type_ value placeholder onChange />
 end
 
-let[@react.component] make ~value ~placeholder ~onChange =
+let [@react.component] make ~value ~placeholder ~onChange =
   let clearInput _ = onChange "" in
   let onChangeHandler event =
     let target = React.Event.Form.target event in
@@ -11,7 +11,7 @@ let[@react.component] make ~value ~placeholder ~onChange =
   in
 
   <div
-    className="relative flex flex-row bg-zinc-200 border-zinc-500 p-2 \
+    className="relative flex flex-row bg-zinc-200 border-zinc-500 p-0 \
                rounded-md focus:ring-2 focus:ring-blue-500">
     <Input
       type_="text"
@@ -20,9 +20,12 @@ let[@react.component] make ~value ~placeholder ~onChange =
       placeholder
       className="border-none w-full p-2 text-black focus:outline-none"
     />
-    <div className="absolute inset-y-0 right-3 flex items-center gap-2">
-      <Button kind=Ghost onClick=clearInput>
-        <span className="text-black text-xs">(React.string "Clear")</span>
-      </Button>
-    </div>
+    (match String.length value > 0 with
+    | true ->
+        <div className="absolute inset-y-0 right-3 flex items-center gap-2">
+          <Button kind=Ghost onClick=clearInput>
+            <span className="text-black text-xs">(React.string "Clear")</span>
+          </Button>
+        </div>
+    | false -> React.null)
   </div>
