@@ -4,6 +4,7 @@
 (using melange 0.1)
 
 (name query-json)
+(version 2bfdfad-dirty)
 
 (generate_opam_files true)
 
@@ -19,8 +20,6 @@
  (github davesnx/query-json))
 
 (implicit_transitive_deps true)
-
-(version 0.5.23)
 
 (package
  (name query-json)
