@@ -3,18 +3,31 @@ include Yojson.Safe.Util
 
 let quotes str = "\"" ^ str ^ "\""
 
+let read_json lexbuf =
+  let lexer_state = init_lexer () in
+  read_t lexer_state lexbuf
+
 let parse_string str =
-  try Ok (Yojson.Safe.from_string str)
+  try
+    let lexbuf = Lexing.from_string str in
+    Ok (read_json lexbuf)
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the string")
 
 let parse_file file =
-  try Ok (Yojson.Safe.from_file file)
+  try
+    let ic = open_in file in
+    let lexbuf = Lexing.from_channel ic in
+    let result = read_json lexbuf in
+    close_in ic;
+    Ok result
   with e ->
     Error (Printexc.to_string e ^ " There was an error reading the file")
 
 let parse_channel channel =
-  try Ok (Yojson.Safe.from_channel channel)
+  try
+    let lexbuf = Lexing.from_channel channel in
+    Ok (read_json lexbuf)
   with e ->
     Error
       (Printexc.to_string e ^ " There was an error reading from standard input")
@@ -67,8 +80,7 @@ struct
 
   and item (name, json) =
     let s =
-      Printf.sprintf "%s:"
-        (name |> encode |> quotes |> Chalk.blue |> Chalk.bold)
+      Printf.sprintf "%s:" (name |> encode |> quotes |> Chalk.blue |> Chalk.bold)
     in
     Easy_format.Label
       ((Easy_format.Atom (s, Easy_format.atom), Easy_format.label), format json)
@@ -96,7 +108,6 @@ module Summarize = struct
       ( (Easy_format.Atom (s, Easy_format.atom), Easy_format.label),
         Easy_format.Atom ("...", Easy_format.atom) )
 end
-
 
 let to_string (json : t) ~colorize ~summarize =
   match summarize with
