@@ -1,9 +1,10 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - '*'
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 permissions:
   contents: write
@@ -11,6 +12,7 @@ permissions:
 
 jobs:
   publish:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && startsWith(github.event.workflow_run.head_branch, 'v') }}
     name: Publish to NPM and GitHub
     runs-on: ubuntu-latest
 
@@ -28,15 +30,15 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
-          commit: ${{ github.sha }}
+          run_id: ${{ github.event.workflow_run.id }}
           name: query-json-js
-          path: _release/query-json-js/js.bc.js
+          path: _release/query-json-js
 
       - name: Download linux artifacts
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
-          commit: ${{ github.sha }}
+          run_id: ${{ github.event.workflow_run.id }}
           name: ubuntu-latest-artifact
           path: _release/platform-linux-x64
 
@@ -44,7 +46,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
-          commit: ${{ github.sha }}
+          run_id: ${{ github.event.workflow_run.id }}
           name: macos-latest-artifact
           path: _release/platform-darwin-x64
 
@@ -52,7 +54,7 @@ jobs:
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
-          commit: ${{ github.sha }}
+          run_id: ${{ github.event.workflow_run.id }}
           name: windows-latest-artifact
           path: _release/platform-windows-x64
 
