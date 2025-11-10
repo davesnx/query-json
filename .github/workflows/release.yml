@@ -29,8 +29,8 @@ jobs:
         with:
           workflow: ci.yml
           commit: ${{ github.sha }}
-          name: js.bc.js
-          path: _build/default/js
+          name: query-json-js
+          path: _release/query-json-js/js.bc.js
 
       - name: Download linux artifacts
         uses: dawidd6/action-download-artifact@v6
