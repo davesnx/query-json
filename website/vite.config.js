@@ -15,12 +15,8 @@ const config = {
     include: ["@monaco-editor/react", "react", "react-dom", "react-dom/client", "monaco-editor"],
   },
   build: {
-    rollupOptions: {
-      external: ["react-dom/client", "react", "monaco-editor"],
-    },
     commonjsOptions: {
       esmExternals: true,
-      /* transformMixedEsModules: true, */
     },
   },
   plugins: [

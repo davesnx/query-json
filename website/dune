@@ -14,7 +14,7 @@
  (enabled_if
   (<> %{os_type} "Win32"))
  (module_systems
-  (es6 re.js))
+  (es6 ml.js))
  (libraries reason-react app)
  (preprocess
   (pps melange.ppx reason-react-ppx)))

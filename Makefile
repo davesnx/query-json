@@ -39,6 +39,10 @@ web-build: ## Bundle the website
 web-preview: ## Preview the website
 	$(VITE) preview --config website/vite.config.js
 
+.PHONY: web-serve
+web-serve: ## Serve the dist directory
+	npx serve dist
+
 .PHONY: clean
 clean: ## Clean artifacts
 	$(DUNE) clean
