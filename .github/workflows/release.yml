@@ -47,7 +47,7 @@ jobs:
         with:
           workflow: ci.yml
           run_id: ${{ github.event.workflow_run.id }}
-          name: macos-13-x64-artifact
+          name: macos-15-intel-x64-artifact
           path: _release/platform-darwin-x64
 
       - name: Download macOS arm64 artifacts
@@ -55,7 +55,7 @@ jobs:
         with:
           workflow: ci.yml
           run_id: ${{ github.event.workflow_run.id }}
-          name: macos-14-arm64-artifact
+          name: macos-latest-arm64-artifact
           path: _release/platform-darwin-arm64
 
       - name: Download windows artifacts

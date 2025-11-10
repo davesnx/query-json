@@ -18,10 +18,10 @@ jobs:
           - os: ubuntu-latest
             arch: x64
             ocaml-compiler: 5.2.1
-          - os: macos-13
+          - os: macos-15-intel
             arch: x64
             ocaml-compiler: 5.2.1
-          - os: macos-14
+          - os: macos-latest
             arch: arm64
             ocaml-compiler: 5.2.1
           - os: windows-latest
