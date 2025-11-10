@@ -1,0 +1,129 @@
+# Unreleased
+
+## 0.5.23
+
+- Refactor to use Safe.from_string
+- Support integers bigger than 63bit
+- Functorize Chalk
+- Fix loading dependencies
+- Remove weird characters from output errors
+- Update dependencies
+- Put name in dune-project
+- Cleanup parser
+- Turn all tokens as _case
+- More expressive on the ast/compiler
+- Update ocamlformat-mlx
+- Fix Windows build (disable website build on Windows as mlx isn't supported)
+- Specify node running tailwind
+- Remove flatten
+- Add new builtins
+- Add array/obj iterator support
+- Add optional expression
+- Add new functions and more tests
+- Fix range
+- Add iterator base
+- Remove prerelease, fix deprecation warning
+- Slices are now supported
+- Refactor iters into matches
+
+## 0.5.13
+
+- Fix: Index can't make out of bounds and crash
+
+## 0.5.12
+
+- Refactor: Rename json to payload and input to json
+- Fix: Don't check for the payload until there's a query
+- Update documentation and logo
+- Web: Finish header and UI improvements
+- CI: Enable windows/mac builds
+- CI: Disable send to coveralls
+- Fix: Remove control characters from error
+- Feat: Allow to share URL with query/json
+- Fix: Adapt to multiple outputs
+- Feat: Add monaco editor
+- Feat: Add styled-ppx
+
+## 0.5.10
+
+- Bring query-json closer to jq
+- Package return (was pure), bind, lift2 and collect in a Results local module
+- Update the README file
+
+## 0.5.9
+
+- Refactor: Rename stuff
+- Feat: Add reason -> jsoo -> js -> bs
+- Feat: Add www with webpack
+- Feat: Add web in BS
+- Feat: Improve stdin without kind inline
+- Refactor: Move web to Js
+- Fix: Remove warnings of shadowing Some
+- Feat: Add web executable
+- Add more benchmarks
+- Setup jsoo with dune
+
+## 0.5.8
+
+- CI: Remove -rf flags from rf
+- CI: Fix snapshot folder
+- Refactor: Add recurse as a token
+- Fix #19
+- CI: Enable global cache and dependency cache
+- Fix: Remove warnings regarding openness shadowing Some
+- Feat: Add key with numbers work fine
+
+## 0.5.7
+
+- Enable Windows build
+- Add snapshot test
+- Enable e2e in windows under a different invocation of bats
+
+## 0.5.6
+
+- Feat: Add documentation on empty cmd
+
+## 0.5.5
+
+- Feat: Improve messages and fix stdin active waiting
+
+## 0.5.0
+
+- Feat: Add reading from stdin
+- Test: Add test coverage with bisect_ppx
+- Test: Add stdin test
+- Fix: Add a few error messages
+- Fix typos in README.md
+- Rename to query-json
+- Feat: Improve quality of errors
+- Feat: Colorized output and --no-color
+- Fix: Keys
+- Feat: Add error message clean
+- Fix: Key optional
+- Feat: Support json parsing
+- Feat: Add all functions
+- Feat: Add all identifier fns
+- Feat: Add formatting into errors
+- Feat: Improved compiled errors
+- Feat: Improved parser/lexer errors
+- Add logo
+
+## 0.2.5
+
+- Publish 0.2.5
+- Add performance benchmarks
+- Improve documentation
+
+## 0.2.0
+
+- CI: Make q available on CI
+- Add testing coverage
+- Add LICENCE
+
+## 0.1.5
+
+- Distro: Remove extension exe for binary
+
+## 0.1.2
+
+- Initial release
