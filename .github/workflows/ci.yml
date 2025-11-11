@@ -78,10 +78,10 @@ jobs:
           name: query-json-js
           path: _build/default/js/js.bc.js
 
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
+  publish:
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
     needs: build
-    name: Release
+    name: Publish and Deploy
     runs-on: ubuntu-latest
 
     steps:
@@ -94,60 +94,90 @@ jobs:
         with:
           node-version: 22.x
 
+      - name: Use OCaml 5.2.1
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+          opam-disable-sandboxing: true
+
+      - name: Install opam deps
+        run: make install
+
+      - name: Install npm deps
+        run: make npm-install
+
+      - name: Pin some deps
+        run: make pin
+
+      - name: Build
+        run: make build-prod
+
+      # Release to NPM and GitHub (only on tags)
       - name: Download JavaScript artifact
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v4
         with:
           name: query-json-js
           path: _release/query-json-js
 
       - name: Download linux artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v4
         with:
           name: ubuntu-latest-x64-artifact
           path: _release/platform-linux-x64
 
       - name: Download macOS x64 artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v4
         with:
           name: macos-15-intel-x64-artifact
           path: _release/platform-darwin-x64
 
       - name: Download macOS arm64 artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v4
         with:
           name: macos-latest-arm64-artifact
           path: _release/platform-darwin-arm64
 
       - name: Download windows artifacts
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/download-artifact@v4
         with:
           name: windows-latest-x64-artifact
           path: _release/platform-windows-x64
 
       - name: Allow execution of query-json
+        if: startsWith(github.ref, 'refs/tags/')
         run: chmod +x _release/platform-linux-x64/bin.exe
 
       - name: Get version
+        if: startsWith(github.ref, 'refs/tags/')
         id: version
         run: |
           VERSION=$(_release/platform-linux-x64/bin.exe --version)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate NPM package
+        if: startsWith(github.ref, 'refs/tags/')
         run: node scripts/make-npm-release.js ${{ steps.version.outputs.version }}
 
       - name: Check if version exists on NPM
+        if: startsWith(github.ref, 'refs/tags/')
         id: npm_check
         run: |
           if npm view @davesnx/query-json@${{ steps.version.outputs.version }} version 2>/dev/null; then
             echo "Version ${{ steps.version.outputs.version }} already exists on NPM, skipping publish"
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "should_publish_to_npm=false" >> "$GITHUB_OUTPUT"
           else
             echo "Version ${{ steps.version.outputs.version }} is available for publishing"
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "should_publish_to_npm=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Create archives for Github release
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd _release/platform-darwin-x64
           mv bin.exe query-json
@@ -170,7 +200,7 @@ jobs:
           cd ../..
 
       - name: Publish to NPM
-        if: steps.npm_check.outputs.should_publish == 'true'
+        if: startsWith(github.ref, 'refs/tags/') && steps.npm_check.outputs.should_publish_to_npm == 'true'
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
@@ -180,6 +210,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
 
       - name: Create Github release
+        if: startsWith(github.ref, 'refs/tags/')
         id: create_release
         uses: ncipollo/release-action@v1.16.0
         env:
@@ -192,6 +223,7 @@ jobs:
           makeLatest: true
 
       - name: Upload query-json-darwin-x64.zip to Github release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -202,6 +234,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload query-json-darwin-arm64.zip to Github release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -212,6 +245,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload query-json-linux-x64.zip to Github release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -222,6 +256,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload query-json-windows-x64.zip to Github release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -231,33 +266,14 @@ jobs:
           asset_name: query-json-windows-x64.zip
           asset_content_type: application/zip
 
-  opam:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
-    name: Publish to opam
-    runs-on: ubuntu-latest
+      # Publish to opam (only on tags)
+      - name: Install dune-release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: opam install dune-release -y
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5.2.1
-
-      - name: Install dependencies
-        run: |
-          opam install . --deps-only
-          opam install dune-release -y
-
-      - name: Install npm deps
-        run: make npm-install
-
-      - name: Build for release
-        run: make build-prod
-
-      - uses: davesnx/dune-release-action@main
+      - name: Publish to opam
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: davesnx/dune-release-action@main
         with:
           package-name: 'query-json'
           changelog: './CHANGES.md'
@@ -265,44 +281,13 @@ jobs:
           to-opam-repository: true
           to-github-releases: false
 
-  website:
-    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
-    needs: build
-    name: Deploy website
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
-
-      - name: Use OCaml 5.2.1
-        uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: 5.2.1
-          dune-cache: true
-          opam-disable-sandboxing: true
-
-      - name: Install deps
-        run: make install
-
-      - name: Install npm deps
-        run: make npm-install
-
-      - name: Pin some deps
-        run: make pin
-
-      - name: Build
-        run: make build-prod
-
+      # Deploy website (only on main or PR)
       - name: Build website
+        if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
         run: make web-build
 
       - name: Deploy to prod
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
@@ -310,7 +295,7 @@ jobs:
         run: npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=../dist
 
       - name: Deploy preview
-        if: ${{ github.event_name == 'pull_request' }}
+        if: github.event_name == 'pull_request'
         working-directory: ./website
         env:
           SITE_ID: ${{ secrets.SITE_ID }}
