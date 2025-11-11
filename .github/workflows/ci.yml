@@ -8,6 +8,9 @@ on:
       - '*'
   pull_request:
 
+env:
+  OCAML_COMPILER: 5.2.1
+
 permissions:
   contents: write
   pull-requests: write
@@ -21,16 +24,12 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x64
-            ocaml-compiler: 5.2.1
           - os: macos-15-intel
             arch: x64
-            ocaml-compiler: 5.2.1
           - os: macos-latest
             arch: arm64
-            ocaml-compiler: 5.2.1
           - os: windows-latest
             arch: x64
-            ocaml-compiler: 5.2.1
 
     steps:
       - uses: actions/checkout@v4
@@ -43,12 +42,50 @@ jobs:
         with:
           node-version: 22.x
 
-      - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v3
+      - name: Load opam cache
+        id: opam-cache
+        uses: actions/cache/restore@v4
         with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
-          dune-cache: true
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+          key: opam-${{ matrix.os }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('**.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_COMPILER }}
+        uses: ocaml/setup-ocaml@v3
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        with:
+          ocaml-compiler: ${{ env.OCAML_COMPILER }}
+          dune-cache: false
           opam-disable-sandboxing: true
+
+      - name: Get OPAM executable path
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const opam_path = await io.which('opam', true);
+            console.log('opam executable found: %s', opam_path);
+            const Fs = require('fs/promises');
+            await Fs.writeFile('.opam-path', opam_path, 'utf-8');
+            console.log('stored path to .opam-path');
+
+      - name: Use cached OPAM environment
+        shell: bash
+        run: |
+          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
+          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+          echo "OPAMROOT=$HOME/.opam"        >> "$GITHUB_ENV"
+
+          OPAM_PATH="$(cat .opam-path)"
+          chmod +x "$OPAM_PATH"
+          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
 
       - name: Install deps
         run: make install
@@ -64,6 +101,17 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Save opam cache
+        uses: actions/cache/save@v4
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+          key: opam-${{ matrix.os }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('**.opam') }}
 
       - name: Upload artifacts for ${{ matrix.os }}-${{ matrix.arch }}
         uses: actions/upload-artifact@v4
@@ -94,12 +142,50 @@ jobs:
         with:
           node-version: 22.x
 
-      - name: Use OCaml 5.2.1
-        uses: ocaml/setup-ocaml@v3
+      - name: Load opam cache
+        id: opam-cache
+        uses: actions/cache/restore@v4
         with:
-          ocaml-compiler: 5.2.1
-          dune-cache: true
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+          key: opam-ubuntu-latest-${{ env.OCAML_COMPILER }}-${{ hashFiles('**.opam') }}
+
+      - name: Use OCaml ${{ env.OCAML_COMPILER }}
+        uses: ocaml/setup-ocaml@v3
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        with:
+          ocaml-compiler: ${{ env.OCAML_COMPILER }}
+          dune-cache: false
           opam-disable-sandboxing: true
+
+      - name: Get OPAM executable path
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const opam_path = await io.which('opam', true);
+            console.log('opam executable found: %s', opam_path);
+            const Fs = require('fs/promises');
+            await Fs.writeFile('.opam-path', opam_path, 'utf-8');
+            console.log('stored path to .opam-path');
+
+      - name: Use cached OPAM environment
+        shell: bash
+        run: |
+          echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
+          echo "OPAMCOLOR=always"            >> "$GITHUB_ENV"
+          echo "OPAMCONFIRMLEVEL=unsafe-yes" >> "$GITHUB_ENV"
+          echo "OPAMERRLOGLEN=0"             >> "$GITHUB_ENV"
+          echo "OPAMPRECISETRACKING=1"       >> "$GITHUB_ENV"
+          echo "OPAMYES=1"                   >> "$GITHUB_ENV"
+          echo "OPAMROOT=$HOME/.opam"        >> "$GITHUB_ENV"
+
+          OPAM_PATH="$(cat .opam-path)"
+          chmod +x "$OPAM_PATH"
+          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
 
       - name: Install opam deps
         run: make install
@@ -112,6 +198,17 @@ jobs:
 
       - name: Build
         run: make build-prod
+
+      - name: Save opam cache
+        uses: actions/cache/save@v4
+        if: steps.opam-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ${{ runner.tool_cache }}/opam
+            ~/.opam
+            _opam
+            .opam-path
+          key: opam-ubuntu-latest-${{ env.OCAML_COMPILER }}-${{ hashFiles('**.opam') }}
 
       # Release to NPM and GitHub (only on tags)
       - name: Download JavaScript artifact
