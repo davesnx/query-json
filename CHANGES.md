@@ -1,6 +1,6 @@
 # Unreleased
 
-## 0.5.41
+## 0.5.42
 
 - Add verbose flag support for deprecation warnings
 - Implement type function
