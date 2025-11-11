@@ -8,6 +8,10 @@ on:
       - '*'
   pull_request:
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   build:
     name: Build and test
@@ -30,6 +34,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -71,3 +77,236 @@ jobs:
         with:
           name: query-json-js
           path: _build/default/js/js.bc.js
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Download JavaScript artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: query-json-js
+          path: _release/query-json-js
+
+      - name: Download linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-latest-x64-artifact
+          path: _release/platform-linux-x64
+
+      - name: Download macOS x64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-15-intel-x64-artifact
+          path: _release/platform-darwin-x64
+
+      - name: Download macOS arm64 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-latest-arm64-artifact
+          path: _release/platform-darwin-arm64
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-latest-x64-artifact
+          path: _release/platform-windows-x64
+
+      - name: Allow execution of query-json
+        run: chmod +x _release/platform-linux-x64/bin.exe
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(_release/platform-linux-x64/bin.exe --version)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Generate NPM package
+        run: node scripts/make-npm-release.js ${{ steps.version.outputs.version }}
+
+      - name: Check if version exists on NPM
+        id: npm_check
+        run: |
+          if npm view @davesnx/query-json@${{ steps.version.outputs.version }} version 2>/dev/null; then
+            echo "Version ${{ steps.version.outputs.version }} already exists on NPM, skipping publish"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version ${{ steps.version.outputs.version }} is available for publishing"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create archives for Github release
+        run: |
+          cd _release/platform-darwin-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-darwin-x64.zip .
+          cd ../..
+
+          cd _release/platform-darwin-arm64
+          mv bin.exe query-json
+          zip -r ../../query-json-darwin-arm64.zip .
+          cd ../..
+
+          cd _release/platform-linux-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-linux-x64.zip .
+          cd ../..
+
+          cd _release/platform-windows-x64
+          mv bin.exe query-json
+          zip -r ../../query-json-windows-x64.zip .
+          cd ../..
+
+      - name: Publish to NPM
+        if: steps.npm_check.outputs.should_publish == 'true'
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
+          npm config set scope "@davesnx"
+          npm publish --access public
+        working-directory: ./_release
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+
+      - name: Create Github release
+        id: create_release
+        uses: ncipollo/release-action@v1.16.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          makeLatest: true
+
+      - name: Upload query-json-darwin-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-darwin-x64.zip
+          asset_name: query-json-darwin-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload query-json-darwin-arm64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-darwin-arm64.zip
+          asset_name: query-json-darwin-arm64.zip
+          asset_content_type: application/zip
+
+      - name: Upload query-json-linux-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-linux-x64.zip
+          asset_name: query-json-linux-x64.zip
+          asset_content_type: application/zip
+
+      - name: Upload query-json-windows-x64.zip to Github release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-windows-x64.zip
+          asset_name: query-json-windows-x64.zip
+          asset_content_type: application/zip
+
+  opam:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    name: Publish to opam
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+
+      - name: Install dependencies
+        run: |
+          opam install . --deps-only
+          opam install dune-release -y
+
+      - uses: davesnx/dune-release-action@main
+        with:
+          package-name: 'query-json'
+          changelog: './CHANGES.md'
+          github-token: ${{ secrets.GH_TOKEN }}
+          to-opam-repository: true
+          to-github-releases: false
+
+  website:
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'pull_request'
+    needs: build
+    name: Deploy website
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Use OCaml 5.2.1
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.2.1
+          dune-cache: true
+          opam-disable-sandboxing: true
+
+      - name: Install deps
+        run: make install
+
+      - name: Install npm deps
+        run: make npm-install
+
+      - name: Pin some deps
+        run: make pin
+
+      - name: Build
+        run: make build-prod
+
+      - name: Build website
+        run: make web-build
+
+      - name: Deploy to prod
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        working-directory: ./website
+        env:
+          SITE_ID: ${{ secrets.SITE_ID }}
+          AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --prod --dir=../dist
+
+      - name: Deploy preview
+        if: ${{ github.event_name == 'pull_request' }}
+        working-directory: ./website
+        env:
+          SITE_ID: ${{ secrets.SITE_ID }}
+          AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: npx netlify deploy --site $SITE_ID --auth $AUTH_TOKEN --dir=../dist
