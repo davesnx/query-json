@@ -80,6 +80,17 @@ jobs:
       - name: Generate NPM package
         run: node scripts/make-npm-release.js ${{ steps.version.outputs.version }}
 
+      - name: Check if version exists on NPM
+        id: npm_check
+        run: |
+          if npm view @davesnx/query-json@${{ steps.version.outputs.version }} version 2>/dev/null; then
+            echo "Version ${{ steps.version.outputs.version }} already exists on NPM, skipping publish"
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Version ${{ steps.version.outputs.version }} is available for publishing"
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create archives for Github release
         run: |
           cd _release/platform-darwin-x64
@@ -103,6 +114,7 @@ jobs:
           cd ../..
 
       - name: Publish to NPM
+        if: steps.npm_check.outputs.should_publish == 'true'
         run: |
           npm config set //registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN
           npm config set scope "@davesnx"
