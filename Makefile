@@ -102,7 +102,8 @@ release: ## Create a new release (usage: make release VERSION=1.2.3)
 	fi
 	@echo "Creating release $(VERSION)"
 	@sed -i.bak "s/^(version .*)/(version $(VERSION))/" dune-project && rm -f dune-project.bak
-	@git add dune-project
+	@$(DUNE) build
+	@git add dune-project *.opam
 	@git commit -m "Bump version to $(VERSION)"
 	@git push origin main
 	@git tag -d $(VERSION) 2>/dev/null || true
