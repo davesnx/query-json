@@ -251,6 +251,12 @@ jobs:
           opam install . --deps-only
           opam install dune-release -y
 
+      - name: Install npm deps
+        run: make npm-install
+
+      - name: Build for release
+        run: make build-prod
+
       - uses: davesnx/dune-release-action@main
         with:
           package-name: 'query-json'
