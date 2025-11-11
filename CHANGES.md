@@ -1,5 +1,7 @@
 # Unreleased
 
+## 0.5.37
+
 - Add verbose flag support for deprecation warnings
 - Implement type function
 - Implement floor function
