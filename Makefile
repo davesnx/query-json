@@ -18,6 +18,7 @@ build: ## Build the project, including non installable libraries and executables
 .PHONY: build-prod
 build-prod: ## Build for production (--profile=prod)
 	$(DUNE) build --profile=release @all
+	$(DUNE) install
 
 .PHONY: dev
 dev: ## Build everything in watch mode
