@@ -28,7 +28,8 @@ let[@react.component] make ~jsonValue ~onJsonChange ~output =
       </div>
     </div>
     <div
-      className="w-full flex-1 flex flex-row border-b border-border bg-[#1E1E1E]">
+      className="w-full flex-1 flex flex-row border-b border-border \
+                 bg-[#1E1E1E]">
       <div className="max-w-[1360px] mx-auto flex-1 flex flex">
         <div className="overflow-auto flex-1 flex border-r border-border">
           <Editor.Json value=jsonValue onChange=onJsonChange />

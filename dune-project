@@ -35,7 +35,7 @@
   dune-build-info
   menhir
   cmdliner
-  yojson
+  (yojson (>= "2.2.2"))
   sedlex
   ppx_deriving
   easy-format
