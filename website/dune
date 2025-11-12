@@ -33,7 +33,6 @@
   (<> %{os_type} "Win32"))
  (deps
   (source_tree .)
-  (:config ./tailwind.config.js)
   (:input ./styles.css))
  (action
-  (run tailwind -c %{config} -i %{input} -o %{target})))
+  (run tailwind -i %{input} -o %{target})))
