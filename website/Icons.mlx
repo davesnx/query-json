@@ -61,3 +61,13 @@ module XIcon = struct
   let[@react.component] make ?(size : size = Medium) ?(className = "") =
     <Binding size=(size_to_number size) className />
 end
+
+module Delete = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element = "Delete"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end

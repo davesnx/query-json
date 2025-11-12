@@ -131,7 +131,7 @@ let[@react.component] make () =
     <TextInput
       value=state.query
       onChange=onQueryChange
-      placeholder="Type your jq filter (e.g., '.store.books[0]')"
+      placeholder="Type your filter (e.g., '.store.books[0]')"
     />
     <Editors jsonValue=(Option.value state.json ~default:"") onJsonChange output
     />

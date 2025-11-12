@@ -45,6 +45,8 @@ type options = {
   selectionHighlight : bool;
   occurrencesHighlight : bool;
   matchBrackets : string;
+  bracketPairColorizationEnabled : bool;
+      [@mel.as "bracketPairColorization.enabled"]
   readOnly : bool;
 }
 
@@ -62,21 +64,6 @@ module External = struct
   [@@mel.module "@monaco-editor/react"] [@@react.component]
 end
 
-let options : options =
-  {
-    fontSize = 16;
-    fontFamily = "IBM Plex Mono";
-    glyphMargin = false;
-    lineNumbersMinChars = 3;
-    padding = { top = 8; bottom = 8 };
-    minimap = { enabled = false };
-    wordWrap = "on";
-    selectionHighlight = false;
-    occurrencesHighlight = false;
-    matchBrackets = "never";
-    readOnly = false;
-  }
-
 type onChange = Write of (string -> unit) | ReadOnly
 
 let isReadOnly = function Write _ -> false | ReadOnly -> true
@@ -88,7 +75,22 @@ let[@react.component] make ~(value : string)
     | ReadOnly -> fun _ -> ()
     | Write handler -> handler
   in
-  let options = { options with readOnly = isReadOnly onChangeValue } in
+  let options =
+    {
+      fontSize = 16;
+      fontFamily = "IBM Plex Mono";
+      glyphMargin = false;
+      lineNumbersMinChars = 3;
+      padding = { top = 8; bottom = 8 };
+      minimap = { enabled = false };
+      wordWrap = "on";
+      selectionHighlight = false;
+      occurrencesHighlight = false;
+      matchBrackets = "never";
+      bracketPairColorizationEnabled = false;
+      readOnly = isReadOnly onChangeValue;
+    }
+  in
   <External
     value
     onChange
