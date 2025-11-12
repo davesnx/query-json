@@ -4,20 +4,22 @@ include Yojson.Safe.Util
 type json = t
 
 let parse_string str =
-  try Ok (Yojson.Safe.from_string str)
-  with e ->
-    Error (Printexc.to_string e ^ " There was an error reading the string")
+  try Ok (Yojson.Safe.from_string str) with
+  | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
+  | e -> Error (Printexc.to_string e ^ " There was an error reading the string")
 
 let parse_file file =
-  try Ok (Yojson.Safe.from_file file)
-  with e ->
-    Error (Printexc.to_string e ^ " There was an error reading the file")
+  try Ok (Yojson.Safe.from_file file) with
+  | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
+  | e -> Error (Printexc.to_string e ^ " There was an error reading the file")
 
 let parse_channel channel =
-  try Ok (Yojson.Safe.from_channel channel)
-  with e ->
-    Error
-      (Printexc.to_string e ^ " There was an error reading from standard input")
+  try Ok (Yojson.Safe.from_channel channel) with
+  | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
+  | e ->
+      Error
+        (Printexc.to_string e
+       ^ " There was an error reading from standard input")
 
 let encode str =
   let buf = Buffer.create (String.length str * 5 / 4) in
