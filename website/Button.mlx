@@ -1,22 +1,30 @@
-let baseClassName =
-  "inline-flex items-center justify-center rounded-md text-sm font-medium \
-   transition-colors focus-visible:outline-none focus-visible:ring-2 \
-   focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 \
-   disabled:pointer-events-none ring-offset-background"
+type kind = Default | Secondary | Ghost
+type size = Sm | Default
 
-type kind = Default | Ghost
-
-let[@react.component] make ~(kind : kind) ?className ~children ~onClick =
+let[@react.component] make ~(kind : kind) ?(size : size = Default) ?className
+    ~children ~onClick =
   let kindClassName =
     match kind with
     | Default ->
-        "border-none rounded-md py-2 px-3 text-gray-100 bg-blue-700 \
-         cursor-pointer transition-colors duration-200 ease-in-out \
-         hover:bg-blue-700/80"
+        "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
+    | Secondary ->
+        "bg-secondary text-secondary-foreground hover:bg-secondary/80 \
+         border-secondary"
     | Ghost -> "hover:bg-accent hover:text-accent-foreground"
+  in
+  let sizeClassName =
+    match size with
+    | Sm -> "gap-2 text-sm py-2 px-3"
+    | Default -> "gap-2 text-sm py-2 px-4"
   in
   let extra =
     className |> Option.map (fun s -> " " ^ s) |> Option.value ~default:""
   in
-  let className = baseClassName ^ " " ^ kindClassName ^ extra in
+  let className =
+    "inline-flex items-center justify-center rounded-lg font-medium \
+     cursor-pointer transition-colors focus-visible:outline-none \
+     focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 \
+     disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
+    ^ " " ^ kindClassName ^ " " ^ sizeClassName ^ extra
+  in
   <button className onClick>children</button>

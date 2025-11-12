@@ -1,8 +1,12 @@
 {
   "name": "query-json-website",
   "version": "0.0.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "lucide-react": "^0.553.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

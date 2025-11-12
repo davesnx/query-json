@@ -1,0 +1,56 @@
+let[@react.component] make () =
+  <footer className="border-t border-border bg-card">
+    <div className="max-w-[1400px] mx-auto px-6 py-6">
+      <div
+        className="flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-foreground">
+            (React.string
+               "A real-time query-json playground for filtering and querying \
+                JSON data")
+          </p>
+          <p className="text-xs text-muted-foreground font-medium">
+            (React.string "Made by ")
+            <a
+              href="https://x.com/davesnx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-muted-foreground hover:text-foreground \
+                         transition-colors underline">
+              (React.string "@davesnx")
+            </a>
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+          <a
+            href="https://sancho.dev/blog/cross-compile-query-json"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-muted-foreground hover:text-foreground \
+                       underline font-medium transition-colors">
+            (React.string {js|Read the blog post|js})
+          </a>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/davesnx/query-json"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground \
+                         transition-colors"
+              ariaLabel="GitHub">
+              <Icons.Github size=Small />
+            </a>
+            <a
+              href="https://x.com/davesnx"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground hover:text-foreground \
+                         transition-colors"
+              ariaLabel="X (Twitter)">
+              <Icons.XIcon size=Small />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>

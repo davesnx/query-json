@@ -33,16 +33,6 @@ let mockJson =
 }
 |}
 
-let page = "flex flex-col items-center h-full bg-zinc-900"
-
-let container =
-  "w-3/4 max-w-full h-full mx-auto flex flex-col justify-between items-center"
-
-let columnHalf =
-  "w-1/2 h-full mx-auto flex flex-col justify-between items-left gap-2"
-
-let box = "bg-gray-800 h-full w-full border-2 border-gray-700 rounded-md"
-
 type t = { query : string; json : string option }
 type actions = UpdateQuery of string | UpdateJson of string
 
@@ -88,6 +78,11 @@ module QueryJson = struct
   let run query json = to_result (query_json_run query json)
 end
 
+module Clipboard = struct
+  external writeText : string -> unit Js.Promise.t = "writeText"
+  [@@mel.scope "navigator", "clipboard"]
+end
+
 let[@react.component] make () =
   let hash = Router.get_hash () in
 
@@ -98,10 +93,11 @@ let[@react.component] make () =
   let initialState =
     match stateFromHash with
     | Some { query; json } -> { query; json }
-    | None -> { query = ""; json = Some mockJson }
+    | None -> { query = ".store"; json = Some mockJson }
   in
 
   let state, dispatch = React.useReducer reduce initialState in
+  let copied, setCopied = React.useState (fun () -> false) in
 
   let onQueryChange value = dispatch (UpdateQuery value) in
   let onJsonChange value = dispatch (UpdateJson value) in
@@ -115,39 +111,29 @@ let[@react.component] make () =
   let onShareClick _ =
     let hash = QueryParams.toHash { query = state.query; json = state.json } in
     match hash with
-    | Some hash -> Router.set_hash hash
-    | None -> Printf.eprintf "Error decoding"
+    | Some hash ->
+        let url =
+          Webapi.Dom.window |> Webapi.Dom.Window.location
+          |> Webapi.Dom.Location.origin
+        in
+        let fullUrl = url ^ "#" ^ hash in
+        let _promise = Clipboard.writeText fullUrl in
+        setCopied (fun _ -> true);
+        let _timeout =
+          Js.Global.setTimeout ~f:(fun () -> setCopied (fun _ -> false)) 2000
+        in
+        ()
+    | None -> Printf.eprintf "Error encoding state"
   in
 
-  <div className=page>
-    <Header onShareClick />
-    <div className="w-full mb-2" />
-    <div className=container>
-      <div className="w-full mb-2">
-        <TextInput
-          value=state.query
-          onChange=onQueryChange
-          placeholder="Type the query to filter against the JSON below. For \
-                       example: '.store'"
-        />
-      </div>
-      <div
-        className="w-full h-full mx-auto flex justify-between items-center \
-                   gap-2">
-        <div className=columnHalf>
-          <span className="text-white text-xs">
-            (React.string "Input JSON")
-          </span>
-          <Editor.Json
-            value=(Option.value state.json ~default:"") onChange=onJsonChange
-          />
-        </div>
-        <div className=columnHalf>
-          <span className="text-white text-xs">(React.string "Output")</span>
-          (match output with
-          | Some value -> <Editor.Output value />
-          | None -> <Editor.Empty />)
-        </div>
-      </div>
-    </div>
+  <div className="flex flex-col min-h-screen bg-background">
+    <Header onShareClick copied />
+    <TextInput
+      value=state.query
+      onChange=onQueryChange
+      placeholder="Type your jq filter (e.g., '.store.books[0]')"
+    />
+    <Editors jsonValue=(Option.value state.json ~default:"") onJsonChange output
+    />
+    <Footer />
   </div>

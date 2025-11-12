@@ -1,0 +1,42 @@
+module Title = struct
+  let[@react.component] make ?subtitle ~children =
+    <div className="px-6 py-3 flex items-center gap-2">
+      <h2 className="text-sm font-medium text-muted-foreground">
+        (React.string children)
+      </h2>
+      (match subtitle with
+      | Some subtitle ->
+          <span className="text-xs text-muted-foreground leading-1">
+            (React.string subtitle)
+          </span>
+      | None -> React.null)
+    </div>
+end
+
+let[@react.component] make ~jsonValue ~onJsonChange ~output =
+  <main className="flex-1 flex flex-col overflow-hidden">
+    <div className="w-full h-full border-b border-border bg-muted/20">
+      <div className="max-w-[1400px] mx-auto w-full h-full flex">
+        <div
+          className="flex-1 flex flex-col border-r border-border \
+                     last:border-r-0">
+          <Title>"INPUT JSON"</Title>
+        </div>
+        <div className="flex-1 flex flex-col">
+          <Title subtitle="(READ ONLY)">"OUTPUT"</Title>
+        </div>
+      </div>
+    </div>
+    <div className="w-full flex-1 flex flex-row border-b border-border bg-[#1E1E1E]">
+      <div className="max-w-[1400px] mx-auto flex-1 flex flex px-6">
+        <div className="overflow-auto flex-1 flex">
+          <Editor.Json value=jsonValue onChange=onJsonChange />
+        </div>
+        <div className="overflow-auto flex-1 flex">
+          (match output with
+          | Some value -> <Editor.Output value />
+          | None -> <Editor.Empty />)
+        </div>
+      </div>
+    </div>
+  </main>

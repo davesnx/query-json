@@ -1,31 +1,30 @@
-module Input = struct
-  let[@react.component] make ~type_ ~className ~value ~placeholder ~onChange =
-    <input autoFocus=true className type_ value placeholder onChange />
-end
-
 let[@react.component] make ~value ~placeholder ~onChange =
-  let clearInput _ = onChange "" in
   let onChangeHandler event =
     let target = React.Event.Form.target event in
     onChange target##value
   in
 
-  <div
-    className="relative flex flex-row bg-zinc-200 border-zinc-500 p-0 \
-               rounded-md focus:ring-2 focus:ring-blue-500">
-    <Input
-      type_="text"
-      value
-      onChange=onChangeHandler
-      placeholder
-      className="border-none w-full p-2 text-black focus:outline-none"
-    />
-    (match String.length value > 0 with
-    | true ->
-        <div className="absolute inset-y-0 right-3 flex items-center gap-2">
-          <Button kind=Ghost onClick=clearInput>
-            <span className="text-black text-xs">(React.string "Clear")</span>
-          </Button>
-        </div>
-    | false -> React.null)
+  <div className="border-b border-border bg-muted/30">
+    <div className="max-w-[1400px] mx-auto px-6 py-4">
+      <div className="flex items-center gap-3 relative">
+        <label
+          htmlFor="query"
+          className="absolute right-[100%] mr-4 text-sm font-medium \
+                     text-muted-foreground whitespace-nowrap \
+                     max-[1400px]:hidden">
+          (React.string "QUERY")
+        </label>
+        <input
+          id="query"
+          type_="text"
+          value
+          onChange=onChangeHandler
+          placeholder
+          className="flex-1 bg-background border border-border rounded-lg px-4 \
+                     py-2 text-sm text-foreground \
+                     placeholder:text-muted-foreground focus:outline-none \
+                     focus:ring-2 focus:ring-ring transition-shadow"
+        />
+      </div>
+    </div>
   </div>
