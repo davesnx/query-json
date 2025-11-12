@@ -70,14 +70,6 @@ struct
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc (l : (string * json) list) ->
         Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
-    | `Tuple (l : json list) ->
-        Easy_format.List
-          (("[", ",", "]", Easy_format.list), List.map to_easy_format l)
-    | `Variant (name, None) -> Easy_format.Atom (name, Easy_format.atom)
-    | `Variant (name, Some json) ->
-        Easy_format.Label
-          ( (Easy_format.Atom (name, Easy_format.atom), Easy_format.label),
-            to_easy_format json )
 
   and item (name, json) =
     let s =

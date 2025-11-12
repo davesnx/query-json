@@ -41,8 +41,6 @@ let get_field_name json =
   | `Int _ -> "int"
   | `Null -> "null"
   | `String _ -> "string"
-  | `Variant _ -> "variant"
-  | `Tuple _ -> "list"
   | `Intlit _ -> "int"
 
 let make_error ~colorize (name : string) (json : Json.t) =
@@ -239,12 +237,12 @@ let emit_warning ~verbose message =
 let type_of (json : Json.t) =
   let type_name =
     match json with
-    | `Tuple _ | `List _ -> "array"
+    | `List _ -> "array"
     | `Assoc _ -> "object"
     | `Bool _ -> "boolean"
     | `Float _ | `Int _ | `Intlit _ -> "number"
     | `Null -> "null"
-    | `Variant _ | `String _ -> "string"
+    | `String _ -> "string"
   in
   Output.return (`String type_name)
 
