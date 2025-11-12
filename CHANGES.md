@@ -1,5 +1,9 @@
 # Unreleased
 
+## 0.5.43
+
+- Fix auto publish
+
 ## 0.5.42
 
 - Add verbose flag support for deprecation warnings
