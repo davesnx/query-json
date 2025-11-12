@@ -57,7 +57,7 @@ module External = struct
     value:string ->
     onChange:(string -> unit) ->
     ?className:string ->
-    style:ReactDOM.Style.t ->
+    ?style:ReactDOM.Style.t ->
     theme:string ->
     options:options ->
     React.element = "default"
@@ -98,5 +98,4 @@ let[@react.component] make ~(value : string)
     theme="vs-dark"
     language=(mode_to_string mode)
     height="100%"
-    style=(ReactDOM.Style.make ~padding:"8px" ~height:"100%" ())
   />
