@@ -272,9 +272,9 @@ jobs:
 
       - name: Publish to opam
         if: startsWith(github.ref, 'refs/tags/')
-        uses: davesnx/dune-release-action@72c2498e49b3cf2968857892f5b0dfd93ff04877
+        uses: davesnx/dune-release-action@v0.2.1
         with:
-          package-name: 'query-json'
+          packages: 'query-json'
           changelog: './CHANGES.md'
           github-token: ${{ secrets.GH_TOKEN }}
           to-opam-repository: true
