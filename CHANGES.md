@@ -1,6 +1,6 @@
 # Unreleased
 
-## 0.5.43
+## 0.5.44
 
 - Fix auto publish
 
