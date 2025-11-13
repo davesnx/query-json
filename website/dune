@@ -1,5 +1,6 @@
 (library
  (name app)
+ (package query-json-playground)
  (modes melange)
  (enabled_if
   (<> %{os_type} "Win32"))
@@ -10,6 +11,7 @@
 
 (melange.emit
  (target website)
+ (package query-json-playground)
  (modules Website)
  (enabled_if
   (<> %{os_type} "Win32"))
@@ -29,6 +31,7 @@
 
 (rule
  (target output.css)
+ (package query-json-playground)
  (enabled_if
   (<> %{os_type} "Win32"))
  (deps
