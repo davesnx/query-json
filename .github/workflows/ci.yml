@@ -272,7 +272,7 @@ jobs:
 
       - name: Create source distribution archive
         if: startsWith(github.ref, 'refs/tags/')
-        run: opam exec -- dune-release distrib
+        run: opam exec -- dune-release distrib -p query-json
 
       - name: Upload source archive to Github release
         if: startsWith(github.ref, 'refs/tags/')
