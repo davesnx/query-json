@@ -270,6 +270,21 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: opam install dune-release -y
 
+      - name: Create source distribution archive
+        if: startsWith(github.ref, 'refs/tags/')
+        run: opam exec -- dune-release distrib
+
+      - name: Upload source archive to Github release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./query-json-${{ steps.version.outputs.version }}.tbz
+          asset_name: query-json-${{ steps.version.outputs.version }}.tbz
+          asset_content_type: application/x-tar
+
       - name: Publish to opam
         if: startsWith(github.ref, 'refs/tags/')
         uses: davesnx/dune-release-action@v0.2.1
