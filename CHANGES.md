@@ -1,6 +1,6 @@
 # Unreleased
 
-## 0.5.47
+## 0.5.48
 
 - Fix auto publish
 - Remove lib app, melange-emit website and output.css from package
