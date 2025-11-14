@@ -23,6 +23,7 @@ depends: [
   "reason-react-ppx"
   "ocamlmerlin-mlx" {with-dev-setup}
   "ocamlformat-mlx" {with-dev-setup}
+  "ocaml-lsp-server" {with-dev-setup}
   "odoc" {with-doc}
 ]
 build: [

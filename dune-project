@@ -30,10 +30,10 @@
 
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
-  ocaml
+  (ocaml (>= 4.14.1))
   dune
   dune-build-info
-  menhir
+  (menhir (>= 20250903))
   cmdliner
   (yojson (>= "3.0.0"))
   sedlex
@@ -41,6 +41,7 @@
   easy-format
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
+  (ocaml-lsp-server :with-dev-setup)
 ))
 
 (package
@@ -74,6 +75,7 @@
   reason-react-ppx
   (ocamlmerlin-mlx :with-dev-setup)
   (ocamlformat-mlx :with-dev-setup)
+  (ocaml-lsp-server :with-dev-setup)
 ))
 
 (dialect

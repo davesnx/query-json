@@ -82,7 +82,7 @@ pin: ## Pin dependencies
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.2.1 --deps-only --with-test -y
+	opam switch create . 5.3.0 --deps-only --with-test --no-install -y
 
 .PHONY: install
 install: ## Install opam deps
