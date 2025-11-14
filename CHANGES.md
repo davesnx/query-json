@@ -1,5 +1,9 @@
 # Unreleased
 
+## 0.5.49
+
+- Update lowerbound for ocaml and menhir
+
 ## 0.5.48
 
 - Fix auto publish
