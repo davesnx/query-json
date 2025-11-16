@@ -30,11 +30,11 @@
 
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
-  (ocaml (>= 4.13.0))
-  dune
+  (ocaml (>= 4.14.1))
+  (dune (>= 3.17))
   dune-build-info
   (menhir (>= 20250903))
-  cmdliner
+  (cmdliner (>= 2.0.0))
   (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
