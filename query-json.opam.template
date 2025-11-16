@@ -1,2 +1,2 @@
-available: [ arch != "x86_32" & arch != "ppc32" & arch != "arm32" ]
+conflicts: [ "ocaml-option-bytecode-only" ] # This ensures that the project is only built with the native compiler
 x-maintenance-intent: ["(latest)"]
