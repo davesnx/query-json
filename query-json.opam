@@ -14,7 +14,7 @@ license: "MIT"
 homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
-  "ocaml" {>= "4.14.1"}
+  "ocaml" {>= "4.13.0"}
   "dune" {>= "3.17"}
   "dune-build-info"
   "menhir" {>= "20250903"}
@@ -43,3 +43,5 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/davesnx/query-json.git"
+available: [ arch != "x86_32" & arch != "ppc32" & arch != "arm32" ]
+x-maintenance-intent: ["(latest)"]

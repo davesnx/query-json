@@ -30,7 +30,7 @@
 
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
-  (ocaml (>= 4.14.1))
+  (ocaml (>= 4.13.0))
   dune
   dune-build-info
   (menhir (>= 20250903))
