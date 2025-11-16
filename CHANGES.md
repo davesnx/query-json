@@ -1,5 +1,10 @@
 # Unreleased
 
+## 0.5.52
+
+- Remove melange-webapi
+- Make development work in 5.3.0
+
 ## 0.5.51
 
 - Enable 32 bits but disable for bytecode
