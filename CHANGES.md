@@ -1,5 +1,9 @@
 # Unreleased
 
+## 0.5.50
+
+- Disable project for 4.13 and 32bits
+
 ## 0.5.49
 
 - Update lowerbound for ocaml and menhir
