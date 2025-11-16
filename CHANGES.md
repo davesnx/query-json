@@ -1,5 +1,9 @@
 # Unreleased
 
+## 0.5.51
+
+- Enable 32 bits but disable for bytecode
+
 ## 0.5.50
 
 - Disable project for 4.13 and 32bits
