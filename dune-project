@@ -70,7 +70,6 @@
   mlx
   (melange (>= 5.0.1))
   melange-json
-  melange-webapi
   reason-react
   reason-react-ppx
   (ocamlmerlin-mlx :with-dev-setup)

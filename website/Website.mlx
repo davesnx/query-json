@@ -1,5 +1,6 @@
 let () =
-  let element = Webapi.Dom.Document.querySelector "#root" Webapi.Dom.document in
+  let document = Web.window |> Web.Window.document in
+  let element = document |> Web.Document.querySelector "#root" in
   match element with
   | Some el ->
       let root = ReactDOM.Client.createRoot el in

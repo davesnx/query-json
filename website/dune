@@ -5,7 +5,7 @@
  (enabled_if
   (<> %{os_type} "Win32"))
  (modules :standard \ Website)
- (libraries reason-react melange.dom melange.js melange-json melange-webapi)
+ (libraries reason-react melange.dom melange.js melange-json web)
  (preprocess
   (pps melange.ppx reason-react-ppx melange-json.ppx)))
 
@@ -17,7 +17,7 @@
   (<> %{os_type} "Win32"))
  (module_systems
   (es6 ml.js))
- (libraries reason-react app)
+ (libraries reason-react app web)
  (preprocess
   (pps melange.ppx reason-react-ppx)))
 

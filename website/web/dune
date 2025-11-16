@@ -1,0 +1,7 @@
+(library
+ (name web)
+ (package query-json-playground)
+ (modes melange)
+ (libraries melange.dom melange.js)
+ (preprocess
+  (pps melange.ppx)))

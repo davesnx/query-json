@@ -112,10 +112,7 @@ let[@react.component] make () =
     let hash = QueryParams.toHash { query = state.query; json = state.json } in
     match hash with
     | Some hash ->
-        let url =
-          Webapi.Dom.window |> Webapi.Dom.Window.location
-          |> Webapi.Dom.Location.origin
-        in
+        let url = Web.window |> Web.Window.location |> Web.Location.origin in
         let fullUrl = url ^ "#" ^ hash in
         let _promise = Clipboard.writeText fullUrl in
         setCopied (fun _ -> true);
