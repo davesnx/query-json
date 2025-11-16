@@ -66,9 +66,9 @@
 
   Play with it in the online playground: https://query-json.netlify.app")
  (depends
-  ocaml
+  (ocaml (>= 5.3.0))
   mlx
-  melange
+  (melange (>= 5.0.1))
   melange-json
   melange-webapi
   reason-react

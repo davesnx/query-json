@@ -14,9 +14,9 @@ homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "dune" {>= "3.17"}
-  "ocaml"
+  "ocaml" {>= "5.3.0"}
   "mlx"
-  "melange"
+  "melange" {>= "5.0.1"}
   "melange-json"
   "melange-webapi"
   "reason-react"
