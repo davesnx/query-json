@@ -53,13 +53,16 @@ module Github = struct
 end
 
 module XIcon = struct
-  module Binding = struct
-    external make : size:int -> className:string -> React.element = "X"
-    [@@react.component] [@@mel.module "lucide-react"]
-  end
-
   let[@react.component] make ?(size : size = Medium) ?(className = "") =
-    <Binding size=(size_to_number size) className />
+    let size_classname =
+      match size with
+      | Small -> "text-base"
+      | Medium -> "text-xl"
+      | Large -> "text-2xl"
+    in
+    <span className=(size_classname ^ " " ^ className)>
+      (React.string {js|𝕏|js})
+    </span>
 end
 
 module Delete = struct
