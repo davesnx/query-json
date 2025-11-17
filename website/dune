@@ -17,7 +17,7 @@
   (<> %{os_type} "Win32"))
  (module_systems
   (es6 ml.js))
- (libraries reason-react app web)
+ (libraries reason-react web app)
  (preprocess
   (pps melange.ppx reason-react-ppx)))
 
