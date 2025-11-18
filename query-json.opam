@@ -7,7 +7,7 @@ query-json is a faster and simpler re-implementation of jq's language in OCaml, 
 
   query-json is a CLI to run small programs against JSON, the same idea as sed but for JSON files.
 
-  Play with it in the online playground: https://query-json.netlify.app"""
+  Play with it in the online playground: https://query-json.pages.dev"""
 maintainer: ["David Sancho <dsnxmoreno@gmail.com>"]
 authors: ["David Sancho <dsnxmoreno@gmail.com>"]
 license: "MIT"

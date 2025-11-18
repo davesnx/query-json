@@ -28,7 +28,7 @@
 
   query-json is a CLI to run small programs against JSON, the same idea as sed but for JSON files.
 
-  Play with it in the online playground: https://query-json.netlify.app")
+  Play with it in the online playground: https://query-json.pages.dev")
  (depends
   (ocaml (>= 4.14.1))
   (dune (>= 3.17))
@@ -50,7 +50,7 @@
  (synopsis "The query-json-js package is the JavaScript library for query-json, compiled by js_of_ocaml")
  (description "query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
-  Play with it in the online playground: https://query-json.netlify.app")
+  Play with it in the online playground: https://query-json.pages.dev")
  (depends
   ocaml
   js_of_ocaml
@@ -64,7 +64,7 @@
  (synopsis "The query-json-playground package is the web playground for query-json, written in reason-react and compiled by Melange")
  (description "query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
-  Play with it in the online playground: https://query-json.netlify.app")
+  Play with it in the online playground: https://query-json.pages.dev")
  (depends
   (ocaml (>= 5.3.0))
   mlx

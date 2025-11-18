@@ -6,7 +6,7 @@ synopsis:
 description: """
 query-json is a faster and simpler re-implementation of jq's language in OCaml, compiled to a native binary (query-json) and as a JavaScript library (query-json-js).
 
-  Play with it in the online playground: https://query-json.netlify.app"""
+  Play with it in the online playground: https://query-json.pages.dev"""
 maintainer: ["David Sancho <dsnxmoreno@gmail.com>"]
 authors: ["David Sancho <dsnxmoreno@gmail.com>"]
 license: "MIT"
