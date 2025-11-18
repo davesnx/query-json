@@ -26,6 +26,7 @@
  (enabled_if
   (<> %{os_type} "Win32"))
  (package query-json-playground)
+ (source_trees ../node_modules/@tailwindcss/cli)
  (files
   ("../node_modules/@tailwindcss/cli/dist/index.mjs" as tailwind)))
 
