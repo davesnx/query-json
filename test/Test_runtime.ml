@@ -237,4 +237,8 @@ let tests =
 
     test "[recurse(.+1; . < 5)]" "0" {|[ 0, 1, 2, 3, 4 ]|};
     test {|walk(if type == "number" then . + 1 else . end)|} {|{"a":1}|} {|{ "a": 2 }|};
+
+    test "[.[] | { name: .name, city: .address.city}]"
+         {|[{"name": "Gilbert", "address": {"city": "Toulouse"}}, {"name": "Alexa", "address": {"city": "Albi"}}]|}
+         "[\n  { \"name\": \"Gilbert\", \"city\": \"Toulouse\" },\n  { \"name\": \"Alexa\", \"city\": \"Albi\" }\n]";
   ]

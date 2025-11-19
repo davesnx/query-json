@@ -38,7 +38,7 @@
 
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE /* lowest precedence */
-%nonassoc COMMA
+%left COMMA
 %left OR
 %left AND
 %nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
@@ -218,11 +218,7 @@ term:
       | "add" -> Fun (Add)
       | _ -> failwith @@ Console.Errors.missing f
     }
-  | OPEN_BRACKET; CLOSE_BRACKET;
-    { List [] }
-
-  // List elements are item_expr, not sequence_expr, separated by COMMA
-  | e = delimited(OPEN_BRACKET, separated_nonempty_list(COMMA, item_expr), CLOSE_BRACKET);
+  | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }
 
   | OPEN_BRACE; CLOSE_BRACE;

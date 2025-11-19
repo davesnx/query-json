@@ -174,22 +174,11 @@ let has ~colorize (json : Json.t) key =
       | _ -> Error (make_error ~colorize "has" json))
   | _ -> Error (make_error ~colorize "has" json)
 
-let in_ ~colorize (json : Json.t) expr =
-  match json with
-  | `Int n -> (
-      match expr with
-      | List list -> Output.return (`Bool (List.length list - 1 >= n))
-      | _ -> Error (make_error ~colorize "in" json))
-  | `String key -> (
-      match expr with
-      | Object list ->
-          let cmp_literal_str key = function
-            | Literal (String s) when s = key -> true
-            | _ -> false
-          in
-          let s = List.map fst list |> List.find_opt (cmp_literal_str key) in
-          Output.return (`Bool (Option.is_some s))
-      | _ -> Error (make_error ~colorize "in" json))
+let in_ ~colorize (json : Json.t) expr compile_fn =
+  let* container = compile_fn expr json in
+  match (json, container) with
+  | `Int n, `List l -> Output.return (`Bool (n >= 0 && n < List.length l))
+  | `String key, `Assoc list -> Output.return (`Bool (List.mem_assoc key list))
   | _ -> Error (make_error ~colorize "in" json)
 
 let range ?step from upto =
@@ -790,10 +779,9 @@ let rec compile ~colorize ~verbose expression json :
       | `Bool b -> (
           match b with true -> Output.return json | false -> Output.empty)
       | _ -> Error (make_error ~colorize "select" res))
-  | List exprs ->
-      List.map (fun expr -> compile ~colorize ~verbose expr json) exprs
-      |> Output.collect
-      |> Result.map (fun x -> [ `List x ])
+  | List None -> Output.return (`List [])
+  | List (Some expr) ->
+      compile ~colorize ~verbose expr json |> Result.map (fun x -> [ `List x ])
   | Comma (left_expr, right_expr) ->
       Result.bind (compile ~colorize ~verbose left_expr json) (fun left ->
           Result.bind (compile ~colorize ~verbose right_expr json) (fun right ->
@@ -804,7 +792,7 @@ let rec compile ~colorize ~verbose expression json :
       match expr with
       | Literal ((String _ | Number _) as expr) -> has ~colorize json expr
       | _ -> Error (show_expression expr ^ " is not allowed"))
-  | In expr -> in_ ~colorize json expr
+  | In expr -> in_ ~colorize json expr compile_expr
   | Range (from, upto, step) ->
       Output.ok (range ?step from upto |> List.map (fun i -> `Int i))
   | Reverse -> (
@@ -938,36 +926,64 @@ and unique_by ~colorize ~verbose expr json =
   | _ -> Error (make_error ~colorize "unique_by" json)
 
 and objects ~colorize ~verbose list json =
-  List.map
-    (fun (left_expr, right_expr) ->
-      match (left_expr, right_expr) with
-      | Literal (String n), None ->
-          (* Search for this key in JSON *)
-          let r =
-            match json with
-            | `Null -> Output.return (`Assoc [ (n, `Null) ])
-            | `Assoc l -> (
-                match List.assoc_opt n l with
-                | None -> Output.return (`Assoc [ (n, `Null) ])
-                | Some v -> Output.return (`Assoc [ (n, v) ]))
-            | _ -> Error (Json.show json ^ " is not implemented")
-          in
-          r
-      | Literal (String key), Some right_expr -> (
+  let compile_field (left_expr, right_expr) =
+    let keys_res =
+      match left_expr with
+      | Literal (String s) -> Ok [ `String s ]
+      | expr -> compile ~colorize ~verbose expr json
+    in
+    match keys_res with
+    | Error e -> Error e
+    | Ok keys -> (
+        let values_res =
           match right_expr with
-          | Key search_val -> (
-              match json with
-              | `Assoc l -> (
-                  match List.assoc_opt search_val l with
-                  | None -> Output.return (`Assoc [ (key, `Null) ])
-                  | Some v -> Output.return (`Assoc [ (key, v) ]))
-              | _ -> assert false)
-          | rexp ->
-              let* rexp = compile ~colorize ~verbose rexp json in
-              Output.return (`Assoc [ (key, rexp) ]))
-      | _ -> Error (show_expression left_expr ^ " is not implemented"))
-    list
-  |> Output.collect
+          | None -> (
+              match left_expr with
+              | Literal (String s) -> (
+                  match json with
+                  | `Null -> Output.return `Null
+                  | _ -> member ~colorize s json)
+              | _ -> Error "Object shorthand only allowed for string keys")
+          | Some expr -> compile ~colorize ~verbose expr json
+        in
+        match values_res with
+        | Error e -> Error e
+        | Ok values ->
+            let rec build_pairs acc_pairs keys =
+              match keys with
+              | [] -> Ok (List.rev acc_pairs)
+              | `String k :: rest ->
+                  let new_pairs = List.map (fun v -> (k, v)) values in
+                  build_pairs (List.rev_append new_pairs acc_pairs) rest
+              | _ :: _ ->
+                  Error (make_error ~colorize "object key must be string" json)
+            in
+            build_pairs [] keys)
+  in
+
+  let rec collect_fields acc = function
+    | [] -> Ok (List.rev acc)
+    | field :: rest -> (
+        match compile_field field with
+        | Ok options -> collect_fields (options :: acc) rest
+        | Error e -> Error e)
+  in
+
+  let rec cartesian_product lists =
+    match lists with
+    | [] -> [ [] ]
+    | first_field_options :: rest_fields ->
+        let rest_product = cartesian_product rest_fields in
+        List.concat_map
+          (fun pair -> List.map (fun rest -> pair :: rest) rest_product)
+          first_field_options
+  in
+
+  match collect_fields [] list with
+  | Ok field_options_list ->
+      let all_combinations = cartesian_product field_options_list in
+      Ok (List.map (fun pairs -> `Assoc pairs) all_combinations)
+  | Error e -> Error e
 
 and builtin_functions ~colorize builtin json =
   match builtin with

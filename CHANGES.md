@@ -1,5 +1,7 @@
 # Unreleased
 
+- Support [.[] | {...}]
+
 ## 0.5.52
 
 - Remove melange-webapi

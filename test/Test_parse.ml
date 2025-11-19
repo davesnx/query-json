@@ -19,7 +19,7 @@ let tests =
   [
     case ".[-1]" (Pipe (Identity, Index [ -1 ]));
     case ".[1]" (Pipe (Identity, Index [ 1 ]));
-    case "[1]" (List [ Literal (Number 1.) ]);
+    case "[1]" (List (Some (Literal (Number 1.))));
     case ".store.books" (Pipe (Key "store", Key "books"));
     case ".books[1]" (Pipe (Key "books", Index [ 1 ]));
     case ".books[1].author"
@@ -44,10 +44,11 @@ let tests =
          ( Literal (Number 1.),
            Add,
            Operation (Literal (Number 2.), Multiply, Literal (Number 3.)) ));
-    case "[1, 2]" (List [ Literal (Number 1.); Literal (Number 2.) ]);
+    case "[1, 2]"
+      (List (Some (Comma (Literal (Number 1.), Literal (Number 2.)))));
     case "select(true)" (Select (Literal (Bool true)));
-    case "[1][0]" (Pipe (List [ Literal (Number 1.) ], Index [ 0 ]));
-    case "[1].foo" (Pipe (List [ Literal (Number 1.) ], Key "foo"));
+    case "[1][0]" (Pipe (List (Some (Literal (Number 1.))), Index [ 0 ]));
+    case "[1].foo" (Pipe (List (Some (Literal (Number 1.))), Key "foo"));
     case "(empty).foo?" (Pipe (Empty, Optional (Key "foo")));
     case ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     case ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
@@ -65,7 +66,10 @@ let tests =
            (Literal (String "foo"), Some (Literal (Number 42.)));
            ( Literal (String "bar"),
              Some
-               (List [ Literal (String "hello world"); Literal (Number 42.) ])
+               (List
+                  (Some
+                     (Comma
+                        (Literal (String "hello world"), Literal (Number 42.)))))
            );
            (Literal (String "user"), None);
          ]);
@@ -85,4 +89,15 @@ let tests =
                Literal (String "Welcome"),
                Literal (String "Real") ) ));
     case "map(add)" (Map (Fun Add));
+    case "[.[] | { name: .name, city: .address.city}]"
+      (List
+         (Some
+            (Pipe
+               ( Pipe (Identity, Index []),
+                 Object
+                   [
+                     (Literal (String "name"), Some (Key "name"));
+                     ( Literal (String "city"),
+                       Some (Pipe (Key "address", Key "city")) );
+                   ] ))));
   ]
