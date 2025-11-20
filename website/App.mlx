@@ -126,10 +126,7 @@ let[@react.component] make () =
     | None -> Printf.eprintf "Error encoding state"
   in
 
-  let onExamplesClick _ =
-    Js.log "Examples button clicked!";
-    setIsModalOpen (fun _ -> true)
-  in
+  let onExamplesClick _ = setIsModalOpen (fun _ -> true) in
   let onCloseModal () = setIsModalOpen (fun _ -> false) in
   let onSelectExample query json =
     dispatch (UpdateQuery query);

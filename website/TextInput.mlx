@@ -13,7 +13,7 @@ let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
           htmlFor="query"
           className="absolute right-[100%] mr-4 text-sm font-medium \
                      text-muted-foreground whitespace-nowrap \
-                     max-[1400px]:hidden">
+                     max-[1400px]:hidden opacity-20">
           (React.string "QUERY")
         </label>
         <div className="flex-1 relative">
