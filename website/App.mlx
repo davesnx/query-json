@@ -35,12 +35,24 @@ let initialJson =
 }
 |}
 
-type t = { query : string; json : string option }
-type actions = UpdateQuery of string | UpdateJson of string
+type t = {
+  query : string;
+  json : string option;
+  copied : bool;
+  isModalOpen : bool;
+}
+
+type actions =
+  | UpdateQuery of string
+  | UpdateJson of string
+  | SetCopied of bool
+  | SetModalOpen of bool
 
 let reduce state = function
   | UpdateQuery query -> { state with query }
   | UpdateJson json -> { state with json = Some json }
+  | SetCopied copied -> { state with copied }
+  | SetModalOpen isModalOpen -> { state with isModalOpen }
 
 module QueryParams = struct
   open Melange_json.Primitives
@@ -94,47 +106,78 @@ let[@react.component] make () =
 
   let initialState =
     match stateFromHash with
-    | Some { query; json } -> { query; json }
-    | None -> { query = initialQuery; json = Some initialJson }
+    | Some { query; json } ->
+        { query; json; copied = false; isModalOpen = false }
+    | None ->
+        {
+          query = initialQuery;
+          json = Some initialJson;
+          copied = false;
+          isModalOpen = false;
+        }
   in
 
   let state, dispatch = React.useReducer reduce initialState in
-  let copied, setCopied = React.useState (fun () -> false) in
-  let isModalOpen, setIsModalOpen = React.useState (fun () -> false) in
 
-  let onQueryChange value = dispatch (UpdateQuery value) in
-  let onJsonChange value = dispatch (UpdateJson value) in
+  let onQueryChange = fun value -> dispatch (UpdateQuery value) in
+  let onJsonChange = fun value -> dispatch (UpdateJson value) in
 
   let output =
-    match (state.json, state.query) with
-    | Some _, "" | None, _ -> None
-    | Some json, _ -> Some (QueryJson.run state.query json)
+    React.useMemo2
+      (fun () ->
+        match (state.json, state.query) with
+        | Some _, "" | None, _ -> None
+        | Some json, _ -> Some (QueryJson.run state.query json))
+      (state.json, state.query)
   in
 
-  let onShareClick _ =
-    let hash = QueryParams.toHash { query = state.query; json = state.json } in
-    match hash with
-    | Some hash ->
-        let url = Web.window |> Web.Window.location |> Web.Location.origin in
-        let fullUrl = url ^ "#" ^ hash in
-        let _promise = Clipboard.writeText fullUrl in
-        setCopied (fun _ -> true);
-        let _timeout =
-          Js.Global.setTimeout ~f:(fun () -> setCopied (fun _ -> false)) 2000
+  let onShareClick =
+    React.useCallback2
+      (fun _ ->
+        let hash =
+          QueryParams.toHash { query = state.query; json = state.json }
         in
-        ()
-    | None -> Printf.eprintf "Error encoding state"
+        match hash with
+        | Some hash ->
+            let url =
+              Web.window |> Web.Window.location |> Web.Location.origin
+            in
+            let fullUrl = url ^ "#" ^ hash in
+            let _promise = Clipboard.writeText fullUrl in
+            dispatch (SetCopied true);
+            let _timeout =
+              Js.Global.setTimeout
+                ~f:(fun () -> dispatch (SetCopied false))
+                2000
+            in
+            ()
+        | None -> Printf.eprintf "Error encoding state")
+      (state.query, state.json)
   in
 
-  let onExamplesClick _ = setIsModalOpen (fun _ -> true) in
-  let onCloseModal () = setIsModalOpen (fun _ -> false) in
-  let onSelectExample query json =
+  let onExamplesClick = fun _ -> dispatch (SetModalOpen true) in
+  let onCloseModal = fun () -> dispatch (SetModalOpen false) in
+  let onSelectExample =
+   fun query json ->
     dispatch (UpdateQuery query);
     dispatch (UpdateJson json)
   in
 
   <div className="flex flex-col min-h-screen bg-background">
-    <Header onShareClick copied />
+    <Header>
+      <Button
+        kind=Secondary size=Sm onClick=onShareClick className="min-w-[110px]">
+        (match state.copied with
+        | true ->
+            <span className="flex items-center gap-2">
+              <Icons.Check size=Small /> (React.string "Copied!")
+            </span>
+        | false ->
+            <span className="flex items-center gap-2">
+              <Icons.Link2 size=Small /> (React.string "Copy unique URL")
+            </span>)
+      </Button>
+    </Header>
     <TextInput
       value=state.query
       onChange=onQueryChange
@@ -144,5 +187,7 @@ let[@react.component] make () =
     <Editors jsonValue=(Option.value state.json ~default:"") onJsonChange output
     />
     <Footer />
-    <Modal_examples isOpen=isModalOpen onClose=onCloseModal onSelectExample />
+    <Modal_examples
+      isOpen=state.isModalOpen onClose=onCloseModal onSelectExample
+    />
   </div>

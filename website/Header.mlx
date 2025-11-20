@@ -121,23 +121,11 @@ module Logo = struct
     </svg>
 end
 
-let[@react.component] make ~onShareClick ~copied =
+let[@react.component] make ~children =
   <header className="border-b border-border bg-card">
     <div
       className="max-w-[1400px] mx-auto px-6 py-4 flex items-center \
                  justify-between">
-      <div className="flex items-center gap-3"><Logo /></div>
-      <Button
-        kind=Secondary size=Sm onClick=onShareClick className="min-w-[110px]">
-        (match copied with
-        | true ->
-            <span className="flex items-center gap-2">
-              <Icons.Check size=Small /> (React.string "Copied!")
-            </span>
-        | false ->
-            <span className="flex items-center gap-2">
-              <Icons.Link2 size=Small /> (React.string "Copy unique URL")
-            </span>)
-      </Button>
+      <div className="flex items-center gap-3"><Logo /></div> children
     </div>
   </header>

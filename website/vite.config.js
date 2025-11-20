@@ -16,7 +16,7 @@ const isProd = process.env.NODE_ENV === "production";
  * @type { import('vite').UserConfig }
  */
 const config = {
-  entry: "_build/default/website/website/website/Website.re.js",
+  entry: "_build/default/website/website/website/Index.ml.js",
   mode: isProd ? "production" : "development",
   resolve: {
     alias: {

@@ -4,7 +4,7 @@
  (modes melange)
  (enabled_if
   (<> %{os_type} "Win32"))
- (modules :standard \ Website)
+ (modules :standard \ Index)
  (libraries reason-react melange.dom melange.js melange-json web)
  (preprocess
   (pps melange.ppx reason-react-ppx melange-json.ppx)))
@@ -12,7 +12,7 @@
 (melange.emit
  (target website)
  (package query-json-playground)
- (modules Website)
+ (modules Index)
  (enabled_if
   (<> %{os_type} "Win32"))
  (module_systems
