@@ -17,6 +17,7 @@
 %token DOT
 %token RECURSE
 %token PIPE
+%token UPDATE_ASSIGN
 %token SEMICOLON
 %token COLON
 %token ADD SUB MULT DIV MODULO
@@ -37,7 +38,7 @@
 %token EOF
 
 /* according to https://github.com/stedolan/jq/issues/1326 */
-%right PIPE /* lowest precedence */
+%right PIPE UPDATE_ASSIGN /* lowest precedence */
 %left COMMA
 %left OR
 %left AND
@@ -79,6 +80,9 @@ sequence_expr:
 
   | left = sequence_expr; PIPE; right = item_expr;
     { Pipe (left, right) }
+
+  | left = sequence_expr; UPDATE_ASSIGN; right = item_expr;
+    { Update (left, right) }
 
   | e = item_expr
     { e }
@@ -168,6 +172,7 @@ term:
       | "transpose" -> Transpose cb
       | "has" -> Has cb
       | "in" -> In cb
+      | "with_entries" -> With_entries cb
       | "startwith" -> Startwith cb (* for backward compatibility *)
       | "startswith" -> Startwith cb (* for backward compatibility *)
       | "starts_with" -> Starts_with cb
@@ -209,7 +214,6 @@ term:
       | "recurse_down" -> Recurse_down
       | "to_entries" -> To_entries
       | "from_entries" -> From_entries
-      | "with_entries" -> With_entries
       | "nan" -> Nan
       | "isnan" (* for backward compatibility *)
       | "is_nan" -> Is_nan

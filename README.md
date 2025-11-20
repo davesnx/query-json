@@ -82,6 +82,10 @@ query-json --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
 query-json '.' pokemons.json --no-colors
 ```
 
+#### More examples
+
+Check out [docs/examples.md](./docs/examples.md) for a walkthrough of common use cases.
+
 ## Performance
 
 [This report](./benchmarks/report.md) is not an exhaustive performance report of both tools, it's a overview for the percieved performance of the user. I don't profile each tool and try to see what are the bootlenecks, since I assume that both tools have the penalty of parsing a JSON file.

@@ -27,6 +27,7 @@ type expression =
   | Identity (* . *)
   | Empty (* empty *)
   | Pipe of expression * expression (* | *)
+  | Update of expression * expression (* |= *)
   | Comma of expression * expression (* expr1 , expr2 *)
   | Literal of literal
   (* Constructors *)
@@ -59,7 +60,7 @@ type expression =
   | To_string (* to_string *)
   | Tostring (* tostring - deprecated *)
   | From_entries (* from_entries *)
-  | With_entries (* with_entries *)
+  | With_entries of expression (* with_entries *)
   | Nan
   | Is_nan
   (* Array *)

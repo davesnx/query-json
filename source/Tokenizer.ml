@@ -26,6 +26,7 @@ type token =
   | DOT
   | RECURSE
   | PIPE
+  | UPDATE_ASSIGN
   | QUESTION_MARK
   | COMMA
   | NULL
@@ -94,6 +95,7 @@ let rec tokenize buf =
   | "]" -> Ok CLOSE_BRACKET
   | "{" -> Ok OPEN_BRACE
   | "}" -> Ok CLOSE_BRACE
+  | "|=" -> Ok UPDATE_ASSIGN
   | "|" -> Ok PIPE
   | ";" -> Ok SEMICOLON
   | ":" -> Ok COLON

@@ -241,4 +241,15 @@ let tests =
     test "[.[] | { name: .name, city: .address.city}]"
          {|[{"name": "Gilbert", "address": {"city": "Toulouse"}}, {"name": "Alexa", "address": {"city": "Albi"}}]|}
          "[\n  { \"name\": \"Gilbert\", \"city\": \"Toulouse\" },\n  { \"name\": \"Alexa\", \"city\": \"Albi\" }\n]";
+
+    (* Update operator tests *)
+    test ".value |= . * 2" {|{"value": 5}|} "10";
+    test ".x |= . + 1" {|{"x": 10}|} "11";
+    test ".[] |= . * 2" "[1,2,3]" "2\n4\n6";
+
+    (* with_entries tests *)
+    test "with_entries(.value |= . * 2)" {|{"a": 1, "b": 2, "c": 3}|} {|{ "a": 2, "b": 4, "c": 6 }|};
+    test "with_entries(.value |= . + 1)" {|{"x": 10, "y": 20}|} {|{ "x": 11, "y": 21 }|};
+    test "with_entries(.key |= . + \"_suffix\")" {|{"a": 1, "b": 2}|} {|{ "a_suffix": 1, "b_suffix": 2 }|};
+    test "with_entries(.value |= if . > 5 then . * 2 else . end)" {|{"a": 3, "b": 10}|} {|{ "a": 3, "b": 20 }|};
   ]

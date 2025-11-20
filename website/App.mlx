@@ -1,4 +1,6 @@
-let mockJson =
+let initialQuery = ".store"
+
+let initialJson =
   {|{
   "store": {
     "books": [

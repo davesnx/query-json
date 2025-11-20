@@ -419,6 +419,50 @@ let from_entries ~colorize (json : Json.t) =
       | Error e -> Error e)
   | _ -> Error (make_error ~colorize "from_entries" json)
 
+let update_entry_field key transform_expr fields entry compile_fn =
+  match List.assoc_opt key fields with
+  | Some value -> (
+      match compile_fn transform_expr value with
+      | Ok [ new_value ] ->
+          let updated_fields =
+            List.map
+              (fun (k, v) -> if k = key then (k, new_value) else (k, v))
+              fields
+          in
+          `Assoc updated_fields
+      | _ -> entry)
+  | None -> entry
+
+let transform_single_entry expr entry compile_fn =
+  match entry with
+  | `Assoc fields -> (
+      match compile_fn expr entry with
+      | Ok _results -> (
+          match expr with
+          | Update (Key key, transform_expr) ->
+              Ok (update_entry_field key transform_expr fields entry compile_fn)
+          | _ -> Ok entry)
+      | Error e -> Error e)
+  | _ -> Ok entry
+
+let rec transform_entry_list expr acc entries compile_fn =
+  match entries with
+  | [] -> Ok (List.rev acc)
+  | entry :: rest -> (
+      match transform_single_entry expr entry compile_fn with
+      | Ok transformed ->
+          transform_entry_list expr (transformed :: acc) rest compile_fn
+      | Error e -> Error e)
+
+let with_entries ~colorize ~verbose:_ expr json compile_fn =
+  match to_entries ~colorize json with
+  | Error e -> Error e
+  | Ok [ `List entries ] -> (
+      match transform_entry_list expr [] entries compile_fn with
+      | Ok transformed -> from_entries ~colorize (`List transformed)
+      | Error e -> Error e)
+  | _ -> Error "to_entries should return a list"
+
 let contains ~colorize expr json compile_fn =
   let* needle = compile_fn expr json in
   let json_equal a b =
@@ -723,6 +767,7 @@ let rec compile ~colorize ~verbose expression json :
       ends_with ~colorize ~verbose ~is_deprecated:true expr json compile_expr
   | To_entries -> to_entries ~colorize json
   | From_entries -> from_entries ~colorize json
+  | With_entries expr -> with_entries ~colorize ~verbose expr json compile_expr
   | Contains expr -> contains ~colorize expr json compile_expr
   | Explode -> explode ~colorize json
   | Implode -> implode ~colorize json
@@ -773,6 +818,9 @@ let rec compile ~colorize ~verbose expression json :
   | Pipe (left, right) ->
       let* left = compile ~colorize ~verbose left json in
       compile ~colorize ~verbose right left
+  | Update (path, transform) ->
+      let* path_result = compile ~colorize ~verbose path json in
+      compile ~colorize ~verbose transform path_result
   | Select conditional -> (
       let* res = compile ~colorize ~verbose conditional json in
       match res with
