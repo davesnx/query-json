@@ -1,14 +1,14 @@
-import { defineConfig } from "vite";
-import NodeResolution from "@rollup/plugin-node-resolve";
-import { createHtmlPlugin } from "vite-plugin-html";
+import Vite from "vite";
+import Node_resolution from "@rollup/plugin-node-resolve";
+import * as Html from "vite-plugin-html";
 import replace from "@rollup/plugin-replace";
 import { viteStaticCopy as copy } from "vite-plugin-static-copy";
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
+import URL from 'url';
+import Path from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const workspaceRoot = resolve(__dirname, '..');
+const __filename = URL.fileURLToPath(import.meta.url);
+const __dirname = Path.dirname(__filename);
+const workspaceRoot = Path.resolve(__dirname, '..');
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -20,14 +20,19 @@ const config = {
   mode: isProd ? "production" : "development",
   resolve: {
     alias: {
-      "@monaco-editor/loader": resolve(workspaceRoot, "node_modules/@monaco-editor/loader"),
-      "@monaco-editor/react": resolve(workspaceRoot, "node_modules/@monaco-editor/react"),
-      "monaco-editor": resolve(workspaceRoot, "node_modules/monaco-editor"),
+      "@monaco-editor/loader": Path.resolve(workspaceRoot, "node_modules/@monaco-editor/loader"),
+      "@monaco-editor/react": Path.resolve(workspaceRoot, "node_modules/@monaco-editor/react"),
+      "monaco-editor": Path.resolve(workspaceRoot, "node_modules/monaco-editor"),
     },
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-dom/client"],
     exclude: ["monaco-editor", "@monaco-editor/react", "@monaco-editor/loader"],
+  },
+  server: {
+    watch: {
+      ignored: ['**/_opam/**', '**/.git/**'],
+    },
   },
   worker: {
     format: "es",
@@ -56,10 +61,10 @@ const config = {
     }),
     replace({
       preventAssignment: true,
-      "process.env.NODE_ENV": JSON.stringify("development"),
+      "process.env.NODE_ENV": JSON.stringify(isProd ? "production" : "development"),
     }),
-    NodeResolution(),
-    createHtmlPlugin({
+    Node_resolution(),
+    Html.createHtmlPlugin({
       inject: {
         tags: [
           {
@@ -75,4 +80,4 @@ const config = {
   ],
 };
 
-export default defineConfig(config);
+export default Vite.defineConfig(config);
