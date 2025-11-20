@@ -28,6 +28,7 @@ type expression =
   | Empty (* empty *)
   | Pipe of expression * expression (* | *)
   | Update of expression * expression (* |= *)
+  | Alternative of expression * expression (* // *)
   | Comma of expression * expression (* expr1 , expr2 *)
   | Literal of literal
   (* Constructors *)

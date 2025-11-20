@@ -27,6 +27,7 @@ type token =
   | RECURSE
   | PIPE
   | UPDATE_ASSIGN
+  | ALTERNATIVE
   | QUESTION_MARK
   | COMMA
   | NULL
@@ -96,6 +97,7 @@ let rec tokenize buf =
   | "{" -> Ok OPEN_BRACE
   | "}" -> Ok CLOSE_BRACE
   | "|=" -> Ok UPDATE_ASSIGN
+  | "//" -> Ok ALTERNATIVE
   | "|" -> Ok PIPE
   | ";" -> Ok SEMICOLON
   | ":" -> Ok COLON

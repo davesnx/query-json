@@ -252,4 +252,15 @@ let tests =
     test "with_entries(.value |= . + 1)" {|{"x": 10, "y": 20}|} {|{ "x": 11, "y": 21 }|};
     test "with_entries(.key |= . + \"_suffix\")" {|{"a": 1, "b": 2}|} {|{ "a_suffix": 1, "b_suffix": 2 }|};
     test "with_entries(.value |= if . > 5 then . * 2 else . end)" {|{"a": 3, "b": 10}|} {|{ "a": 3, "b": 20 }|};
+
+    (* Alternative operator tests *)
+    test {|.email // "no-email@example.com"|} {|{"email": "test@example.com"}|} {|"test@example.com"|};
+    test {|.email // "no-email@example.com"|} {|{"name": "John"}|} {|"no-email@example.com"|};
+    test {|.email // "no-email@example.com"|} {|{"email": null}|} {|"no-email@example.com"|};
+    test {|.email // "no-email@example.com"|} {|{"email": false}|} {|"no-email@example.com"|};
+    test {|.email // "no-email@example.com"|} {|{"email": ""}|} {|""|};
+    test {|.count // 0|} {|{"count": 5}|} {|5|};
+    test {|.count // 0|} {|{}|} {|0|};
+    test {|.value // 10 // 20|} {|{"value": null}|} {|10|};
+    test {|.value // 10 // 20|} {|{}|} {|10|};
   ]

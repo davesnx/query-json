@@ -18,6 +18,7 @@
 %token RECURSE
 %token PIPE
 %token UPDATE_ASSIGN
+%token ALTERNATIVE
 %token SEMICOLON
 %token COLON
 %token ADD SUB MULT DIV MODULO
@@ -38,7 +39,7 @@
 %token EOF
 
 /* according to https://github.com/stedolan/jq/issues/1326 */
-%right PIPE UPDATE_ASSIGN /* lowest precedence */
+%right PIPE UPDATE_ASSIGN ALTERNATIVE /* lowest precedence */
 %left COMMA
 %left OR
 %left AND
@@ -83,6 +84,9 @@ sequence_expr:
 
   | left = sequence_expr; UPDATE_ASSIGN; right = item_expr;
     { Update (left, right) }
+
+  | left = sequence_expr; ALTERNATIVE; right = item_expr;
+    { Alternative (left, right) }
 
   | e = item_expr
     { e }
