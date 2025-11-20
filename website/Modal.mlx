@@ -1,0 +1,66 @@
+let[@react.component] make ~isOpen ~onClose ~title ~description ~children =
+  let handleBackdropClick event =
+    let target = React.Event.Mouse.target event in
+    let currentTarget = React.Event.Mouse.currentTarget event in
+    if target == currentTarget then onClose ()
+  in
+
+  React.useEffect1
+    (fun () ->
+      Js.log2 "Modal isOpen state changed to:" isOpen;
+      None)
+    [| isOpen |];
+
+  if not isOpen then React.null
+  else
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 \
+                 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      onClick=handleBackdropClick
+      role="dialog"
+      ariaModal=true
+      ariaLabelledby="modal-title"
+      ariaDescribedby="modal-description">
+      <div
+        className="relative w-full max-w-[95vw] max-h-[95vh] overflow-hidden \
+                   bg-card border border-border rounded-lg shadow-lg \
+                   animate-in zoom-in-95 slide-in-from-bottom-4">
+        <div className="border-b border-border px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2
+                id="modal-title" className="text-2xl font-bold text-foreground">
+                (React.string title)
+              </h2>
+              <p
+                id="modal-description"
+                className="text-sm text-muted-foreground mt-1">
+                (React.string description)
+              </p>
+            </div>
+            <button
+              onClick=(fun _ -> onClose ())
+              className="text-muted-foreground hover:text-foreground \
+                         transition-colors p-2 rounded-lg hover:bg-accent"
+              ariaLabel="Close modal">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="overflow-y-auto max-h-[calc(95vh-120px)] p-6">
+          children
+        </div>
+      </div>
+    </div>

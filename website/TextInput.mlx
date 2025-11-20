@@ -1,4 +1,4 @@
-let[@react.component] make ~value ~placeholder ~onChange =
+let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
   let onChangeHandler event =
     let target = React.Event.Form.target event in
     onChange target##value
@@ -39,6 +39,11 @@ let[@react.component] make ~value ~placeholder ~onChange =
              </button>
            else React.null)
         </div>
+        <Button kind=Secondary size=Sm onClick=onExamplesClick>
+          <span className="flex items-center gap-2">
+            <Icons.FileJson size=Small /> (React.string "Examples")
+          </span>
+        </Button>
       </div>
     </div>
   </div>

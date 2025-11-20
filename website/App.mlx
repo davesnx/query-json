@@ -95,11 +95,12 @@ let[@react.component] make () =
   let initialState =
     match stateFromHash with
     | Some { query; json } -> { query; json }
-    | None -> { query = ".store"; json = Some mockJson }
+    | None -> { query = initialQuery; json = Some initialJson }
   in
 
   let state, dispatch = React.useReducer reduce initialState in
   let copied, setCopied = React.useState (fun () -> false) in
+  let isModalOpen, setIsModalOpen = React.useState (fun () -> false) in
 
   let onQueryChange value = dispatch (UpdateQuery value) in
   let onJsonChange value = dispatch (UpdateJson value) in
@@ -125,14 +126,26 @@ let[@react.component] make () =
     | None -> Printf.eprintf "Error encoding state"
   in
 
+  let onExamplesClick _ =
+    Js.log "Examples button clicked!";
+    setIsModalOpen (fun _ -> true)
+  in
+  let onCloseModal () = setIsModalOpen (fun _ -> false) in
+  let onSelectExample query json =
+    dispatch (UpdateQuery query);
+    dispatch (UpdateJson json)
+  in
+
   <div className="flex flex-col min-h-screen bg-background">
     <Header onShareClick copied />
     <TextInput
       value=state.query
       onChange=onQueryChange
+      onExamplesClick
       placeholder="Type your filter (e.g., '.store.books[0]')"
     />
     <Editors jsonValue=(Option.value state.json ~default:"") onJsonChange output
     />
     <Footer />
+    <Modal_examples isOpen=isModalOpen onClose=onCloseModal onSelectExample />
   </div>

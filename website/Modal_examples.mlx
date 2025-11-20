@@ -1,0 +1,178 @@
+type example = { title : string; query : string; input : string }
+
+let examples =
+  [
+    {
+      title = "Extract a single value";
+      query = ".name";
+      input = {|{"id": 123, "name": "Sample"}|};
+    };
+    {
+      title = "Map over an array and modify values";
+      query = "map(. + 1)";
+      input = "[1, 2, 3]";
+    };
+    {
+      title = "Filter an array";
+      query = "map(select(. > 2))";
+      input = "[1, 2, 3, 4, 5]";
+    };
+    {
+      title = "Construct a new object structure";
+      query = "[.[] | { name: .name, city: .address.city}]";
+      input =
+        {|[{"name": "Gilbert", "address": {"city": "Toulouse"}}, {"name": "Alexa", "address": {"city": "Albi"}}]|};
+    };
+    {
+      title = "Calculate aggregate values (max)";
+      query = "max";
+      input = "[10, 2, 30, 5]";
+    };
+    {
+      title = "Calculate aggregate values (length)";
+      query = "length";
+      input = "[1, 2, 3]";
+    };
+    {
+      title = "Sort and unique";
+      query = "sort | unique";
+      input = "[3, 1, 2, 1]";
+    };
+    {
+      title = "String manipulation (split and join)";
+      query = {|split(",") | {array: ., joined: join("-")}|};
+      input = {|"Hello,world,query,json"|};
+    };
+    {
+      title = "Conditionals";
+      query = {|if . > 10 then "high" else "low" end|};
+      input = "5";
+    };
+    { title = "Recursion (range)"; query = "range(0; 5)"; input = "null" };
+    {
+      title = "Recursive walk";
+      query = {|walk(if type == "number" then . + 1 else . end)|};
+      input = {|{"a": 1, "b": {"c": 2}}|};
+    };
+    {
+      title = "Get all keys from an object";
+      query = "keys";
+      input = {|{"name": "Alice", "age": 30, "city": "Paris"}|};
+    };
+    {
+      title = "Get all values from an object";
+      query = ".[]";
+      input = {|{"name": "Alice", "age": 30, "city": "Paris"}|};
+    };
+    {
+      title = "Select specific fields";
+      query = "{name, city}";
+      input =
+        {|{"name": "Alice", "age": 30, "city": "Paris", "country": "France"}|};
+    };
+    {
+      title = "Add/update fields in an object";
+      query = {|. + {country: "France"}|};
+      input = {|{"name": "Alice", "city": "Paris"}|};
+    };
+    {
+      title = "Remove a field from an object";
+      query = "del(.age)";
+      input = {|{"name": "Alice", "age": 30, "city": "Paris"}|};
+    };
+    {
+      title = "Access nested object properties";
+      query = ".user.profile.email";
+      input =
+        {|{"user": {"profile": {"email": "alice@example.com", "name": "Alice"}}}|};
+    };
+    {
+      title = "Convert object to key-value pairs";
+      query = "to_entries";
+      input = {|{"name": "Alice", "age": 30, "city": "Paris"}|};
+    };
+    {
+      title = "Convert key-value pairs back to object";
+      query = "from_entries";
+      input =
+        {|[{"key": "name", "value": "Alice"}, {"key": "age", "value": 30}]|};
+    };
+    {
+      title = "Filter objects in array by property";
+      query = "map(select(.age > 25))";
+      input =
+        {|[{"name": "Alice", "age": 30}, {"name": "Bob", "age": 20}, {"name": "Charlie", "age": 35}]|};
+    };
+    {
+      title = "Group objects by property";
+      query = "group_by(.category)";
+      input =
+        {|[{"name": "apple", "category": "fruit"}, {"name": "carrot", "category": "vegetable"}, {"name": "banana", "category": "fruit"}]|};
+    };
+    {
+      title = "Transform object values";
+      query = "with_entries(.value |= . * 2)";
+      input = {|{"a": 1, "b": 2, "c": 3}|};
+    };
+    {
+      title = "Check if object has a key";
+      query = "has(\"email\")";
+      input = {|{"name": "Alice", "age": 30}|};
+    };
+    {
+      title = "Get object with default value";
+      query = ".email // \"no-email@example.com\"";
+      input = {|{"name": "Alice", "age": 30}|};
+    };
+    {
+      title = "Flatten nested arrays in objects";
+      query = ".tags | flatten";
+      input = {|{"tags": [["a", "b"], ["c", "d"]]}|};
+    };
+  ]
+
+module Card = struct
+  let[@react.component] make ~example ~onClick =
+    <button
+      onClick
+      className="flex flex-col items-start justify-start text-left p-4 \
+                 rounded-lg border border-border bg-card hover:bg-accent\n\
+                \                 hover:border-accent-foreground \
+                 transition-all duration-200 group cursor-pointer \
+                 focus-visible:outline-none focus-visible:ring-2 \
+                 focus-visible:ring-ring focus-visible:ring-offset-2 \
+                 ring-offset-background overflow-hidden">
+      <h3
+        className="text-sm font-medium text-foreground \
+                   group-hover:text-accent-foreground mb-2">
+        (React.string example.title)
+      </h3>
+      <code
+        className="text-xs text-muted-foreground \
+                   group-hover:text-accent-foreground/80 font-mono block \
+                   truncate">
+        (React.string example.query)
+      </code>
+    </button>
+end
+
+let[@react.component] make ~isOpen ~onClose ~onSelectExample =
+  let onClick { query; input; _ } =
+    onSelectExample query input;
+    onClose ()
+  in
+  <Modal
+    isOpen
+    onClose
+    title="Examples"
+    description="here there are some examples to learn/play with query-json.">
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 \
+                 gap-3">
+      (examples
+      |> List.map (fun example ->
+             <Card key=example.title example onClick=(fun _ -> onClick example)
+             />)
+      |> Array.of_list |> React.array)
+    </div>
+  </Modal>

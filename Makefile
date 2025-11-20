@@ -30,7 +30,11 @@ dev-core: ## Build in watch mode
 
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
-	$(VITE) --host --config website/vite.config.js
+	$(VITE) --host --config website/vite.config.js --force
+
+.PHONY: web-clean
+web-clean: ## Clear Vite's cache
+	rm -rf node_modules/.vite
 
 .PHONY: web-build
 web-build: ## Bundle the website
