@@ -5,12 +5,6 @@ let[@react.component] make ~isOpen ~onClose ~title ~description ~children =
     if target == currentTarget then onClose ()
   in
 
-  React.useEffect1
-    (fun () ->
-      Js.log2 "Modal isOpen state changed to:" isOpen;
-      None)
-    [| isOpen |];
-
   if not isOpen then React.null
   else
     <div
