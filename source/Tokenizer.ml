@@ -15,6 +15,7 @@ type token =
   | BOOL of bool
   | IDENTIFIER of string
   | FUNCTION of string
+  | VARIABLE of string
   | OPEN_PARENT
   | CLOSE_PARENT
   | OPEN_BRACKET
@@ -46,11 +47,13 @@ type token =
   | LOWER_EQUAL
   | RANGE
   | FLATTEN
+  | REDUCE
   | IF
   | THEN
   | ELSE
   | ELIF
   | END
+  | AS
   | EOF
 [@@deriving show]
 
@@ -75,6 +78,13 @@ let tokenize_apply buf =
   match%sedlex buf with
   | '(' -> Ok (FUNCTION identifier)
   | _ -> Ok (IDENTIFIER identifier)
+
+let tokenize_variable buf =
+  match%sedlex buf with
+  | identifier ->
+      let var_name = lexeme buf in
+      Ok (VARIABLE var_name)
+  | _ -> Error "Expected variable name after $"
 
 let rec tokenize buf =
   match%sedlex buf with
@@ -110,13 +120,16 @@ let rec tokenize buf =
   | ")" -> Ok CLOSE_PARENT
   | "range" -> Ok RANGE
   | "flatten" -> Ok FLATTEN
+  | "reduce" -> Ok REDUCE
   | "if" -> Ok IF
   | "then" -> Ok THEN
   | "else" -> Ok ELSE
   | "elif" -> Ok ELIF
   | "end" -> Ok END
+  | "as" -> Ok AS
   | "." -> Ok DOT
   | ".." -> Ok RECURSE
+  | '$' -> tokenize_variable buf
   | '"' -> tokenize_string buf
   | identifier -> tokenize_apply buf
   | number ->

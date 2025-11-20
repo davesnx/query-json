@@ -31,6 +31,7 @@ type expression =
   | Alternative of expression * expression (* // *)
   | Comma of expression * expression (* expr1 , expr2 *)
   | Literal of literal
+  | Variable of string (* $var *)
   (* Constructors *)
   | List of expression option (* [ expr ] *)
   | Object of (expression * expression option) list (* {} *)
@@ -76,7 +77,8 @@ type expression =
   (* map(x) *)
   | Slice of int option * int option
   | Flat_map of expression (* flat_map(x) *)
-  | Reduce of expression (* reduce(x) *)
+  | Reduce of expression * string * expression * expression
+    (* reduce EXPR as $VAR (INIT; UPDATE) *)
   | Select of expression (* select(x) *)
   | Sort_by of expression (* sort_by(x) *)
   | Group_by of expression (* group_by(x) *)

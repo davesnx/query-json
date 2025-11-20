@@ -68,6 +68,8 @@ end
 
 let ( let* ) = Output.bind
 
+type env = (string * Json.t) list
+
 module Operators = struct
   let not (json : Json.t) =
     match json with
@@ -627,6 +629,61 @@ let walk_tree ~colorize:_ ~verbose:_ expr json compile =
   in
   Output.return (walk json)
 
+let nan_value () = Output.return (`Float nan)
+
+let is_nan ~colorize (json : Json.t) =
+  match json with
+  | `Float f -> Output.return (`Bool (Float.is_nan f))
+  | `Int _ -> Output.return (`Bool false)
+  | _ -> Error (make_error ~colorize "is_nan" json)
+
+let transpose ~colorize (json : Json.t) =
+  match json with
+  | `List [] -> Output.return (`List [])
+  | `List rows ->
+      let get_length row =
+        match row with `List l -> Some (List.length l) | _ -> None
+      in
+      let lengths = List.filter_map get_length rows in
+      if List.length lengths <> List.length rows then
+        Error "transpose requires an array of arrays"
+      else
+        let max_len = List.fold_left Int.max 0 lengths in
+        let get_column i =
+          List.filter_map
+            (fun row ->
+              match row with
+              | `List l when i < List.length l -> Some (List.nth l i)
+              | _ -> None)
+            rows
+        in
+        let transposed = List.init max_len (fun i -> `List (get_column i)) in
+        Output.return (`List transposed)
+  | _ -> Error (make_error ~colorize "transpose" json)
+
+let recurse_down ~colorize:_ ~verbose:_ json =
+  let rec descend acc current =
+    match current with
+    | `List items ->
+        let new_items = List.concat_map (fun item -> descend [] item) items in
+        new_items @ (current :: acc)
+    | `Assoc fields ->
+        let new_values = List.concat_map (fun (_, v) -> descend [] v) fields in
+        new_values @ (current :: acc)
+    | other -> other :: acc
+  in
+  Ok (descend [] json)
+
+let test_regex ~colorize pattern json =
+  match json with
+  | `String s -> (
+      try
+        let regex = Str.regexp pattern in
+        let _ = Str.search_forward regex s 0 in
+        Output.return (`Bool true)
+      with Not_found -> Output.return (`Bool false))
+  | _ -> Error (make_error ~colorize "test" json)
+
 let filter ~colorize (fn : Json.t -> bool) (json : Json.t) =
   match json with
   | `List list -> Ok (`List (List.filter fn list))
@@ -734,9 +791,9 @@ let slice ~colorize (start : int option) (finish : int option) (json : Json.t) =
            ("[" ^ Int.to_string start ^ ":" ^ Int.to_string finish ^ "]")
            json)
 
-let rec compile ~colorize ~verbose expression json :
+let rec compile ~colorize ~verbose ?(env = []) expression json :
     (Json.t list, string) result =
-  let compile_expr = compile ~colorize ~verbose in
+  let compile_expr = compile ~colorize ~verbose ~env in
   match expression with
   | Identity -> Output.return json
   | Empty -> Output.empty
@@ -785,40 +842,46 @@ let rec compile ~colorize ~verbose expression json :
   | Operation (left, op, right) -> (
       match op with
       | Add ->
-          operation ~colorize ~verbose left right (Operators.add ~colorize) json
+          operation ~colorize ~verbose ~env left right (Operators.add ~colorize)
+            json
       | Subtract ->
-          operation ~colorize ~verbose left right
+          operation ~colorize ~verbose ~env left right
             (Operators.subtract ~colorize)
             json
       | Multiply ->
-          operation ~colorize ~verbose left right
+          operation ~colorize ~verbose ~env left right
             (Operators.multiply ~colorize)
             json
       | Divide ->
-          operation ~colorize ~verbose left right
+          operation ~colorize ~verbose ~env left right
             (Operators.divide ~colorize)
             json
       | Modulo ->
-          operation ~colorize ~verbose left right
+          operation ~colorize ~verbose ~env left right
             (Operators.modulo ~colorize)
             json
       | Greater_than ->
-          operation ~colorize ~verbose left right (Operators.gt ~colorize) json
-      | Greater_than_or_equal ->
-          operation ~colorize ~verbose left right (Operators.gte ~colorize) json
-      | Less_than ->
-          operation ~colorize ~verbose left right (Operators.lt ~colorize) json
-      | Less_than_or_equal ->
-          operation ~colorize ~verbose left right (Operators.lte ~colorize) json
-      | Equal -> operation ~colorize ~verbose left right Operators.equal json
-      | Not_equal ->
-          operation ~colorize ~verbose left right Operators.not_equal json
-      | And ->
-          operation ~colorize ~verbose left right (Operators.and_ ~colorize)
+          operation ~colorize ~verbose ~env left right (Operators.gt ~colorize)
             json
+      | Greater_than_or_equal ->
+          operation ~colorize ~verbose ~env left right (Operators.gte ~colorize)
+            json
+      | Less_than ->
+          operation ~colorize ~verbose ~env left right (Operators.lt ~colorize)
+            json
+      | Less_than_or_equal ->
+          operation ~colorize ~verbose ~env left right (Operators.lte ~colorize)
+            json
+      | Equal ->
+          operation ~colorize ~verbose ~env left right Operators.equal json
+      | Not_equal ->
+          operation ~colorize ~verbose ~env left right Operators.not_equal json
+      | And ->
+          operation ~colorize ~verbose ~env left right
+            (Operators.and_ ~colorize) json
       | Or ->
-          operation ~colorize ~verbose left right (Operators.or_ ~colorize) json
-      )
+          operation ~colorize ~verbose ~env left right (Operators.or_ ~colorize)
+            json)
   | Literal literal -> (
       match literal with
       | Bool b -> Output.return (`Bool b)
@@ -883,12 +946,32 @@ let rec compile ~colorize ~verbose expression json :
   | Recurse -> recurse_simple json compile_expr
   | Recurse_with (f, cond) ->
       recurse_with_cond ~colorize ~verbose f cond json compile_expr
+  | Recurse_down -> recurse_down ~colorize ~verbose json
   | Walk expr -> walk_tree ~colorize ~verbose expr json compile_expr
-  | _ -> Error (show_expression expression ^ " is not implemented")
+  | Transpose expr ->
+      let* values = compile ~colorize ~verbose expr json in
+      transpose ~colorize values
+  | Nan -> nan_value ()
+  | Is_nan -> is_nan ~colorize json
+  | Flat_map expr -> flat_map ~colorize ~verbose expr json
+  | Find expr -> find ~colorize ~verbose expr json
+  | Some_ expr -> some ~colorize ~verbose expr json
+  | Any_with_condition expr -> any_with_condition ~colorize ~verbose expr json
+  | All_with_condition expr -> all_with_condition ~colorize ~verbose expr json
+  | Test pattern -> test_regex ~colorize pattern json
+  | Path expr -> path_of ~colorize ~verbose ~env expr json
+  | Variable var_name -> (
+      match List.assoc_opt var_name env with
+      | Some value -> Output.return value
+      | None -> Error ("Undefined variable: $" ^ var_name))
+  | Reduce (generator, var_name, init_expr, update_expr) ->
+      reduce ~colorize ~verbose ~env generator var_name init_expr update_expr
+        json
+  | Break -> Error "break is not supported"
 
-and operation ~colorize ~verbose left_expr right_expr op json =
-  let* left = compile ~colorize ~verbose left_expr json in
-  let* right = compile ~colorize ~verbose right_expr json in
+and operation ~colorize ~verbose ~env left_expr right_expr op json =
+  let* left = compile ~colorize ~verbose ~env left_expr json in
+  let* right = compile ~colorize ~verbose ~env right_expr json in
   op left right
 
 and map ~colorize ~verbose (expr : expression) (json : Json.t) =
@@ -1061,3 +1144,167 @@ and builtin_functions ~colorize builtin json =
               Operators.add ~colorize acc el)
             (Output.return `Null) l
       | _ -> Error (make_error ~colorize "add" json))
+
+and flat_map ~colorize ~verbose expr json =
+  match json with
+  | `List list when List.length list > 0 ->
+      Output.collect (List.map (compile ~colorize ~verbose expr) list)
+      |> Result.map (fun collected ->
+          let flattened =
+            List.concat_map
+              (function `List l -> l | other -> [ other ])
+              collected
+          in
+          [ `List flattened ])
+  | `List _ -> Error (make_empty_list_error ~colorize "flat_map")
+  | _ -> Error (make_error ~colorize "flat_map" json)
+
+and find ~colorize ~verbose expr json =
+  match json with
+  | `List list ->
+      let rec find_first = function
+        | [] -> Output.return `Null
+        | x :: xs -> (
+            match compile ~colorize ~verbose expr x with
+            | Ok [ `Bool true ] -> Output.return x
+            | Ok [ `Bool false ] -> find_first xs
+            | Ok [ other ] ->
+                if other = `Null || other = `Bool false then find_first xs
+                else Output.return x
+            | _ -> find_first xs)
+      in
+      find_first list
+  | _ -> Error (make_error ~colorize "find" json)
+
+and some ~colorize ~verbose expr json =
+  match json with
+  | `List list ->
+      let rec check_some = function
+        | [] -> Output.return (`Bool false)
+        | x :: xs -> (
+            match compile ~colorize ~verbose expr x with
+            | Ok [ `Bool true ] -> Output.return (`Bool true)
+            | Ok [ `Bool false ] -> check_some xs
+            | Ok [ other ] ->
+                if other = `Null || other = `Bool false then check_some xs
+                else Output.return (`Bool true)
+            | _ -> check_some xs)
+      in
+      check_some list
+  | _ -> Error (make_error ~colorize "some" json)
+
+and any_with_condition ~colorize ~verbose expr json =
+  match json with
+  | `List list ->
+      let is_truthy = function `Bool false | `Null -> false | _ -> true in
+      let rec check_any = function
+        | [] -> Output.return (`Bool false)
+        | x :: xs -> (
+            match compile ~colorize ~verbose expr x with
+            | Ok results ->
+                if List.exists is_truthy results then Output.return (`Bool true)
+                else check_any xs
+            | Error _ -> check_any xs)
+      in
+      check_any list
+  | _ -> Error (make_error ~colorize "any" json)
+
+and all_with_condition ~colorize ~verbose expr json =
+  match json with
+  | `List list ->
+      let is_truthy = function `Bool false | `Null -> false | _ -> true in
+      let rec check_all = function
+        | [] -> Output.return (`Bool true)
+        | x :: xs -> (
+            match compile ~colorize ~verbose expr x with
+            | Ok results ->
+                if List.for_all is_truthy results then check_all xs
+                else Output.return (`Bool false)
+            | Error _ -> Output.return (`Bool false))
+      in
+      check_all list
+  | _ -> Error (make_error ~colorize "all" json)
+
+and path_of ~colorize ~verbose ~env expr json =
+  (* Path tracking: returns JSON pointer paths to all values selected by expr.
+     This is a simplified implementation that handles common cases. *)
+  let rec extract_paths current_path expression value =
+    match expression with
+    | Identity -> [ current_path ]
+    | Key key -> (
+        match value with
+        | `Assoc fields ->
+            if List.mem_assoc key fields then [ current_path @ [ `String key ] ]
+            else []
+        | _ -> [])
+    | Index indices when indices = [] -> (
+        (* Iterator case *)
+        match value with
+        | `List l -> List.mapi (fun i _ -> current_path @ [ `Int i ]) l
+        | `Assoc fields ->
+            List.map (fun (k, _) -> current_path @ [ `String k ]) fields
+        | _ -> [])
+    | Index indices ->
+        List.concat_map
+          (fun idx ->
+            match value with
+            | `List _ -> [ current_path @ [ `Int idx ] ]
+            | _ -> [])
+          indices
+    | Pipe (left, right) -> (
+        match compile ~colorize ~verbose ~env left value with
+        | Ok selected_values ->
+            List.concat_map
+              (fun selected ->
+                match extract_path_for_value value selected with
+                | Some left_path ->
+                    extract_paths (current_path @ left_path) right selected
+                | None -> [])
+              selected_values
+        | Error _ -> [])
+    | _ -> []
+  and extract_path_for_value parent child =
+    (* Helper to find the path from parent to child *)
+    match (parent, child) with
+    | `Assoc fields, _ ->
+        List.find_map
+          (fun (key, v) -> if v = child then Some [ `String key ] else None)
+          fields
+    | `List items, _ ->
+        List.find_mapi
+          (fun i v -> if v = child then Some [ `Int i ] else None)
+          items
+    | _ -> if parent = child then Some [] else None
+  in
+  let paths = extract_paths [] expr json in
+  let path_jsons =
+    List.map
+      (fun path ->
+        `List
+          (List.map
+             (function `String s -> `String s | `Int i -> `Int i | _ -> `Null)
+             path))
+      paths
+  in
+  Ok path_jsons
+
+and reduce ~colorize ~verbose ~env generator var_name init_expr update_expr json
+    =
+  match compile ~colorize ~verbose ~env init_expr json with
+  | Error e -> Error e
+  | Ok init_values -> (
+      match init_values with
+      | [ init_val ] -> (
+          match compile ~colorize ~verbose ~env generator json with
+          | Error e -> Error e
+          | Ok generated_values ->
+              List.fold_left
+                (fun acc_result elem ->
+                  match acc_result with
+                  | Ok [ acc ] ->
+                      let env_with_var = (var_name, elem) :: env in
+                      compile ~colorize ~verbose ~env:env_with_var update_expr
+                        acc
+                  | err -> err)
+                (Ok [ init_val ]) generated_values)
+      | _ -> Error "reduce init expression must return a single value")

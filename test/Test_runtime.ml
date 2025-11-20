@@ -263,4 +263,50 @@ let tests =
     test {|.count // 0|} {|{}|} {|0|};
     test {|.value // 10 // 20|} {|{"value": null}|} {|10|};
     test {|.value // 10 // 20|} {|{}|} {|10|};
+
+    (* New features tests *)
+
+    (* nan and is_nan *)
+    test "is_nan" "42" "false";
+    test "is_nan" "42.5" "false";
+
+    (* transpose *)
+    test "transpose" {|[[1,2],[3,4]]|} {|[ [ 1, 3 ], [ 2, 4 ] ]|};
+    test "transpose" {|[[1,2,3],[4,5,6]]|} {|[ [ 1, 4 ], [ 2, 5 ], [ 3, 6 ] ]|};
+    test "transpose" {|[]|} {|[]|};
+
+    (* flat_map *)
+    test "flat_map(. * 2)" "[1,2,3]" {|[ 2, 4, 6 ]|};
+    test "flat_map([., . * 2])" "[1,2]" {|[ 1, 2, 2, 4 ]|};
+
+    (* find *)
+    test "find(. > 2)" "[1,2,3,4]" "3";
+    test "find(. > 10)" "[1,2,3]" "null";
+
+    (* some *)
+    test "some(. > 2)" "[1,2,3]" "true";
+    test "some(. > 10)" "[1,2,3]" "false";
+
+    (* any with condition *)
+    test "any(. > 2)" "[1,2,3]" "true";
+    test "any(. > 10)" "[1,2,3]" "false";
+
+    (* all with condition *)
+    test "all(. > 0)" "[1,2,3]" "true";
+    test "all(. > 2)" "[1,2,3]" "false";
+
+    (* test (regex) *)
+    test {|test("^hello")|} {|"hello world"|} "true";
+    test {|test("^hello")|} {|"world hello"|} "false";
+    test {|test("[0-9]+")|} {|"abc123def"|} "true";
+
+    (* path *)
+    test "path(.foo)" {|{"foo": 1}|} {|[ "foo" ]|};
+
+    (* reduce with variables *)
+    test "reduce .[] as $x (0; . + $x)" "[1,2,3,4,5]" "15";
+    test "reduce .[] as $item (0; . + $item)" "[10,20,30]" "60";
+
+    (* variable references *)
+    test "reduce .[] as $x (0; . + $x)" "[5]" "5";
   ]

@@ -11,8 +11,10 @@
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
+%token <string> VARIABLE
 %token RANGE
 %token FLATTEN
+%token REDUCE
 %token IF THEN ELSE ELIF END
 %token DOT
 %token RECURSE
@@ -36,6 +38,7 @@
 %token COMMA
 %token OPEN_BRACE
 %token CLOSE_BRACE
+%token AS
 %token EOF
 
 /* according to https://github.com/stedolan/jq/issues/1326 */
@@ -132,6 +135,8 @@ term:
     { Literal (Bool b) }
   | NULL
     { Literal(Null) }
+  | var = VARIABLE;
+    { Variable var }
   | RANGE; OPEN_PARENT; nl = separated_nonempty_list(SEMICOLON, number); CLOSE_PARENT;
     {
       match (List.map Int.of_float nl) with
@@ -173,7 +178,6 @@ term:
       | "any" -> Any_with_condition cb
       | "all" -> All_with_condition cb
       | "walk" -> Walk cb
-      | "transpose" -> Transpose cb
       | "has" -> Has cb
       | "in" -> In cb
       | "with_entries" -> With_entries cb
@@ -188,8 +192,14 @@ term:
       | "split" -> Split cb
       | "join" -> Join cb
       | "contains" -> Contains cb
+      | "test" -> (
+          match cb with
+          | Literal (String pattern) -> Test pattern
+          | _ -> failwith "test() requires a string literal pattern")
       | _ -> failwith @@ Console.Errors.missing f
     }
+  | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
+    { Reduce (expr, var, init, update) }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty
@@ -218,6 +228,7 @@ term:
       | "recurse_down" -> Recurse_down
       | "to_entries" -> To_entries
       | "from_entries" -> From_entries
+      | "transpose" -> Transpose Identity
       | "nan" -> Nan
       | "isnan" (* for backward compatibility *)
       | "is_nan" -> Is_nan
