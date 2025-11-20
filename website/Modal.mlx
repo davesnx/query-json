@@ -1,16 +1,16 @@
-let[@react.component] make ~isOpen ~onClose ~title ~description ~children =
-  let handleBackdropClick event =
+let[@react.component] make ~is_open ~on_close ~title ~description ~children =
+  let handle_backdrop_click event =
     let target = React.Event.Mouse.target event in
-    let currentTarget = React.Event.Mouse.currentTarget event in
-    if target == currentTarget then onClose ()
+    let current_target = React.Event.Mouse.currentTarget event in
+    if target == current_target then on_close ()
   in
 
-  if not isOpen then React.null
+  if not is_open then React.null
   else
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 \
                  bg-black/50 backdrop-blur-sm animate-in fade-in"
-      onClick=handleBackdropClick
+      onClick=handle_backdrop_click
       role="dialog"
       ariaModal=true
       ariaLabelledby="modal-title"
@@ -33,7 +33,7 @@ let[@react.component] make ~isOpen ~onClose ~title ~description ~children =
               </p>
             </div>
             <button
-              onClick=(fun _ -> onClose ())
+              onClick=(fun _ -> on_close ())
               className="text-muted-foreground hover:text-foreground \
                          transition-colors p-2 rounded-lg hover:bg-accent"
               ariaLabel="Close modal">

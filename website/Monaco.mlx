@@ -9,21 +9,21 @@ type environment = { getWorker : unit -> string -> worker }
 external loader : loader = "loader" [@@mel.module "@monaco-editor/react"]
 external monaco : monaco = "monaco-editor" [@@mel.module]
 
-external jsonWorker : unit -> worker = "default"
+external json_worker : unit -> worker = "default"
 [@@mel.module "monaco-editor/esm/vs/language/json/json.worker?worker"]
 [@@mel.new]
 
-external editorWorker : unit -> worker = "default"
+external editor_worker : unit -> worker = "default"
 [@@mel.module "monaco-editor/esm/vs/editor/editor.worker?worker"] [@@mel.new]
 
-external createEnv : self -> environment -> monacoEnv = "MonacoEnvironment"
+external create_env : self -> environment -> monacoEnv = "MonacoEnvironment"
 [@@mel.set]
 
 let _ =
   let getWorker _ label : worker =
-    match label with "json" -> jsonWorker () | _ -> editorWorker ()
+    match label with "json" -> json_worker () | _ -> editor_worker ()
   in
-  let _env = createEnv [%mel.raw {|self|}] { getWorker } in
+  let _env = create_env [%mel.raw {|self|}] { getWorker } in
   let () = loader.config { monaco } in
   loader.init () |> Js.Promise.then_ (fun _ -> Js.Promise.resolve ()) |> ignore
 
@@ -64,15 +64,15 @@ module External = struct
   [@@mel.module "@monaco-editor/react"] [@@react.component]
 end
 
-type onChange = Write of (string -> unit) | ReadOnly
+type on_change = Write of (string -> unit) | Read_only
 
-let isReadOnly = function Write _ -> false | ReadOnly -> true
+let is_read_only = function Write _ -> false | Read_only -> true
 
 let[@react.component] make ~(value : string)
-    ~onChange:(onChangeValue : onChange) ~(mode : mode) =
-  let onChange =
-    match onChangeValue with
-    | ReadOnly -> fun _ -> ()
+    ~on_change:(on_change_value : on_change) ~(mode : mode) =
+  let on_change =
+    match on_change_value with
+    | Read_only -> fun _ -> ()
     | Write handler -> handler
   in
   let options =
@@ -88,12 +88,12 @@ let[@react.component] make ~(value : string)
       occurrencesHighlight = false;
       matchBrackets = "never";
       bracketPairColorizationEnabled = false;
-      readOnly = isReadOnly onChangeValue;
+      readOnly = is_read_only on_change_value;
     }
   in
   <External
     value
-    onChange
+    onChange=on_change
     options
     theme="vs-dark"
     language=(mode_to_string mode)

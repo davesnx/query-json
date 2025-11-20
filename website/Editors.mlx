@@ -13,7 +13,7 @@ module Title = struct
     </div>
 end
 
-let[@react.component] make ~jsonValue ~onJsonChange ~output =
+let[@react.component] make ~json_value ~on_json_change ~output =
   <main className="flex-1 flex flex-col overflow-hidden">
     <div className="w-full h-full border-b border-border bg-muted/20">
       <div className="max-w-[1400px] mx-auto w-full h-full flex">
@@ -32,7 +32,7 @@ let[@react.component] make ~jsonValue ~onJsonChange ~output =
                  bg-background">
       <div className="max-w-[1360px] mx-auto flex-1 flex flex">
         <div className="overflow-auto flex-1 flex border-r border-border">
-          <Editor.Json value=jsonValue onChange=onJsonChange />
+          <Editor.Json value=json_value on_change=on_json_change />
         </div>
         <div className="overflow-auto flex-1 flex">
           (match output with

@@ -2,8 +2,8 @@ type kind = Default | Secondary | Ghost
 type size = Sm | Default
 
 let[@react.component] make ~(kind : kind) ?(size : size = Default) ?className
-    ~children ~onClick =
-  let kindClassName =
+    ~children ~on_click =
+  let kind_class_name =
     match kind with
     | Default ->
         "bg-primary text-primary-foreground hover:bg-primary/90 border-primary"
@@ -12,7 +12,7 @@ let[@react.component] make ~(kind : kind) ?(size : size = Default) ?className
          border-secondary"
     | Ghost -> "hover:bg-accent hover:text-accent-foreground"
   in
-  let sizeClassName =
+  let size_class_name =
     match size with
     | Sm -> "gap-2 text-sm py-2 px-3"
     | Default -> "gap-2 text-sm py-2 px-4"
@@ -25,6 +25,6 @@ let[@react.component] make ~(kind : kind) ?(size : size = Default) ?className
      cursor-pointer transition-colors focus-visible:outline-none \
      focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 \
      disabled:opacity-50 disabled:pointer-events-none ring-offset-background"
-    ^ " " ^ kindClassName ^ " " ^ sizeClassName ^ extra
+    ^ " " ^ kind_class_name ^ " " ^ size_class_name ^ extra
   in
-  <button className onClick>children</button>
+  <button className onClick=on_click>children</button>

@@ -1,10 +1,10 @@
-let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
-  let onChangeHandler event =
+let[@react.component] make ~value ~placeholder ~on_change ~on_examples_click =
+  let on_change_handler event =
     let target = React.Event.Form.target event in
-    onChange target##value
+    on_change target##value
   in
 
-  let onClear _ = onChange "" in
+  let on_clear _ = on_change "" in
 
   <div className="border-b border-border bg-muted/30">
     <div className="max-w-[1400px] mx-auto px-6 py-4">
@@ -21,7 +21,7 @@ let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
             id="query"
             type_="text"
             value
-            onChange=onChangeHandler
+            onChange=on_change_handler
             placeholder
             className="w-full bg-background border border-border rounded-lg \
                        px-4 py-2 pr-10 text-sm text-foreground \
@@ -31,7 +31,7 @@ let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
           (if value <> "" then
              <button
                type_="button"
-               onClick=onClear
+               onClick=on_clear
                className="absolute right-3 top-1/2 -translate-y-1/2 \
                           text-muted-foreground hover:text-foreground \
                           transition-colors cursor-pointer">
@@ -39,7 +39,7 @@ let[@react.component] make ~value ~placeholder ~onChange ~onExamplesClick =
              </button>
            else React.null)
         </div>
-        <Button kind=Secondary size=Sm onClick=onExamplesClick>
+        <Button kind=Secondary size=Sm on_click=on_examples_click>
           <span className="flex items-center gap-2">
             <Icons.FileJson size=Small /> (React.string "Examples")
           </span>

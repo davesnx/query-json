@@ -132,9 +132,9 @@ let examples =
   ]
 
 module Card = struct
-  let[@react.component] make ~example ~onClick =
+  let[@react.component] make ~example ~on_click =
     <button
-      onClick
+      onClick=on_click
       className="flex flex-col items-start justify-start text-left p-4 \
                  rounded-lg border border-border bg-card hover:bg-accent\n\
                 \                 hover:border-accent-foreground \
@@ -156,14 +156,14 @@ module Card = struct
     </button>
 end
 
-let[@react.component] make ~isOpen ~onClose ~onSelectExample =
-  let onClick { query; input; _ } =
-    onSelectExample query input;
-    onClose ()
+let[@react.component] make ~is_open ~on_close ~on_select_example =
+  let on_click { query; input; _ } =
+    on_select_example query input;
+    on_close ()
   in
   <Modal
-    isOpen
-    onClose
+    is_open
+    on_close
     title="Examples"
     description="here there are some examples to learn/play with query-json.">
     <div
@@ -171,7 +171,8 @@ let[@react.component] make ~isOpen ~onClose ~onSelectExample =
                  gap-3">
       (examples
       |> List.map (fun example ->
-             <Card key=example.title example onClick=(fun _ -> onClick example)
+             <Card
+               key=example.title example on_click=(fun _ -> on_click example)
              />)
       |> Array.of_list |> React.array)
     </div>

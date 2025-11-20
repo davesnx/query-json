@@ -1,6 +1,6 @@
-let initialQuery = ".store"
+let initial_query = ".store"
 
-let initialJson =
+let initial_json =
   {|{
   "store": {
     "books": [
@@ -43,18 +43,18 @@ type t = {
 }
 
 type actions =
-  | UpdateQuery of string
-  | UpdateJson of string
-  | SetCopied of bool
-  | SetModalOpen of bool
+  | Update_query of string
+  | Update_json of string
+  | Set_copied of bool
+  | Set_modal_open of bool
 
 let reduce state = function
-  | UpdateQuery query -> { state with query }
-  | UpdateJson json -> { state with json = Some json }
-  | SetCopied copied -> { state with copied }
-  | SetModalOpen isModalOpen -> { state with isModalOpen }
+  | Update_query query -> { state with query }
+  | Update_json json -> { state with json = Some json }
+  | Set_copied copied -> { state with copied }
+  | Set_modal_open isModalOpen -> { state with isModalOpen }
 
-module QueryParams = struct
+module Query_params = struct
   open Melange_json.Primitives
 
   type t = { query : string; json : string option } [@@deriving json]
@@ -73,19 +73,19 @@ module Option = struct
   let bind f o = match o with None -> None | Some v -> f v
 end
 
-module QueryJson = struct
-  type js_of_ocaml_result = {
+module Query_json = struct
+  type jsoo_result = {
     first : int; [@mel.as "0"]
     second : string; [@mel.as "1"]
   }
 
-  let to_result (res : js_of_ocaml_result) =
+  let to_result (res : jsoo_result) =
     match res.first with
     | 0 -> Ok res.second
     | 1 -> Error res.second
     | _ -> Error "Invalid result from QueryJsonJs"
 
-  let query_json_run : string -> string -> js_of_ocaml_result =
+  let query_json_run : string -> string -> jsoo_result =
     [%mel.raw
       {| function (query, json) { return window['query-json'].run(query, json); }|}]
 
@@ -93,49 +93,48 @@ module QueryJson = struct
 end
 
 module Clipboard = struct
-  external writeText : string -> unit Js.Promise.t = "writeText"
+  external write_text : string -> unit Js.Promise.t = "writeText"
   [@@mel.scope "navigator", "clipboard"]
 end
 
 let[@react.component] make () =
-  let hash = Router.get_hash () in
-
-  let stateFromHash =
-    hash |> Option.bind Base64.decode |> Option.map QueryParams.fromString
+  let state_from_hash =
+    Router.get_hash () |> Option.bind Base64.decode
+    |> Option.map Query_params.fromString
   in
 
-  let initialState =
-    match stateFromHash with
+  let initial_state =
+    match state_from_hash with
     | Some { query; json } ->
         { query; json; copied = false; isModalOpen = false }
     | None ->
         {
-          query = initialQuery;
-          json = Some initialJson;
+          query = initial_query;
+          json = Some initial_json;
           copied = false;
           isModalOpen = false;
         }
   in
 
-  let state, dispatch = React.useReducer reduce initialState in
+  let state, dispatch = React.useReducer reduce initial_state in
 
-  let onQueryChange = fun value -> dispatch (UpdateQuery value) in
-  let onJsonChange = fun value -> dispatch (UpdateJson value) in
+  let on_query_change = fun value -> dispatch (Update_query value) in
+  let on_json_change = fun value -> dispatch (Update_json value) in
 
   let output =
     React.useMemo2
       (fun () ->
         match (state.json, state.query) with
         | Some _, "" | None, _ -> None
-        | Some json, _ -> Some (QueryJson.run state.query json))
+        | Some json, _ -> Some (Query_json.run state.query json))
       (state.json, state.query)
   in
 
-  let onShareClick =
+  let on_share_click =
     React.useCallback2
       (fun _ ->
         let hash =
-          QueryParams.toHash { query = state.query; json = state.json }
+          Query_params.toHash { query = state.query; json = state.json }
         in
         match hash with
         | Some hash ->
@@ -143,11 +142,11 @@ let[@react.component] make () =
               Web.window |> Web.Window.location |> Web.Location.origin
             in
             let fullUrl = url ^ "#" ^ hash in
-            let _promise = Clipboard.writeText fullUrl in
-            dispatch (SetCopied true);
+            let _promise = Clipboard.write_text fullUrl in
+            dispatch (Set_copied true);
             let _timeout =
               Js.Global.setTimeout
-                ~f:(fun () -> dispatch (SetCopied false))
+                ~f:(fun () -> dispatch (Set_copied false))
                 2000
             in
             ()
@@ -155,18 +154,18 @@ let[@react.component] make () =
       (state.query, state.json)
   in
 
-  let onExamplesClick = fun _ -> dispatch (SetModalOpen true) in
-  let onCloseModal = fun () -> dispatch (SetModalOpen false) in
-  let onSelectExample =
+  let on_examples_click = fun _ -> dispatch (Set_modal_open true) in
+  let on_close_modal = fun () -> dispatch (Set_modal_open false) in
+  let on_select_example =
    fun query json ->
-    dispatch (UpdateQuery query);
-    dispatch (UpdateJson json)
+    dispatch (Update_query query);
+    dispatch (Update_json json)
   in
 
   <div className="flex flex-col min-h-screen bg-background">
     <Header>
       <Button
-        kind=Secondary size=Sm onClick=onShareClick className="min-w-[110px]">
+        kind=Secondary size=Sm on_click=on_share_click className="min-w-[110px]">
         (match state.copied with
         | true ->
             <span className="flex items-center gap-2">
@@ -180,14 +179,15 @@ let[@react.component] make () =
     </Header>
     <TextInput
       value=state.query
-      onChange=onQueryChange
-      onExamplesClick
+      on_change=on_query_change
+      on_examples_click
       placeholder="Type your filter (e.g., '.store.books[0]')"
     />
-    <Editors jsonValue=(Option.value state.json ~default:"") onJsonChange output
+    <Editors
+      json_value=(Option.value state.json ~default:"") on_json_change output
     />
     <Footer />
     <Modal_examples
-      isOpen=state.isModalOpen onClose=onCloseModal onSelectExample
+      is_open=state.isModalOpen on_close=on_close_modal on_select_example
     />
   </div>

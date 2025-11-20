@@ -44,8 +44,8 @@ let get_field_name json =
   | `Intlit _ -> "int"
 
 let make_error ~colorize (name : string) (json : Json.t) =
-  let itemName = get_field_name json in
-  make_error_wrong_operation ~colorize name itemName json
+  let item_name = get_field_name json in
+  make_error_wrong_operation ~colorize name item_name json
 
 module Output = struct
   let ok x = Ok x

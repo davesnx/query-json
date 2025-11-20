@@ -1,19 +1,19 @@
 module Empty = struct
   let[@react.component] make () =
-    <Monaco mode=Text value="" onChange=ReadOnly />
+    <Monaco mode=Text value="" on_change=Read_only />
 end
 
 module Output = struct
   let[@react.component] make ~value =
     let text = match value with Ok value -> value | Error error -> error in
-    let hasError = Result.is_error value in
+    let has_error = Result.is_error value in
     let mode : Monaco.mode =
-      match hasError with true -> Text | false -> Json
+      match has_error with true -> Text | false -> Json
     in
-    <Monaco mode value=text onChange=ReadOnly />
+    <Monaco mode value=text on_change=Read_only />
 end
 
 module Json = struct
-  let[@react.component] make ~value ~onChange =
-    <Monaco mode=Json value onChange=(Write onChange) />
+  let[@react.component] make ~value ~on_change =
+    <Monaco mode=Json value on_change=(Write on_change) />
 end
