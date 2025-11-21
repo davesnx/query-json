@@ -1,51 +1,5 @@
 open Ast
-
-let append_article (noun : string) =
-  let starts_with_any (str : string) (chars : string list) =
-    let rec loop (chars : string list) =
-      match chars with
-      | [] -> false
-      | x :: xs -> if String.starts_with ~prefix:str x then true else loop xs
-    in
-    loop chars
-  in
-  match starts_with_any noun [ "a"; "e"; "i"; "o"; "u" ] with
-  | true -> "an " ^ noun
-  | false -> "a " ^ noun
-
-let make_error_wrong_operation ~colorize op member_kind (value : Json.t) =
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
-  end) in
-  "Trying to "
-  ^ Console.Formatting.single_quotes (Chalk.bold op)
-  ^ " on "
-  ^ Chalk.bold (append_article member_kind)
-  ^ ":" ^ Console.Formatting.enter 1
-  ^ Chalk.gray (Json.to_string value ~colorize ~summarize:true)
-
-let make_empty_list_error ~colorize op =
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
-  end) in
-  "Trying to "
-  ^ Console.Formatting.single_quotes (Chalk.bold op)
-  ^ " on an empty array."
-
-let get_field_name json =
-  match json with
-  | `List _ -> "list"
-  | `Assoc _ -> "object"
-  | `Bool _ -> "bool"
-  | `Float _ -> "float"
-  | `Int _ -> "int"
-  | `Null -> "null"
-  | `String _ -> "string"
-  | `Intlit _ -> "int"
-
-let make_error ~colorize (name : string) (json : Json.t) =
-  let item_name = get_field_name json in
-  make_error_wrong_operation ~colorize name item_name json
+open Runtime_errors
 
 module Output = struct
   let ok x = Ok x
@@ -182,23 +136,29 @@ let range ?step from upto =
   in
   match upto with None -> range 1 from | Some upto -> range ?step from upto
 
-let split expr json =
+let split ~colorize expr json =
   match json with
   | `String s ->
       let* rcase =
         match expr with
         | Literal (String s) -> Output.return s
-        | _ -> Error "split input should be a string"
+        | _ ->
+            Error
+              (make_message_error ~colorize
+                 "Invalid argument for 'split': expected string literal")
       in
       Output.return
         (`List (Str.split (Str.regexp rcase) s |> List.map (fun s -> `String s)))
-  | _ -> Error "input should be a JSON string"
+  | _ -> Error (make_error ~colorize "split" json)
 
-let join expr json =
+let join ~colorize expr json =
   let* rcase =
     match expr with
     | Literal (String s) -> Output.return s
-    | _ -> Error "join input should be a string"
+    | _ ->
+            Error
+              (make_message_error ~colorize
+                 "Invalid argument for 'join': expected string literal")
   in
   match json with
   | `List l ->
@@ -206,7 +166,7 @@ let join expr json =
         (`String
            (List.map (function `String s -> s | _ -> "") l
            |> String.concat rcase))
-  | _ -> Error "input should be a list"
+  | _ -> Error (make_error ~colorize "join" json)
 
 let length ~colorize (json : Json.t) =
   match json with
@@ -363,7 +323,9 @@ let to_entries ~colorize (json : Json.t) =
           obj
       in
       Output.return (`List entries)
-  | _ -> Error (make_error ~colorize "to_entries" json)
+  | _ ->
+      Error
+        (make_structure_error ~colorize "to_entries" "requires an object" json)
 
 let from_entries ~colorize (json : Json.t) =
   match json with
@@ -379,9 +341,13 @@ let from_entries ~colorize (json : Json.t) =
                 | Some (`String k), Some v -> convert ((k, v) :: acc) rest
                 | _ ->
                     Error
-                      "from_entries requires objects with 'key' (string) and \
-                       'value' fields")
-            | _ -> Error "from_entries requires an array of objects")
+                      (make_structure_error ~colorize "from_entries"
+                         "requires objects with 'key' (string) and 'value' fields"
+                         json))
+            | _ ->
+                Error
+                  (make_structure_error ~colorize "from_entries"
+                     "requires an array of objects" json))
       in
       match convert [] entries with
       | Ok obj -> Output.return (`Assoc obj)
@@ -423,7 +389,9 @@ let transpose ~colorize (json : Json.t) =
       in
       let lengths = List.filter_map get_length rows in
       if List.length lengths <> List.length rows then
-        Error "transpose requires an array of arrays"
+        Error
+          (make_structure_error ~colorize "transpose"
+             "requires an array of arrays" json)
       else
         let max_len = List.fold_left Int.max 0 lengths in
         let get_column i =
@@ -483,18 +451,6 @@ let tail ~colorize (json : Json.t) =
           Output.return (Json.index last_index json)
       | false -> Error (make_empty_list_error ~colorize "tail"))
   | _ -> Error (make_error ~colorize "tail" json)
-
-let make_error_missing_member ~colorize op key (value : Json.t) =
-  let open Console in
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
-  end) in
-  "Trying to "
-  ^ Formatting.double_quotes (Chalk.bold op)
-  ^ " on an object, that don't have the field "
-  ^ Formatting.double_quotes key
-  ^ ":" ^ Formatting.enter 1
-  ^ Chalk.gray (Json.to_string value ~colorize ~summarize:true)
 
 let member ~colorize (key : string) (json : Json.t) =
   match json with
@@ -650,7 +606,10 @@ let rec interp ~colorize ~verbose ?(env = []) expression json :
   | Has expr -> (
       match expr with
       | Literal ((String _ | Number _) as expr) -> has ~colorize json expr
-      | _ -> Error (show_expression expr ^ " is not allowed"))
+      | _ ->
+          Error
+            (make_message_error ~colorize
+               (show_expression expr ^ " is not allowed")))
   | In expr -> in_ ~colorize ~verbose json expr
   | Range (from, upto, step) ->
       Output.ok (range ?step from upto |> List.map (fun i -> `Int i))
@@ -658,8 +617,8 @@ let rec interp ~colorize ~verbose ?(env = []) expression json :
       match json with
       | `List l -> Output.return (`List (List.rev l))
       | _ -> Error (make_error ~colorize "reverse" json))
-  | Split expr -> split expr json
-  | Join expr -> join expr json
+  | Split expr -> split ~colorize expr json
+  | Join expr -> join ~colorize expr json
   | Fun builtin -> builtin_functions ~colorize builtin json
   | If_then_else (cond, if_branch, else_branch) -> (
       let* cond = interp ~colorize ~verbose cond json in
@@ -697,11 +656,12 @@ let rec interp ~colorize ~verbose ?(env = []) expression json :
   | Variable var_name -> (
       match List.assoc_opt var_name env with
       | Some value -> Output.return value
-      | None -> Error ("Undefined variable: $" ^ var_name))
+      | None ->
+          Error (make_message_error ~colorize ("Undefined variable: $" ^ var_name)))
   | Reduce (generator, var_name, init_expr, update_expr) ->
       reduce ~colorize ~verbose ~env generator var_name init_expr update_expr
         json
-  | Break -> Error "break is not supported"
+  | Break -> Error (make_message_error ~colorize "break is not supported")
 
 and operation ~colorize ~verbose ~env left_expr right_expr op json =
   let* left = interp ~colorize ~verbose ~env left_expr json in
@@ -832,7 +792,10 @@ and objects ~colorize ~verbose list json =
                   match json with
                   | `Null -> Output.return `Null
                   | _ -> member ~colorize s json)
-              | _ -> Error "Object shorthand only allowed for string keys")
+              | _ ->
+                  Error
+                    (make_message_error ~colorize
+                       "Object shorthand only allowed for string keys"))
           | Some expr -> interp ~colorize ~verbose expr json
         in
         match values_res with
@@ -845,7 +808,8 @@ and objects ~colorize ~verbose list json =
                   let new_pairs = List.map (fun v -> (k, v)) values in
                   build_pairs (List.rev_append new_pairs acc_pairs) rest
               | _ :: _ ->
-                  Error (make_error ~colorize "object key must be string" json)
+                  Error
+                    (make_message_error ~colorize "object key must be string")
             in
             build_pairs [] keys)
   in

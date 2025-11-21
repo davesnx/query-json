@@ -4,6 +4,12 @@
 
 %{
   open Ast
+
+  let missing f =
+    Formatting.single_quotes f
+    ^ " looks like a function and maybe is not implemented or missing in the \
+       parser. Either way, could you open an issue \
+       'https://github.com/davesnx/query-json/issues/new'"
 %}
 
 %token <string> STRING
@@ -157,7 +163,7 @@ term:
       | "while" -> While (cond, update)
       | "until" -> Until (cond, update)
       | "recurse" -> Recurse_with (cond, update)
-      | _ -> failwith @@ Console.Errors.missing f
+      | _ -> failwith @@ missing f
     }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
@@ -196,7 +202,7 @@ term:
           match cb with
           | Literal (String pattern) -> Test pattern
           | _ -> failwith "test() requires a string literal pattern")
-      | _ -> failwith @@ Console.Errors.missing f
+      | _ -> failwith @@ missing f
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
@@ -235,7 +241,8 @@ term:
       | "not" -> Not
       | "abs" -> Fun (Absolute)
       | "add" -> Fun (Add)
-      | _ -> failwith @@ Console.Errors.missing f
+      | "break" -> Break
+      | _ -> failwith @@ missing f
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }

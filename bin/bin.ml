@@ -10,6 +10,41 @@ module Info = struct
      in OCaml"
 end
 
+let print_error_message ~colorize str =
+  let module Chalk = Chalk.Make (struct
+    let disable = not colorize
+  end) in
+  print_endline
+    (Formatting.enter 1
+    ^ Chalk.red (Chalk.bold "Error")
+    ^ Chalk.red ":" ^ Formatting.indent 1 ^ str ^ Formatting.enter 1)
+
+let usage ?(colorize = true) () =
+  let open Formatting in
+  let module Chalk = Chalk.Make (struct
+    let disable = not colorize
+  end) in
+  [
+    enter 1;
+    Chalk.yellow "Missing query as argument";
+    enter 1 ^ "Usage:" ^ enter 2 ^ Chalk.bold "query-json"
+    ^ Chalk.gray " [OPTIONS] " ^ "[QUERY] [JSON]" ^ enter 2
+    ^ Chalk.bold "OPTIONS";
+    indent 1 ^ "-c, --no-color: Disable color in the output";
+    indent 1 ^ "-k [VAL], --kind[=VAL]: input kind. " ^ double_quotes "file"
+    ^ " | " ^ double_quotes "inline";
+    indent 1 ^ "-v, --verbose: Activate verbossity";
+    indent 1 ^ "-d, --debug: Print AST";
+    indent 1 ^ "--version: Show version information." ^ enter 2
+    ^ Chalk.bold "EXAMPLES";
+    indent 1 ^ "query-json '.dependencies' package.json";
+    indent 1 ^ "query-json '.' <<< '[1, 2, 3]'" ^ enter 2 ^ Chalk.bold "MORE";
+    indent 1 ^ " https://github.com/davesnx/query-json";
+    enter 1;
+  ]
+  |> String.concat (enter 1)
+  |> print_endline
+
 module Runtime = struct
   type input_kind = File | Inline
 
@@ -30,8 +65,8 @@ module Runtime = struct
             json
             |> List.map (Json.to_string ~colorize ~summarize:false)
             |> List.iter print_endline
-        | Error err -> print_endline (Console.Errors.print_error ~colorize err))
-    | Error err -> print_endline (Console.Errors.print_error ~colorize err)
+        | Error err -> print_error_message ~colorize err)
+    | Error err -> print_error_message ~colorize err
 end
 
 let execution (query : string option) (payload : string option)
@@ -46,8 +81,8 @@ let execution (query : string option) (payload : string option)
       in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
-      | Error err -> print_endline (Console.Errors.print_error ~colorize err))
-  | None -> print_endline (Console.usage ())
+      | Error err -> print_error_message ~colorize err)
+  | None -> usage ()
 
 let () =
   let open Cmdliner.Arg in

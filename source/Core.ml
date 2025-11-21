@@ -21,9 +21,29 @@ let provider ~debug buf =
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
 
-let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
+let position_to_string start end_ =
+  Printf.sprintf "[line: %d, char: %d-%d]" start.Lexing.pos_lnum
+    (start.Lexing.pos_cnum - start.Lexing.pos_bol)
+    (end_.Lexing.pos_cnum - end_.Lexing.pos_bol)
+
+let pretty_print_error ~colorize ~input ~(start : Lexing.position)
+    ~(end_ : Lexing.position) =
+  let module Chalk = Chalk.Make (struct
+    let disable = not colorize
+  end) in
+  let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
+  Chalk.red (Chalk.bold "Parse error: ")
+  ^ "Problem parsing at position "
+  ^ position_to_string start end_
+  ^ Formatting.enter 2 ^ "Input:" ^ Formatting.indent 1
+  ^ Chalk.green (Chalk.bold input)
+  ^ Formatting.enter 1 ^ Formatting.indent 4
+  ^ String.make start.pos_cnum ' '
+  ^ Chalk.gray pointer_range
+
+let parse ?(debug = false) ?(colorize = true) ?(verbose : _) input :
     (Ast.expression, string) result =
-  let _ = verbose in
+  let _ = ignore verbose in
   (* verbose will be used for parser warnings in the future *)
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
@@ -37,12 +57,10 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
         print_endline "Lexer error";
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error
-        (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
+      Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error
-        (Console.Errors.make ~colorize ~input ~start:loc_start ~end_:loc_end)
+      Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
 
 let run ?(colorize = false) ?(verbose = false) query json =
   let result =
