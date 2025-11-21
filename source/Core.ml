@@ -46,7 +46,7 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
 
 let run ?(colorize = false) ?(verbose = false) query json =
   let result =
-    parse ~colorize query |> Result.map (Compiler.compile ~colorize ~verbose)
+    parse ~colorize query |> Result.map (Interpreter.interp ~colorize ~verbose)
     |> fun x ->
     Result.bind x (fun runtime ->
         match Json.parse_string json with

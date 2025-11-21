@@ -42,7 +42,7 @@ let execution (query : string option) (payload : string option)
   | Some query -> (
       let runtime =
         Core.parse ~debug ~colorize ~verbose query
-        |> Result.map (Compiler.compile ~colorize ~verbose)
+        |> Result.map (Interpreter.interp ~colorize ~verbose)
       in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
