@@ -36,7 +36,7 @@ It was created with mostly two reasons in mind, learning and having fun
   - All methods are snake_case instead of alltoghetercase
   - Added `filter(p)` as an alias for `map(select(p))`
   - Supports comments in JSONs
-- **Small**: Lexer, Parser and Interpreter are just 300 LOC and most of the commands that I use on my day to day are implemented in only 140 LOC.
+- **Small**: Lexer, Parser and Interpreter are just 1300 LOC
 
 ## Installation
 

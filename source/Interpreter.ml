@@ -641,9 +641,10 @@ let rec interp ~colorize ~verbose ?(env = []) expression json :
   | List (Some expr) ->
       interp ~colorize ~verbose expr json |> Result.map (fun x -> [ `List x ])
   | Comma (left_expr, right_expr) ->
-      Result.bind (interp ~colorize ~verbose left_expr json) (fun left ->
-          Result.bind (interp ~colorize ~verbose right_expr json) (fun right ->
-              Ok (left @ right)))
+      let ( let* ) = Result.bind in
+      let* left = interp ~colorize ~verbose left_expr json in
+      let* right = interp ~colorize ~verbose right_expr json in
+      Ok (left @ right)
   | Object [] -> Output.return (`Assoc [])
   | Object list -> objects ~colorize ~verbose list json
   | Has expr -> (
