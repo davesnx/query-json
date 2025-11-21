@@ -16,7 +16,7 @@ let tests =
     (* split argument type mismatch *)
     test_error "split(1)" "\"a,b\"" "Invalid argument for 'split'";
     (* split input type mismatch *)
-    test_error "split(\",\")" "123" "Trying to 'split' on";
+    test_error "split(\",\")" "123" "Trying to 'split' on an int";
     (* join argument type mismatch *)
     test_error "join(1)" "[\"a\", \"b\"]" "Invalid argument for 'join'";
     (* join input type mismatch *)
