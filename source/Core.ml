@@ -66,7 +66,9 @@ let run query json =
   match parse ~debug:false ~colorize:false ~verbose:false query with
   | Ok runtime ->
       let ( let* ) = Result.bind in
-      let* results = Interpreter.execute ~colorize:false ~verbose:false runtime json in
+      let* results =
+        Interpreter.execute ~colorize:false ~verbose:false runtime json
+      in
       Ok
         (results
         |> List.map (Json.to_string ~colorize:false ~summarize:false)

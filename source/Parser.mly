@@ -22,8 +22,6 @@
 %token FLATTEN
 %token REDUCE
 %token IF THEN ELSE ELIF END
-%token TRY
-%token ASSIGN
 %token DOT
 %token RECURSE
 %token PIPE
@@ -57,7 +55,6 @@
 %nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
 %left ADD SUB
 %left MULT DIV MODULO /* highest precedence */
-%nonassoc TRY
 
 %start <expression> program
 
@@ -166,11 +163,11 @@ term:
       | "while" -> While (cond, update)
       | "until" -> Until (cond, update)
       | "recurse" -> Recurse_with (cond, update)
+      | "try" -> Try (cond, Some update)
       | "limit" -> (
           match cond with
           | Literal (Number n) -> Limit (int_of_float n, update)
           | _ -> failwith "limit first argument must be a number literal")
-      | "try" -> Try (cond, Some update)
       | "sub" -> (
           match cond with
           | Literal (String pattern) -> (
@@ -251,8 +248,6 @@ term:
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
-  | TRY; expr = item_expr;
-    { Try (expr, None) }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty

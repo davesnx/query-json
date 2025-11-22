@@ -113,10 +113,11 @@ type expression =
   | Contains of expression (* contains *)
   (* Strings *)
   | Test of string
-(* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
+  (* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
   | Match of string (* match(regex) with captures *)
   | Scan of string (* scan(regex) *)
-  | Capture of string (* capture(regex) - same as match but array of captures only *)
+  | Capture of
+      string (* capture(regex) - same as match but array of captures only *)
   | Sub of string * string (* sub(regex; replacement) *)
   | Gsub of string * string (* gsub(regex; replacement) *)
   | To_number (* to_number *)

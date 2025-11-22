@@ -2,7 +2,7 @@ let test_error query json_str expected_error_part =
   let fn () =
     match Json.parse_string json_str with
     | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
-    | Ok json ->
+    | Ok json -> (
         match Core.run query json with
         | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
         | Error err -> (
@@ -10,7 +10,7 @@ let test_error query json_str expected_error_part =
             try ignore (Str.search_forward re err 0)
             with Not_found ->
               Alcotest.failf "Expected error containing '%s', but got:\n%s"
-                expected_error_part err)
+                expected_error_part err))
   in
   Alcotest.test_case query `Quick fn
 

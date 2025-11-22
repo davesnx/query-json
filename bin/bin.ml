@@ -75,7 +75,7 @@ let execution (query : string option) (payload : string option) (verbose : bool)
         Core.parse ~debug ~colorize ~verbose query
         |> Result.map (fun expr ->
             fun ~colorize ~verbose json ->
-              Interpreter.execute ~colorize ~verbose expr json)
+             Interpreter.execute ~colorize ~verbose expr json)
       in
       match runtime with
       | Ok runtime -> Runtime.run ~payload ~no_color ~verbose runtime

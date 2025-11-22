@@ -351,5 +351,5 @@ let tests =
     test {|[scan("[a-z]+")]|} {|"hello world test"|} {|[ "hello", "world", "test" ]|};
 
     (* Error propagation with try *)
-    test {|try (error("test"))|} "null" "";
+    test {|try(error("test"))|} "null" "";
   ]
