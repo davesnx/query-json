@@ -106,6 +106,10 @@ npm-install: ## Install npm dependencies
 .PHONY: init
 init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
 
+.PHONY: bench
+bench: ## Run benchmarks
+	./benchmarks/bench.sh
+
 .PHONY: release
 release: ## Create a new release (usage: make release VERSION=1.2.3)
 	@if [ -z "$(VERSION)" ]; then \

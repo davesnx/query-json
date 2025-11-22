@@ -64,6 +64,18 @@ jobs:
       - name: Run tests
         run: make test
 
+      - name: Install benchmark tools
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+          wget https://github.com/sharkdp/hyperfine/releases/download/v1.18.0/hyperfine_1.18.0_amd64.deb
+          sudo dpkg -i hyperfine_1.18.0_amd64.deb
+
+      - name: Run benchmarks
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: BENCH_JQ=1 MIN_RUNS=5 ./benchmarks/bench.sh
+
       - name: Upload artifacts for ${{ matrix.os }}-${{ matrix.arch }}
         uses: actions/upload-artifact@v4
         with:
