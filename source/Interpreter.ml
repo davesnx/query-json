@@ -41,7 +41,9 @@ module Error = struct
          ("Invalid argument for "
          ^ Formatting.single_quotes (Chalk.bold op)
          ^ ": expected " ^ Chalk.bold expected ^ "." ^ Formatting.enter 1
-         ^ Chalk.gray (Json.to_string actual_value ~colorize ~summarize:true)))
+         ^ Chalk.gray
+             (Json.to_string actual_value ~colorize ~summarize:true ~raw:false)
+         ))
 
   let structure ~colorize op msg actual_value =
     let module Chalk = Chalk.Make (struct
@@ -52,7 +54,9 @@ module Error = struct
          ("Invalid structure for "
          ^ Formatting.single_quotes (Chalk.bold op)
          ^ ": " ^ msg ^ "." ^ Formatting.enter 1
-         ^ Chalk.gray (Json.to_string actual_value ~colorize ~summarize:true)))
+         ^ Chalk.gray
+             (Json.to_string actual_value ~colorize ~summarize:true ~raw:false)
+         ))
 
   let message ~colorize msg =
     let module Chalk = Chalk.Make (struct
@@ -83,7 +87,8 @@ module Error = struct
          ^ " on "
          ^ Chalk.bold (prepend_article member_kind)
          ^ ":" ^ Formatting.enter 1
-         ^ Chalk.gray (Json.to_string json ~colorize ~summarize:true)))
+         ^ Chalk.gray (Json.to_string json ~colorize ~summarize:true ~raw:false)
+         ))
 
   let missing_member ~colorize op key (value : Json.t) =
     let module Chalk = Chalk.Make (struct
@@ -96,7 +101,8 @@ module Error = struct
          ^ " on an object, that don't have the field "
          ^ Formatting.double_quotes key
          ^ ":" ^ Formatting.enter 1
-         ^ Chalk.gray (Json.to_string value ~colorize ~summarize:true)))
+         ^ Chalk.gray
+             (Json.to_string value ~colorize ~summarize:true ~raw:false)))
 end
 
 module Operators = struct
@@ -282,7 +288,7 @@ let to_string ~verbose ~deprecated (json : Json.t) =
     emit_warning ~verbose
       "Using deprecated 'tostring'. Use 'to_string' instead. This may not be \
        supported in future versions.";
-  `String (Json.to_string ~colorize:false ~summarize:false json)
+  `String (Json.to_string ~colorize:false ~summarize:false ~raw:false json)
 
 let min ~colorize (json : Json.t) =
   match json with
@@ -1587,7 +1593,7 @@ and group_by ~colorize ~verbose ~env expr json =
           match keys with
           | [ key ] ->
               let key_str =
-                Json.to_string ~colorize:false ~summarize:false key
+                Json.to_string ~colorize:false ~summarize:false ~raw:false key
               in
               let existing =
                 try Hashtbl.find groups key_str with Not_found -> []
@@ -1730,7 +1736,7 @@ and error_msg ~colorize ~verbose ~env msg_expr json =
       | [ `String msg ] -> Error.message ~colorize msg
       | [ other ] ->
           Error.message ~colorize
-            (Json.to_string ~colorize:false ~summarize:false other)
+            (Json.to_string ~colorize:false ~summarize:false ~raw:false other)
       | _ -> Error.message ~colorize "error expects single string")
 
 and isempty ~colorize ~verbose ~env expr json =

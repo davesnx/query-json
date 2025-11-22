@@ -71,6 +71,6 @@ let run query json =
       in
       Ok
         (results
-        |> List.map (Json.to_string ~colorize:false ~summarize:false)
+        |> List.map (Json.to_string ~colorize:false ~summarize:false ~raw:false)
         |> String.concat "\n")
   | Error err -> Error err

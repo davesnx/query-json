@@ -31,6 +31,7 @@ let usage ?(colorize = true) () =
     ^ Chalk.gray " [OPTIONS] " ^ "[QUERY] [JSON]" ^ enter 2
     ^ Chalk.bold "OPTIONS";
     indent 1 ^ "-c, --no-color: Disable color in the output";
+    indent 1 ^ "-r, --raw-output: Output raw strings, not JSON texts";
     indent 1 ^ "-v, --verbose: Activate verbossity";
     indent 1 ^ "-d, --debug: Print AST";
     indent 1 ^ "--version: Show version information." ^ enter 2
@@ -44,7 +45,7 @@ let usage ?(colorize = true) () =
   |> print_endline
 
 module Runtime = struct
-  let run ~payload ~no_color ~verbose runtime =
+  let run ~payload ~no_color ~verbose ~raw_output runtime =
     let colorize = not no_color in
     let input =
       match payload with
@@ -60,14 +61,15 @@ module Runtime = struct
         match runtime ~colorize ~verbose json with
         | Ok json ->
             json
-            |> List.map (Json.to_string ~colorize ~summarize:false)
+            |> List.map
+                 (Json.to_string ~colorize ~summarize:false ~raw:raw_output)
             |> List.iter print_endline
         | Error err -> print_error_message ~colorize err)
     | Error err -> print_error_message ~colorize err
 end
 
 let execution (query : string option) (payload : string option) (verbose : bool)
-    (debug : bool) (no_color : bool) =
+    (debug : bool) (no_color : bool) (raw_output : bool) =
   let colorize = not no_color in
   match query with
   | Some query -> (
@@ -78,7 +80,8 @@ let execution (query : string option) (payload : string option) (verbose : bool)
              Interpreter.execute ~colorize ~verbose expr json)
       in
       match runtime with
-      | Ok runtime -> Runtime.run ~payload ~no_color ~verbose runtime
+      | Ok runtime ->
+          Runtime.run ~payload ~no_color ~verbose ~raw_output runtime
       | Error err -> print_error_message ~colorize err)
   | None -> usage ()
 
@@ -94,9 +97,13 @@ let () =
     value & flag
     & info [ "c"; "no-color" ] ~doc:"Enable or disable color in the output"
   in
+  let raw_output =
+    value & flag
+    & info [ "r"; "raw-output" ] ~doc:"Output raw strings, not JSON texts"
+  in
   let term =
     let open Cmdliner.Term in
-    const execution $ query $ json $ verbose $ debug $ color
+    const execution $ query $ json $ verbose $ debug $ color $ raw_output
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

@@ -83,15 +83,18 @@ struct
       ((Easy_format.Atom (s, Easy_format.atom), Easy_format.label), value)
 end
 
-let to_string (json : json) ~colorize ~summarize =
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
-  end) in
-  let module Format =
-    Make_format
-      (Chalk)
-      (struct
-        let summarize = summarize
-      end)
-  in
-  Easy_format.Pretty.to_string (Format.to_easy_format json)
+let to_string (json : json) ~colorize ~summarize ~raw =
+  match (raw, json) with
+  | true, `String s -> s
+  | _ ->
+      let module Chalk = Chalk.Make (struct
+        let disable = not colorize
+      end) in
+      let module Format =
+        Make_format
+          (Chalk)
+          (struct
+            let summarize = summarize
+          end)
+      in
+      Easy_format.Pretty.to_string (Format.to_easy_format json)

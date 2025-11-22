@@ -82,6 +82,13 @@ query-json '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
 query-json '.' pokemons.json --no-colors
 ```
 
+#### query with raw output (strings without quotes)
+```bash
+query-json -r '.name' pokemon.json
+# Output: Pikachu
+# Instead of: "Pikachu"
+```
+
 #### More examples
 
 Check out [docs/examples.md](./docs/examples.md) for a walkthrough of common use cases.
@@ -107,6 +114,7 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 #### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
   - `--version` ✅
   - `--no-color`. This disables colors ✅
+  - `-r, --raw-output`. Output raw strings, not JSON texts ✅
   - ...rest ⚠️
 
 #### [Basic filters](https://stedolan.github.io/jq/manual/v1.6/#Basicfilters)
