@@ -22,6 +22,8 @@
 %token FLATTEN
 %token REDUCE
 %token IF THEN ELSE ELIF END
+%token TRY
+%token ASSIGN
 %token DOT
 %token RECURSE
 %token PIPE
@@ -55,6 +57,7 @@
 %nonassoc NOT_EQUAL EQUAL LOWER GREATER LOWER_EQUAL GREATER_EQUAL
 %left ADD SUB
 %left MULT DIV MODULO /* highest precedence */
+%nonassoc TRY
 
 %start <expression> program
 
@@ -163,6 +166,26 @@ term:
       | "while" -> While (cond, update)
       | "until" -> Until (cond, update)
       | "recurse" -> Recurse_with (cond, update)
+      | "limit" -> (
+          match cond with
+          | Literal (Number n) -> Limit (int_of_float n, update)
+          | _ -> failwith "limit first argument must be a number literal")
+      | "try" -> Try (cond, Some update)
+      | "sub" -> (
+          match cond with
+          | Literal (String pattern) -> (
+              match update with
+              | Literal (String replacement) -> Sub (pattern, replacement)
+              | _ -> failwith "sub() second argument must be string literal")
+          | _ -> failwith "sub() first argument must be string literal")
+      | "gsub" -> (
+          match cond with
+          | Literal (String pattern) -> (
+              match update with
+              | Literal (String replacement) -> Gsub (pattern, replacement)
+              | _ -> failwith "gsub() second argument must be string literal")
+          | _ -> failwith "gsub() first argument must be string literal")
+      | "setpath" -> Setpath (cond, update)
       | _ -> failwith @@ missing f
     }
   | f = FUNCTION; CLOSE_PARENT;
@@ -202,10 +225,34 @@ term:
           match cb with
           | Literal (String pattern) -> Test pattern
           | _ -> failwith "test() requires a string literal pattern")
+      | "match" -> (
+          match cb with
+          | Literal (String pattern) -> Match pattern
+          | _ -> failwith "match() requires a string literal pattern")
+      | "scan" -> (
+          match cb with
+          | Literal (String pattern) -> Scan pattern
+          | _ -> failwith "scan() requires a string literal pattern")
+      | "capture" -> (
+          match cb with
+          | Literal (String pattern) -> Capture pattern
+          | _ -> failwith "capture() requires a string literal pattern")
+      | "isempty" -> Isempty cb
+      | "del" -> Del cb
+      | "getpath" -> Getpath cb
+      | "paths" -> Paths_filter cb
+      | "try" -> Try (cb, None)
+      | "error" -> Error_msg (Some cb)
+      | "halt_error" -> (
+          match cb with
+          | Literal (Number n) -> Halt_error (Some (int_of_float n))
+          | _ -> failwith "halt_error requires number literal")
       | _ -> failwith @@ missing f
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
+  | TRY; expr = item_expr;
+    { Try (expr, None) }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty
@@ -242,6 +289,24 @@ term:
       | "abs" -> Fun (Absolute)
       | "add" -> Fun (Add)
       | "break" -> Break
+      | "paths" -> Paths
+      | "error" -> Error_msg None
+      | "halt" -> Halt
+      | "halt_error" -> Halt_error None
+      | "sin" -> Fun Sin
+      | "cos" -> Fun Cos
+      | "tan" -> Fun Tan
+      | "asin" -> Fun Asin
+      | "acos" -> Fun Acos
+      | "atan" -> Fun Atan
+      | "log" -> Fun Log
+      | "log10" -> Fun Log10
+      | "exp" -> Fun Exp
+      | "pow" -> Fun Pow
+      | "ceil" -> Fun Ceil
+      | "round" -> Fun Round
+      | "infinite" -> Fun Infinite
+      | "now" -> Fun Now
       | _ -> failwith @@ missing f
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;

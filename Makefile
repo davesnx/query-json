@@ -81,12 +81,19 @@ subst: ## Run dune substitute
 	$(DUNE) subst
 
 .PHONY: pin
-pin: ## Pin dependencies
-	echo "Nothing to pin"
+pin: # pin dependencies
+	opam pin add melange.dev "https://github.com/melange-re/melange.git#7b51f143b537076f1ad694464ca2a1102cd23287" -y
+	opam pin add mlx.dev "https://github.com/ocaml-mlx/mlx.git#c03f35259304982d9efc342958caf443f62cfeb0" -y
+	opam pin add ocamlmerlin-mlx.dev "https://github.com/ocaml-mlx/mlx.git#c03f35259304982d9efc342958caf443f62cfeb0" -y
+	opam pin add ocamlformat-mlx-lib.dev "https://github.com/ocaml-mlx/ocamlformat-mlx.git#fbb1a4a8607e2cba6b9ef0540f8dc15307ccc868" -y
+	opam pin add ocamlformat-mlx.dev "https://github.com/ocaml-mlx/ocamlformat-mlx.git#fbb1a4a8607e2cba6b9ef0540f8dc15307ccc868" -y
+	opam pin add jsonrpc.dev "https://github.com/davesnx/ocaml-lsp.git#687d9f21af1256ba6c16bf851e597c9a292c75ed" -y
+	opam pin add lsp.dev "https://github.com/davesnx/ocaml-lsp.git#687d9f21af1256ba6c16bf851e597c9a292c75ed" -y
+	opam pin add ocaml-lsp-server.dev "https://github.com/davesnx/ocaml-lsp.git#687d9f21af1256ba6c16bf851e597c9a292c75ed" -y
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.3.0 --deps-only --with-test --no-install -y
+	opam switch create . 5.4.0 --deps-only --with-test --no-install -y
 
 .PHONY: install
 install: ## Install opam deps

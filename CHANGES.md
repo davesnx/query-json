@@ -1,5 +1,28 @@
 # Unreleased
 
+- **BREAKING:** Requires OCaml 5.0+
+- [core] Add `try(expr)` and `try(expr; handler)` for error handling
+- [core] Add `break` for loop exit (via Break effect)
+- [core] Add `limit(n; expr)` to limit generator output
+- [core] Add `error(msg)` for custom errors
+- [core] Add `halt` / `halt_error(code)` for program termination
+- [core] Add `isempty(expr)` to check empty streams
+- [core] Add `match(regex)` for pattern matching with captures
+- [core] Add `scan(regex)` to find all matches
+- [core] Add `capture(regex)` to extract capture groups
+- [core] Add `sub(regex; replacement)` for single replacement
+- [core] Add `gsub(regex; replacement)` for global replacement
+- [core] Add `del(path)` to delete keys/indices
+- [core] Add `getpath(path_array)` for path navigation
+- [core] Add `setpath(path_array; value)` for path updates
+- [core] Add `paths` to enumerate all paths
+- [core] Add `paths(filter)` for filtered path enumeration
+- [core] Add trig functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
+- [core] Add `log`, `log10`, `exp` for logarithms/exponentials
+- [core] Add `ceil`, `round` for rounding
+- [core] Add `pow` for power operations
+- [core] Add `infinite` - infinite generator (use with `limit`!)
+- [core] Add `now` for current Unix timestamp
 - [core] Support [.[] | {...}]
 - [core] Support |=
 - [core] Support //

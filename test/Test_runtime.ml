@@ -1,9 +1,12 @@
-let test query json expected =
+let test query json_str expected =
   let fn () =
     let result =
-      match Core.run query json with
-      | Ok r -> r
-      | Error err -> Alcotest.fail err
+      match Json.parse_string json_str with
+      | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+      | Ok json -> (
+          match Core.run query json with
+          | Ok r -> r
+          | Error err -> Alcotest.fail err)
     in
     ();
     Alcotest.check Alcotest.string "should be equal" expected result
@@ -309,4 +312,44 @@ let tests =
 
     (* variable references *)
     test "reduce .[] as $x (0; . + $x)" "[5]" "5";
+
+    (* Control flow tests *)
+    test "try(.foo)" {|{"foo": 42}|} "42";
+    test "try(.foo)" {|{}|} "";
+    test "limit(3; range(10))" "null" "1\n2\n3";
+    test "limit(2; .[])" "[1,2,3,4,5]" "1\n2";
+    test "[limit(3; range(10))]" "null" "[ 1, 2, 3 ]";
+    test "isempty(empty)" "null" "true";
+    test "isempty(.[])" "[]" "true";
+    test "isempty(.[])" "[1]" "false";
+    test "del(.foo)" {|{"foo": 1, "bar": 2}|} {|{ "bar": 2 }|};
+    test "paths" {|{"a": {"b": 1}}|} "[ \"a\" ]\n[ \"a\", \"b\" ]";
+    test "getpath([\"a\", \"b\"])" {|{"a": {"b": 42}}|} "42";
+
+    (* Regex tests *)
+    test {|sub("world"; "universe")|} {|"hello world"|} {|"hello universe"|};
+    test {|gsub("l"; "L")|} {|"hello"|} {|"heLLo"|};
+    test {|scan("[0-9]+")|} {|"abc123def456"|} "\"123\"\n\"456\"";
+
+    (* Object/Path tests *)
+    test {|setpath(["a", "b"]; 99)|} {|{"a": {"b": 42}}|} {|{ "a": { "b": 99 } }|};
+    test {|setpath(["x"]; 1)|} {|{}|} {|{ "x": 1 }|};
+    test {|del(.[0])|} {|[1,2,3]|} {|[ 2, 3 ]|};
+
+    (* Math functions *)
+    test "ceil" "3.2" "4";
+    test "round" "3.7" "4";
+    test "log10" "100" "2";
+    test "exp" "0" "1";
+
+    (* limit with infinite - would hang without limit! *)
+    test "[limit(5; infinite)]" "null" "[ 0, 1, 2, 3, 4 ]";
+
+    (* More advanced tests *)
+    test "sin" "0" "0";
+    test "cos" "0" "1";
+    test {|[scan("[a-z]+")]|} {|"hello world test"|} {|[ "hello", "world", "test" ]|};
+
+    (* Error propagation with try *)
+    test {|try (error("test"))|} "null" "";
   ]

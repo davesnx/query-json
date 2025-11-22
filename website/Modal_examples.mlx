@@ -171,9 +171,8 @@ let[@react.component] make ~is_open ~on_close ~on_select_example =
                  gap-3">
       (examples
       |> List.map (fun example ->
-             <Card
-               key=example.title example on_click=(fun _ -> on_click example)
-             />)
+          <Card key=example.title example on_click=(fun _ -> on_click example)
+          />)
       |> Array.of_list |> React.array)
     </div>
   </Modal>

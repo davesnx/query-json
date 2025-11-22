@@ -66,7 +66,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.3.0))
+  (ocaml (>= 5.4.0))
   mlx
   (melange (>= 5.0.1))
   melange-json

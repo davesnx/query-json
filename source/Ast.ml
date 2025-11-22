@@ -5,7 +5,24 @@ type literal =
   | Null (* null *)
 [@@deriving show { with_path = false }]
 
-type builtin = Add | Absolute [@@deriving show { with_path = false }]
+type builtin =
+  | Add
+  | Absolute
+  | Sin
+  | Cos
+  | Tan
+  | Asin
+  | Acos
+  | Atan
+  | Log
+  | Log10
+  | Exp
+  | Pow
+  | Ceil
+  | Round
+  | Infinite
+  | Now
+[@@deriving show { with_path = false }]
 
 type op =
   | Add
@@ -96,7 +113,12 @@ type expression =
   | Contains of expression (* contains *)
   (* Strings *)
   | Test of string
-    (* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
+(* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
+  | Match of string (* match(regex) with captures *)
+  | Scan of string (* scan(regex) *)
+  | Capture of string (* capture(regex) - same as match but array of captures only *)
+  | Sub of string * string (* sub(regex; replacement) *)
+  | Gsub of string * string (* gsub(regex; replacement) *)
   | To_number (* to_number *)
   | Tonumber (* tonumber - deprecated *)
   | Starts_with of expression (* startswith *)
@@ -114,6 +136,23 @@ type expression =
   | While of expression * expression (* while(condition; update) *)
   | Until of expression * expression (* until(condition; update) *)
   | Break (* break *)
+  | Try of expression * expression option (* try expr catch handler *)
+  | Limit of int * expression (* limit(n; expr) *)
+  | Error_msg of expression option (* error or error(msg) *)
+  | Halt (* halt *)
+  | Halt_error of int option (* halt_error or halt_error(exit_code) *)
+  | Isempty of expression (* isempty(expr) *)
+  | Foreach of expression * expression * expression * expression
+    (* foreach EXPR as $VAR (INIT; UPDATE; EXTRACT) *)
+  | Label of string * expression (* label(name; expr) *)
+  | Del of expression (* del(path) *)
+  | Assign of expression * expression (* .foo = value *)
+  | Getpath of expression (* getpath(path) *)
+  | Setpath of expression * expression (* setpath(path; value) *)
+  | Paths (* paths - all paths *)
+  | Paths_filter of expression (* paths(filter) *)
+  | Def of string * string list * expression (* def name(args): body *)
+  | Call of string * expression list (* function_name(args) *)
   (* Conditionals *)
   | Not (* not *)
   (* builtin *)

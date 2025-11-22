@@ -44,7 +44,7 @@ let usage ?(colorize = true) () =
   |> print_endline
 
 module Runtime = struct
-  let run ~payload ~no_color runtime =
+  let run ~payload ~no_color ~verbose runtime =
     let colorize = not no_color in
     let input =
       match payload with
@@ -57,7 +57,7 @@ module Runtime = struct
     in
     match input with
     | Ok json -> (
-        match runtime json with
+        match runtime ~colorize ~verbose json with
         | Ok json ->
             json
             |> List.map (Json.to_string ~colorize ~summarize:false)
@@ -73,10 +73,12 @@ let execution (query : string option) (payload : string option) (verbose : bool)
   | Some query -> (
       let runtime =
         Core.parse ~debug ~colorize ~verbose query
-        |> Result.map (Interpreter.interp ~colorize ~verbose)
+        |> Result.map (fun expr ->
+            fun ~colorize ~verbose json ->
+              Interpreter.execute ~colorize ~verbose expr json)
       in
       match runtime with
-      | Ok runtime -> Runtime.run ~payload ~no_color runtime
+      | Ok runtime -> Runtime.run ~payload ~no_color ~verbose runtime
       | Error err -> print_error_message ~colorize err)
   | None -> usage ()
 

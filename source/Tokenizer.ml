@@ -54,6 +54,8 @@ type token =
   | ELIF
   | END
   | AS
+  | TRY
+  | ASSIGN
   | EOF
 [@@deriving show]
 
@@ -127,8 +129,10 @@ let rec tokenize buf =
   | "elif" -> Ok ELIF
   | "end" -> Ok END
   | "as" -> Ok AS
+  | "try" -> Ok TRY
   | "." -> Ok DOT
   | ".." -> Ok RECURSE
+  | "=" -> Ok ASSIGN
   | '$' -> tokenize_variable buf
   | '"' -> tokenize_string buf
   | identifier -> tokenize_apply buf

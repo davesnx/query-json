@@ -2,12 +2,12 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (libraries menhirLib yojson sedlex easy-format str)
+ (libraries menhirLib yojson sedlex easy-format str unix)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation
   (backend bisect_ppx)))
 
 (menhir
- (flags --strict --external-tokens Tokenizer --explain --dump)
+ (flags --external-tokens Tokenizer --explain --dump)
  (modules Parser))
