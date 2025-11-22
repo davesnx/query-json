@@ -31,8 +31,6 @@ let usage ?(colorize = true) () =
     ^ Chalk.gray " [OPTIONS] " ^ "[QUERY] [JSON]" ^ enter 2
     ^ Chalk.bold "OPTIONS";
     indent 1 ^ "-c, --no-color: Disable color in the output";
-    indent 1 ^ "-k [VAL], --kind[=VAL]: input kind. " ^ double_quotes "file"
-    ^ " | " ^ double_quotes "inline";
     indent 1 ^ "-v, --verbose: Activate verbossity";
     indent 1 ^ "-d, --debug: Print AST";
     indent 1 ^ "--version: Show version information." ^ enter 2
@@ -46,15 +44,14 @@ let usage ?(colorize = true) () =
   |> print_endline
 
 module Runtime = struct
-  type input_kind = File | Inline
-
-  let run ~kind ~payload ~no_color runtime =
+  let run ~payload ~no_color runtime =
     let colorize = not no_color in
     let input =
-      match (kind, payload) with
-      | File, Some file -> Json.parse_file file
-      | Inline, Some str -> Json.parse_string str
-      | _, None ->
+      match payload with
+      | Some file_or_json ->
+          if Sys.file_exists file_or_json then Json.parse_file file_or_json
+          else Json.parse_string file_or_json
+      | None ->
           let ic = Unix.in_channel_of_descr Unix.stdin in
           Json.parse_channel ic
     in
@@ -69,9 +66,8 @@ module Runtime = struct
     | Error err -> print_error_message ~colorize err
 end
 
-let execution (query : string option) (payload : string option)
-    (kind : Runtime.input_kind) (verbose : bool) (debug : bool)
-    (no_color : bool) =
+let execution (query : string option) (payload : string option) (verbose : bool)
+    (debug : bool) (no_color : bool) =
   let colorize = not no_color in
   match query with
   | Some query -> (
@@ -80,7 +76,7 @@ let execution (query : string option) (payload : string option)
         |> Result.map (Interpreter.interp ~colorize ~verbose)
       in
       match runtime with
-      | Ok runtime -> Runtime.run ~payload ~kind ~no_color runtime
+      | Ok runtime -> Runtime.run ~payload ~no_color runtime
       | Error err -> print_error_message ~colorize err)
   | None -> usage ()
 
@@ -88,14 +84,6 @@ let () =
   let open Cmdliner.Arg in
   let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in
   let json = value & pos 1 (some string) None & info [] ~doc:"JSON" in
-  let kind =
-    let kind_enum =
-      enum [ ("file", Runtime.File); ("inline", Runtime.Inline) ]
-    in
-    value
-    & opt kind_enum ~vopt:Runtime.File Runtime.File
-    & info [ "k"; "kind" ] ~doc:"Input kind, either a JSON file or inline JSON"
-  in
   let verbose =
     value & flag & info [ "v"; "verbose" ] ~doc:"Activate verbossity"
   in
@@ -106,7 +94,7 @@ let () =
   in
   let term =
     let open Cmdliner.Term in
-    const execution $ query $ json $ kind $ verbose $ debug $ color
+    const execution $ query $ json $ verbose $ debug $ color
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

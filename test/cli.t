@@ -5,5 +5,10 @@ json call works
 
 inline call works
 
-  $ query-json --no-color --kind=inline '.' '{ "a": 1 }'
+  $ query-json --no-color '.' '{ "a": 1 }'
   { "a": 1 }
+
+stdin works
+
+  $ echo '{ "b": 2 }' | query-json --no-color '.'
+  { "b": 2 }

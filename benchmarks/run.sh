@@ -18,7 +18,7 @@ test () {
 }
 
 title "### Pipe a json to stdin"
-test cat benchmarks/big.json | query-json --kind=inline '.' > /dev/null
+test cat benchmarks/big.json | query-json '.' > /dev/null
 test cat benchmarks/big.json | jq '.' > /dev/null
 test cat benchmarks/big.json | faq '.' > /dev/null
 test cat benchmarks/big.json | fx '.' > /dev/null

@@ -1,19 +1,20 @@
 # Unreleased
 
-- Support [.[] | {...}]
-- Support |=
-- Support //
-- Add `nan` and `is_nan` functions for NaN handling
-- Add `transpose` function for matrix transposition
-- Add `flat_map` function for mapping and flattening
-- Add `find` function for finding first matching element
-- Add `some` function for checking if some elements match a condition
-- Add `any(condition)` and `all(condition)` with conditions
-- Add `recurse_down` for depth-first recursion
-- Add `test(pattern)` for regex pattern matching using Str module
-- Add `path(expr)` for JSON pointer path tracking
-- Add variable support with `$variable` syntax
-- Add full `reduce` with variables: `reduce EXPR as $VAR (INIT; UPDATE)`
+- [core] Support [.[] | {...}]
+- [core] Support |=
+- [core] Support //
+- [core] Add `nan` and `is_nan` functions for NaN handling
+- [core] Add `transpose` function for matrix transposition
+- [core] Add `flat_map` function for mapping and flattening
+- [core] Add `find` function for finding first matching element
+- [core] Add `some` function for checking if some elements match a condition
+- [core] Add `any(condition)` and `all(condition)` with conditions
+- [core] Add `recurse_down` for depth-first recursion
+- [core] Add `test(pattern)` for regex pattern matching using Str module
+- [core] Add `path(expr)` for JSON pointer path tracking
+- [core] Add variable support with `$variable` syntax
+- [core] Add full `reduce` with variables: `reduce EXPR as $VAR (INIT; UPDATE)`
+- [cli] Remove --kind
 
 ## 0.5.52
 

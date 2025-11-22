@@ -74,7 +74,7 @@ query-json '.' <<< '{ "bulvasur": { "id": 1, "power": 20 } }'
 
 #### query a json inlined
 ```bash
-query-json --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
+query-json '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
 ```
 
 #### query without colors
@@ -106,9 +106,6 @@ The report shows that **query-json** is between 2x and 5x faster than **jq** in 
 
 #### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
   - `--version` ✅
-  - `--kind`. This is different than jq ✅
-    - `--kind=file` and the 2nd argument can be a json file
-    - `--kind=inline` and the 2nd argument can be a json as a string
   - `--no-color`. This disables colors ✅
   - ...rest ⚠️
 
