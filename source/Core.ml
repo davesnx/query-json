@@ -11,12 +11,10 @@ exception Lexer_error of string
 let provider ~debug buf =
   let start, stop = Sedlexing.lexing_positions buf in
   let token =
-    match Tokenizer.tokenize buf with
-    | Ok t -> t
-    | Error e -> raise (Lexer_error e)
+    match Lexer.tokenize buf with Ok t -> t | Error e -> raise (Lexer_error e)
   in
   last_position := { loc_start = start; loc_end = stop };
-  if debug then print_endline (Tokenizer.show_token token);
+  if debug then print_endline (Lexer.show_token token);
   (token, start, stop)
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
@@ -62,19 +60,15 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose : _) input :
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run ?(colorize = false) ?(verbose = false) query json =
-  let result =
-    parse ~colorize query |> Result.map (Interpreter.interp ~colorize ~verbose)
-    |> fun x ->
-    Result.bind x (fun runtime ->
-        match Json.parse_string json with
-        | Ok input -> runtime input
-        | Error err -> Error err)
-  in
-  match result with
-  | Ok res ->
+let run query json =
+  match parse ~debug:false ~colorize:false ~verbose:false query with
+  | Ok runtime ->
+      let ( let* ) = Result.bind in
+      let* results =
+        Interpreter.execute ~colorize:false ~verbose:false runtime json
+      in
       Ok
-        (res
-        |> List.map (Json.to_string ~colorize ~summarize:false)
+        (results
+        |> List.map (Json.to_string ~colorize:false ~summarize:false ~raw:false)
         |> String.concat "\n")
-  | Error e -> Error e
+  | Error err -> Error err

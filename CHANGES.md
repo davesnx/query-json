@@ -1,19 +1,45 @@
 # Unreleased
 
-- Support [.[] | {...}]
-- Support |=
-- Support //
-- Add `nan` and `is_nan` functions for NaN handling
-- Add `transpose` function for matrix transposition
-- Add `flat_map` function for mapping and flattening
-- Add `find` function for finding first matching element
-- Add `some` function for checking if some elements match a condition
-- Add `any(condition)` and `all(condition)` with conditions
-- Add `recurse_down` for depth-first recursion
-- Add `test(pattern)` for regex pattern matching using Str module
-- Add `path(expr)` for JSON pointer path tracking
-- Add variable support with `$variable` syntax
-- Add full `reduce` with variables: `reduce EXPR as $VAR (INIT; UPDATE)`
+- [bench] Create a minimum benchmark against jq 1.8
+- [cli] Add --raw-output
+- [core] **BREAKING:** Requires OCaml 5.0+ (uses effect handlers for control flow)
+- [core] Add `try(expr)` and `try(expr; handler)` for error handling
+- [core] Add `break` for loop exit (via Break effect)
+- [core] Add `limit(n; expr)` to limit generator output
+- [core] Add `error(msg)` for custom errors
+- [core] Add `halt` / `halt_error(code)` for program termination
+- [core] Add `isempty(expr)` to check empty streams
+- [core] Add `match(regex)` for pattern matching with captures
+- [core] Add `scan(regex)` to find all matches
+- [core] Add `capture(regex)` to extract capture groups
+- [core] Add `sub(regex; replacement)` for single replacement
+- [core] Add `gsub(regex; replacement)` for global replacement
+- [core] Add `del(path)` to delete keys/indices
+- [core] Add `getpath(path_array)` for path navigation
+- [core] Add `setpath(path_array; value)` for path updates
+- [core] Add `paths` to enumerate all paths
+- [core] Add `paths(filter)` for filtered path enumeration
+- [core] Add trig functions: `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
+- [core] Add `log`, `log10`, `exp` for logarithms/exponentials
+- [core] Add `ceil`, `round` for rounding
+- [core] Add `pow` for power operations
+- [core] Add `infinite` - infinite generator (use with `limit`!)
+- [core] Add `now` for current Unix timestamp
+- [core] Support [.[] | {...}]
+- [core] Support |=
+- [core] Support //
+- [core] Add `nan` and `is_nan` functions for NaN handling
+- [core] Add `transpose` function for matrix transposition
+- [core] Add `flat_map` function for mapping and flattening
+- [core] Add `find` function for finding first matching element
+- [core] Add `some` function for checking if some elements match a condition
+- [core] Add `any(condition)` and `all(condition)` with conditions
+- [core] Add `recurse_down` for depth-first recursion
+- [core] Add `test(pattern)` for regex pattern matching using Str module
+- [core] Add `path(expr)` for JSON pointer path tracking
+- [core] Add variable support with `$variable` syntax
+- [core] Add full `reduce` with variables: `reduce EXPR as $VAR (INIT; UPDATE)`
+- [cli] Remove --kind
 
 ## 0.5.52
 

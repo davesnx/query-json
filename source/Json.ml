@@ -1,8 +1,6 @@
 include Yojson.Safe
 include Yojson.Safe.Util
 
-type json = t
-
 let parse_string str =
   try Ok (Yojson.Safe.from_string str) with
   | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
@@ -64,11 +62,11 @@ struct
         Easy_format.Atom (Chalk.green (quotes (encode s)), Easy_format.atom)
     | `Intlit s -> Easy_format.Atom (Chalk.green s, Easy_format.atom)
     | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
-    | `List (l : json list) ->
+    | `List (l : t list) ->
         Easy_format.List
           (("[", ",", "]", Easy_format.list), List.map to_easy_format l)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
-    | `Assoc (l : (string * json) list) ->
+    | `Assoc (l : (string * t) list) ->
         Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
 
   and item (name, json) =
@@ -83,15 +81,18 @@ struct
       ((Easy_format.Atom (s, Easy_format.atom), Easy_format.label), value)
 end
 
-let to_string (json : json) ~colorize ~summarize =
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
-  end) in
-  let module Format =
-    Make_format
-      (Chalk)
-      (struct
-        let summarize = summarize
-      end)
-  in
-  Easy_format.Pretty.to_string (Format.to_easy_format json)
+let to_string (json : t) ~colorize ~summarize ~raw =
+  match (raw, json) with
+  | true, `String s -> s
+  | _ ->
+      let module Chalk = Chalk.Make (struct
+        let disable = not colorize
+      end) in
+      let module Format =
+        Make_format
+          (Chalk)
+          (struct
+            let summarize = summarize
+          end)
+      in
+      Easy_format.Pretty.to_string (Format.to_easy_format json)

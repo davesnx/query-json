@@ -1,4 +1,7 @@
-let run = Core.run
+let run query input =
+  match Json.parse_string input with
+  | Ok json -> Core.run query json
+  | Error e -> Error e
 
 let () =
   Js_of_ocaml.Js.export "query-json"

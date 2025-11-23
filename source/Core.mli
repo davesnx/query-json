@@ -5,5 +5,4 @@ val parse :
   string ->
   (Ast.expression, string) result
 
-val run :
-  ?colorize:bool -> ?verbose:bool -> string -> string -> (string, string) result
+val run : string -> Json.t -> (string, string) result

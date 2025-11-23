@@ -1,13 +1,16 @@
-let test_error query json expected_error_part =
+let test_error query json_str expected_error_part =
   let fn () =
-    match Core.run query json with
-    | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
-    | Error err -> (
-        let re = Str.regexp_string expected_error_part in
-        try ignore (Str.search_forward re err 0)
-        with Not_found ->
-          Alcotest.failf "Expected error containing '%s', but got:\n%s"
-            expected_error_part err)
+    match Json.parse_string json_str with
+    | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+    | Ok json -> (
+        match Core.run query json with
+        | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
+        | Error err -> (
+            let re = Str.regexp_string expected_error_part in
+            try ignore (Str.search_forward re err 0)
+            with Not_found ->
+              Alcotest.failf "Expected error containing '%s', but got:\n%s"
+                expected_error_part err))
   in
   Alcotest.test_case query `Quick fn
 
@@ -36,7 +39,7 @@ let tests =
     (* Undefined variables *)
     test_error "$undefined" "null" "Error: Undefined variable: $undefined";
     (* Unsupported break *)
-    test_error "break" "null" "Error: break is not supported";
+    test_error "break" "null" "Error: break used outside of loop context";
     (* Object shorthand validation *)
     test_error "{(1): 2}" "null" "Error: object key must be string";
   ]

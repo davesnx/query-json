@@ -7,7 +7,7 @@
   (pps js_of_ocaml-ppx))
  (js_of_ocaml
   (flags
-   (:standard --target-env=browser))
+   (:standard --target-env=browser --effects=cps))
   (sourcemap no))
  (modes
   js

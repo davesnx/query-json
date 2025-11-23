@@ -22,7 +22,7 @@ It was created with mostly two reasons in mind, learning and having fun
 
 ## What it brings
 
-- **Great Performance**: Fast, small footprint and minimum runtime. Check [Performance section](#Performance) for a longer explanation, but it can be 2x to 5x faster than jq.
+- **Great Performance**: Fast, small footprint and minimum runtime. Consistently 1.5x to 4.5x faster than jq depending on file size and operation. See [Performance section](#Performance) for detailed benchmarks.
 - **Delightful errors**:
   - Better errors when json types and operation don't match:
     ```bash
@@ -32,11 +32,51 @@ It was created with mostly two reasons in mind, learning and having fun
     ```
   - `debug` prints the tokens and the AST.
   - `verbose` flag, prints each operation in each state and it's intermediate states. _(Work in progress...)_
-- **Improved API**: made small adjustments to the buildin operations. Some examples are:
-  - All methods are snake_case instead of alltoghetercase
-  - Added `filter(p)` as an alias for `map(select(p))`
-  - Supports comments in JSONs
+- **Improved API**: Snake_case function names, helpful aliases, and convenient additions. See [jq Compatibility](#jq-compatibility) for details.
 - **Small**: Lexer, Parser and Interpreter are just 1300 LOC
+
+## jq compatibility
+
+query-json implements most of jq 1.8's functionality with some intentional improvements:
+
+### Improvements
+
+**Better naming** - snake_case instead of alllowercase:
+- `to_number` / `to_string` (instead of `tonumber` / `tostring`)
+- `starts_with` / `ends_with` (instead of `startswith` / `endswith`)
+- `is_nan` (instead of `isnan`)
+
+> The old names still work but show deprecation warnings with `--verbose` or `-v` flag.
+
+**Extra conveniences:**
+- `filter(expr)` - alias for `map(select(expr))`
+- `flat_map(expr)` - map and flatten in one operation
+- `find(expr)` - find first matching element
+- `some(expr)` - check if at least one element matches
+- `unique` - accepts both `unique` and `uniq` (jq only has `uniq`)
+- **JSON comments** - supports comments in JSON input
+
+### Implemented features
+
+- All basic filters (`.`, `.foo`, `.[]`, `.[0]`, `.[1:3]`, etc.)
+- Operators (`+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`)
+- Conditionals (`if-then-else`)
+- Pipes (`|`), comma (`,`), alternative (`//`)
+- Core functions (`map`, `select`, `length`, `keys`, `has`, `in`, `add`, `reverse`, etc.)
+- Array operations (`sort`, `sort_by`, `unique`, `unique_by`, `group_by`, `flatten`, `min`, `max`, etc.)
+- String operations (`split`, `join`, `startswith`, `endswith`, `contains`, `explode`, `implode`)
+- Type operations (`type`, `to_number`, `to_string`)
+- Math functions (`abs`, `floor`, `sqrt`, `ceil`, `round`, `sin`, `cos`, `tan`, `log`, `exp`, etc.)
+- Object operations (`to_entries`, `from_entries`, `with_entries`)
+- Path operations (`path`, `paths`, `getpath`, `setpath`, `del`)
+- Control flow (`while`, `until`, `recurse`, `walk`, `limit`, `try-catch`, `reduce`)
+- Regex support (`test`, `match`, `scan`, `capture`, `sub`, `gsub`)
+
+### Not supported
+
+User-defined functions (`def`), modules (`import`, `include`), format strings (`@text`, `@csv`, `@base64`), and running tests (`--run-tests`).
+
+For a complete reference, see the [jq manual](https://jqlang.org/manual/).
 
 ## Installation
 
@@ -74,12 +114,19 @@ query-json '.' <<< '{ "bulvasur": { "id": 1, "power": 20 } }'
 
 #### query a json inlined
 ```bash
-query-json --kind=inline '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
+query-json '.' '{ "bulvasur": { "id": 1, "power": 20 } }'
 ```
 
 #### query without colors
 ```bash
 query-json '.' pokemons.json --no-colors
+```
+
+#### query with raw output (strings without quotes)
+```bash
+query-json -r '.name' pokemon.json
+# Output: Pikachu
+# Instead of: "Pikachu"
 ```
 
 #### More examples
@@ -88,100 +135,25 @@ Check out [docs/examples.md](./docs/examples.md) for a walkthrough of common use
 
 ## Performance
 
-[This report](./benchmarks/report.md) is not an exhaustive performance report of both tools, it's a overview for the percieved performance of the user. I don't profile each tool and try to see what are the bootlenecks, since I assume that both tools have the penalty of parsing a JSON file.
+query-json consistently outperforms jq 1.8.1 across most file sizes and operations, with performance improvements ranging from **1.5x to 4.5x faster** depending on the file size and operation:
 
-Aside from that, **query-json** doesn't have feature parity with **jq** which is ok at this point, but **jq** contains a ton of functionality that query-json misses. Adding the missing operations on **query-json** won't affect the performance of it, that could not be true for features like "modules", "functions" or "tests".
+- **Small files (< 10KB):** 2.4-3x faster
+- **Medium files (100-500KB):** 2-4.5x faster
+- **Large files (> 500KB):** 1.6-3.3x faster
+- **Huge files (> 50MB):** 1.5-1.8x faster
 
-The report shows that **query-json** is between 2x and 5x faster than **jq** in all operations tested and same speed (~1.1x) with huge files (> 100M).
+### Why is query-json faster?
 
-## Currently supported feature set
+1. **Native compilation**: Compiled to optimized [machine code with OCaml](https://ocaml.org/manual/5.4/native.html)
+2. **Simpler runtime**: Implementing a focused subset allows for optimization decisions not possible with jq's full feature set. The biggest missing pieces that might affect performance:
+  - **User-defined functions** (`def`) - intentional tradeoff for better performance
+  - **Modules** (`import`, `include`) - not implemented
+  - **Format strings** (`@text`, `@csv`, `@base64`, etc.) - not implemented
+  - **Running tests** - `--run-tests`
+3. **Tail-recursive architecture**: OCaml optimizes piped recursive operations into tight loops
+4. **Fast parser**: Uses [Menhir](http://gallium.inria.fr/~fpottier/menhir/), a high-performance LR(1) parser generator
 
-| Badge | Meaning             |
-| ----- | ------------------- |
-| ✅    | Implemented         |
-| ⚠️    | Not implemented yet |
-| 🔴    | Won't implement     |
-
-##### Based on jq 1.6
-
-#### [CLI: Invoking jq](https://stedolan.github.io/jq/manual/v1.6/#Invokingjq)
-  - `--version` ✅
-  - `--kind`. This is different than jq ✅
-    - `--kind=file` and the 2nd argument can be a json file
-    - `--kind=inline` and the 2nd argument can be a json as a string
-  - `--no-color`. This disables colors ✅
-  - ...rest ⚠️
-
-#### [Basic filters](https://stedolan.github.io/jq/manual/v1.6/#Basicfilters)
-  - Identity: `.` ✅
-  - Object Identifier-Index: `.foo`, `.foo.bar` ✅
-  - Optional Object Identifier-Index: `.foo?` ✅
-  - Generic Object Index: `.[<string>]` ✅
-  - Array Index: `.[2]` ✅
-  - Array Multi-Index: `.[0,2,4]` ✅
-  - Pipe: `|` ✅
-  - Array/String Slice: `.[10:15]` ✅
-  - Array/Object Value Iterator: `.[]` ✅
-  - Comma: `,` ✅
-  - Parenthesis: `()` ✅️
-  - Dictionary Construction: `{key: value}` ✅
-
-#### [Types and Values](https://stedolan.github.io/jq/manual/v1.6/#TypesandValues) ⚠️
-
-#### [Builtin operators and functions](https://stedolan.github.io/jq/manual/v1.6/#Builtinoperatorsandfunctions)
-
-  - Abs: `abs` ✅
-  - Add: `add` ✅
-  - Addition: `+` ✅
-  - Subtraction: `-` ✅
-  - Multiplication, division: `*`, `/` ✅
-  - Modulo: `%` ✅
-  - `length` ✅
-  - `keys` ✅
-  - `map` ✅
-  - `select` ✅
-  - `has(key)` ✅
-  - `in` ✅
-  - `path(path_expression)` ⚠️
-  - `to_entries`, `from_entries`, `with_entries` ⚠️
-  - `any`, `any(condition)`, `any(generator; condition)` ⚠️
-  - `all`, `all(condition)`, `all(generator; condition)` ⚠️
-  - `flatten` ⚠️
-  - `range(upto)`, `range(from;upto)` `range(from;upto;by)` ✅
-  - `floor`, `sqrt` ⚠️
-  - `tonumber`, `tostring` ⚠️
-  - `type` ⚠️
-  - `infinite`, `nan`, `isinfinite`, `isnan`, `isfinite`, `isnormal` ⚠️
-  - `sort`, `sort_by(path_expression)` ⚠️
-  - `group_by(path_expression)` ⚠️
-  - `min, max, min_by(path_exp), max_by(path_exp)` ⚠️
-  - `unique, unique_by(path_exp)` ⚠️
-  - `reverse` ✅
-  - `contains(element)` ⚠️
-  - `index(s), rindex(s)` ⚠️
-  - `startswith(str)`, `endswith(str)` ⚠️
-  - `explode`, `implode` ⚠️
-  - `split(str)`, `join(str)` ✅
-  - `while(cond; update)`, `until(cond; next)` ⚠️
-  - `recurse(f)`, `recurse`, `recurse(f; condition)`, `recurse_down` ⚠️
-  - `walk(f)` ⚠️
-  - `transpose(f)` ⚠️
-  - Format strings and escaping: `@text`, `@csv`, etc.. 🔴
-
-#### [Conditionals and Comparisons](https://stedolan.github.io/jq/manual/v1.6/#ConditionalsandComparisons)
-  - `==`, `!=` ✅
-  - `if-then-else` ✅
-  - `>`, `>=`, `<=`, `<` ✅
-  - `and`, `or`, `not` ✅
-  - `break` 🔴
-
-#### [Regular expressions (PCRE)](https://stedolan.github.io/jq/manual/v1.6/#RegularexpressionsPCRE) ⚠️
-
-#### [Advanced features](https://stedolan.github.io/jq/manual/v1.6/#Advancedfeatures) ⚠️
-
-#### [Assignment](https://stedolan.github.io/jq/manual/v1.6/#Assignment) ⚠️
-
-#### [Modules](https://stedolan.github.io/jq/manual/v1.6/#Modules) ⚠️
+**For detailed benchmarks and methodology**, see [benchmarks/README.md](./benchmarks/README.md).
 
 ## Contributing
 
@@ -189,7 +161,7 @@ Contributions are what make the open source community such an amazing place to b
 
 ### Support
 
-I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) or [x.com/davesnx](https://x.com/davesnx) so feel free to ask anything.
+I usually hang out at [discord.gg/reasonml](https://discord.com/channels/235176658175262720/235176658175262720) feel free to DM.
 
 ### Setup
 
@@ -207,6 +179,6 @@ dune exec query-json # Run binary
 Running the playground
 ```bash
 # In different terminals
-make dev # compiles all packages "query-json" "query-json-s" and "query-json-playground", and runs the bundler
-make web-dev # Runs bundler
+make dev # compiles all packages "query-json" "query-json-js" and "query-json-playground", and runs the bundler
+make web-dev # Runs bundler and the web server
 ```
