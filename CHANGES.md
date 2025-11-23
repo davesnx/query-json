@@ -1,5 +1,7 @@
 # Unreleased
 
+## 0.6.0
+
 - [bench] Create a minimum benchmark against jq 1.8
 - [cli] Add --raw-output
 - [core] **BREAKING:** Requires OCaml 5.0+ (uses effect handlers for control flow)
