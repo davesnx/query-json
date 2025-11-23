@@ -1,6 +1,8 @@
 # Unreleased
 
-- **BREAKING:** Requires OCaml 5.0+
+- [bench] Create a minimum benchmark against jq 1.8
+- [cli] Add --raw-output
+- [core] **BREAKING:** Requires OCaml 5.0+ (uses effect handlers for control flow)
 - [core] Add `try(expr)` and `try(expr; handler)` for error handling
 - [core] Add `break` for loop exit (via Break effect)
 - [core] Add `limit(n; expr)` to limit generator output
