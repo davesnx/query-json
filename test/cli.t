@@ -59,9 +59,9 @@ raw output for array (should still output JSON)
 
 raw output with string containing escape sequences
 
-  $ query-json --no-color '.message' <<< '{"message": "Hello\nWorld\t!"}'
+  $ printf '{"message": "Hello\\nWorld\\t!"}' | query-json --no-color '.message'
   "Hello\nWorld\t!"
 
-  $ query-json --no-color -r '.message' <<< '{"message": "Hello\nWorld\t!"}'
+  $ printf '{"message": "Hello\\nWorld\\t!"}' | query-json --no-color -r '.message'
   Hello
   World	!
