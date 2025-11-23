@@ -11,12 +11,10 @@ exception Lexer_error of string
 let provider ~debug buf =
   let start, stop = Sedlexing.lexing_positions buf in
   let token =
-    match Tokenizer.tokenize buf with
-    | Ok t -> t
-    | Error e -> raise (Lexer_error e)
+    match Lexer.tokenize buf with Ok t -> t | Error e -> raise (Lexer_error e)
   in
   last_position := { loc_start = start; loc_end = stop };
-  if debug then print_endline (Tokenizer.show_token token);
+  if debug then print_endline (Lexer.show_token token);
   (token, start, stop)
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
