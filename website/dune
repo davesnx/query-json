@@ -4,6 +4,7 @@
  (modes melange)
  (enabled_if
   (<> %{os_type} "Win32"))
+ (melange.runtime_deps monaco-editor.js)
  (modules :standard \ Index)
  (libraries reason-react melange.dom melange.js melange-json web)
  (preprocess

@@ -1,32 +1,3 @@
-type self
-type monaco
-type config = { monaco : monaco }
-type loader = { config : config -> unit; init : unit -> unit Js.Promise.t }
-type worker
-type monacoEnv
-type environment = { getWorker : unit -> string -> worker }
-
-external loader : loader = "loader" [@@mel.module "@monaco-editor/react"]
-external monaco : monaco = "monaco-editor" [@@mel.module]
-
-external json_worker : unit -> worker = "default"
-[@@mel.module "monaco-editor/esm/vs/language/json/json.worker?worker"]
-[@@mel.new]
-
-external editor_worker : unit -> worker = "default"
-[@@mel.module "monaco-editor/esm/vs/editor/editor.worker?worker"] [@@mel.new]
-
-external create_env : self -> environment -> monacoEnv = "MonacoEnvironment"
-[@@mel.set]
-
-let _ =
-  let getWorker _ label : worker =
-    match label with "json" -> json_worker () | _ -> editor_worker ()
-  in
-  let _env = create_env [%mel.raw {|self|}] { getWorker } in
-  let () = loader.config { monaco } in
-  loader.init () |> Js.Promise.then_ (fun _ -> Js.Promise.resolve ()) |> ignore
-
 type mode = Text | Json
 
 let mode_to_string = function Text -> "text" | Json -> "json"
@@ -61,7 +32,7 @@ module External = struct
     theme:string ->
     options:options ->
     React.element = "default"
-  [@@mel.module "@monaco-editor/react"] [@@react.component]
+  [@@mel.module "./monaco-editor.js"] [@@react.component]
 end
 
 type on_change = Write of (string -> unit) | Read_only
