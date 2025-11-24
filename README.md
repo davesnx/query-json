@@ -84,7 +84,7 @@ For a complete reference, see the [jq manual](https://jqlang.org/manual/).
 
 Check the content of [scripts/install.sh](./scripts/install.sh) before running anything in your local. [Friends don't let friends curl | bash](https://sysdig.com/blog/friends-dont-let-friends-curl-bash).
 ```bash
-curl -sfL https://raw.githubusercontent.com/davesnx/query-json/master/scripts/install.sh | bash
+curl -sfL https://query-json.page.dev/install.sh | bash
 ```
 
 ### Using npm

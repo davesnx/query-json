@@ -57,6 +57,10 @@ const config = {
           src: "_build/default/js/js.bc.js",
           dest: "_build/default/js",
         },
+        {
+          src: "scripts/install.sh",
+          dest: "",
+        },
       ],
     }),
     replace({
