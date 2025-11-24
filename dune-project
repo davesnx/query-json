@@ -34,7 +34,7 @@
   (dune (>= 3.17))
   dune-build-info
   (menhir (>= 20250903))
-  cmdliner
+  (cmdliner (>= 1.1.0))
   (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
