@@ -1,5 +1,10 @@
 # Unreleased
 
+## 0.6.1
+
+- Make sure cmdliner is >= 1.1.0
+- Make sure ocaml 5.3.0
+
 ## 0.6.0
 
 - [bench] Create a minimum benchmark against jq 1.8
