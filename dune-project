@@ -30,7 +30,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 4.14.1))
+  (ocaml (>= 5.3.0))
   (dune (>= 3.17))
   dune-build-info
   (menhir (>= 20250903))

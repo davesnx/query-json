@@ -14,7 +14,7 @@ license: "MIT"
 homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
-  "ocaml" {>= "4.14.1"}
+  "ocaml" {>= "5.3.0"}
   "dune" {>= "3.17" & >= "3.17"}
   "dune-build-info"
   "menhir" {>= "20250903"}
