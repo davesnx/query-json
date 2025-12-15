@@ -1,3 +1,5 @@
+open Base
+
 module Location = struct
   type t = { loc_start : Lexing.position; loc_end : Lexing.position }
 
@@ -14,7 +16,7 @@ let provider ~debug buf =
     match Lexer.tokenize buf with Ok t -> t | Error e -> raise (Lexer_error e)
   in
   last_position := { loc_start = start; loc_end = stop };
-  if debug then print_endline (Lexer.show_token token);
+  if debug then Stdio.print_endline (Lexer.show_token token);
   (token, start, stop)
 
 let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
@@ -47,13 +49,13 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose : _) input :
   let next_token () = provider ~debug buf in
   match menhir next_token with
   | ast ->
-      if debug then print_endline (Ast.show_expression ast);
+      if debug then Stdio.print_endline (Ast.show_expression ast);
       Ok ast
   | exception Lexer_error msg ->
       (* TODO: Do we want to show the lexing error differently than the parser error? *)
       if debug then (
-        print_endline "Lexer error";
-        print_endline msg);
+        Stdio.print_endline "Lexer error";
+        Stdio.print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
   | exception _exn ->
@@ -63,12 +65,12 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose : _) input :
 let run query json =
   match parse ~debug:false ~colorize:false ~verbose:false query with
   | Ok runtime ->
-      let ( let* ) = Result.bind in
+      let ( let* ) x f = Result.bind x ~f in
       let* results =
         Interpreter.execute ~colorize:false ~verbose:false runtime json
       in
       Ok
         (results
-        |> List.map (Json.to_string ~colorize:false ~summarize:false ~raw:false)
-        |> String.concat "\n")
+        |> List.map ~f:(Json.to_string ~colorize:false ~summarize:false ~raw:false)
+        |> String.concat ~sep:"\n")
   | Error err -> Error err

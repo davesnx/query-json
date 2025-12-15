@@ -1,3 +1,5 @@
+open Base
+
 module Make (Config : sig
   val disable : bool
 end) =

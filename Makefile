@@ -3,6 +3,10 @@ opam_file = $(project_name).opam
 DUNE = opam exec -- dune
 VITE = ./node_modules/.bin/vite
 
+# Use ld.bfd instead of mold to work around linker bugs with oxcaml
+LD_OVERRIDE_DIR := /tmp/ld-override
+export PATH := $(LD_OVERRIDE_DIR):$(PATH)
+
 .PHONY: help
 help: ## Print this help message
 	@echo "";

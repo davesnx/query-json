@@ -32,6 +32,8 @@
  (depends
   (ocaml (>= 5.2.0))
   (dune (>= 3.17))
+  base
+  stdio
   dune-build-info
   (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))

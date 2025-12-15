@@ -1,22 +1,24 @@
+open Base
+
 include Yojson.Safe
 include Yojson.Safe.Util
 
 let parse_string str =
   try Ok (Yojson.Safe.from_string str) with
   | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
-  | e -> Error (Printexc.to_string e ^ " There was an error reading the string")
+  | e -> Error (Exn.to_string e ^ " There was an error reading the string")
 
 let parse_file file =
   try Ok (Yojson.Safe.from_file file) with
   | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
-  | e -> Error (Printexc.to_string e ^ " There was an error reading the file")
+  | e -> Error (Exn.to_string e ^ " There was an error reading the file")
 
 let parse_channel channel =
   try Ok (Yojson.Safe.from_channel channel) with
   | Yojson.Json_error msg -> Error ("JSON parse error: " ^ msg)
   | e ->
       Error
-        (Printexc.to_string e
+        (Exn.to_string e
        ^ " There was an error reading from standard input")
 
 let encode str =
@@ -30,7 +32,7 @@ let encode str =
     | '\r' -> Buffer.add_string buf {|\r|}
     | '\b' -> Buffer.add_string buf {|\b|}
     | ('\000' .. '\031' | '\127') as c ->
-        Printf.bprintf buf "\\u%04X" (Char.code c)
+        Printf.bprintf buf "\\u%04X" (Char.to_int c)
     | c -> Buffer.add_char buf c
   done;
   Buffer.contents buf
@@ -53,8 +55,8 @@ struct
         Easy_format.Atom (Chalk.green (Int.to_string i), Easy_format.atom)
     | `Float f ->
         let float_to_string float =
-          if Stdlib.Float.equal (Stdlib.Float.round float) float then
-            float |> Float.to_int |> Int.to_string
+          if Float.equal (Float.round_nearest float) float then
+            float |> Int.of_float |> Int.to_string
           else Printf.sprintf "%g" float
         in
         Easy_format.Atom (Chalk.green (float_to_string f), Easy_format.atom)
@@ -64,10 +66,10 @@ struct
     | `List [] -> Easy_format.Atom ("[]", Easy_format.atom)
     | `List (l : t list) ->
         Easy_format.List
-          (("[", ",", "]", Easy_format.list), List.map to_easy_format l)
+          (("[", ",", "]", Easy_format.list), List.map l ~f:to_easy_format)
     | `Assoc [] -> Easy_format.Atom ("{}", Easy_format.atom)
     | `Assoc (l : (string * t) list) ->
-        Easy_format.List (("{", ",", "}", Easy_format.list), List.map item l)
+        Easy_format.List (("{", ",", "}", Easy_format.list), List.map l ~f:item)
 
   and item (name, json) =
     let s =
