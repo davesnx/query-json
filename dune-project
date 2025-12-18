@@ -30,17 +30,14 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.2.0))
+  (ocaml (>= 5.3.0))
   (dune (>= 3.17))
-  base
-  stdio
   dune-build-info
   (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))
   (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
-  easy-format
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)
@@ -68,7 +65,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.2.0))
+  (ocaml (>= 5.3.0))
   mlx
   (melange (>= 5.0.1))
   melange-json
