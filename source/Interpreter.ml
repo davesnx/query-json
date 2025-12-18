@@ -1584,7 +1584,8 @@ and rindex_of ~colorize ~verbose ~env expr json =
 and group_by ~colorize ~verbose ~env expr json =
   match json with
   | `List l ->
-      let groups = Hashtbl.create 10 in
+      let estimated_groups = Int.max 16 (List.length l / 4) in
+      let groups = Hashtbl.create estimated_groups in
       List.iter
         (fun item ->
           let keys =
