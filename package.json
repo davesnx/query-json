@@ -8,7 +8,8 @@
     "@monaco-editor/react": "^4.7.0",
     "lucide-react": "^0.553.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "vite-plugin-monaco-editor": "^1.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^16.0.3",

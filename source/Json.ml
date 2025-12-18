@@ -327,7 +327,7 @@ let to_string json ~colorize ~summarize ~raw =
   | true, `String s -> s
   | _ -> Printer.to_string ~colorize ~summarize json
 
-let print json ~colorize ~summarize ~raw =
+let print (json : t) ~colorize ~summarize ~raw =
   match (raw, json) with
   | true, `String s -> print_endline s
   | _ -> Printer.print ~colorize ~summarize json

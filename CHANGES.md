@@ -1,5 +1,7 @@
 # Unreleased
 
+- Remove easy-format
+
 ## 0.6.1
 
 - Make sure cmdliner is >= 1.1.0

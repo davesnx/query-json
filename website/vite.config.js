@@ -16,18 +16,17 @@ const isProd = process.env.NODE_ENV === "production";
  * @type { import('vite').UserConfig }
  */
 const config = {
-  entry: "_build/default/website/website/website/Index.ml.js",
+  entry: Path.resolve(workspaceRoot, "_build/default/website/website/website/Index.ml.js"),
   mode: isProd ? "production" : "development",
   resolve: {
     alias: {
-      "@monaco-editor/loader": Path.resolve(workspaceRoot, "node_modules/@monaco-editor/loader"),
-      "@monaco-editor/react": Path.resolve(workspaceRoot, "node_modules/@monaco-editor/react"),
-      "monaco-editor": Path.resolve(workspaceRoot, "node_modules/monaco-editor"),
+      // Redirect @monaco-editor/react to our custom minimal component that only loads JSON
+      "@monaco-editor/react": Path.resolve(workspaceRoot, "_build/default/website/website/monaco-editor.js"),
     },
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-dom/client"],
-    exclude: ["monaco-editor", "@monaco-editor/react", "@monaco-editor/loader"],
+    exclude: ["monaco-editor"],
   },
   server: {
     watch: {
@@ -56,6 +55,10 @@ const config = {
         {
           src: "_build/default/js/js.bc.js",
           dest: "_build/default/js",
+        },
+        {
+          src: "scripts/install.sh",
+          dest: "",
         },
       ],
     }),

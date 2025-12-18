@@ -7,17 +7,17 @@
   <br>
 </p>
 
-**query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in OCaml distributed as a binary, but also distributed as a JavaScript package via [js_of_ocaml](https://github.com/ocsigen/js_of_ocaml).
+**query-json** is a [faster](#Performance), simpler and more portable implementation of the [jq language](https://github.com/stedolan/jq/wiki/jq-Language-Description) in OCaml distributed as a binary and as a JavaScript library.
 
-**query-json** allows you to write small programs to operate on top of json files with a concise syntax.
+**query-json** allows you to write small programs to operate on json files with a concise syntax.
 
 [![asciicast](https://asciinema.org/a/b6g6ar2cQSAEAyn5qe7ptr98Q.svg)](https://asciinema.org/a/b6g6ar2cQSAEAyn5qe7ptr98Q)
 
 ## Purpose
 
-It was created with mostly two reasons in mind, learning and having fun
+It was started with mostly two reasons in mind, learning and having fun.
 
-- **Learn how to write a programming language with the OCaml stack** using `menhir`, `sedlex` and friends and try to make great error messages.
+- **Learn how to write a programming language with the OCaml stack** using `menhir`, `sedlex` and friends while making great error messages.
 - **Create a CLI tool in OCaml** and being able to distribute it to twoo different platforms: as a binary (for performance) and as a JavaScript library (for portability).
 
 ## What it brings
@@ -84,7 +84,7 @@ For a complete reference, see the [jq manual](https://jqlang.org/manual/).
 
 Check the content of [scripts/install.sh](./scripts/install.sh) before running anything in your local. [Friends don't let friends curl | bash](https://sysdig.com/blog/friends-dont-let-friends-curl-bash).
 ```bash
-curl -sfL https://raw.githubusercontent.com/davesnx/query-json/master/scripts/install.sh | bash
+curl -sfL https://query-json.page.dev/install.sh | bash
 ```
 
 ### Using npm
@@ -180,5 +180,5 @@ Running the playground
 ```bash
 # In different terminals
 make dev # compiles all packages "query-json" "query-json-js" and "query-json-playground", and runs the bundler
-make web-dev # Runs bundler and the web server
+make web-dev # Runs the web server
 ```
