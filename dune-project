@@ -38,7 +38,6 @@
   (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
-  easy-format
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)

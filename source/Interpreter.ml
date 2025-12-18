@@ -23,48 +23,48 @@ module Error = struct
     | false -> "a " ^ noun
 
   let empty_list ~colorize op =
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
     raise
       (Query_error
          ("Trying to "
-         ^ Formatting.single_quotes (Chalk.bold op)
+         ^ Formatting.single_quotes (Color.bold op)
          ^ " on an empty array."))
 
   let arg ~colorize op expected actual_value =
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
     raise
       (Query_error
          ("Invalid argument for "
-         ^ Formatting.single_quotes (Chalk.bold op)
-         ^ ": expected " ^ Chalk.bold expected ^ "." ^ Formatting.enter 1
-         ^ Chalk.gray
+         ^ Formatting.single_quotes (Color.bold op)
+         ^ ": expected " ^ Color.bold expected ^ "." ^ Formatting.enter 1
+         ^ Color.gray
              (Json.to_string actual_value ~colorize ~summarize:true ~raw:false)
          ))
 
   let structure ~colorize op msg actual_value =
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
     raise
       (Query_error
          ("Invalid structure for "
-         ^ Formatting.single_quotes (Chalk.bold op)
+         ^ Formatting.single_quotes (Color.bold op)
          ^ ": " ^ msg ^ "." ^ Formatting.enter 1
-         ^ Chalk.gray
+         ^ Color.gray
              (Json.to_string actual_value ~colorize ~summarize:true ~raw:false)
          ))
 
   let message ~colorize msg =
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
-    raise (Query_error (Chalk.red "Error: " ^ msg))
+    raise (Query_error (Color.red "Error: " ^ msg))
 
-  let get_field_name json =
+  let get_field_name (json : Json.t) =
     match json with
     | `List _ -> "list"
     | `Assoc _ -> "object"
@@ -77,31 +77,31 @@ module Error = struct
 
   let make ~colorize (name : string) (json : Json.t) =
     let member_kind = get_field_name json in
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
     raise
       (Query_error
          ("Trying to "
-         ^ Formatting.single_quotes (Chalk.bold name)
+         ^ Formatting.single_quotes (Color.bold name)
          ^ " on "
-         ^ Chalk.bold (prepend_article member_kind)
+         ^ Color.bold (prepend_article member_kind)
          ^ ":" ^ Formatting.enter 1
-         ^ Chalk.gray (Json.to_string json ~colorize ~summarize:true ~raw:false)
+         ^ Color.gray (Json.to_string json ~colorize ~summarize:true ~raw:false)
          ))
 
   let missing_member ~colorize op key (value : Json.t) =
-    let module Chalk = Chalk.Make (struct
-      let disable = not colorize
+    let module Color = Ansi.To_string (struct
+      let colorize = colorize
     end) in
     raise
       (Query_error
          ("Trying to "
-         ^ Formatting.double_quotes (Chalk.bold op)
+         ^ Formatting.double_quotes (Color.bold op)
          ^ " on an object, that don't have the field "
          ^ Formatting.double_quotes key
          ^ ":" ^ Formatting.enter 1
-         ^ Chalk.gray
+         ^ Color.gray
              (Json.to_string value ~colorize ~summarize:true ~raw:false)))
 end
 

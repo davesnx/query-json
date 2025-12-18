@@ -26,20 +26,20 @@ let position_to_string start end_ =
 
 let pretty_print_error ~colorize ~input ~(start : Lexing.position)
     ~(end_ : Lexing.position) =
-  let module Chalk = Chalk.Make (struct
-    let disable = not colorize
+  let module Color = Ansi.To_string (struct
+    let colorize = colorize
   end) in
   let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
-  Chalk.red (Chalk.bold "Parse error: ")
+  Color.red (Color.bold "Parse error: ")
   ^ "Problem parsing at position "
   ^ position_to_string start end_
   ^ Formatting.enter 2 ^ "Input:" ^ Formatting.indent 1
-  ^ Chalk.green (Chalk.bold input)
+  ^ Color.green (Color.bold input)
   ^ Formatting.enter 1 ^ Formatting.indent 4
   ^ String.make start.pos_cnum ' '
-  ^ Chalk.gray pointer_range
+  ^ Color.gray pointer_range
 
-let parse ?(debug = false) ?(colorize = true) ?(verbose : _) input :
+let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
     (Ast.expression, string) result =
   let _ = ignore verbose in
   (* verbose will be used for parser warnings in the future *)
