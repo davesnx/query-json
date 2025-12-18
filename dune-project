@@ -32,15 +32,12 @@
  (depends
   (ocaml (>= 5.2.0))
   (dune (>= 3.17))
-  base
-  stdio
   dune-build-info
   (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))
   (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
-  easy-format
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)
