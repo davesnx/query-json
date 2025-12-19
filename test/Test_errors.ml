@@ -3,7 +3,7 @@ let test_error query json_str expected_error_part =
     match Json.parse_string json_str with
     | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
     | Ok json -> (
-        match Core.run query json with
+        match Core.run ~colorize:false query json with
         | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
         | Error err -> (
             let re = Str.regexp_string expected_error_part in
@@ -19,7 +19,7 @@ let tests =
     (* split argument type mismatch *)
     test_error "split(1)" "\"a,b\"" "Invalid argument for 'split'";
     (* split input type mismatch *)
-    test_error "split(\",\")" "123" "Trying to 'split' on an int";
+    test_error "split(\",\")" "123" "Trying to 'split' on a number";
     (* join argument type mismatch *)
     test_error "join(1)" "[\"a\", \"b\"]" "Invalid argument for 'join'";
     (* join input type mismatch *)

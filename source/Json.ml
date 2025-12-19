@@ -331,3 +331,20 @@ let print (json : t) ~colorize ~summarize ~raw =
   match (raw, json) with
   | true, `String s -> print_endline s
   | _ -> Printer.print ~colorize ~summarize json
+
+let type_of (json : t) =
+  match json with
+  | `List _ -> "array"
+  | `Assoc _ -> "object"
+  | `Bool _ -> "boolean"
+  | `Float _ | `Int _ | `Intlit _ -> "number"
+  | `Null -> "null"
+  | `String _ -> "string"
+
+let equal (a : t) (b : t) =
+  match (a, b) with
+  | `Int x, `Int y -> x = y
+  | `Float x, `Float y -> x = y
+  | `Int x, `Float y -> float_of_int x = y
+  | `Float x, `Int y -> x = float_of_int y
+  | _ -> a = b

@@ -4,7 +4,7 @@ let test query json_str expected =
       match Json.parse_string json_str with
       | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
       | Ok json -> (
-          match Core.run query json with
+          match Core.run ~colorize:false query json with
           | Ok r -> r
           | Error err -> Alcotest.fail err)
     in

@@ -50,20 +50,17 @@ let execution query payload verbose debug no_color raw_output =
   | None -> usage ()
   | Some query -> (
       let output =
-        let* expr = Core.parse ~debug ~colorize ~verbose query in
         let* json =
           match payload with
           | Some f when Sys.file_exists f -> Json.parse_file f
           | Some s -> Json.parse_string s
           | None -> Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
         in
-        Interpreter.execute ~colorize ~verbose expr json
+        Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
+          query json
       in
       match output with
-      | Ok results ->
-          List.iter
-            (Json.print ~colorize ~summarize:false ~raw:raw_output)
-            results
+      | Ok results -> print_endline results
       | Error err -> print_error_message ~colorize err)
 
 let () =

@@ -4,7 +4,7 @@ let assert_string left right =
 let case input expected =
   let fn () =
     let result =
-      match Core.parse ~debug:false input with
+      match Core.parse ~debug:false ~colorize:false input with
       | Ok r -> r
       | Error err -> Alcotest.fail err
     in

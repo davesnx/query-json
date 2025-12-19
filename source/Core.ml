@@ -39,10 +39,7 @@ let pretty_print_error ~colorize ~input ~(start : Lexing.position)
   ^ String.make start.pos_cnum ' '
   ^ Color.gray pointer_range
 
-let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
-    (Ast.expression, string) result =
-  let _ = ignore verbose in
-  (* verbose will be used for parser warnings in the future *)
+let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
   match menhir next_token with
@@ -50,7 +47,6 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
   | exception Lexer_error msg ->
-      (* TODO: Do we want to show the lexing error differently than the parser error? *)
       if debug then (
         print_endline "Lexer error";
         print_endline msg);
@@ -60,15 +56,13 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run query json =
-  match parse ~debug:false ~colorize:false ~verbose:false query with
+let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
+    ?(summarize = false) query json =
+  match parse ~debug ~colorize query with
   | Ok runtime ->
-      let ( let* ) = Result.bind in
-      let* results =
-        Interpreter.execute ~colorize:false ~verbose:false runtime json
-      in
-      Ok
-        (results
-        |> List.map (Json.to_string ~colorize:false ~summarize:false ~raw:false)
-        |> String.concat "\n")
+      Interpreter.execute ~colorize ~verbose runtime json
+      |> Result.map (fun results ->
+          results
+          |> List.map (Json.to_string ~colorize ~summarize ~raw)
+          |> String.concat "\n")
   | Error err -> Error err
