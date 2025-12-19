@@ -322,6 +322,12 @@ let tests =
     (* variable references *)
     test {|reduce .[] as $x (0; . + $x)|} {|[5]|} {|5|};
 
+    (* foreach *)
+    test {|[foreach .[] as $x (0; . + $x; .)]|} {|[1,2,3]|} {|[ 1, 3, 6 ]|};
+    test {|[foreach .[] as $x (0; . + $x; .)]|} {|[0,1,2,3,4]|} {|[ 0, 1, 3, 6, 10 ]|};
+    test {|[foreach .[] as $x (""; . + $x; .)]|} {|["a","b","c"]|} {|[ "a", "ab", "abc" ]|};
+    test {|foreach .[] as $x (0; . + $x; . * 2)|} {|[1,2,3]|} "2\n6\n12";
+
     (* Control flow tests *)
     test {|try(.foo)|} {|{"foo": 42}|} {|42|};
     test {|try(.foo)|} {|{}|} {||};

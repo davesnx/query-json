@@ -54,6 +54,23 @@ let run_while fn ~when_ =
   in
   Effect.Deep.try_with fn () handler
 
+let run_and_collect_results fn =
+  let handler : (unit, Json.t list) Effect.Deep.handler =
+    {
+      retc = (fun () -> []);
+      exnc = (fun e -> raise e);
+      effc =
+        (fun (type a) (eff : a Effect.t) ->
+          match eff with
+          | Yield v ->
+              Some
+                (fun (k : (a, _) continuation) ->
+                  v :: Effect.Deep.continue k ())
+          | _ -> None);
+    }
+  in
+  Effect.Deep.match_with fn () handler
+
 module Error = struct
   let prepend_article (noun : string) =
     let starts_with_any (str : string) (chars : string list) =
@@ -680,23 +697,6 @@ let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
         ("[" ^ Int.to_string start ^ ":" ^ Int.to_string finish ^ "]")
         json
 
-let collect_results thunk =
-  let handler : (unit, Json.t list) Effect.Deep.handler =
-    {
-      retc = (fun () -> []);
-      exnc = (fun e -> raise e);
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield v ->
-              Some
-                (fun (k : (a, _) continuation) ->
-                  v :: Effect.Deep.continue k ())
-          | _ -> None);
-    }
-  in
-  Effect.Deep.match_with thunk () handler
-
 let rec interp ~ctx expression json : unit =
   match expression with
   | Identity -> yield json
@@ -845,8 +845,8 @@ let rec interp ~ctx expression json : unit =
   | Call (fname, _args) ->
       Error.message ~ctx
         ("calling function " ^ fname ^ " - custom functions not yet implemented")
-  | Reduce (generator, var_name, init_expr, update_expr) ->
-      reduce ~ctx generator var_name init_expr update_expr json
+  | Reduce (expr, var_name, init_expr, update_expr) ->
+      reduce ~ctx expr var_name init_expr update_expr json
   | Break -> break ()
   | Try (expr, handler) -> try_catch ~ctx expr handler json
   | Limit (n, expr) -> limit ~ctx n expr json
@@ -860,10 +860,12 @@ let rec interp ~ctx expression json : unit =
   | Paths -> paths json
   | Paths_filter expr -> paths_filter ~ctx expr json
   | Assign (path, value_expr) -> assign ~ctx path value_expr json
-  | Foreach (_, _, _, _) -> Error.message ~ctx "foreach is not yet implemented"
+  | Foreach (expr, var_name, init_expr, update_expr, extract_expr) ->
+      foreach ~ctx expr var_name init_expr update_expr extract_expr json
   | Label (_, _) -> Error.message ~ctx "label is not yet implemented"
 
-and collect ~ctx expr json = collect_results (fun () -> interp ~ctx expr json)
+and collect ~ctx expr json =
+  run_and_collect_results (fun () -> interp ~ctx expr json)
 
 and operation ~ctx left_expr right_expr op json =
   let apply_op l_val r_val =
@@ -1220,8 +1222,7 @@ and reduce ~ctx generator var_name init_expr update_expr json =
         ~and_then:(fun elem ->
           let env_with_var = (var_name, elem) :: ctx.env in
           let res =
-            collect_results (fun () ->
-                interp ~ctx:{ ctx with env = env_with_var } update_expr !acc)
+            collect ~ctx:{ ctx with env = env_with_var } update_expr !acc
           in
           match res with
           | [ new_acc ] -> acc := new_acc
@@ -1231,6 +1232,26 @@ and reduce ~ctx generator var_name init_expr update_expr json =
         ();
       yield !acc
   | _ -> Error.message ~ctx "reduce init expression must return a single value"
+
+and foreach ~ctx generator var_name init_expr update_expr extract_expr json =
+  let init_values = collect ~ctx init_expr json in
+  match init_values with
+  | [ init_val ] ->
+      let acc = ref init_val in
+      run
+        (fun () -> interp ~ctx generator json)
+        ~and_then:(fun elem ->
+          let new_ctx = { ctx with env = (var_name, elem) :: ctx.env } in
+          let update_res = collect ~ctx:new_ctx update_expr !acc in
+          (match update_res with
+          | [ new_acc ] -> acc := new_acc
+          | _ ->
+              Error.message ~ctx
+                "foreach update expression must return single value");
+          let extract_res = collect ~ctx:new_ctx extract_expr !acc in
+          List.iter yield extract_res)
+        ()
+  | _ -> Error.message ~ctx "foreach init expression must return a single value"
 
 and in_ ~ctx json expr =
   let container_results = collect ~ctx expr json in

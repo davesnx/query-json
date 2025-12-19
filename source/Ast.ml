@@ -143,7 +143,7 @@ type expression =
   | Halt (* halt *)
   | Halt_error of int option (* halt_error or halt_error(exit_code) *)
   | Isempty of expression (* isempty(expr) *)
-  | Foreach of expression * expression * expression * expression
+  | Foreach of expression * string * expression * expression * expression
     (* foreach EXPR as $VAR (INIT; UPDATE; EXTRACT) *)
   | Label of string * expression (* label(name; expr) *)
   | Del of expression (* del(path) *)
