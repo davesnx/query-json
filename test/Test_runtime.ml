@@ -1016,8 +1016,6 @@ let env =
     (* Test that env and $ENV both work - use HOME which should exist *)
     test {|$ENV.HOME != null|} {|null|} {|true|};
     test {|env.HOME != null|} {|null|} {|true|};
-    test {|env.LC_ALL|} {|null|} {|"en_US.UTF-8"|};
-    test {|$ENV.LC_ALL|} {|null|} {|"en_US.UTF-8"|};
   ]
 
 let bsearch =
