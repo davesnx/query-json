@@ -1,5 +1,5 @@
 (test
- (name test)
+ (name Test)
  (libraries alcotest query-json.core yojson ppx_deriving.runtime))
 
 (cram
