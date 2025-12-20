@@ -1,6 +1,9 @@
 # Unreleased
 
 - Remove easy-format
+- Add `=` assignment operator (`.a = .b`, `(.a, .b) = expr`)
+- Fix `|=` to create paths that don't exist (`.a |= 42` on `null` creates `{"a": 42}`)
+- Fix `|=` to take first value when transform produces multiple results
 - Add User-defined functions
   - Add `def name(args): body; expr` for user-defined functions
   - Add function calls with semicolon-separated arguments: `func(a; b; c)`
