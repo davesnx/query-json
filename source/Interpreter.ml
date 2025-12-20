@@ -4,7 +4,15 @@ type _ Effect.t += Yield : Json.t -> unit Effect.t
 type _ Effect.t += Break : unit Effect.t
 type _ Effect.t += Halt : int -> unit Effect.t
 type _ Effect.t += Fail : string -> unit Effect.t
-type ctx = { colorize : bool; verbose : bool; env : (string * Json.t) list }
+type _ Effect.t += User_error : Json.t -> unit Effect.t
+type fn_definition = { params : string list; body : expression }
+
+type ctx = {
+  colorize : bool;
+  verbose : bool;
+  env : (string * Json.t) list;
+  fns : (string * fn_definition) list;
+}
 
 let yield v = Effect.perform (Yield v)
 let break () = Effect.perform Break
@@ -12,6 +20,10 @@ let halt ?(code = 0) () = Effect.perform (Halt code)
 
 let fail msg =
   Effect.perform (Fail msg);
+  assert false (* unreachable - handler never continues *)
+
+let user_error value =
+  Effect.perform (User_error value);
   assert false (* unreachable - handler never continues *)
 
 let yield_many items = List.iter yield items
@@ -71,6 +83,109 @@ let run_and_collect_results fn =
   in
   Effect.Deep.match_with fn () handler
 
+let rec substitute_params (params : string list) (args : expression list)
+    (expr : expression) : expression =
+  let sub = substitute_params params args in
+  let sub_opt = Option.map sub in
+  let find_param name =
+    let rec find idx = function
+      | [] -> None
+      | p :: _ when p = name -> Some (List.nth args idx)
+      | _ :: rest -> find (idx + 1) rest
+    in
+    find 0 params
+  in
+  match expr with
+  (* nullary calls to a parameter name gets substituted with the argument expression *)
+  | Call (name, []) -> (
+      match find_param name with Some arg_expr -> arg_expr | None -> expr)
+  (* all other expressions substitute in sub-expressions *)
+  | Identity | Empty | Keys | Floor | Sqrt | Type | Sort | Unique | Reverse
+  | Explode | Implode | Any | All | Recurse | Recurse_down | To_entries
+  | From_entries | Nan | Is_nan | Not | Ascii_upcase | Ascii_downcase | Trim
+  | Ltrim | Rtrim | Head | Tail | Length | Utf8bytelength | Min | Max
+  | To_number | Tonumber | To_string | Tostring | Env | Break | Paths | Halt
+  | Iterator | Combinations | Fun _ | Literal _ | Variable _ | Key _ | Test _
+  | Match _ | Scan _ | Capture _ | Env_var _ ->
+      expr
+  | Index indices -> Index indices
+  | Slice (a, b) -> Slice (a, b)
+  | Sub (a, b) -> Sub (a, b)
+  | Gsub (a, b) -> Gsub (a, b)
+  | Limit (n, e) -> Limit (n, sub e)
+  | Skip (n, e) -> Skip (n, sub e)
+  | Halt_error n -> Halt_error n
+  | Pipe (l, r) -> Pipe (sub l, sub r)
+  | Update (l, r) -> Update (sub l, sub r)
+  | Alternative (l, r) -> Alternative (sub l, sub r)
+  | Comma (l, r) -> Comma (sub l, sub r)
+  | Operation (l, op, r) -> Operation (sub l, op, sub r)
+  | Optional e -> Optional (sub e)
+  | List e -> List (sub_opt e)
+  | Object pairs -> Object (List.map (fun (k, v) -> (sub k, sub_opt v)) pairs)
+  | Walk e -> Walk (sub e)
+  | Transpose e -> Transpose (sub e)
+  | Has e -> Has (sub e)
+  | In e -> In (sub e)
+  | Recurse_expr e -> Recurse_expr (sub e)
+  | Recurse_with (e1, e2) -> Recurse_with (sub e1, sub e2)
+  | With_entries e -> With_entries (sub e)
+  | Range (e1, e2, e3) -> Range (sub e1, sub_opt e2, sub_opt e3)
+  | Flatten e -> Flatten (sub_opt e)
+  | Map e -> Map (sub e)
+  | Map_values e -> Map_values (sub e)
+  | Flat_map e -> Flat_map (sub e)
+  | Reduce (e, var, init, update) -> Reduce (sub e, var, sub init, sub update)
+  | As (e, var, body) -> As (sub e, var, sub body)
+  | Select e -> Select (sub e)
+  | Sort_by e -> Sort_by (sub e)
+  | Group_by e -> Group_by (sub e)
+  | Unique_by e -> Unique_by (sub e)
+  | Min_by e -> Min_by (sub e)
+  | Max_by e -> Max_by (sub e)
+  | All_with_condition e -> All_with_condition (sub e)
+  | Any_with_condition e -> Any_with_condition (sub e)
+  | Some_ e -> Some_ (sub e)
+  | Find e -> Find (sub e)
+  | Contains e -> Contains (sub e)
+  | Starts_with e -> Starts_with (sub e)
+  | Startwith e -> Startwith (sub e)
+  | Ends_with e -> Ends_with (sub e)
+  | Endwith e -> Endwith (sub e)
+  | Index_of e -> Index_of (sub e)
+  | Rindex_of e -> Rindex_of (sub e)
+  | Indices e -> Indices (sub e)
+  | Inside e -> Inside (sub e)
+  | Ltrimstr e -> Ltrimstr (sub e)
+  | Rtrimstr e -> Rtrimstr (sub e)
+  | Split e -> Split (sub e)
+  | Join e -> Join (sub e)
+  | Bsearch e -> Bsearch (sub e)
+  | Combinations_n e -> Combinations_n (sub e)
+  | Repeat e -> Repeat (sub e)
+  | Add_expr e -> Add_expr (sub e)
+  | First e -> First (sub_opt e)
+  | Last e -> Last (sub_opt e)
+  | Nth (e1, e2) -> Nth (sub e1, sub e2)
+  | Path e -> Path (sub e)
+  | If_then_else (c, t, e) -> If_then_else (sub c, sub t, sub e)
+  | While (c, u) -> While (sub c, sub u)
+  | Until (c, u) -> Until (sub c, sub u)
+  | Try (e, h) -> Try (sub e, sub_opt h)
+  | Error_msg e -> Error_msg (sub_opt e)
+  | Isempty e -> Isempty (sub e)
+  | Foreach (e, var, init, update, extract) ->
+      Foreach (sub e, var, sub init, sub update, sub extract)
+  | Label (name, e) -> Label (name, sub e)
+  | Del e -> Del (sub e)
+  | Delpaths e -> Delpaths (sub e)
+  | Assign (l, r) -> Assign (sub l, sub r)
+  | Getpath e -> Getpath (sub e)
+  | Setpath (e1, e2) -> Setpath (sub e1, sub e2)
+  | Paths_filter e -> Paths_filter (sub e)
+  | Def (name, params', body) -> Def (name, params', sub body)
+  | Call (name, call_args) -> Call (name, List.map sub call_args)
+
 module Error = struct
   let prepend_article (noun : string) =
     let starts_with_any (str : string) (chars : string list) =
@@ -125,38 +240,13 @@ module Error = struct
       ^ gray
           (Json.to_string json ~colorize:ctx.colorize ~summarize:true ~raw:false)
       )
-
-  let missing_member ~ctx op key (value : Json.t) =
-    let open Formatting in
-    let open Ansi.To_string (struct
-      let colorize = ctx.colorize
-    end) in
-    fail
-      ("Trying to "
-      ^ double_quotes (bold op)
-      ^ " on an object, that don't have the field " ^ double_quotes key ^ ":"
-      ^ enter 1
-      ^ gray
-          (Json.to_string value ~colorize:ctx.colorize ~summarize:true
-             ~raw:false))
 end
 
 module Operators = struct
   let not (json : Json.t) =
     match json with `Bool false | `Null -> `Bool true | _ -> `Bool false
 
-  let rec merge_map ~(eq : 'a -> 'a -> 'b) ~(f : 'a -> 'b)
-      (cmp : 'a -> 'a -> int) (l1 : 'a list) (l2 : 'a list) : 'b list =
-    match (l1, l2) with
-    | [], l2 -> List.map f l2
-    | l1, [] -> List.map f l1
-    | h1 :: t1, h2 :: t2 ->
-        let r = cmp h1 h2 in
-        if r = 0 then eq h1 h2 :: merge_map ~eq ~f cmp t1 t2
-        else if r < 0 then f h1 :: merge_map ~eq ~f cmp t1 l2
-        else f h2 :: merge_map ~eq ~f cmp l1 t2
-
-  let rec add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
+  let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
     | `Float l, `Float r -> `Float (l +. r)
     | `Int l, `Float r -> `Float (Int.to_float l +. r)
@@ -166,14 +256,23 @@ module Operators = struct
     | `Null, `Float r | `Float r, `Null -> `Float r
     | `String l, `String r -> `String (l ^ r)
     | `Null, `String r | `String r, `Null -> `String r
-    | `Assoc l, `Assoc r ->
-        let cmp (key1, _) (key2, _) = String.compare key1 key2 in
-        let eq (key, v1) (_, v2) =
-          let result = add ~ctx str v1 v2 in
-          (key, result)
+    | `Assoc l_entries, `Assoc r_entries ->
+        (* right side wins for duplicate keys (override, not merge) *)
+        let updated_l =
+          List.map
+            (fun (k, v) ->
+              match List.assoc_opt k r_entries with
+              | Some v' -> (k, v')
+              | None -> (k, v))
+            l_entries
         in
-        let f (key, v) = (key, v) in
-        `Assoc (merge_map ~f ~eq cmp l r)
+        (* Then add new keys from r that weren't in l *)
+        let new_keys =
+          List.filter
+            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
+            r_entries
+        in
+        `Assoc (updated_l @ new_keys)
     | `Null, `Assoc r | `Assoc r, `Null -> `Assoc r
     | `List l, `List r -> `List (l @ r)
     | `Null, `List r | `List r, `Null -> `List r
@@ -196,24 +295,88 @@ module Operators = struct
     | `Int l, `Int r -> `Bool (fn (Int.to_float l) (Int.to_float r))
     | _ -> Error.make ~ctx str right
 
-  let condition ~ctx (str : string) (fn : bool -> bool -> bool) (left : Json.t)
-      (right : Json.t) =
-    match (left, right) with
-    | `Bool l, `Bool r -> `Bool (fn l r)
-    | _ -> Error.make ~ctx str right
-
   let gt ~ctx = compare ~ctx ">" ( > )
   let gte ~ctx = compare ~ctx ">=" ( >= )
   let lt ~ctx = compare ~ctx "<" ( < )
   let lte ~ctx = compare ~ctx "<=" ( <= )
-  let and_ ~ctx = condition ~ctx "and" ( && )
-  let or_ ~ctx = condition ~ctx "or" ( || )
-  let equal l r = `Bool (l = r)
-  let not_equal l r = `Bool (l <> r)
+
+  let is_truthy (json : Json.t) : bool =
+    (* in jq, false and null are falsy, everything else is truthy *)
+    match json with
+    | `Bool false | `Null -> false
+    | _ -> true
+
+  let and_ ~ctx:_ (left : Json.t) (right : Json.t) : Json.t =
+    `Bool (is_truthy left && is_truthy right)
+
+  let or_ ~ctx:_ (left : Json.t) (right : Json.t) : Json.t =
+    `Bool (is_truthy left || is_truthy right)
+
+  let equal l r = `Bool (Json.equal l r)
+  let not_equal l r = `Bool (Stdlib.not (Json.equal l r))
   let add ~ctx = add ~ctx "+"
-  let subtract ~ctx = apply_operation ~ctx "-" (fun l r -> l -. r)
-  let multiply ~ctx = apply_operation ~ctx "*" (fun l r -> l *. r)
-  let divide ~ctx = apply_operation ~ctx "/" (fun l r -> l /. r)
+
+  let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
+    match (left, right) with
+    | `Float l, `Float r -> `Float (l -. r)
+    | `Int l, `Float r -> `Float (Int.to_float l -. r)
+    | `Float l, `Int r -> `Float (l -. Int.to_float r)
+    | `Int l, `Int r -> `Float (Int.to_float l -. Int.to_float r)
+    | `List l, `List r ->
+        let in_r x = List.exists (fun y -> Json.equal x y) r in
+        `List (List.filter (fun x -> Stdlib.not (in_r x)) l)
+    | _ -> Error.make ~ctx "-" left
+
+  let rec deep_merge (left : Json.t) (right : Json.t) : Json.t =
+    match (left, right) with
+    | `Assoc l_entries, `Assoc r_entries ->
+        (* Preserve key order: update existing keys from l with recursive merge from r *)
+        let updated_l =
+          List.map
+            (fun (k, v) ->
+              match List.assoc_opt k r_entries with
+              | Some r_val -> (k, deep_merge v r_val)
+              | None -> (k, v))
+            l_entries
+        in
+        (* Add new keys from r that weren't in l *)
+        let new_keys =
+          List.filter
+            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
+            r_entries
+        in
+        `Assoc (updated_l @ new_keys)
+    | _, r -> r
+
+  let multiply ~ctx (left : Json.t) (right : Json.t) : Json.t =
+    match (left, right) with
+    | `Float l, `Float r -> `Float (l *. r)
+    | `Int l, `Float r -> `Float (Int.to_float l *. r)
+    | `Float l, `Int r -> `Float (l *. Int.to_float r)
+    | `Int l, `Int r -> `Float (Int.to_float l *. Int.to_float r)
+    | `String s, `Int n ->
+        if n <= 0 then `String ""
+        else `String (String.concat "" (List.init n (fun _ -> s)))
+    | `String s, `Float f ->
+        let count = Int.of_float f in
+        if count <= 0 then `String ""
+        else `String (String.concat "" (List.init count (fun _ -> s)))
+    | `Assoc _, `Assoc _ -> deep_merge left right
+    | `Null, r | r, `Null -> r
+    | _ -> Error.make ~ctx "*" left
+
+  let divide ~ctx (left : Json.t) (right : Json.t) : Json.t =
+    match (left, right) with
+    | `Float l, `Float r -> `Float (l /. r)
+    | `Int l, `Float r -> `Float (Int.to_float l /. r)
+    | `Float l, `Int r -> `Float (l /. Int.to_float r)
+    | `Int l, `Int r -> `Float (Int.to_float l /. Int.to_float r)
+    | `String s, `String delim ->
+        `List
+          (Str.split_delim (Str.regexp_string delim) s
+          |> List.map (fun part -> `String part))
+    | _ -> Error.make ~ctx "/" left
+
   let modulo ~ctx = apply_operation ~ctx "%" (fun l r -> mod_float l r)
 
   let apply_to_number ~ctx name f json =
@@ -233,9 +396,111 @@ module Operators = struct
   let exp_ ~ctx = apply_to_number ~ctx "exp" Stdlib.exp
 end
 
+module Search = struct
+  let string_first haystack needle =
+    try Some (Str.search_forward (Str.regexp_string needle) haystack 0)
+    with Not_found -> None
+
+  let string_last haystack needle =
+    let rec search pos last =
+      try
+        let found =
+          Str.search_forward (Str.regexp_string needle) haystack pos
+        in
+        search (found + 1) (Some found)
+      with Not_found -> last
+    in
+    search 0 None
+
+  let string_all haystack needle =
+    let rec search pos acc =
+      try
+        let found =
+          Str.search_forward (Str.regexp_string needle) haystack pos
+        in
+        search (found + 1) (found :: acc)
+      with Not_found -> List.rev acc
+    in
+    search 0 []
+
+  let sublist_matches_at haystack sublist idx =
+    let sublen = List.length sublist in
+    let haylen = List.length haystack in
+    if idx + sublen > haylen then false
+    else
+      let slice =
+        List.filteri (fun i _ -> i >= idx && i < idx + sublen) haystack
+      in
+      List.length slice = sublen && List.for_all2 Json.equal slice sublist
+
+  let sublist_first haystack sublist =
+    let sublen = List.length sublist in
+    let haylen = List.length haystack in
+    let rec search idx =
+      if idx + sublen > haylen then None
+      else if sublist_matches_at haystack sublist idx then Some idx
+      else search (idx + 1)
+    in
+    search 0
+
+  let sublist_last haystack sublist =
+    let sublen = List.length sublist in
+    let haylen = List.length haystack in
+    let rec search idx last =
+      if idx + sublen > haylen then last
+      else if sublist_matches_at haystack sublist idx then
+        search (idx + 1) (Some idx)
+      else search (idx + 1) last
+    in
+    search 0 None
+
+  let sublist_all haystack sublist =
+    let sublen = List.length sublist in
+    let haylen = List.length haystack in
+    let rec search idx acc =
+      if idx + sublen > haylen then List.rev acc
+      else if sublist_matches_at haystack sublist idx then
+        search (idx + 1) (idx :: acc)
+      else search (idx + 1) acc
+    in
+    search 0 []
+
+  let element_first haystack needle =
+    let rec search idx = function
+      | [] -> None
+      | hd :: tl ->
+          if Json.equal hd needle then Some idx else search (idx + 1) tl
+    in
+    search 0 haystack
+
+  let element_last haystack needle =
+    let rec search idx last = function
+      | [] -> last
+      | hd :: tl ->
+          let last = if Json.equal hd needle then Some idx else last in
+          search (idx + 1) last tl
+    in
+    search 0 None haystack
+
+  let element_all haystack needle =
+    let rec search idx acc = function
+      | [] -> List.rev acc
+      | hd :: tl ->
+          let acc = if Json.equal hd needle then idx :: acc else acc in
+          search (idx + 1) acc tl
+    in
+    search 0 [] haystack
+end
+
 let keys ~ctx (json : Json.t) =
   match json with
-  | `Assoc _list -> `List (Json.keys json |> List.map (fun i -> `String i))
+  | `Assoc _list ->
+      let sorted_keys = Json.keys json |> List.sort String.compare in
+      `List (sorted_keys |> List.map (fun i -> `String i))
+  | `List l ->
+      (* return indices 0..length-1 *)
+      let len = List.length l in
+      `List (List.init len (fun i -> `Int i))
   | _ -> Error.make ~ctx "keys" json
 
 let has ~ctx (json : Json.t) key =
@@ -250,25 +515,33 @@ let has ~ctx (json : Json.t) key =
       | _ -> Error.make ~ctx "has" json)
   | _ -> Error.make ~ctx "has" json
 
+let range_list ?(step = 1) start stop =
+  if step = 0 then []
+  else
+    let rec loop current =
+      if (step > 0 && current >= stop) || (step < 0 && current <= stop) then []
+      else current :: loop (current + step)
+    in
+    loop start
+
 let range ?step from upto =
-  let rec range ?(step = 1) start stop =
-    if step = 0 then []
-    else if (step > 0 && start >= stop) || (step < 0 && start <= stop) then []
-    else start :: range ~step (start + step) stop
-  in
-  match upto with None -> range 1 from | Some upto -> range ?step from upto
+  match upto with
+  | None -> range_list 0 from
+  | Some stop -> range_list ?step from stop
 
 let split ~ctx expr json =
   match json with
   | `String s ->
-      let rcase =
+      let delim =
         match expr with
         | Literal (String s) -> s
         | _ ->
             Error.message ~ctx
               "Invalid argument for 'split': expected string literal"
       in
-      `List (Str.split (Str.regexp rcase) s |> List.map (fun s -> `String s))
+      (* Use split_delim to preserve trailing empty strings, then filter leading empty if not at boundary *)
+      let parts = Str.split_delim (Str.regexp_string delim) s in
+      `List (List.map (fun s -> `String s) parts)
   | _ -> Error.make ~ctx "split" json
 
 let join ~ctx expr json =
@@ -281,17 +554,34 @@ let join ~ctx expr json =
   in
   match json with
   | `List l ->
-      `String
-        (List.map (function `String s -> s | _ -> "") l |> String.concat rcase)
+      let to_str = function
+        | `String s -> Some s
+        | `Null -> None
+        | `Bool b -> Some (Bool.to_string b)
+        | `Int n -> Some (Int.to_string n)
+        | `Float f -> Some (Printf.sprintf "%g" f)
+        | other ->
+            Some
+              (Json.to_string ~colorize:false ~summarize:false ~raw:true other)
+      in
+      `String (List.filter_map to_str l |> String.concat rcase)
   | _ -> Error.make ~ctx "join" json
 
 let length ~ctx (json : Json.t) =
   match json with
   | `List list -> `Int (List.length list)
+  (* TODO: OCaml strings are byte arrays, so this often incorrect *)
   | `String s -> `Int (String.length s)
   | `Assoc obj -> `Int (List.length obj)
   | `Null -> `Int 0
+  | `Int n -> `Int (abs n)
+  | `Float f -> `Float (Float.abs f)
   | _ -> Error.make ~ctx "length" json
+
+let utf8bytelength ~ctx (json : Json.t) =
+  match json with
+  | `String s -> `Int (String.length s) (* OCaml strings are byte arrays *)
+  | _ -> Error.make ~ctx "utf8bytelength" json
 
 let emit_warning ~verbose message =
   if verbose then Printf.eprintf "Warning: %s\n%!" message else ()
@@ -327,22 +617,18 @@ let to_string ~ctx ~deprecated (json : Json.t) =
     emit_warning ~verbose:ctx.verbose
       "Using deprecated 'tostring'. Use 'to_string' instead. This may not be \
        supported in future versions.";
-  `String (Json.to_string ~colorize:false ~summarize:false ~raw:false json)
+  match json with
+  (* for strings, return as-is (no extra quotes) *)
+  | `String s -> `String s
+  | _ ->
+      `String (Json.to_string ~colorize:false ~summarize:false ~raw:false json)
 
 let min ~ctx (json : Json.t) =
   match json with
   | `List [] -> Error.empty_list ~ctx "min"
   | `List l ->
-      let compare_json a b =
-        match (a, b) with
-        | `Int x, `Int y -> compare x y
-        | `Float x, `Float y -> compare x y
-        | `Int x, `Float y -> compare (Float.of_int x) y
-        | `Float x, `Int y -> compare x (Float.of_int y)
-        | _ -> 0
-      in
       List.fold_left
-        (fun acc x -> if compare_json x acc < 0 then x else acc)
+        (fun acc x -> if Json.compare x acc < 0 then x else acc)
         (List.hd l) (List.tl l)
   | _ -> Error.make ~ctx "min" json
 
@@ -350,23 +636,14 @@ let max ~ctx (json : Json.t) =
   match json with
   | `List [] -> Error.empty_list ~ctx "max"
   | `List l ->
-      let compare_json a b =
-        match (a, b) with
-        | `Int x, `Int y -> compare x y
-        | `Float x, `Float y -> compare x y
-        | `Int x, `Float y -> compare (Float.of_int x) y
-        | `Float x, `Int y -> compare x (Float.of_int y)
-        | _ -> 0
-      in
       List.fold_left
-        (fun acc x -> if compare_json x acc > 0 then x else acc)
+        (fun acc x -> if Json.compare x acc > 0 then x else acc)
         (List.hd l) (List.tl l)
   | _ -> Error.make ~ctx "max" json
 
-let flatten ~ctx depth_opt (json : Json.t) =
+let flatten ~ctx depth (json : Json.t) =
   match json with
   | `List l ->
-      let depth = match depth_opt with Some d -> d | None -> 1 in
       let rec flatten_n n lst =
         if n <= 0 then lst
         else
@@ -382,17 +659,7 @@ let flatten ~ctx depth_opt (json : Json.t) =
 
 let sort ~ctx (json : Json.t) =
   match json with
-  | `List l ->
-      let compare_json a b =
-        match (a, b) with
-        | `Int x, `Int y -> compare x y
-        | `Float x, `Float y -> compare x y
-        | `Int x, `Float y -> compare (Float.of_int x) y
-        | `Float x, `Int y -> compare x (Float.of_int y)
-        | `String x, `String y -> compare x y
-        | _ -> 0
-      in
-      `List (List.sort compare_json l)
+  | `List l -> `List (List.sort Json.compare l)
   | _ -> Error.make ~ctx "sort" json
 
 let unique ~ctx (json : Json.t) =
@@ -479,6 +746,14 @@ let is_nan ~ctx (json : Json.t) =
   | `Int _ -> `Bool false
   | _ -> Error.make ~ctx "is_nan" json
 
+let get_envs () =
+  (* TODO: Do I need to escape stuff here? *)
+  Unix.environment () |> Array.to_list
+  |> List.filter_map (fun s ->
+      match String.split_on_char '=' s with
+      | k :: rest -> Some (k, `String (String.concat "=" rest))
+      | [] -> None)
+
 let transpose ~ctx (json : Json.t) =
   match json with
   | `List [] -> `List []
@@ -492,11 +767,11 @@ let transpose ~ctx (json : Json.t) =
       else
         let max_len = List.fold_left Int.max 0 lengths in
         let get_column i =
-          List.filter_map
+          List.map
             (fun row ->
               match row with
-              | `List l when i < List.length l -> Some (List.nth l i)
-              | _ -> None)
+              | `List l when i < List.length l -> List.nth l i
+              | _ -> `Null)
             rows
         in
         let transposed = List.init max_len (fun i -> `List (get_column i)) in
@@ -630,14 +905,12 @@ let tail ~ctx (json : Json.t) =
       | false -> Error.empty_list ~ctx "tail")
   | _ -> Error.make ~ctx "tail" json
 
-let member ~ctx (key : string) (json : Json.t) =
+let member ~ctx:_ (key : string) (json : Json.t) =
   match json with
-  | `Assoc _assoc -> (
-      let access_member = Json.member key json in
-      match access_member with
-      | `Null -> Error.missing_member ~ctx ("." ^ key) key json
-      | _ -> access_member)
-  | _ -> Error.make ~ctx ("." ^ key) json
+  | `Assoc _assoc -> Json.member key json
+  | `Null -> `Null
+  | _ ->
+      fail ("Cannot index " ^ Json.type_of json ^ " with string \"" ^ key ^ "\"")
 
 let iterator ~ctx (json : Json.t) =
   match json with
@@ -704,13 +977,14 @@ let rec interp ~ctx expression json : unit =
   | Keys -> yield (keys ~ctx json)
   | Key key -> yield (member ~ctx key json)
   | Optional expr ->
-      run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> yield `Null) ()
+      run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> ()) ()
   | Index idx -> index ~ctx idx json
   | Iterator -> iterator ~ctx json
   | Slice (start, finish) -> slice ~ctx start finish json
   | Head -> yield (head ~ctx json)
   | Tail -> yield (tail ~ctx json)
   | Length -> yield (length ~ctx json)
+  | Utf8bytelength -> yield (utf8bytelength ~ctx json)
   | Not -> yield (Operators.not json)
   | Type -> yield (`String (Json.type_of json))
   | Floor -> yield (floor ~ctx json)
@@ -721,7 +995,14 @@ let rec interp ~ctx expression json : unit =
   | Tostring -> yield (to_string ~ctx ~deprecated:true json)
   | Min -> yield (min ~ctx json)
   | Max -> yield (max ~ctx json)
-  | Flatten depth -> yield (flatten ~ctx depth json)
+  | Flatten None -> yield (flatten ~ctx 1 json)
+  | Flatten (Some expr) ->
+      collect ~ctx expr json
+      |> List.iter (fun depth ->
+          match depth with
+          | `Int d -> yield (flatten ~ctx d json)
+          | `Float f -> yield (flatten ~ctx (Int.of_float f) json)
+          | _ -> Error.make ~ctx "flatten: depth must be a number" depth)
   | Sort -> yield (sort ~ctx json)
   | Unique -> yield (unique ~ctx json)
   | Any -> yield (any ~ctx json)
@@ -737,6 +1018,7 @@ let rec interp ~ctx expression json : unit =
   | Explode -> yield (explode ~ctx json)
   | Implode -> yield (implode ~ctx json)
   | Map expr -> map ~ctx expr json
+  | Map_values expr -> map_values ~ctx expr json
   | Operation (left, op, right) -> operation ~ctx left right op json
   | Literal literal -> (
       match literal with
@@ -744,6 +1026,10 @@ let rec interp ~ctx expression json : unit =
       | Number f -> yield (`Float f)
       | String s -> yield (`String s)
       | Null -> yield `Null)
+  | Pipe (Def (name, params, body), right) ->
+      let func = { params; body } in
+      let new_ctx = { ctx with fns = (name, func) :: ctx.fns } in
+      interp ~ctx:new_ctx right json
   | Pipe (left, right) ->
       run
         (fun () -> interp ~ctx left json)
@@ -775,16 +1061,44 @@ let rec interp ~ctx expression json : unit =
       | Literal ((String _ | Number _) as lit) -> yield (has ~ctx json lit)
       | _ -> Error.message ~ctx (show_expression expr ^ " is not allowed"))
   | In expr -> in_ ~ctx json expr
-  | Range (from, upto, step) ->
-      let vals = range ?step from upto in
-      List.iter (fun i -> yield (`Int i)) vals
+  | Range (from_expr, upto_expr, step_expr) ->
+      let to_int_list results =
+        List.filter_map
+          (function
+            | `Int n -> Some n | `Float f -> Some (Float.to_int f) | _ -> None)
+          results
+      in
+      let froms = to_int_list (collect ~ctx from_expr json) in
+      let uptos =
+        match upto_expr with
+        | None -> [ None ]
+        | Some expr ->
+            List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
+      in
+      let steps =
+        match step_expr with
+        | None -> [ None ]
+        | Some expr ->
+            List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
+      in
+      List.iter
+        (fun from ->
+          List.iter
+            (fun upto ->
+              List.iter
+                (fun step ->
+                  let vals = range ?step from upto in
+                  List.iter (fun i -> yield (`Int i)) vals)
+                steps)
+            uptos)
+        froms
   | Reverse -> (
       match json with
       | `List l -> yield (`List (List.rev l))
       | _ -> Error.make ~ctx "reverse" json)
   | Split expr -> yield (split ~ctx expr json)
   | Join expr -> yield (join ~ctx expr json)
-  | Fun builtin -> builtin_functions ~ctx builtin json
+  | Fun builtin -> builtin_fns ~ctx builtin json
   | If_then_else (cond, if_branch, else_branch) ->
       run
         (fun () -> interp ~ctx cond json)
@@ -799,12 +1113,33 @@ let rec interp ~ctx expression json : unit =
   | Unique_by expr -> unique_by ~ctx expr json
   | Index_of expr -> index_of ~ctx expr json
   | Rindex_of expr -> rindex_of ~ctx expr json
+  | Indices expr -> indices ~ctx expr json
+  | Inside expr -> inside ~ctx expr json
+  | Ltrimstr expr -> left_trimstr ~ctx expr json
+  | Rtrimstr expr -> right_trimstr ~ctx expr json
+  | Trim -> trim ~ctx json
+  | Ltrim -> left_trim ~ctx json
+  | Rtrim -> right_trim ~ctx json
+  | Ascii_upcase -> ascii_upcase ~ctx json
+  | Ascii_downcase -> ascii_downcase ~ctx json
+  | Bsearch expr -> binary_search ~ctx expr json
+  | First None -> first_of_array ~ctx json
+  | First (Some expr) -> first_of_expr ~ctx expr json
+  | Last None -> last_of_array ~ctx json
+  | Last (Some expr) -> last_of_expr ~ctx expr json
+  | Nth (n_expr, expr) -> nth ~ctx n_expr expr json
   | Group_by expr -> group_by ~ctx expr json
   | While (cond, update) -> while_loop ~ctx cond update json
   | Until (cond, update) -> until_loop ~ctx cond update json
   | Recurse ->
-      let results = recurse ~ctx json in
+      let results = recurse_down json in
       yield_many results
+  | Recurse_expr f ->
+      let rec loop value =
+        yield value;
+        run (fun () -> interp ~ctx f value) ~and_then:(fun next -> loop next) ()
+      in
+      loop json
   | Recurse_with (f, cond) ->
       let results = recurse_with_cond ~ctx f cond json in
       yield_many results
@@ -833,28 +1168,33 @@ let rec interp ~ctx expression json : unit =
   | Gsub (pattern, replacement) ->
       yield (gsub_regex ~ctx pattern replacement json)
   | Path expr -> path_of ~ctx expr json
-  | Variable var_name -> (
-      match List.assoc_opt var_name ctx.env with
-      | Some value -> yield value
-      | None -> Error.message ~ctx ("Undefined variable: $" ^ var_name))
-  | Def (name, _params, _body) ->
-      Error.message ~ctx
-        ("def " ^ name
-       ^ " is not yet fully implemented - definitions should be at program top \
-          level")
-  | Call (fname, _args) ->
-      Error.message ~ctx
-        ("calling function " ^ fname ^ " - custom functions not yet implemented")
+  | Variable name -> variable ~ctx name
+  | Env -> yield (`Assoc (get_envs ()))
+  | Env_var name -> (
+      match Sys.getenv_opt name with
+      | Some v -> yield (`String v)
+      | None -> yield `Null)
+  | Combinations -> combinations ~ctx json
+  | Combinations_n expr -> combinations_n ~ctx expr json
+  | Repeat expr -> repeat_expr ~ctx expr json
+  | Add_expr expr -> add_expr ~ctx expr json
+  | Def (_, _, _) ->
+      (* Def on its own (not in a Pipe). IT shouldn't happen in well-formed programs *)
+      yield json
+  | Call (fname, args) -> call_function ~ctx fname args json
   | Reduce (expr, var_name, init_expr, update_expr) ->
       reduce ~ctx expr var_name init_expr update_expr json
+  | As (expr, var_name, body) -> as_binding ~ctx expr var_name body json
   | Break -> break ()
   | Try (expr, handler) -> try_catch ~ctx expr handler json
   | Limit (n, expr) -> limit ~ctx n expr json
+  | Skip (n, expr) -> skip ~ctx n expr json
   | Error_msg msg_expr -> error_msg ~ctx msg_expr json
   | Halt -> halt ()
   | Halt_error exit_code -> halt ~code:(Option.value exit_code ~default:1) ()
   | Isempty expr -> isempty ~ctx expr json
   | Del expr -> del ~ctx expr json
+  | Delpaths expr -> delpaths ~ctx expr json
   | Getpath expr -> getpath ~ctx expr json
   | Setpath (path, value_expr) -> setpath ~ctx path value_expr json
   | Paths -> paths json
@@ -903,6 +1243,32 @@ and map ~ctx (expr : expression) (json : Json.t) =
   | `List _ -> yield (`List [])
   | _ -> Error.make ~ctx "map" json
 
+and map_values ~ctx (expr : expression) (json : Json.t) =
+  match json with
+  | `List list ->
+      let mapped =
+        List.filter_map
+          (fun item ->
+            match collect ~ctx expr item with
+            | [ v ] -> Some v
+            | [] -> None (* Filter out when expression produces empty *)
+            | vs -> Some (`List vs))
+          list
+      in
+      yield (`List mapped)
+  | `Assoc entries ->
+      let mapped =
+        List.filter_map
+          (fun (key, value) ->
+            match collect ~ctx expr value with
+            | [ v ] -> Some (key, v)
+            | [] -> None (* Filter out when expression produces empty *)
+            | vs -> Some (key, `List vs))
+          entries
+      in
+      yield (`Assoc mapped)
+  | _ -> Error.make ~ctx "map_values" json
+
 and sort_by ~ctx expr json =
   match json with
   | `List l ->
@@ -910,14 +1276,7 @@ and sort_by ~ctx expr json =
         let res_a = collect ~ctx expr a in
         let res_b = collect ~ctx expr b in
         match (res_a, res_b) with
-        | [ av ], [ bv ] -> (
-            match (av, bv) with
-            | `Int x, `Int y -> compare x y
-            | `Float x, `Float y -> compare x y
-            | `Int x, `Float y -> compare (Float.of_int x) y
-            | `Float x, `Int y -> compare x (Float.of_int y)
-            | `String x, `String y -> compare x y
-            | _ -> 0)
+        | [ av ], [ bv ] -> Json.compare av bv
         | _ -> 0
       in
       let sorted = List.sort compare_by l in
@@ -932,13 +1291,7 @@ and min_by ~ctx expr json =
         let res_a = collect ~ctx expr a in
         let res_b = collect ~ctx expr b in
         match (res_a, res_b) with
-        | [ av ], [ bv ] -> (
-            match (av, bv) with
-            | `Int x, `Int y -> compare x y
-            | `Float x, `Float y -> compare x y
-            | `Int x, `Float y -> compare (Float.of_int x) y
-            | `Float x, `Int y -> compare x (Float.of_int y)
-            | _ -> 0)
+        | [ av ], [ bv ] -> Json.compare av bv
         | _ -> 0
       in
       let min_elem =
@@ -957,13 +1310,7 @@ and max_by ~ctx expr json =
         let res_a = collect ~ctx expr a in
         let res_b = collect ~ctx expr b in
         match (res_a, res_b) with
-        | [ av ], [ bv ] -> (
-            match (av, bv) with
-            | `Int x, `Int y -> compare x y
-            | `Float x, `Float y -> compare x y
-            | `Int x, `Float y -> compare (Float.of_int x) y
-            | `Float x, `Int y -> compare x (Float.of_int y)
-            | _ -> 0)
+        | [ av ], [ bv ] -> Json.compare av bv
         | _ -> 0
       in
       let max_elem =
@@ -1028,7 +1375,7 @@ and objects ~ctx list json =
   let all_combinations = cartesian_product field_options_list in
   List.iter (fun pairs -> yield (`Assoc pairs)) all_combinations
 
-and builtin_functions ~ctx builtin json =
+and builtin_fns ~ctx builtin json =
   match builtin with
   | Absolute -> (
       match json with
@@ -1254,8 +1601,7 @@ and foreach ~ctx generator var_name init_expr update_expr extract_expr json =
   | _ -> Error.message ~ctx "foreach init expression must return a single value"
 
 and in_ ~ctx json expr =
-  let container_results = collect ~ctx expr json in
-  match container_results with
+  match collect ~ctx expr json with
   | [ container ] -> (
       match (json, container) with
       | `Int n, `List l -> yield (`Bool (n >= 0 && n < List.length l))
@@ -1263,20 +1609,50 @@ and in_ ~ctx json expr =
       | _ -> Error.make ~ctx "in" json)
   | _ -> Error.message ~ctx "in expects single container"
 
+and variable ~ctx var_name =
+  if var_name = "ENV" then
+    let env_pairs = get_envs () in
+    yield (`Assoc env_pairs)
+  else
+    match List.assoc_opt var_name ctx.env with
+    | Some value -> yield value
+    | None -> Error.message ~ctx ("Undefined variable: $" ^ var_name)
+
+and as_binding ~ctx expr var_name body json =
+  (* expr as $var | body: for each value from expr, bind to var and run body *)
+  run
+    (fun () -> interp ~ctx expr json)
+    ~and_then:(fun elem ->
+      let new_ctx = { ctx with env = (var_name, elem) :: ctx.env } in
+      interp ~ctx:new_ctx body json)
+    ()
+
+and call_function ~ctx fname args json =
+  match List.assoc_opt fname ctx.fns with
+  | None -> Error.message ~ctx ("undefined function: " ^ fname)
+  | Some { params; body } ->
+      if List.length params <> List.length args then
+        Error.message ~ctx
+          ("wrong number of arguments for " ^ fname ^ ": expected "
+          ^ Int.to_string (List.length params)
+          ^ " but got "
+          ^ Int.to_string (List.length args))
+      else
+        let new_body = substitute_params params args body in
+        interp ~ctx new_body json
+
 and starts_with ~ctx ~is_deprecated expr json =
   let name = if is_deprecated then "startwith/startswith" else "starts_with" in
   if is_deprecated then
     emit_warning ~verbose:ctx.verbose
       "Using deprecated 'startwith' or 'startswith'. Use 'starts_with' \
        instead. This may not be supported in future versions.";
-  let patterns = collect ~ctx expr json in
-  List.iter
-    (fun pattern ->
+  collect ~ctx expr json
+  |> List.iter (fun pattern ->
       match (json, pattern) with
       | `String s, `String prefix ->
           yield (`Bool (String.starts_with ~prefix s))
       | _ -> Error.make ~ctx name json)
-    patterns
 
 and ends_with ~ctx ~is_deprecated expr json =
   let name = if is_deprecated then "endwith/endswith" else "ends_with" in
@@ -1284,13 +1660,11 @@ and ends_with ~ctx ~is_deprecated expr json =
     emit_warning ~verbose:ctx.verbose
       "Using deprecated 'endwith' or 'endswith'. Use 'ends_with' instead. This \
        may not be supported in future versions.";
-  let patterns = collect ~ctx expr json in
-  List.iter
-    (fun pattern ->
+  collect ~ctx expr json
+  |> List.iter (fun pattern ->
       match (json, pattern) with
       | `String s, `String suffix -> yield (`Bool (String.ends_with ~suffix s))
       | _ -> Error.make ~ctx name json)
-    patterns
 
 and with_entries ~ctx expr json =
   let update_entry_field key transform_expr fields entry =
@@ -1340,58 +1714,267 @@ and alternative ~ctx left right json =
     ()
 
 and contains ~ctx expr json =
-  let needles = collect ~ctx expr json in
-  match needles with
-  | [ needle ] -> (
-      match (json, needle) with
-      | `String s, `String sub -> (
-          try
-            let _ = Str.search_forward (Str.regexp_string sub) s 0 in
-            yield (`Bool true)
-          with Not_found -> yield (`Bool false))
-      | `List haystack, `List needles_list ->
-          yield
-            (`Bool
-               (List.for_all
-                  (fun n -> List.exists (Json.equal n) haystack)
-                  needles_list))
-      | _ -> Error.make ~ctx "contains" json)
+  let rec value_contains haystack needle =
+    match (haystack, needle) with
+    | `String s, `String sub -> (
+        try
+          let _ = Str.search_forward (Str.regexp_string sub) s 0 in
+          true
+        with Not_found -> false)
+    | `List haystack, `List needle ->
+        (* Every element in needle must be contained by some element in haystack *)
+        List.for_all
+          (fun n -> List.exists (fun h -> value_contains h n) haystack)
+          needle
+    | `Assoc haystack, `Assoc needle ->
+        (* every key in needle must exist in haystack with contained value *)
+        List.for_all
+          (fun (k, v) ->
+            match List.assoc_opt k haystack with
+            | Some h_val -> value_contains h_val v
+            | None -> false)
+          needle
+    | h, n -> Json.equal h n
+  in
+  match collect ~ctx expr json with
+  | [ needle ] -> yield (`Bool (value_contains json needle))
   | _ -> Error.message ~ctx "contains expects single value"
 
 and index_of ~ctx expr json =
-  let needles = collect ~ctx expr json in
-  List.iter
-    (fun needle ->
+  let yield_opt = function Some p -> yield (`Int p) | None -> yield `Null in
+  collect ~ctx expr json
+  |> List.iter (fun needle ->
       match (json, needle) with
-      | `String haystack, `String needle -> (
-          try
-            let pos =
-              Str.search_forward (Str.regexp_string needle) haystack 0
-            in
-            yield (`Int pos)
-          with Not_found -> yield `Null)
+      | `String haystack, `String needle ->
+          yield_opt (Search.string_first haystack needle)
+      | `List haystack, `List sublist ->
+          yield_opt (Search.sublist_first haystack sublist)
+      | `List haystack, needle ->
+          yield_opt (Search.element_first haystack needle)
       | _ -> Error.make ~ctx "index" json)
-    needles
 
 and rindex_of ~ctx expr json =
-  let needles = collect ~ctx expr json in
-  List.iter
-    (fun needle ->
+  let yield_opt = function Some p -> yield (`Int p) | None -> yield `Null in
+  collect ~ctx expr json
+  |> List.iter (fun needle ->
       match (json, needle) with
-      | `String haystack, `String needle -> (
-          let rec search_backward pos =
-            try
-              let found_pos =
-                Str.search_forward (Str.regexp_string needle) haystack pos
-              in
-              search_backward (found_pos + 1)
-            with Not_found -> if pos = 0 then None else Some (pos - 1)
-          in
-          match search_backward 0 with
-          | Some pos -> yield (`Int pos)
-          | None -> yield `Null)
+      | `String haystack, `String needle ->
+          yield_opt (Search.string_last haystack needle)
+      | `List haystack, `List sublist ->
+          yield_opt (Search.sublist_last haystack sublist)
+      | `List haystack, needle ->
+          yield_opt (Search.element_last haystack needle)
       | _ -> Error.make ~ctx "rindex" json)
-    needles
+
+and indices ~ctx expr json =
+  let yield_positions positions =
+    yield (`List (List.map (fun p -> `Int p) positions))
+  in
+  collect ~ctx expr json
+  |> List.iter (fun needle ->
+      match (json, needle) with
+      | `String haystack, `String needle ->
+          yield_positions (Search.string_all haystack needle)
+      | `List haystack, `List sublist ->
+          yield_positions (Search.sublist_all haystack sublist)
+      | `List haystack, needle ->
+          yield_positions (Search.element_all haystack needle)
+      | _ -> Error.make ~ctx "indices" json)
+
+and inside ~ctx expr json =
+  collect ~ctx expr json
+  |> List.iter (fun container ->
+      match (json, container) with
+      | `String needle, `String haystack -> (
+          try
+            let _ = Str.search_forward (Str.regexp_string needle) haystack 0 in
+            yield (`Bool true)
+          with Not_found -> yield (`Bool false))
+      | `List needles, `List haystack ->
+          yield
+            (`Bool
+               (List.for_all
+                  (fun n -> List.exists (fun h -> Json.contains n h) haystack)
+                  needles))
+      | `Assoc _, `Assoc _ -> yield (`Bool (Json.contains json container))
+      | _ -> Error.make ~ctx "inside" json)
+
+and left_trimstr ~ctx expr json =
+  collect ~ctx expr json
+  |> List.iter (fun prefix ->
+      match (json, prefix) with
+      | `String s, `String prefix ->
+          if String.starts_with ~prefix s then
+            let prefix_len = String.length prefix in
+            yield
+              (`String (String.sub s prefix_len (String.length s - prefix_len)))
+          else yield json
+      | _ -> Error.make ~ctx "ltrimstr" json)
+
+and right_trimstr ~ctx expr json =
+  collect ~ctx expr json
+  |> List.iter (fun suffix ->
+      match (json, suffix) with
+      | `String s, `String suffix ->
+          if String.ends_with ~suffix s then
+            let suffix_len = String.length suffix in
+            yield (`String (String.sub s 0 (String.length s - suffix_len)))
+          else yield json
+      | _ -> Error.make ~ctx "rtrimstr" json)
+
+and trim ~ctx json =
+  match json with
+  | `String s -> yield (`String (String.trim s))
+  | _ -> Error.make ~ctx "trim" json
+
+and left_trim ~ctx json =
+  match json with
+  | `String s ->
+      let len = String.length s in
+      let i = ref 0 in
+      while
+        !i < len
+        && (s.[!i] = ' ' || s.[!i] = '\t' || s.[!i] = '\n' || s.[!i] = '\r')
+      do
+        incr i
+      done;
+      yield (`String (String.sub s !i (len - !i)))
+  | _ -> Error.make ~ctx "ltrim" json
+
+and right_trim ~ctx json =
+  match json with
+  | `String s ->
+      let len = String.length s in
+      let i = ref (len - 1) in
+      while
+        !i >= 0
+        && (s.[!i] = ' ' || s.[!i] = '\t' || s.[!i] = '\n' || s.[!i] = '\r')
+      do
+        decr i
+      done;
+      yield (`String (String.sub s 0 (!i + 1)))
+  | _ -> Error.make ~ctx "rtrim" json
+
+and combinations ~ctx json =
+  (* combinations: input is array of arrays, output all combinations *)
+  match json with
+  | `List arrays ->
+      let arrays =
+        List.map (fun a -> match a with `List l -> l | _ -> [ a ]) arrays
+      in
+      let rec cartesian = function
+        | [] -> [ [] ]
+        | hd :: tl ->
+            let rest = cartesian tl in
+            List.concat_map (fun x -> List.map (fun r -> x :: r) rest) hd
+      in
+      List.iter (fun combo -> yield (`List combo)) (cartesian arrays)
+  | _ -> Error.make ~ctx "combinations" json
+
+and combinations_n ~ctx expr json =
+  (* combinations(n): generates n-way combinations from input array *)
+  match (json, collect ~ctx expr json) with
+  | `List arr, [ n_val ] ->
+      let n =
+        match n_val with `Float f -> Float.to_int f | `Int i -> i | _ -> 0
+      in
+      let rec repeat_arr count =
+        if count <= 0 then [] else arr :: repeat_arr (count - 1)
+      in
+      let arrays = repeat_arr n in
+      let rec cartesian = function
+        | [] -> [ [] ]
+        | hd :: tl ->
+            let rest = cartesian tl in
+            List.concat_map (fun x -> List.map (fun r -> x :: r) rest) hd
+      in
+      List.iter (fun combo -> yield (`List combo)) (cartesian arrays)
+  | _ -> Error.message ~ctx "combinations(n) expects array input and number n"
+
+and repeat_expr ~ctx expr json =
+  (* repeat(f): generates infinite stream f, f|f, f|f|f, ... stopping on error *)
+  let current = ref json in
+  let continue = ref true in
+  while !continue do
+    run
+      (fun () -> interp ~ctx expr !current)
+      ~on_fail:(fun _ -> continue := false)
+      ~and_then:(fun result ->
+        yield result;
+        current := result)
+      ()
+  done
+
+and add_expr ~ctx expr json =
+  match collect ~ctx expr json with
+  | [] -> yield `Null
+  | first :: rest ->
+      let sum = List.fold_left (Operators.add ~ctx) first rest in
+      yield sum
+
+and ascii_upcase ~ctx json =
+  match json with
+  | `String s -> yield (`String (String.uppercase_ascii s))
+  | _ -> Error.make ~ctx "ascii_upcase" json
+
+and ascii_downcase ~ctx json =
+  match json with
+  | `String s -> yield (`String (String.lowercase_ascii s))
+  | _ -> Error.make ~ctx "ascii_downcase" json
+
+and binary_search ~ctx expr json =
+  match json with
+  | `List l ->
+      collect ~ctx expr json
+      |> List.iter (fun target ->
+          let arr = Array.of_list l in
+          let len = Array.length arr in
+          let rec search lo hi =
+            if lo >= hi then -(lo + 1)
+            else
+              let mid = (lo + hi) / 2 in
+              let cmp = Json.compare arr.(mid) target in
+              if cmp < 0 then search (mid + 1) hi
+              else if cmp > 0 then search lo mid
+              else mid
+          in
+          yield (`Int (search 0 len)))
+  | _ -> Error.make ~ctx "bsearch" json
+
+and first_of_array ~ctx json =
+  match json with
+  | `List [] -> ()
+  | `List (hd :: _) -> yield hd
+  | _ -> Error.make ~ctx "first" json
+
+and first_of_expr ~ctx expr json =
+  match collect ~ctx expr json with [] -> () | hd :: _ -> yield hd
+
+and last_of_array ~ctx json =
+  match json with
+  | `List [] -> ()
+  | `List l -> yield (List.hd (List.rev l))
+  | _ -> Error.make ~ctx "last" json
+
+and last_of_expr ~ctx expr json =
+  match collect ~ctx expr json with
+  | [] -> ()
+  | l -> yield (List.hd (List.rev l))
+
+and nth ~ctx n_expr expr json =
+  let n_results = collect ~ctx n_expr json in
+  let n_opt =
+    match n_results with
+    | [ `Int n ] -> Some n
+    | [ `Float f ] -> Some (Int.of_float f)
+    | _ -> None
+  in
+  match n_opt with
+  | Some n ->
+      let results = collect ~ctx expr json in
+      if n >= 0 && n < List.length results then yield (List.nth results n)
+      else () (* out of bounds returns empty *)
+  | None -> Error.make ~ctx "nth: first argument must be a number" json
 
 and group_by ~ctx expr json =
   match json with
@@ -1435,32 +2018,17 @@ and while_loop ~ctx cond update json =
   yield_many (loop [] json)
 
 and until_loop ~ctx cond update json =
-  let rec loop acc current =
-    let acc_with_current = current :: acc in
+  (* until(cond; update): loop until cond is true, yield only final value *)
+  let rec loop current =
     let cond_res = collect ~ctx cond current in
     match cond_res with
-    | [ `Bool true ] -> List.rev acc_with_current
+    | [ `Bool true ] -> yield current
     | [ `Bool false ] -> (
         let next_res = collect ~ctx update current in
-        match next_res with
-        | [ next ] -> loop acc_with_current next
-        | _ -> List.rev acc_with_current)
-    | _ -> List.rev acc_with_current
+        match next_res with [ next ] -> loop next | _ -> yield current)
+    | _ -> yield current
   in
-  yield_many (loop [] json)
-
-and recurse ~ctx json =
-  let rec loop acc current =
-    try
-      let children = collect ~ctx (Key "children") current in
-      match children with
-      | [] -> current :: acc
-      | list ->
-          let new_acc = current :: acc in
-          List.fold_left (fun a child -> loop a child) new_acc list
-    with _ -> current :: acc
-  in
-  loop [] json
+  loop json
 
 and recurse_with_cond ~ctx f cond json =
   let rec loop acc current =
@@ -1492,11 +2060,27 @@ and walk_tree ~ctx expr json =
   yield (walk json)
 
 and try_catch ~ctx expr handler json =
-  run
-    (fun () -> interp ~ctx expr json)
-    ~on_fail:(fun _ ->
-      match handler with None -> () | Some handler -> interp ~ctx handler json)
-    ()
+  let try_handler : unit Effect.Deep.effect_handler =
+    {
+      effc =
+        (fun (type a) (eff : a Effect.t) ->
+          match eff with
+          | User_error value ->
+              Some
+                (fun (_ : (a, _) Effect.Deep.continuation) ->
+                  match handler with
+                  | None -> () (* No catch handler, error is silently ignored *)
+                  | Some handler_expr -> interp ~ctx handler_expr value)
+          | Fail _ ->
+              Some
+                (fun (_ : (a, _) Effect.Deep.continuation) ->
+                  match handler with
+                  | None -> ()
+                  | Some handler_expr -> interp ~ctx handler_expr json)
+          | _ -> None);
+    }
+  in
+  Effect.Deep.try_with (fun () -> interp ~ctx expr json) () try_handler
 
 and limit ~ctx n expr json =
   let count = ref 0 in
@@ -1509,21 +2093,27 @@ and limit ~ctx n expr json =
         true)
       else false)
 
+and skip ~ctx n expr json =
+  let count = ref 0 in
+  run
+    (fun () -> interp ~ctx expr json)
+    ~and_then:(fun result ->
+      incr count;
+      if !count > n then yield result)
+    ()
+
 and error_msg ~ctx msg_expr json =
   match msg_expr with
-  | None -> Error.message ~ctx "error"
+  | None -> user_error json
   | Some expr -> (
-      let results = collect ~ctx expr json in
-      match results with
-      | [ `String msg ] -> Error.message ~ctx msg
-      | [ other ] ->
-          Error.message ~ctx
-            (Json.to_string ~colorize:false ~summarize:false ~raw:false other)
-      | _ -> Error.message ~ctx "error expects single string")
+      match collect ~ctx expr json with
+      | [ value ] -> user_error value
+      | _ -> Error.message ~ctx "error expects single value")
 
 and isempty ~ctx expr json =
-  let results = collect ~ctx expr json in
-  match results with [] -> yield (`Bool true) | _ -> yield (`Bool false)
+  match collect ~ctx expr json with
+  | [] -> yield (`Bool true)
+  | _ -> yield (`Bool false)
 
 and del ~ctx:_ path json =
   match (path, json) with
@@ -1537,6 +2127,50 @@ and del ~ctx:_ path json =
       let filtered = List.filteri (fun i _ -> not (List.mem i indices)) items in
       yield (`List filtered)
   | _ -> yield json
+
+and delete_path value path_components =
+  let rec del_at value = function
+    | [] -> `Null (* Path points to root, delete returns null *)
+    | [ `String key ] -> (
+        match value with
+        | `Assoc fields -> `Assoc (List.filter (fun (k, _) -> k <> key) fields)
+        | _ -> value)
+    | [ ((`Int _ | `Float _) as num) ] -> (
+        let idx =
+          match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
+        in
+        match value with
+        | `List items -> `List (List.filteri (fun i _ -> i <> idx) items)
+        | _ -> value)
+    | `String key :: rest -> (
+        match value with
+        | `Assoc fields ->
+            `Assoc
+              (List.map
+                 (fun (k, v) -> if k = key then (k, del_at v rest) else (k, v))
+                 fields)
+        | _ -> value)
+    | ((`Int _ | `Float _) as num) :: rest -> (
+        let idx =
+          match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
+        in
+        match value with
+        | `List items ->
+            `List
+              (List.mapi
+                 (fun i v -> if i = idx then del_at v rest else v)
+                 items)
+        | _ -> value)
+    | _ -> value
+  in
+  match path_components with `List comps -> del_at value comps | _ -> value
+
+and delpaths ~ctx expr json =
+  match collect ~ctx expr json with
+  | [ `List paths ] ->
+      let result = List.fold_left delete_path json paths in
+      yield result
+  | _ -> Error.message ~ctx "delpaths expects array of paths"
 
 and getpath ~ctx path json =
   let paths = collect ~ctx path json in
@@ -1584,7 +2218,10 @@ and setpath ~ctx path value_expr json =
                 else `Assoc (fields @ [ (key, set_at `Null rest) ])
             | `Null -> `Assoc [ (key, set_at `Null rest) ]
             | _ -> value)
-        | `Int idx :: rest -> (
+        | ((`Int _ | `Float _) as num) :: rest -> (
+            let idx =
+              match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
+            in
             match value with
             | `List items ->
                 let rec update_list i = function
@@ -1594,7 +2231,13 @@ and setpath ~ctx path value_expr json =
                       else x :: update_list (i + 1) xs
                 in
                 `List (update_list 0 items)
-            | `Null -> `List [ set_at `Null rest ]
+            | `Null ->
+                (* Create array with nulls up to idx, then set value at idx *)
+                let arr =
+                  List.init (idx + 1) (fun i ->
+                      if i = idx then set_at `Null rest else `Null)
+                in
+                `List arr
             | _ -> value)
         | _ :: rest -> set_at value rest
       in
@@ -1680,7 +2323,7 @@ and assign ~ctx path value_expr json =
   | _ -> Error.message ~ctx "complex path assignment not yet fully implemented"
 
 let execute ~colorize ~verbose ?(env = []) expr json =
-  let ctx = { colorize; verbose; env } in
+  let ctx = { colorize; verbose; env; fns = [] } in
   let open Ansi.To_string (struct
     let colorize = colorize
   end) in

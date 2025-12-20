@@ -52,6 +52,12 @@ let parse ~debug ~colorize input =
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
+  | exception Failure msg ->
+      (* all failwith from Parser.mly most likely are semantic errors (e.g., "not implemented") *)
+      let open Ansi.To_string (struct
+        let colorize = colorize
+      end) in
+      Error (red (bold "Error: ") ^ msg)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
