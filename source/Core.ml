@@ -26,18 +26,19 @@ let position_to_string start end_ =
 
 let pretty_print_error ~colorize ~input ~(start : Lexing.position)
     ~(end_ : Lexing.position) =
-  let module Color = Ansi.To_string (struct
+  let open Formatting in
+  let open Ansi.To_string (struct
     let colorize = colorize
   end) in
   let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
-  Color.red (Color.bold "Parse error: ")
+  red (bold "Parse error: ")
   ^ "Problem parsing at position "
   ^ position_to_string start end_
-  ^ Formatting.enter 2 ^ "Input:" ^ Formatting.indent 1
-  ^ Color.green (Color.bold input)
-  ^ Formatting.enter 1 ^ Formatting.indent 4
+  ^ enter 2 ^ "Input:" ^ indent 1
+  ^ green (bold input)
+  ^ enter 1 ^ indent 4
   ^ String.make start.pos_cnum ' '
-  ^ Color.gray pointer_range
+  ^ gray pointer_range
 
 let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in

@@ -22,6 +22,23 @@ type builtin =
   | Round
   | Infinite
   | Now
+  | Sinh
+  | Cosh
+  | Tanh
+  | Asinh
+  | Acosh
+  | Atanh
+  | Isinfinite
+  | Isnormal
+  | Trunc
+  | Fabs
+  | Cbrt
+  | Expm1
+  | Exp2
+  | Log1p
+  | Log2
+  | Nearbyint
+  | Logb
 [@@deriving show { with_path = false }]
 
 type op =
@@ -61,6 +78,15 @@ type expression =
   | Optional of expression (* ? *)
   | Has of expression (* has(x) *)
   | Keys (* keys *)
+  | Keys_unsorted (* keys_unsorted *)
+  | Leaf_paths (* leaf_paths *)
+  | Builtins (* builtins *)
+  | Formats (* formats *)
+  | Localtime (* localtime *)
+  | Gmtime (* gmtime *)
+  | Mktime (* mktime *)
+  | Debug (* debug *)
+  | Stderr (* stderr *)
   | Floor (* floor *)
   | Sqrt (* sqrt *)
   | Type (* type *)
@@ -88,6 +114,7 @@ type expression =
   (* Array *)
   | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
   | Iterator (* .[] - currently represented as Index [], kept for future use *)
+  | Dynamic_access of expression (* .[$expr] - dynamic key/index access *)
   | Range of
       expression
       * expression option
@@ -100,6 +127,7 @@ type expression =
   (* .[] *)
   (* map(x) *)
   | Slice of int option * int option
+  | Slice_expr of expression option * expression option (* .[expr:expr] *)
   | Flat_map of expression (* flat_map(x) *)
   | Reduce of expression * string * expression * expression
     (* reduce EXPR as $VAR (INIT; UPDATE) *)
@@ -112,6 +140,8 @@ type expression =
   | Max_by of expression (* max_by(x) *)
   | All_with_condition of expression (* all(c) *)
   | Any_with_condition of expression (* any(c) *)
+  | Any_with_generator of expression * expression (* any(gen; cond) *)
+  | All_with_generator of expression * expression (* all(gen; cond) *)
   | Some_ of expression (* some, Some_ to not collide with option *)
   | Find of expression (* find(x) *)
   (* operations *)
@@ -161,6 +191,17 @@ type expression =
       expression * expression * expression (* If then (elseif) else end *)
   | While of expression * expression (* while(condition; update) *)
   | Until of expression * expression (* until(condition; update) *)
+  | Atan2 of expression * expression (* atan2(y; x) *)
+  | Copysign of expression * expression (* copysign(x; y) *)
+  | Ldexp of expression * expression (* ldexp(m; e) *)
+  | Fdim of expression * expression (* fdim(x; y) *)
+  | Remainder of expression * expression (* remainder(x; y) *)
+  | Scalbn of expression * expression (* scalbn(x; n) *)
+  | Pow2 of expression * expression (* pow(x; y) - two argument version *)
+  | Fma of
+      expression
+      * expression
+      * expression (* fma(x; y; z) - fused multiply-add *)
   | Break (* break *)
   | Try of expression * expression option (* try expr catch handler *)
   | Limit of int * expression (* limit(n; expr) *)
@@ -177,11 +218,11 @@ type expression =
   | Assign of expression * expression (* .foo = value *)
   | Getpath of expression (* getpath(path) *)
   | Setpath of expression * expression (* setpath(path; value) *)
+  | Pick of expression (* pick(.a, .b.c) *)
   | Paths (* paths *)
   | Paths_filter of expression (* paths(filter) *)
   | Def of string * string list * expression (* def name(args): body *)
-  | Call of string * expression list (* function_name(args) *)
+  | Apply of string * expression list (* function_name(args) *)
   | Not (* not *)
-  (* builtin *)
   | Fun of builtin
 [@@deriving show { with_path = false }]

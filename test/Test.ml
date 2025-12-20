@@ -4,4 +4,5 @@ let _ =
       ("Parsing", Test_parse.tests);
       ("Runtime", Test_runtime.tests);
       ("Errors", Test_errors.tests);
+      ("Programs", Test_programs.tests);
     ]

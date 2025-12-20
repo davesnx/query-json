@@ -74,9 +74,12 @@ query-json implements most of jq 1.8's functionality with some intentional impro
 
 ### Not supported
 
-User-defined functions (`def`), modules (`import`, `include`), format strings (`@text`, `@csv`, `@base64`), and running tests (`--run-tests`).
-
-For a complete reference, see the [jq manual](https://jqlang.org/manual/).
+- Modules (`import`, `include`)
+- Format strings (`@text`, `@csv`, `@base64`)
+- Complex regexes
+- Streams (`--stream`)
+- Operations on dates
+- Running tests (`--run-tests`)
 
 ## Installation
 
@@ -99,7 +102,7 @@ npm install --global @davesnx/query-json
 
 I recommend to write the query in single-quotes inside the terminal, since writting JSON requires double-quotes for accessing properties.
 
-> NOTE: I have aliased query-json to "q" for short, you can set it in your dotfiles with `alias q="query-json"`.
+> NOTE: I have aliased query-json to `q` for short, you can set it in your dotfiles with `alias q="query-json"`.
 
 #### query a json file
 ```bash
@@ -131,7 +134,7 @@ query-json -r '.name' pokemon.json
 
 #### More examples
 
-Check out [docs/examples.md](./docs/examples.md) for a walkthrough of common use cases.
+Check out our simple tests [./test/Test_runtime.ml](./test/Test_runtime.ml) for a walkthrough of common use cases, or check our [./test/Test_program.ml](./test/Test_program.ml) for entire programs in jqlang.
 
 ## Performance
 

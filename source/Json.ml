@@ -56,10 +56,10 @@ let encode str =
 
 module Printer = struct
   let indent_str = "  "
-  let max_compact_width = 60
+  let max_compact_width = 120
 
   let should_compact (json : t) =
-    (* Combined check with early bail-out *)
+    (* combined check with early bail-out *)
     let exception Not_compact in
     let width = ref 0 in
     let add n =
@@ -113,7 +113,6 @@ module Printer = struct
     encode_to_buffer buf s;
     Buffer.add_char buf '"'
 
-  (* Write a primitive JSON value (null, bool, number, string) with optional color callbacks *)
   let write_primitive buf ~value ~reset json =
     match (json : t) with
     | `Null ->

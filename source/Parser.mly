@@ -26,6 +26,7 @@
 %token MULT_ASSIGN
 %token DIV_ASSIGN
 %token ALT_ASSIGN
+%token ASSIGN
 %token ALTERNATIVE
 %token SEMICOLON
 %token COLON
@@ -57,7 +58,7 @@
 %token EOF
 
 /* according to https://github.com/stedolan/jq/issues/1326 */
-%right PIPE UPDATE_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN ALT_ASSIGN ALTERNATIVE /* lowest precedence */
+%right PIPE UPDATE_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN ALT_ASSIGN ASSIGN ALTERNATIVE /* lowest precedence */
 %left COMMA
 %left OR
 %left AND
@@ -69,19 +70,16 @@
 
 %%
 
+def_param:
+  | p = IDENTIFIER { p }
+  | p = VARIABLE { "$" ^ p }
+
 def_params:
   | { [] }
-  | p = IDENTIFIER { [p] }
-  | p = IDENTIFIER; SEMICOLON; rest = def_params { p :: rest }
+  | p = def_param { [p] }
+  | p = def_param; SEMICOLON; rest = def_params { p :: rest }
 
 program:
-  | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = program
-    { Pipe (Def (name, [], body), rest) }
-  | DEF; name = IDENTIFIER; OPEN_PARENT; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = program
-    { Pipe (Def (name, params, body), rest) }
-  (* FUNCTION token is produced when identifier is followed by '(' - handle it for def with params *)
-  | DEF; name = FUNCTION; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = program
-    { Pipe (Def (name, params, body), rest) }
   | e = sequence_expr; EOF;
     { e }
   | EOF;
@@ -94,7 +92,7 @@ string_or_identifier:
 key_value (E):
   | key = string_or_identifier
     { key, None }
-  | OPEN_PARENT; e1 = E CLOSE_PARENT; COLON; e2 = E
+  | OPEN_PARENT; e1 = sequence_expr CLOSE_PARENT; COLON; e2 = E
     { e1, Some e2 }
   | key = string_or_identifier; COLON; e = E
     { key, Some e }
@@ -114,6 +112,9 @@ sequence_expr:
 
   | left = sequence_expr; UPDATE_ASSIGN; right = item_expr;
     { Update (left, right) }
+
+  | left = sequence_expr; ASSIGN; right = item_expr;
+    { Assign (left, right) }
 
   | left = sequence_expr; PLUS_ASSIGN; right = item_expr;
     { Update (left, Operation (Identity, Add, right)) }
@@ -135,6 +136,14 @@ sequence_expr:
 
   | TRY; e = sequence_expr; CATCH; handler = item_expr
     { Try (e, Some handler) }
+
+  (* Nested function definitions within expressions *)
+  | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+    { Pipe (Def (name, [], body), rest) }
+  | DEF; name = IDENTIFIER; OPEN_PARENT; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+    { Pipe (Def (name, params, body), rest) }
+  | DEF; name = FUNCTION; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+    { Pipe (Def (name, params, body), rest) }
 
   | e = item_expr
     { e }
@@ -220,6 +229,11 @@ term:
     { Range (from, Some upto, None) }
   | RANGE; OPEN_PARENT; from = sequence_expr; SEMICOLON; upto = sequence_expr; SEMICOLON; step = sequence_expr; CLOSE_PARENT;
     { Range (from, Some upto, Some step) }
+  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT;
+    { match f with
+      | "fma" -> Fma (arg1, arg2, arg3)
+      | _ -> Apply (f, [arg1; arg2; arg3])
+    }
   | FLATTEN;
     { Flatten None }
   | FLATTEN; OPEN_PARENT; CLOSE_PARENT;
@@ -254,87 +268,99 @@ term:
               | Literal (String replacement) -> Gsub (pattern, replacement)
               | _ -> failwith "gsub() second argument must be string literal")
           | _ -> failwith "gsub() first argument must be string literal")
+      | "any" -> Any_with_generator (cond, update)
+      | "all" -> All_with_generator (cond, update)
       | "setpath" -> Setpath (cond, update)
       | "nth" -> Nth (cond, update)
-      | "atan" -> failwith "atan2 (two-arg atan) not implemented"
+      | "atan2" -> Atan2 (cond, update)
+      | "atan" -> Atan2 (cond, update)
+      | "copysign" -> Copysign (cond, update)
+      | "ldexp" -> Ldexp (cond, update)
+      | "fdim" -> Fdim (cond, update)
+      | "remainder" -> Remainder (cond, update)
+      | "drem" -> Remainder (cond, update)
+      | "scalbn" -> Scalbn (cond, update)
+      | "scalbln" -> Scalbn (cond, update)
+      | "pow" -> Pow2 (cond, update)
       | "strftime" -> failwith "strftime not implemented"
       | "strptime" -> failwith "strptime not implemented"
       | "splits" -> failwith "splits not implemented (use split)"
       | "sql" -> failwith "sql not implemented"
       | "dateadd" | "datesub" -> failwith "date arithmetic not implemented"
       | "modulemeta" -> failwith "modulemeta not implemented"
-      | _ -> Call (f, [cond; update])
+      | _ -> Apply (f, [cond; update])
     }
   | f = FUNCTION; CLOSE_PARENT;
     { failwith (f ^ "(), should contain a body") }
-  | f = FUNCTION; cb = sequence_expr; CLOSE_PARENT;
+  | f = FUNCTION; seq = sequence_expr; CLOSE_PARENT;
     { match f with
-      | "filter" -> Map (Select cb)
-      | "map" -> Map cb
-      | "map_values" -> Map_values cb
-      | "flat_map" -> Flat_map cb
-      | "select" -> Select cb
-      | "sort_by" -> Sort_by cb
-      | "min_by" -> Min_by cb
-      | "max_by" -> Max_by cb
-      | "group_by" -> Group_by cb
-      | "unique_by" -> Unique_by cb
-      | "find" -> Find cb
-      | "some" -> Some_ cb
-      | "path" -> Path cb
-      | "any" -> Any_with_condition cb
-      | "all" -> All_with_condition cb
-      | "walk" -> Walk cb
-      | "has" -> Has cb
-      | "in" -> In cb
-      | "with_entries" -> With_entries cb
-      | "startwith" -> Startwith cb
-      | "startswith" -> Startwith cb
-      | "starts_with" -> Starts_with cb
-      | "endwith" -> Endwith cb
-      | "endswith" -> Endwith cb
-      | "ends_with" -> Ends_with cb
-      | "index" -> Index_of cb
-      | "rindex" -> Rindex_of cb
-      | "indices" -> Indices cb
-      | "inside" -> Inside cb
-      | "ltrimstr" -> Ltrimstr cb
-      | "rtrimstr" -> Rtrimstr cb
-      | "split" -> Split cb
-      | "join" -> Join cb
-      | "contains" -> Contains cb
-      | "bsearch" -> Bsearch cb
-      | "first" -> First (Some cb)
-      | "last" -> Last (Some cb)
-      | "recurse" -> Recurse_expr cb
-      | "delpaths" -> Delpaths cb
-      | "combinations" -> Combinations_n cb
-      | "repeat" -> Repeat cb
-      | "add" -> Add_expr cb
+      | "filter" -> Map (Select seq)
+      | "map" -> Map seq
+      | "map_values" -> Map_values seq
+      | "flat_map" -> Flat_map seq
+      | "select" -> Select seq
+      | "sort_by" -> Sort_by seq
+      | "min_by" -> Min_by seq
+      | "max_by" -> Max_by seq
+      | "group_by" -> Group_by seq
+      | "unique_by" -> Unique_by seq
+      | "find" -> Find seq
+      | "some" -> Some_ seq
+      | "path" -> Path seq
+      | "any" -> Any_with_condition seq
+      | "all" -> All_with_condition seq
+      | "walk" -> Walk seq
+      | "has" -> Has seq
+      | "in" -> In seq
+      | "with_entries" -> With_entries seq
+      | "startwith" -> Startwith seq
+      | "startswith" -> Startwith seq
+      | "starts_with" -> Starts_with seq
+      | "endwith" -> Endwith seq
+      | "endswith" -> Endwith seq
+      | "ends_with" -> Ends_with seq
+      | "index" -> Index_of seq
+      | "rindex" -> Rindex_of seq
+      | "indices" -> Indices seq
+      | "inside" -> Inside seq
+      | "ltrimstr" -> Ltrimstr seq
+      | "rtrimstr" -> Rtrimstr seq
+      | "split" -> Split seq
+      | "join" -> Join seq
+      | "contains" -> Contains seq
+      | "bsearch" -> Bsearch seq
+      | "first" -> First (Some seq)
+      | "last" -> Last (Some seq)
+      | "recurse" -> Recurse_expr seq
+      | "delpaths" -> Delpaths seq
+      | "combinations" -> Combinations_n seq
+      | "repeat" -> Repeat seq
+      | "add" -> Add_expr seq
       | "test" -> (
-          match cb with
+          match seq with
           | Literal (String pattern) -> Test pattern
           | _ -> failwith "test() requires a string literal pattern")
       | "match" -> (
-          match cb with
+          match seq with
           | Literal (String pattern) -> Match pattern
           | _ -> failwith "match() requires a string literal pattern")
       | "scan" -> (
-          match cb with
+          match seq with
           | Literal (String pattern) -> Scan pattern
           | _ -> failwith "scan() requires a string literal pattern")
       | "capture" -> (
-          match cb with
+          match seq with
           | Literal (String pattern) -> Capture pattern
           | _ -> failwith "capture() requires a string literal pattern")
-      | "isempty" -> Isempty cb
-      | "del" -> Del cb
-      | "getpath" -> Getpath cb
-      | "paths" -> Paths_filter cb
-      | "try" -> Try (cb, None)
-      | "error" -> Error_msg (Some cb)
+      | "isempty" -> Isempty seq
+      | "del" -> Del seq
+      | "pick" -> Pick seq
+      | "getpath" -> Getpath seq
+      | "paths" -> Paths_filter seq
+      | "try" -> Try (seq, None)
+      | "error" -> Error_msg (Some seq)
       | "halt_error" -> (
-          match cb with
+          match seq with
           | Literal (Number n) -> Halt_error (Some (int_of_float n))
           | _ -> failwith "halt_error requires number literal")
       | "debug" -> failwith "debug not implemented"
@@ -346,7 +372,7 @@ term:
       | "mktime" -> failwith "mktime not implemented"
       | "tojsonstream" | "fromjsonstream" | "truncate_stream" -> failwith "JSON stream functions not implemented"
       | "splits" -> failwith "splits not implemented (use split)"
-      | "isvalid" -> failwith "isvalid not implemented"
+      | "isvalid" -> Try (Pipe (seq, Literal (Bool true)), Some (Literal (Bool false)))
       | "tojson" | "fromjson" -> failwith "tojson/fromjson not implemented (use tostring/input is already JSON)"
       | "ascii" -> failwith "ascii not implemented"
       | "modulemeta" -> failwith "modulemeta not implemented"
@@ -355,7 +381,7 @@ term:
       | "builtins" -> failwith "builtins not implemented"
       | "limit" -> failwith "limit first argument must be a number literal"
       | "until" | "while" -> failwith (f ^ " requires two arguments: condition and update")
-      | _ -> Call (f, [cb])
+      | _ -> Apply (f, [seq])
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
@@ -429,6 +455,24 @@ term:
       | "round" -> Fun Round
       | "infinite" -> Fun Infinite
       | "now" -> Fun Now
+      | "sinh" -> Fun Sinh
+      | "cosh" -> Fun Cosh
+      | "tanh" -> Fun Tanh
+      | "asinh" -> Fun Asinh
+      | "acosh" -> Fun Acosh
+      | "atanh" -> Fun Atanh
+      | "isinfinite" -> Fun Isinfinite
+      | "isnormal" -> Fun Isnormal
+      | "trunc" -> Fun Trunc
+      | "fabs" -> Fun Fabs
+      | "cbrt" -> Fun Cbrt
+      | "expm1" -> Fun Expm1
+      | "exp2" -> Fun Exp2
+      | "log1p" -> Fun Log1p
+      | "log2" -> Fun Log2
+      | "nearbyint" -> Fun Nearbyint
+      | "rint" -> Fun Nearbyint
+      | "logb" -> Fun Logb
       (* Type selectors - equivalent to select(type == "...") *)
       | "numbers" -> Select (Operation (Type, Equal, Literal (String "number")))
       | "strings" -> Select (Operation (Type, Equal, Literal (String "string")))
@@ -446,34 +490,29 @@ term:
           And,
           Operation (Type, Not_equal, Literal (String "object"))))
       | "input" | "inputs" -> failwith "input/inputs not implemented (query-json reads all input upfront)"
-      | "debug" -> failwith "debug not implemented"
-      | "stderr" -> failwith "stderr not implemented"
-      | "localtime" | "gmtime" -> failwith "time functions not implemented"
-      | "mktime" -> failwith "mktime not implemented"
+      | "debug" -> Debug
+      | "stderr" -> Stderr
+      | "localtime" -> Localtime
+      | "gmtime" -> Gmtime
+      | "mktime" -> Mktime
       | "strftime" | "strptime" -> failwith "time formatting not implemented"
-      | "isinfinite" -> failwith "isinfinite not implemented (use . == infinite or . == -infinite)"
-      | "isnormal" -> failwith "isnormal not implemented"
-      | "isvalid" -> failwith "isvalid not implemented"
-      | "leaf_paths" -> failwith "leaf_paths not implemented"
-      | "builtins" -> failwith "builtins not implemented"
+      | "isvalid" -> Try (Pipe (Identity, Literal (Bool true)), Some (Literal (Bool false)))
+      | "leaf_paths" -> Leaf_paths
+      | "builtins" -> Builtins
       | "modulemeta" -> failwith "modulemeta not implemented"
-      | "keys_unsorted" -> failwith "keys_unsorted not implemented (keys returns sorted keys)"
-      | "formats" -> failwith "formats not implemented"
+      | "keys_unsorted" -> Keys_unsorted
+      | "formats" -> Formats
       | "tojsonstream" | "fromjsonstream" | "truncate_stream" -> failwith "JSON stream functions not implemented"
       | "tojson" | "fromjson" -> failwith "tojson/fromjson not implemented (use tostring/input is already JSON)"
       | "input_filename" | "input_line_number" -> failwith "input metadata not implemented"
-      | "drem" | "fdim" | "fma" -> failwith "advanced math functions not implemented"
-      | "frexp" | "ldexp" | "modf" | "scalbn" | "scalbln" -> failwith "floating point decomposition not implemented"
+      | "fma" -> failwith "fma requires three arguments: fma(x; y; z)"
+      | "atan2" | "copysign" | "ldexp" | "fdim" | "remainder" | "drem" | "scalbn" | "scalbln" -> failwith (f ^ " requires two arguments")
+      | "frexp" | "modf" -> failwith (f ^ " not implemented (returns multiple values)")
       | "significand" | "lgamma" | "tgamma" | "j0" | "j1" | "y0" | "y1" -> failwith "special math functions not implemented"
-      | "nearbyint" | "trunc" | "rint" -> failwith (f ^ " not implemented (use floor, ceil, or round)")
-      | "fabs" -> failwith "fabs not implemented (use abs)"
-      | "cbrt" -> failwith "cbrt not implemented (use pow(.; 1/3))"
-      | "expm1" | "exp2" | "exp10" | "log1p" | "log2" -> failwith (f ^ " not implemented")
-      | "sinh" | "cosh" | "tanh" | "asinh" | "acosh" | "atanh" -> failwith "hyperbolic functions not implemented"
-      | "logb" | "copysign" | "remainder" -> failwith (f ^ " not implemented")
+      | "exp10" -> failwith "exp10 not implemented"
       | "getpath" -> failwith "getpath requires an argument"
       | "setpath" | "delpaths" -> failwith (f ^ " requires arguments")
-      | _ -> Call (f, [])
+      | _ -> Apply (f, [])
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }
@@ -499,6 +538,10 @@ term:
   /* Optional string key access: .["foo"]? */
   | e = term; OPEN_BRACKET; key = STRING; CLOSE_BRACKET; QUESTION_MARK
     { Pipe (e, Optional (Key key)) }
+
+  /* Dynamic access with variable: .[$var] */
+  | e = term; OPEN_BRACKET; var = VARIABLE; CLOSE_BRACKET
+    { Pipe (e, Dynamic_access (Variable var)) }
 
   /* Empty brackets: .[] */
   | e = term; OPEN_BRACKET; CLOSE_BRACKET

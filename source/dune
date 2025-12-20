@@ -9,5 +9,5 @@
   (backend bisect_ppx)))
 
 (menhir
- (flags --strict --external-tokens Lexer --explain --dump)
+ (flags --external-tokens Lexer --explain --dump)
  (modules Parser))

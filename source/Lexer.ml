@@ -33,6 +33,7 @@ type token =
   | MULT_ASSIGN
   | DIV_ASSIGN
   | ALT_ASSIGN
+  | ASSIGN
   | ALTERNATIVE
   | QUESTION_MARK
   | COMMA
@@ -165,6 +166,7 @@ and tokenize_impl buf =
   | ">=" -> Ok GREATER_EQUAL
   | "==" -> Ok EQUAL
   | "!=" -> Ok NOT_EQUAL
+  | "=" -> Ok ASSIGN
   | "+" -> Ok ADD
   | "and" -> Ok AND
   | "or" -> Ok OR

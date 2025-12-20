@@ -176,16 +176,7 @@ let object_construction =
       {|{ "stedolan": [ "JQ Primer", "More JQ" ] }|};
     test {|[.[] | { name: .name, city: .address.city}]|}
       {|[{"name": "Gilbert", "address": {"city": "Toulouse"}}, {"name": "Alexa", "address": {"city": "Albi"}}]|}
-      {|[
-  {
-    "name": "Gilbert",
-    "city": "Toulouse"
-  },
-  {
-    "name": "Alexa",
-    "city": "Albi"
-  }
-]|};
+      {|[ { "name": "Gilbert", "city": "Toulouse" }, { "name": "Alexa", "city": "Albi" } ]|};
   ]
 
 let addition =
@@ -287,9 +278,9 @@ let alternative =
 
 let update =
   [
-    test {|.value |= . * 2|} {|{"value": 5}|} {|10|};
-    test {|.x |= . + 1|} {|{"x": 10}|} {|11|};
-    test {|.[] |= . * 2|} {|[1,2,3]|} "2\n4\n6";
+    test {|.value |= . * 2|} {|{"value": 5}|} {|{ "value": 10 }|};
+    test {|.x |= . + 1|} {|{"x": 10}|} {|{ "x": 11 }|};
+    test {|.[] |= . * 2|} {|[1,2,3]|} {|[ 2, 4, 6 ]|};
     (* TODO: test {|(..|select(type=="boolean")) |= if . then 1 else 0 end|} {|[true,false,[5,true,[true,[false]],false]]|} {|[1,0,[5,1,[1,[0]],0]]|}; *)
   ]
 
@@ -332,33 +323,7 @@ let range =
     test {|[range(0;10;-1)]|} {|null|} {|[]|};
     test {|[range(0;-5;-1)]|} {|null|} {|[ 0, -1, -2, -3, -4 ]|};
     test {|[range(0,1;4,5;1,2)]|} {|null|}
-      "[\n\
-      \  0,\n\
-      \  1,\n\
-      \  2,\n\
-      \  3,\n\
-      \  0,\n\
-      \  2,\n\
-      \  0,\n\
-      \  1,\n\
-      \  2,\n\
-      \  3,\n\
-      \  4,\n\
-      \  0,\n\
-      \  2,\n\
-      \  4,\n\
-      \  1,\n\
-      \  2,\n\
-      \  3,\n\
-      \  1,\n\
-      \  3,\n\
-      \  1,\n\
-      \  2,\n\
-      \  3,\n\
-      \  4,\n\
-      \  1,\n\
-      \  3\n\
-       ]";
+      {|[ 0, 1, 2, 3, 0, 2, 0, 1, 2, 3, 4, 0, 2, 4, 1, 2, 3, 1, 3, 1, 2, 3, 4, 1, 3 ]|};
     test {|range(2; 4)|} {|null|} "2\n3";
     test {|[range(2; 4)]|} {|null|} {|[ 2, 3 ]|};
     test {|[range(4)]|} {|null|} {|[ 0, 1, 2, 3 ]|};
@@ -523,20 +488,7 @@ let sort =
     test {|sort|} {|[8,3,null,6]|} {|[ null, 3, 6, 8 ]|};
     test {|sort_by(.foo)|}
       {|[{"foo":4, "bar":10}, {"foo":3, "bar":10}, {"foo":2, "bar":1}]|}
-      {|[
-  {
-    "foo": 2,
-    "bar": 1
-  },
-  {
-    "foo": 3,
-    "bar": 10
-  },
-  {
-    "foo": 4,
-    "bar": 10
-  }
-]|};
+      {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 4, "bar": 10 } ]|};
     (* TODO: test {|sort_by(.foo, .bar)|} {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|} {|[{"foo":2, "bar":1}, {"foo":3, "bar":10}, {"foo":3, "bar":20}, {"foo":4, "bar":10}]|}; *)
   ]
 
@@ -570,24 +522,7 @@ let group_by =
       {|[ [ { "x": 1 }, { "x": 1 } ], [ { "x": 2 } ] ]|};
     test {|group_by(.foo)|}
       {|[{"foo":1, "bar":10}, {"foo":3, "bar":100}, {"foo":1, "bar":1}]|}
-      {|[
-  [
-    {
-      "foo": 1,
-      "bar": 10
-    },
-    {
-      "foo": 1,
-      "bar": 1
-    }
-  ],
-  [
-    {
-      "foo": 3,
-      "bar": 100
-    }
-  ]
-]|};
+      {|[ [ { "foo": 1, "bar": 10 }, { "foo": 1, "bar": 1 } ], [ { "foo": 3, "bar": 100 } ] ]|};
   ]
 
 let any_all =
@@ -842,12 +777,7 @@ let regex_test =
 let regex_match =
   [
     test {|match("foo")|} {|"foo bar foo"|}
-      {|{
-  "offset": 0,
-  "length": 3,
-  "string": "foo",
-  "captures": []
-}|};
+      {|{ "offset": 0, "length": 3, "string": "foo", "captures": [] }|};
     (* TODO: test {|match("(abc)+"; "g")|} {|"abc abc"|} {|{"offset": 0, "length": 3, "string": "abc", "captures": [{"offset": 0, "length": 3, "string": "abc", "name": null}]}|}; *)
     (* TODO: test {|match(["foo", "ig"])|} {|"foo bar FOO"|} {|{"offset": 0, "length": 3, "string": "foo", "captures": []}|}; *)
     (* TODO: test {|match("foo (?<bar123>bar)? foo"; "ig")|} {|"foo bar foo foo foo"|} {|{"offset": 0, "length": 11, "string": "foo bar foo", "captures": [{"offset": 4, "length": 3, "string": "bar", "name": "bar123"}]}|}; *)
@@ -897,7 +827,6 @@ let path =
     test {|setpath(["x"]; 1)|} {|{}|} {|{ "x": 1 }|};
     test {|setpath(["a","b"]; 1)|} {|null|} {|{ "a": { "b": 1 } }|};
     test {|setpath(["a","b"]; 1)|} {|{"a":{"b":0}}|} {|{ "a": { "b": 1 } }|};
-    (* TODO: test {|path(.a[0].b)|} {|null|} {|[ "a", 0, "b" ]|}; *)
     (* TODO: test {|[path(..)]|} {|{"a":[{"b":1}]}|} {|[ [], [ "a" ], [ "a", 0 ], [ "a", 0, "b" ] ]|}; *)
     test {|setpath([0,"a"]; 1)|} {|null|} {|[ { "a": 1 } ]|};
     (* TODO: test {|[getpath(["a","b"], ["a","c"])]|} {|{"a":{"b":0, "c":1}}|} {|[0, 1]|}; *)
@@ -969,13 +898,13 @@ let optional_operator =
 
 let arithmetic_update =
   [
-    test {|.foo += 1|} {|{"foo": 42}|} {|43|};
-    test {|.foo -= 2|} {|{"foo": 42}|} {|40|};
-    test {|.foo *= 2|} {|{"foo": 21}|} {|42|};
-    test {|.foo /= 2|} {|{"foo": 42}|} {|21|};
+    test {|.foo += 1|} {|{"foo": 42}|} {|{ "foo": 43 }|};
+    test {|.foo -= 2|} {|{"foo": 42}|} {|{ "foo": 40 }|};
+    test {|.foo *= 2|} {|{"foo": 21}|} {|{ "foo": 42 }|};
+    test {|.foo /= 2|} {|{"foo": 42}|} {|{ "foo": 21 }|};
     (* //= works when field exists with non-null/false value - keeps original *)
-    test {|.foo //= 10|} {|{"foo": 42}|} {|42|};
-    test {|.foo //= 10|} {|{"foo": false}|} {|10|};
+    test {|.foo //= 10|} {|{"foo": 42}|} {|{ "foo": 42 }|};
+    test {|.foo //= 10|} {|{"foo": false}|} {|{ "foo": 10 }|};
   ]
 
 let keys =
@@ -986,8 +915,11 @@ let keys =
   ]
 
 let pick =
-  [ (* TODO: test {|pick(.a, .b.c, .x)|} {|{"a": 1, "b": {"c": 2, "d": 3}, "e": 4}|} {|{"a":1,"b":{"c":2},"x":null}|}; *)
-    (* TODO: test {|pick(.[2], .[0], .[0])|} {|[1,2,3,4]|} {|[1,null,3]|}; *) ]
+  [
+    test {|pick(.a, .b.c, .x)|} {|{"a": 1, "b": {"c": 2, "d": 3}, "e": 4}|}
+      {|{ "a": 1, "b": { "c": 2 }, "x": null }|};
+    test {|pick(.[2], .[0], .[0])|} {|[1,2,3,4]|} {|[ 1, null, 3 ]|};
+  ]
 
 let combinations =
   [
@@ -1031,10 +963,12 @@ let date =
     (* TODO: test {|strptime("%Y-%m-%dT%H:%M:%SZ")|mktime|} {|"2015-03-05T23:51:47Z"|} {|1425599507|}; *) ]
 
 let assignment =
-  [ (* TODO: test {|.a = .b|} {|{"a": {"b": 10}, "b": 20}|} {|{"a":20,"b":20}|}; *)
-    (* TODO: test {|.a |= .b|} {|{"a": {"b": 10}, "b": 20}|} {|{"a":10,"b":20}|}; *)
-    (* TODO: test {|(.a, .b) = range(3)|} {|null|} {|{"a":0,"b":0}|}; *)
-    (* TODO: test {|(.a, .b) |= range(3)|} {|null|} {|{"a":0,"b":0}|}; *) ]
+  [
+    test {|.a = .b|} {|{"a": {"b": 10}, "b": 20}|} {|{ "a": 20, "b": 20 }|};
+    test {|.a |= .b|} {|{"a": {"b": 10}, "b": 20}|} {|{ "a": 10, "b": 20 }|};
+    test {|(.a, .b) = range(3)|} {|null|} {|{ "a": 0, "b": 0 }|};
+    test {|(.a, .b) |= range(3)|} {|null|} {|{ "a": 0, "b": 0 }|};
+  ]
 
 let defining_functions =
   [

@@ -28,6 +28,64 @@ let user_error value =
 
 let yield_many items = List.iter yield items
 
+let rec get_path value components =
+  match components with
+  | [] -> value
+  | `String key :: rest -> (
+      match value with
+      | `Assoc fields -> (
+          match List.assoc_opt key fields with
+          | Some v -> get_path v rest
+          | None -> `Null)
+      | _ -> `Null)
+  | `Int idx :: rest -> (
+      match value with
+      | `List items ->
+          if idx >= 0 && idx < List.length items then
+            get_path (List.nth items idx) rest
+          else `Null
+      | _ -> `Null)
+  | _ :: rest -> get_path value rest
+
+let rec set_path value path_components new_value =
+  match path_components with
+  | [] -> new_value
+  | `String key :: rest -> (
+      match value with
+      | `Assoc fields ->
+          let updated =
+            List.map
+              (fun (k, v) ->
+                if k = key then (k, set_path v rest new_value) else (k, v))
+              fields
+          in
+          let exists = List.mem_assoc key fields in
+          if exists then `Assoc updated
+          else `Assoc (fields @ [ (key, set_path `Null rest new_value) ])
+      | `Null -> `Assoc [ (key, set_path `Null rest new_value) ]
+      | _ -> value)
+  | ((`Int _ | `Float _) as num) :: rest -> (
+      let idx =
+        match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
+      in
+      match value with
+      | `List items ->
+          let rec update_list i = function
+            | [] -> if i = idx then [ set_path `Null rest new_value ] else []
+            | x :: xs ->
+                if i = idx then set_path x rest new_value :: xs
+                else x :: update_list (i + 1) xs
+          in
+          `List (update_list 0 items)
+      | `Null ->
+          let arr =
+            List.init (idx + 1) (fun i ->
+                if i = idx then set_path `Null rest new_value else `Null)
+          in
+          `List arr
+      | _ -> value)
+  | _ :: rest -> set_path value rest new_value
+
 let run fn ?and_then ?on_fail () =
   let handler : 'a Effect.Deep.effect_handler =
     {
@@ -97,19 +155,22 @@ let rec substitute_params (params : string list) (args : expression list)
   in
   match expr with
   (* nullary calls to a parameter name gets substituted with the argument expression *)
-  | Call (name, []) -> (
+  | Apply (name, []) -> (
       match find_param name with Some arg_expr -> arg_expr | None -> expr)
   (* all other expressions substitute in sub-expressions *)
-  | Identity | Empty | Keys | Floor | Sqrt | Type | Sort | Unique | Reverse
-  | Explode | Implode | Any | All | Recurse | Recurse_down | To_entries
-  | From_entries | Nan | Is_nan | Not | Ascii_upcase | Ascii_downcase | Trim
-  | Ltrim | Rtrim | Head | Tail | Length | Utf8bytelength | Min | Max
-  | To_number | Tonumber | To_string | Tostring | Env | Break | Paths | Halt
-  | Iterator | Combinations | Fun _ | Literal _ | Variable _ | Key _ | Test _
-  | Match _ | Scan _ | Capture _ | Env_var _ ->
+  | Identity | Empty | Keys | Keys_unsorted | Leaf_paths | Builtins | Formats
+  | Localtime | Gmtime | Mktime | Debug | Stderr | Floor | Sqrt | Type | Sort
+  | Unique | Reverse | Explode | Implode | Any | All | Recurse | Recurse_down
+  | To_entries | From_entries | Nan | Is_nan | Not | Ascii_upcase
+  | Ascii_downcase | Trim | Ltrim | Rtrim | Head | Tail | Length
+  | Utf8bytelength | Min | Max | To_number | Tonumber | To_string | Tostring
+  | Env | Break | Paths | Halt | Iterator | Combinations | Fun _ | Literal _
+  | Variable _ | Key _ | Test _ | Match _ | Scan _ | Capture _ | Env_var _ ->
       expr
   | Index indices -> Index indices
+  | Dynamic_access e -> Dynamic_access (sub e)
   | Slice (a, b) -> Slice (a, b)
+  | Slice_expr (a, b) -> Slice_expr (Option.map sub a, Option.map sub b)
   | Sub (a, b) -> Sub (a, b)
   | Gsub (a, b) -> Gsub (a, b)
   | Limit (n, e) -> Limit (n, sub e)
@@ -145,6 +206,8 @@ let rec substitute_params (params : string list) (args : expression list)
   | Max_by e -> Max_by (sub e)
   | All_with_condition e -> All_with_condition (sub e)
   | Any_with_condition e -> Any_with_condition (sub e)
+  | Any_with_generator (g, c) -> Any_with_generator (sub g, sub c)
+  | All_with_generator (g, c) -> All_with_generator (sub g, sub c)
   | Some_ e -> Some_ (sub e)
   | Find e -> Find (sub e)
   | Contains e -> Contains (sub e)
@@ -171,6 +234,14 @@ let rec substitute_params (params : string list) (args : expression list)
   | If_then_else (c, t, e) -> If_then_else (sub c, sub t, sub e)
   | While (c, u) -> While (sub c, sub u)
   | Until (c, u) -> Until (sub c, sub u)
+  | Atan2 (e1, e2) -> Atan2 (sub e1, sub e2)
+  | Copysign (e1, e2) -> Copysign (sub e1, sub e2)
+  | Ldexp (e1, e2) -> Ldexp (sub e1, sub e2)
+  | Fdim (e1, e2) -> Fdim (sub e1, sub e2)
+  | Remainder (e1, e2) -> Remainder (sub e1, sub e2)
+  | Scalbn (e1, e2) -> Scalbn (sub e1, sub e2)
+  | Pow2 (e1, e2) -> Pow2 (sub e1, sub e2)
+  | Fma (e1, e2, e3) -> Fma (sub e1, sub e2, sub e3)
   | Try (e, h) -> Try (sub e, sub_opt h)
   | Error_msg e -> Error_msg (sub_opt e)
   | Isempty e -> Isempty (sub e)
@@ -179,12 +250,13 @@ let rec substitute_params (params : string list) (args : expression list)
   | Label (name, e) -> Label (name, sub e)
   | Del e -> Del (sub e)
   | Delpaths e -> Delpaths (sub e)
+  | Pick e -> Pick (sub e)
   | Assign (l, r) -> Assign (sub l, sub r)
   | Getpath e -> Getpath (sub e)
   | Setpath (e1, e2) -> Setpath (sub e1, sub e2)
   | Paths_filter e -> Paths_filter (sub e)
   | Def (name, params', body) -> Def (name, params', sub body)
-  | Call (name, call_args) -> Call (name, List.map sub call_args)
+  | Apply (name, call_args) -> Apply (name, List.map sub call_args)
 
 module Error = struct
   let prepend_article (noun : string) =
@@ -394,6 +466,52 @@ module Operators = struct
   let log_ ~ctx = apply_to_number ~ctx "log" Stdlib.log
   let log10_ ~ctx = apply_to_number ~ctx "log10" Stdlib.log10
   let exp_ ~ctx = apply_to_number ~ctx "exp" Stdlib.exp
+  let sinh_ ~ctx = apply_to_number ~ctx "sinh" Stdlib.sinh
+  let cosh_ ~ctx = apply_to_number ~ctx "cosh" Stdlib.cosh
+  let tanh_ ~ctx = apply_to_number ~ctx "tanh" Stdlib.tanh
+  let asinh_ ~ctx = apply_to_number ~ctx "asinh" Float.asinh
+  let acosh_ ~ctx = apply_to_number ~ctx "acosh" Float.acosh
+  let atanh_ ~ctx = apply_to_number ~ctx "atanh" Float.atanh
+  let trunc_ ~ctx = apply_to_number ~ctx "trunc" Float.trunc
+  let cbrt_ ~ctx = apply_to_number ~ctx "cbrt" Float.cbrt
+  let expm1_ ~ctx = apply_to_number ~ctx "expm1" Float.expm1
+  let exp2_ ~ctx = apply_to_number ~ctx "exp2" Float.exp2
+  let log1p_ ~ctx = apply_to_number ~ctx "log1p" Float.log1p
+  let log2_ ~ctx = apply_to_number ~ctx "log2" Float.log2
+
+  let isinfinite ~ctx json =
+    match json with
+    | `Float x -> `Bool (Float.is_infinite x)
+    | `Int _ -> `Bool false
+    | _ -> Error.make ~ctx "isinfinite" json
+
+  let isnormal ~ctx json =
+    match json with
+    | `Float x ->
+        let is_normal =
+          Float.is_finite x && x <> 0.0 && Float.abs x >= Float.min_float
+        in
+        `Bool is_normal
+    | `Int n -> `Bool (n <> 0)
+    | _ -> Error.make ~ctx "isnormal" json
+
+  let fabs ~ctx json =
+    match json with
+    | `Float x -> `Float (Float.abs x)
+    | `Int n -> `Float (Float.abs (Float.of_int n))
+    | _ -> Error.make ~ctx "fabs" json
+
+  let nearbyint ~ctx json =
+    match json with
+    | `Float x -> `Float (Float.round x)
+    | `Int n -> `Int n
+    | _ -> Error.make ~ctx "nearbyint" json
+
+  let logb ~ctx json =
+    match json with
+    | `Float x -> `Float (Float.floor (Float.log2 (Float.abs x)))
+    | `Int n -> `Float (Float.floor (Float.log2 (Float.abs (Float.of_int n))))
+    | _ -> Error.make ~ctx "logb" json
 end
 
 module Search = struct
@@ -502,6 +620,250 @@ let keys ~ctx (json : Json.t) =
       let len = List.length l in
       `List (List.init len (fun i -> `Int i))
   | _ -> Error.make ~ctx "keys" json
+
+let keys_unsorted ~ctx (json : Json.t) =
+  match json with
+  | `Assoc list -> `List (List.map (fun (k, _) -> `String k) list)
+  | `List l ->
+      let len = List.length l in
+      `List (List.init len (fun i -> `Int i))
+  | _ -> Error.make ~ctx "keys_unsorted" json
+
+let builtins_list () =
+  `List
+    (List.map
+       (fun s -> `String s)
+       [
+         "add";
+         "abs";
+         "acos";
+         "acosh";
+         "all";
+         "any";
+         "ascii";
+         "ascii_downcase";
+         "ascii_upcase";
+         "asin";
+         "asinh";
+         "atan";
+         "atan2";
+         "atanh";
+         "bsearch";
+         "builtins";
+         "cbrt";
+         "ceil";
+         "combinations";
+         "contains";
+         "copysign";
+         "cos";
+         "cosh";
+         "del";
+         "delpaths";
+         "empty";
+         "endswith";
+         "env";
+         "error";
+         "exp";
+         "exp2";
+         "expm1";
+         "explode";
+         "fabs";
+         "fdim";
+         "first";
+         "flatten";
+         "floor";
+         "fma";
+         "foreach";
+         "format";
+         "from_entries";
+         "getpath";
+         "group_by";
+         "gsub";
+         "halt";
+         "halt_error";
+         "has";
+         "head";
+         "if";
+         "implode";
+         "in";
+         "index";
+         "indices";
+         "infinite";
+         "inside";
+         "isempty";
+         "isinfinite";
+         "isnan";
+         "isnormal";
+         "join";
+         "keys";
+         "keys_unsorted";
+         "last";
+         "ldexp";
+         "leaf_paths";
+         "length";
+         "limit";
+         "log";
+         "log10";
+         "log1p";
+         "log2";
+         "logb";
+         "ltrimstr";
+         "map";
+         "map_values";
+         "match";
+         "max";
+         "max_by";
+         "min";
+         "min_by";
+         "nan";
+         "nearbyint";
+         "not";
+         "now";
+         "nth";
+         "null";
+         "objects";
+         "path";
+         "paths";
+         "pow";
+         "range";
+         "recurse";
+         "recurse_down";
+         "reduce";
+         "remainder";
+         "repeat";
+         "reverse";
+         "rindex";
+         "rint";
+         "round";
+         "rtrimstr";
+         "scalbn";
+         "scan";
+         "select";
+         "setpath";
+         "sin";
+         "sinh";
+         "sort";
+         "sort_by";
+         "split";
+         "sqrt";
+         "startswith";
+         "sub";
+         "tail";
+         "tan";
+         "tanh";
+         "test";
+         "to_entries";
+         "to_number";
+         "to_string";
+         "tonumber";
+         "tostring";
+         "transpose";
+         "trim";
+         "trunc";
+         "type";
+         "unique";
+         "unique_by";
+         "until";
+         "utf8bytelength";
+         "values";
+         "walk";
+         "while";
+         "with_entries";
+       ])
+
+let formats_list () =
+  `List
+    (List.map
+       (fun s -> `String s)
+       [
+         "text"; "json"; "html"; "uri"; "csv"; "tsv"; "sh"; "base64"; "base64d";
+       ])
+
+let tm_to_array (tm : Unix.tm) (is_dst : bool) : Json.t =
+  `List
+    [
+      `Int tm.tm_sec;
+      `Int tm.tm_min;
+      `Int tm.tm_hour;
+      `Int tm.tm_mday;
+      `Int tm.tm_mon;
+      `Int tm.tm_year;
+      `Int tm.tm_wday;
+      `Int tm.tm_yday;
+      `Int (if is_dst then 1 else 0);
+    ]
+
+let localtime_fn ~ctx json =
+  match json with
+  | `Float f ->
+      let tm = Unix.localtime f in
+      tm_to_array tm tm.tm_isdst
+  | `Int n ->
+      let tm = Unix.localtime (Float.of_int n) in
+      tm_to_array tm tm.tm_isdst
+  | _ -> Error.make ~ctx "localtime" json
+
+let gmtime_fn ~ctx json =
+  match json with
+  | `Float f ->
+      let tm = Unix.gmtime f in
+      tm_to_array tm false
+  | `Int n ->
+      let tm = Unix.gmtime (Float.of_int n) in
+      tm_to_array tm false
+  | _ -> Error.make ~ctx "gmtime" json
+
+let mktime_fn ~ctx json =
+  match json with
+  | `List
+      [
+        `Int sec;
+        `Int min;
+        `Int hour;
+        `Int mday;
+        `Int mon;
+        `Int year;
+        _;
+        _;
+        `Int isdst;
+      ] ->
+      let tm =
+        {
+          Unix.tm_sec = sec;
+          tm_min = min;
+          tm_hour = hour;
+          tm_mday = mday;
+          tm_mon = mon;
+          tm_year = year;
+          tm_wday = 0;
+          tm_yday = 0;
+          tm_isdst = isdst = 1;
+        }
+      in
+      let time, _ = Unix.mktime tm in
+      `Float time
+  | `List _ ->
+      Error.message ~ctx
+        "mktime expects array of 9 integers [sec, min, hour, mday, mon, year, \
+         wday, yday, isdst]"
+  | _ -> Error.make ~ctx "mktime" json
+
+let debug_fn json =
+  let str = Json.to_string ~colorize:false ~summarize:false ~raw:false json in
+  Printf.eprintf "[\"DEBUG:\", %s]\n%!" str;
+  yield json
+
+let stderr_fn json =
+  match json with
+  | `String s ->
+      Printf.eprintf "%s\n%!" s;
+      yield json
+  | _ ->
+      let str =
+        Json.to_string ~colorize:false ~summarize:false ~raw:false json
+      in
+      Printf.eprintf "%s\n%!" str;
+      yield json
 
 let has ~ctx (json : Json.t) key =
   match key with
@@ -707,8 +1069,17 @@ let from_entries ~ctx (json : Json.t) =
         | entry :: rest -> (
             match entry with
             | `Assoc fields -> (
-                let key = List.assoc_opt "key" fields in
-                let value = List.assoc_opt "value" fields in
+                (* jq accepts both "key"/"name" and "value"/"values" *)
+                let key =
+                  match List.assoc_opt "key" fields with
+                  | Some k -> Some k
+                  | None -> List.assoc_opt "name" fields
+                in
+                let value =
+                  match List.assoc_opt "value" fields with
+                  | Some v -> Some v
+                  | None -> List.assoc_opt "values" fields
+                in
                 match (key, value) with
                 | Some (`String k), Some v -> convert ((k, v) :: acc) rest
                 | _ ->
@@ -975,12 +1346,24 @@ let rec interp ~ctx expression json : unit =
   | Identity -> yield json
   | Empty -> ()
   | Keys -> yield (keys ~ctx json)
+  | Keys_unsorted -> yield (keys_unsorted ~ctx json)
+  | Leaf_paths -> leaf_paths json
+  | Builtins -> yield (builtins_list ())
+  | Formats -> yield (formats_list ())
+  | Localtime -> yield (localtime_fn ~ctx json)
+  | Gmtime -> yield (gmtime_fn ~ctx json)
+  | Mktime -> yield (mktime_fn ~ctx json)
+  | Debug -> debug_fn json
+  | Stderr -> stderr_fn json
   | Key key -> yield (member ~ctx key json)
   | Optional expr ->
       run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> ()) ()
   | Index idx -> index ~ctx idx json
+  | Dynamic_access expr -> dynamic_access ~ctx expr json
   | Iterator -> iterator ~ctx json
   | Slice (start, finish) -> slice ~ctx start finish json
+  | Slice_expr (start_expr, end_expr) ->
+      slice_expr ~ctx start_expr end_expr json
   | Head -> yield (head ~ctx json)
   | Tail -> yield (tail ~ctx json)
   | Length -> yield (length ~ctx json)
@@ -995,7 +1378,7 @@ let rec interp ~ctx expression json : unit =
   | Tostring -> yield (to_string ~ctx ~deprecated:true json)
   | Min -> yield (min ~ctx json)
   | Max -> yield (max ~ctx json)
-  | Flatten None -> yield (flatten ~ctx 1 json)
+  | Flatten None -> yield (flatten ~ctx max_int json)
   | Flatten (Some expr) ->
       collect ~ctx expr json
       |> List.iter (fun depth ->
@@ -1026,27 +1409,10 @@ let rec interp ~ctx expression json : unit =
       | Number f -> yield (`Float f)
       | String s -> yield (`String s)
       | Null -> yield `Null)
-  | Pipe (Def (name, params, body), right) ->
-      let func = { params; body } in
-      let new_ctx = { ctx with fns = (name, func) :: ctx.fns } in
-      interp ~ctx:new_ctx right json
-  | Pipe (left, right) ->
-      run
-        (fun () -> interp ~ctx left json)
-        ~and_then:(fun json -> interp ~ctx right json)
-        ()
-  | Update (path, transform) ->
-      run
-        (fun () -> interp ~ctx path json)
-        ~and_then:(fun json -> interp ~ctx transform json)
-        ()
+  | Pipe (left, right) -> pipe ~ctx left right json
+  | Update (path_expr, transform) -> update ~ctx path_expr transform json
   | Alternative (left, right) -> alternative ~ctx left right json
-  | Select conditional ->
-      run
-        (fun () -> interp ~ctx conditional json)
-        ~and_then:(fun result ->
-          match result with `Bool false | `Null -> () | _ -> yield json)
-        ()
+  | Select conditional -> select ~ctx conditional json
   | List None -> yield (`List [])
   | List (Some expr) ->
       let results = collect ~ctx expr json in
@@ -1062,36 +1428,7 @@ let rec interp ~ctx expression json : unit =
       | _ -> Error.message ~ctx (show_expression expr ^ " is not allowed"))
   | In expr -> in_ ~ctx json expr
   | Range (from_expr, upto_expr, step_expr) ->
-      let to_int_list results =
-        List.filter_map
-          (function
-            | `Int n -> Some n | `Float f -> Some (Float.to_int f) | _ -> None)
-          results
-      in
-      let froms = to_int_list (collect ~ctx from_expr json) in
-      let uptos =
-        match upto_expr with
-        | None -> [ None ]
-        | Some expr ->
-            List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
-      in
-      let steps =
-        match step_expr with
-        | None -> [ None ]
-        | Some expr ->
-            List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
-      in
-      List.iter
-        (fun from ->
-          List.iter
-            (fun upto ->
-              List.iter
-                (fun step ->
-                  let vals = range ?step from upto in
-                  List.iter (fun i -> yield (`Int i)) vals)
-                steps)
-            uptos)
-        froms
+      range_expr ~ctx from_expr upto_expr step_expr json
   | Reverse -> (
       match json with
       | `List l -> yield (`List (List.rev l))
@@ -1100,13 +1437,7 @@ let rec interp ~ctx expression json : unit =
   | Join expr -> yield (join ~ctx expr json)
   | Fun builtin -> builtin_fns ~ctx builtin json
   | If_then_else (cond, if_branch, else_branch) ->
-      run
-        (fun () -> interp ~ctx cond json)
-        ~and_then:(function
-          | `Bool true -> interp ~ctx if_branch json
-          | `Bool false | `Null -> interp ~ctx else_branch json
-          | v -> Error.make ~ctx "if condition should be a bool" v)
-        ()
+      if_then_else ~ctx cond if_branch else_branch json
   | Sort_by expr -> sort_by ~ctx expr json
   | Min_by expr -> min_by ~ctx expr json
   | Max_by expr -> max_by ~ctx expr json
@@ -1131,9 +1462,15 @@ let rec interp ~ctx expression json : unit =
   | Group_by expr -> group_by ~ctx expr json
   | While (cond, update) -> while_loop ~ctx cond update json
   | Until (cond, update) -> until_loop ~ctx cond update json
-  | Recurse ->
-      let results = recurse_down json in
-      yield_many results
+  | Atan2 (y_expr, x_expr) -> atan2_op ~ctx y_expr x_expr json
+  | Copysign (x_expr, y_expr) -> copysign_op ~ctx x_expr y_expr json
+  | Ldexp (m_expr, e_expr) -> ldexp_op ~ctx m_expr e_expr json
+  | Fdim (x_expr, y_expr) -> fdim_op ~ctx x_expr y_expr json
+  | Remainder (x_expr, y_expr) -> remainder_op ~ctx x_expr y_expr json
+  | Scalbn (x_expr, n_expr) -> scalbn_op ~ctx x_expr n_expr json
+  | Pow2 (x_expr, y_expr) -> pow2_op ~ctx x_expr y_expr json
+  | Fma (x_expr, y_expr, z_expr) -> fma_op ~ctx x_expr y_expr z_expr json
+  | Recurse -> yield_many (recurse_down json)
   | Recurse_expr f ->
       let rec loop value =
         yield value;
@@ -1143,9 +1480,7 @@ let rec interp ~ctx expression json : unit =
   | Recurse_with (f, cond) ->
       let results = recurse_with_cond ~ctx f cond json in
       yield_many results
-  | Recurse_down ->
-      let results = recurse_down json in
-      yield_many results
+  | Recurse_down -> yield_many (recurse_down json)
   | Walk expr -> walk_tree ~ctx expr json
   | Transpose expr ->
       run
@@ -1159,6 +1494,8 @@ let rec interp ~ctx expression json : unit =
   | Some_ expr -> some ~ctx expr json
   | Any_with_condition expr -> any_with_condition ~ctx expr json
   | All_with_condition expr -> all_with_condition ~ctx expr json
+  | Any_with_generator (gen, cond) -> any_with_generator ~ctx gen cond json
+  | All_with_generator (gen, cond) -> all_with_generator ~ctx gen cond json
   | Test pattern -> yield (test_regex ~ctx pattern json)
   | Match pattern -> match_regex ~ctx pattern json
   | Scan pattern -> scan_regex ~ctx pattern json
@@ -1181,7 +1518,7 @@ let rec interp ~ctx expression json : unit =
   | Def (_, _, _) ->
       (* Def on its own (not in a Pipe). IT shouldn't happen in well-formed programs *)
       yield json
-  | Call (fname, args) -> call_function ~ctx fname args json
+  | Apply (fname, args) -> call_function ~ctx fname args json
   | Reduce (expr, var_name, init_expr, update_expr) ->
       reduce ~ctx expr var_name init_expr update_expr json
   | As (expr, var_name, body) -> as_binding ~ctx expr var_name body json
@@ -1195,6 +1532,7 @@ let rec interp ~ctx expression json : unit =
   | Isempty expr -> isempty ~ctx expr json
   | Del expr -> del ~ctx expr json
   | Delpaths expr -> delpaths ~ctx expr json
+  | Pick expr -> pick ~ctx expr json
   | Getpath expr -> getpath ~ctx expr json
   | Setpath (path, value_expr) -> setpath ~ctx path value_expr json
   | Paths -> paths json
@@ -1206,6 +1544,120 @@ let rec interp ~ctx expression json : unit =
 
 and collect ~ctx expr json =
   run_and_collect_results (fun () -> interp ~ctx expr json)
+
+and dynamic_access ~ctx expr json =
+  collect ~ctx expr json
+  |> List.iter (fun key_or_idx ->
+      match (json, key_or_idx) with
+      | `Assoc fields, `String key -> (
+          match List.assoc_opt key fields with
+          | Some v -> yield v
+          | None -> yield `Null)
+      | `List items, `Int idx ->
+          let len = List.length items in
+          let actual_idx = if idx < 0 then len + idx else idx in
+          if actual_idx >= 0 && actual_idx < len then
+            yield (List.nth items actual_idx)
+          else yield `Null
+      | `List items, `Float f ->
+          let idx = Float.to_int f in
+          let len = List.length items in
+          let actual_idx = if idx < 0 then len + idx else idx in
+          if actual_idx >= 0 && actual_idx < len then
+            yield (List.nth items actual_idx)
+          else yield `Null
+      | `Null, _ -> yield `Null
+      | _ ->
+          Error.message ~ctx
+            ("Cannot index " ^ Json.type_of json ^ " with "
+           ^ Json.type_of key_or_idx))
+
+and update ~ctx path_expr transform json =
+  (* path |= f means: for each path selected by path_expr, apply f to the value and update *)
+  (* try to get existing paths *)
+  let paths = collect ~ctx (Path path_expr) json in
+  (* if no paths found, extract paths from AST for creation semantics *)
+  let paths =
+    if paths = [] then
+      let rec extract_static_paths expr =
+        match expr with
+        | Identity -> [ [] ]
+        | Key k -> [ [ `String k ] ]
+        | Pipe (Identity, right) -> extract_static_paths right
+        | Pipe (Key k, right) ->
+            List.map (fun p -> `String k :: p) (extract_static_paths right)
+        | Comma (left, right) ->
+            extract_static_paths left @ extract_static_paths right
+        | _ -> []
+      in
+      List.map (fun p -> `List p) (extract_static_paths path_expr)
+    else paths
+  in
+  let result = ref json in
+  List.iter
+    (fun path_json ->
+      match path_json with
+      | `List path_components -> (
+          let current_value = get_path !result path_components in
+          let new_values = collect ~ctx transform current_value in
+          match new_values with
+          | new_value :: _ ->
+              result := set_path !result path_components new_value
+          | [] -> ())
+      | _ -> ())
+    paths;
+  yield !result
+
+and range_expr ~ctx from_expr upto_expr step_expr json =
+  let to_int_list results =
+    List.filter_map
+      (function
+        | `Int n -> Some n | `Float f -> Some (Float.to_int f) | _ -> None)
+      results
+  in
+  let froms = to_int_list (collect ~ctx from_expr json) in
+  let uptos =
+    match upto_expr with
+    | None -> [ None ]
+    | Some expr ->
+        List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
+  in
+  let steps =
+    match step_expr with
+    | None -> [ None ]
+    | Some expr ->
+        List.map (fun x -> Some x) (to_int_list (collect ~ctx expr json))
+  in
+  List.iter
+    (fun from ->
+      List.iter
+        (fun upto ->
+          List.iter
+            (fun step ->
+              let vals = range ?step from upto in
+              List.iter (fun i -> yield (`Int i)) vals)
+            steps)
+        uptos)
+    froms
+
+and select ~ctx conditional json =
+  run
+    (fun () -> interp ~ctx conditional json)
+    ~and_then:(fun result ->
+      match result with `Bool false | `Null -> () | _ -> yield json)
+    ()
+
+and pipe ~ctx left right json =
+  match left with
+  | Def (name, params, body) ->
+      let func = { params; body } in
+      let new_ctx = { ctx with fns = (name, func) :: ctx.fns } in
+      interp ~ctx:new_ctx right json
+  | _ ->
+      run
+        (fun () -> interp ~ctx left json)
+        ~and_then:(fun json -> interp ~ctx right json)
+        ()
 
 and operation ~ctx left_expr right_expr op json =
   let apply_op l_val r_val =
@@ -1251,7 +1703,7 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
           (fun item ->
             match collect ~ctx expr item with
             | [ v ] -> Some v
-            | [] -> None (* Filter out when expression produces empty *)
+            | [] -> None (* filter out when expression produces empty *)
             | vs -> Some (`List vs))
           list
       in
@@ -1262,7 +1714,7 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
           (fun (key, value) ->
             match collect ~ctx expr value with
             | [ v ] -> Some (key, v)
-            | [] -> None (* Filter out when expression produces empty *)
+            | [] -> None (* filter out when expression produces empty *)
             | vs -> Some (key, `List vs))
           entries
       in
@@ -1422,6 +1874,23 @@ and builtin_fns ~ctx builtin json =
       in
       infinite_gen 0
   | Now -> yield (`Float (Unix.gettimeofday ()))
+  | Sinh -> yield (Operators.sinh_ ~ctx json)
+  | Cosh -> yield (Operators.cosh_ ~ctx json)
+  | Tanh -> yield (Operators.tanh_ ~ctx json)
+  | Asinh -> yield (Operators.asinh_ ~ctx json)
+  | Acosh -> yield (Operators.acosh_ ~ctx json)
+  | Atanh -> yield (Operators.atanh_ ~ctx json)
+  | Isinfinite -> yield (Operators.isinfinite ~ctx json)
+  | Isnormal -> yield (Operators.isnormal ~ctx json)
+  | Trunc -> yield (Operators.trunc_ ~ctx json)
+  | Fabs -> yield (Operators.fabs ~ctx json)
+  | Cbrt -> yield (Operators.cbrt_ ~ctx json)
+  | Expm1 -> yield (Operators.expm1_ ~ctx json)
+  | Exp2 -> yield (Operators.exp2_ ~ctx json)
+  | Log1p -> yield (Operators.log1p_ ~ctx json)
+  | Log2 -> yield (Operators.log2_ ~ctx json)
+  | Nearbyint -> yield (Operators.nearbyint ~ctx json)
+  | Logb -> yield (Operators.logb ~ctx json)
 
 and flat_map ~ctx expr json =
   match json with
@@ -1502,6 +1971,34 @@ and all_with_condition ~ctx expr json =
       check_all list
   | _ -> Error.make ~ctx "all" json
 
+and any_with_generator ~ctx gen cond json =
+  let is_truthy = function `Bool false | `Null -> false | _ -> true in
+  let gen_results = collect ~ctx gen json in
+  let rec check = function
+    | [] -> yield (`Bool false)
+    | x :: xs -> (
+        try
+          let cond_results = collect ~ctx cond x in
+          if List.exists is_truthy cond_results then yield (`Bool true)
+          else check xs
+        with _ -> check xs)
+  in
+  check gen_results
+
+and all_with_generator ~ctx gen cond json =
+  let is_truthy = function `Bool false | `Null -> false | _ -> true in
+  let gen_results = collect ~ctx gen json in
+  let rec check = function
+    | [] -> yield (`Bool true)
+    | x :: xs -> (
+        try
+          let cond_results = collect ~ctx cond x in
+          if List.for_all is_truthy cond_results then check xs
+          else yield (`Bool false)
+        with _ -> yield (`Bool false))
+  in
+  check gen_results
+
 and path_of ~ctx expr json =
   let rec extract_paths current_path expression value =
     match expression with
@@ -1525,6 +2022,19 @@ and path_of ~ctx expr json =
             | `List _ -> [ current_path @ [ `Int idx ] ]
             | _ -> [])
           indices
+    | Dynamic_access expr ->
+        let keys_or_indices = collect ~ctx expr value in
+        List.concat_map
+          (fun key_or_idx ->
+            match (value, key_or_idx) with
+            | `Assoc fields, `String key ->
+                if List.mem_assoc key fields then
+                  [ current_path @ [ `String key ] ]
+                else []
+            | `List _, `Int idx -> [ current_path @ [ `Int idx ] ]
+            | `List _, `Float f -> [ current_path @ [ `Int (Float.to_int f) ] ]
+            | _ -> [])
+          keys_or_indices
     | Pipe (left, right) ->
         let selected_values = collect ~ctx left value in
         List.concat_map
@@ -1534,18 +2044,24 @@ and path_of ~ctx expr json =
                 extract_paths (current_path @ left_path) right selected
             | None -> [])
           selected_values
+    | Comma (left, right) ->
+        extract_paths current_path left value
+        @ extract_paths current_path right value
     | _ -> []
   and extract_path_for_value parent child =
-    match (parent, child) with
-    | `Assoc fields, _ ->
-        List.find_map
-          (fun (key, v) -> if v = child then Some [ `String key ] else None)
-          fields
-    | `List items, _ ->
-        List.find_mapi
-          (fun i v -> if v = child then Some [ `Int i ] else None)
-          items
-    | _ -> if parent = child then Some [] else None
+    (* First check if parent = child - this is the path [] *)
+    if parent = child then Some []
+    else
+      match (parent, child) with
+      | `Assoc fields, _ ->
+          List.find_map
+            (fun (key, v) -> if v = child then Some [ `String key ] else None)
+            fields
+      | `List items, _ ->
+          List.find_mapi
+            (fun i v -> if v = child then Some [ `Int i ] else None)
+            items
+      | _ -> None
   in
   let paths = extract_paths [] expr json in
   let path_jsons : Json.t list =
@@ -1627,6 +2143,15 @@ and as_binding ~ctx expr var_name body json =
       interp ~ctx:new_ctx body json)
     ()
 
+and if_then_else ~ctx cond if_branch else_branch json =
+  run
+    (fun () -> interp ~ctx cond json)
+    ~and_then:(function
+      | `Bool true -> interp ~ctx if_branch json
+      | `Bool false | `Null -> interp ~ctx else_branch json
+      | v -> Error.make ~ctx "if condition should be a bool" v)
+    ()
+
 and call_function ~ctx fname args json =
   match List.assoc_opt fname ctx.fns with
   | None -> Error.message ~ctx ("undefined function: " ^ fname)
@@ -1638,8 +2163,37 @@ and call_function ~ctx fname args json =
           ^ " but got "
           ^ Int.to_string (List.length args))
       else
-        let new_body = substitute_params params args body in
-        interp ~ctx new_body json
+        (* Separate value params ($x) from filter params (x) *)
+        let is_value_param p = String.length p > 0 && p.[0] = '$' in
+        let filter_params, filter_args, value_params, value_args =
+          List.fold_left2
+            (fun (fp, fa, vp, va) param arg ->
+              if is_value_param param then (fp, fa, param :: vp, arg :: va)
+              else (param :: fp, arg :: fa, vp, va))
+            ([], [], [], []) params args
+        in
+        let filter_params = List.rev filter_params in
+        let filter_args = List.rev filter_args in
+        let value_params = List.rev value_params in
+        let value_args = List.rev value_args in
+        (* Substitute filter params in body *)
+        let new_body = substitute_params filter_params filter_args body in
+        (* Evaluate value params and bind them as variables (strip the $ prefix for env lookup) *)
+        let value_bindings =
+          List.map2
+            (fun param arg ->
+              let var_name = String.sub param 1 (String.length param - 1) in
+              let values = collect ~ctx arg json in
+              match values with
+              | [ v ] -> (var_name, v)
+              | [] -> (var_name, `Null)
+              | _ ->
+                  Error.message ~ctx
+                    ("value parameter " ^ param ^ " produced multiple values"))
+            value_params value_args
+        in
+        let new_ctx = { ctx with env = value_bindings @ ctx.env } in
+        interp ~ctx:new_ctx new_body json
 
 and starts_with ~ctx ~is_deprecated expr json =
   let name = if is_deprecated then "startwith/startswith" else "starts_with" in
@@ -1667,34 +2221,16 @@ and ends_with ~ctx ~is_deprecated expr json =
       | _ -> Error.make ~ctx name json)
 
 and with_entries ~ctx expr json =
-  let update_entry_field key transform_expr fields entry =
-    match List.assoc_opt key fields with
-    | Some value -> (
-        match collect ~ctx transform_expr value with
-        | [ new_value ] ->
-            let updated_fields =
-              List.map
-                (fun (k, v) -> if k = key then (k, new_value) else (k, v))
-                fields
-            in
-            `Assoc updated_fields
-        | _ -> entry)
-    | None -> entry
-  in
-  let transform_single_entry expr entry =
-    match entry with
-    | `Assoc fields -> (
-        match expr with
-        | Update (Key key, transform_expr) ->
-            update_entry_field key transform_expr fields entry
-        | _ -> (
-            match collect ~ctx expr entry with [ res ] -> res | _ -> entry))
-    | _ -> entry
-  in
   match to_entries ~ctx json with
   | `List entries ->
       let transformed =
-        List.map (fun entry -> transform_single_entry expr entry) entries
+        List.filter_map
+          (fun entry ->
+            match collect ~ctx expr entry with
+            | [ res ] -> Some res
+            | [] -> None
+            | _ -> Some entry)
+          entries
       in
       yield (from_entries ~ctx (`List transformed))
   | _ -> Error.make ~ctx "to_entries failed" json
@@ -1981,6 +2517,7 @@ and group_by ~ctx expr json =
   | `List l ->
       let estimated_groups = Int.max 16 (List.length l / 4) in
       let groups = Hashtbl.create estimated_groups in
+      let group_keys = ref [] in
       List.iter
         (fun item ->
           let keys = collect ~ctx expr item in
@@ -1992,15 +2529,25 @@ and group_by ~ctx expr json =
               let existing =
                 match Hashtbl.find_opt groups key_str with
                 | Some items -> items
-                | None -> []
+                | None ->
+                    group_keys := (key_str, key) :: !group_keys;
+                    []
               in
               Hashtbl.replace groups key_str (item :: existing)
           | _ -> ())
         l;
-      let result =
-        Hashtbl.fold (fun _ items acc -> List.rev items :: acc) groups []
+      let sorted_keys =
+        List.sort (fun (_, k1) (_, k2) -> Json.compare k1 k2) !group_keys
       in
-      yield (`List (List.map (fun items -> `List items) result))
+      let result =
+        List.map
+          (fun (key_str, _) ->
+            match Hashtbl.find_opt groups key_str with
+            | Some items -> `List (List.rev items)
+            | None -> `List [])
+          sorted_keys
+      in
+      yield (`List result)
   | _ -> Error.make ~ctx "group_by" json
 
 and while_loop ~ctx cond update json =
@@ -2029,6 +2576,146 @@ and until_loop ~ctx cond update json =
     | _ -> yield current
   in
   loop json
+
+and atan2_op ~ctx y_expr x_expr json =
+  let y_vals = collect ~ctx y_expr json in
+  let x_vals = collect ~ctx x_expr json in
+  match (y_vals, x_vals) with
+  | [ y ], [ x ] -> (
+      match (y, x) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (Float.atan2 yf xf))
+      | _ -> Error.message ~ctx "atan2 requires two numbers")
+  | _ -> Error.message ~ctx "atan2 requires two single values"
+
+and copysign_op ~ctx x_expr y_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let y_vals = collect ~ctx y_expr json in
+  match (x_vals, y_vals) with
+  | [ x ], [ y ] -> (
+      match (x, y) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (Float.copy_sign xf yf))
+      | _ -> Error.message ~ctx "copysign requires two numbers")
+  | _ -> Error.message ~ctx "copysign requires two single values"
+
+and ldexp_op ~ctx m_expr e_expr json =
+  let m_vals = collect ~ctx m_expr json in
+  let e_vals = collect ~ctx e_expr json in
+  match (m_vals, e_vals) with
+  | [ m ], [ e ] -> (
+      match (m, e) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let mf =
+            match m with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let ei =
+            match e with `Int n -> n | `Float f -> Float.to_int f | _ -> 0
+          in
+          yield (`Float (Float.ldexp mf ei))
+      | _ -> Error.message ~ctx "ldexp requires two numbers")
+  | _ -> Error.message ~ctx "ldexp requires two single values"
+
+and fdim_op ~ctx x_expr y_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let y_vals = collect ~ctx y_expr json in
+  match (x_vals, y_vals) with
+  | [ x ], [ y ] -> (
+      match (x, y) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (Float.max 0.0 (xf -. yf)))
+      | _ -> Error.message ~ctx "fdim requires two numbers")
+  | _ -> Error.message ~ctx "fdim requires two single values"
+
+and remainder_op ~ctx x_expr y_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let y_vals = collect ~ctx y_expr json in
+  match (x_vals, y_vals) with
+  | [ x ], [ y ] -> (
+      match (x, y) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (mod_float xf yf))
+      | _ -> Error.message ~ctx "remainder requires two numbers")
+  | _ -> Error.message ~ctx "remainder requires two single values"
+
+and scalbn_op ~ctx x_expr n_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let n_vals = collect ~ctx n_expr json in
+  match (x_vals, n_vals) with
+  | [ x ], [ n ] -> (
+      match (x, n) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let ni =
+            match n with `Int n -> n | `Float f -> Float.to_int f | _ -> 0
+          in
+          yield (`Float (Float.ldexp xf ni))
+      | _ -> Error.message ~ctx "scalbn requires two numbers")
+  | _ -> Error.message ~ctx "scalbn requires two single values"
+
+and pow2_op ~ctx x_expr y_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let y_vals = collect ~ctx y_expr json in
+  match (x_vals, y_vals) with
+  | [ x ], [ y ] -> (
+      match (x, y) with
+      | (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (xf ** yf))
+      | _ -> Error.message ~ctx "pow requires two numbers")
+  | _ -> Error.message ~ctx "pow requires two single values"
+
+and fma_op ~ctx x_expr y_expr z_expr json =
+  let x_vals = collect ~ctx x_expr json in
+  let y_vals = collect ~ctx y_expr json in
+  let z_vals = collect ~ctx z_expr json in
+  match (x_vals, y_vals, z_vals) with
+  | [ x ], [ y ], [ z ] -> (
+      match (x, y, z) with
+      | (`Float _ | `Int _), (`Float _ | `Int _), (`Float _ | `Int _) ->
+          let xf =
+            match x with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let yf =
+            match y with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          let zf =
+            match z with `Float f -> f | `Int n -> Float.of_int n | _ -> 0.0
+          in
+          yield (`Float (Float.fma xf yf zf))
+      | _ -> Error.message ~ctx "fma requires three numbers")
+  | _ -> Error.message ~ctx "fma requires three single values"
 
 and recurse_with_cond ~ctx f cond json =
   let rec loop acc current =
@@ -2244,6 +2931,41 @@ and setpath ~ctx path value_expr json =
       yield (set_at json path_components)
   | _ -> Error.message ~ctx "setpath expects (path_array, value)"
 
+and pick ~ctx expr json =
+  (* extract path structure from expressions, even for non-existent paths *)
+  let rec extract_path_expr = function
+    | Identity -> [ [] ]
+    | Key key -> [ [ `String key ] ]
+    | Index [ idx ] -> [ [ `Int idx ] ]
+    | Pipe (left, right) ->
+        let left_paths = extract_path_expr left in
+        let right_paths = extract_path_expr right in
+        List.concat_map
+          (fun lp -> List.map (fun rp -> lp @ rp) right_paths)
+          left_paths
+    | Comma (left, right) -> extract_path_expr left @ extract_path_expr right
+    | Dynamic_access inner ->
+        (* For dynamic access like .[$var], evaluate to get the key/index *)
+        let keys = collect ~ctx inner json in
+        List.filter_map
+          (function
+            | `String s -> Some [ `String s ]
+            | `Int i -> Some [ `Int i ]
+            | `Float f -> Some [ `Int (Float.to_int f) ]
+            | _ -> None)
+          keys
+    | _ -> []
+  in
+  let paths = extract_path_expr expr in
+  let result =
+    List.fold_left
+      (fun acc path_components ->
+        let value = get_path json path_components in
+        set_path acc path_components value)
+      `Null paths
+  in
+  yield result
+
 and paths json = yield_many (List.map (fun p -> `List p) (all_paths_list json))
 
 and paths_filter ~ctx filter_expr json =
@@ -2299,28 +3021,59 @@ and all_paths_list json =
   in
   all_paths [] json
 
+and leaf_paths json =
+  let rec find_leaf_paths current_path value =
+    match value with
+    | `Assoc fields ->
+        List.concat_map
+          (fun (k, v) -> find_leaf_paths (current_path @ [ `String k ]) v)
+          fields
+    | `List items ->
+        List.concat_map
+          (fun (i, v) -> find_leaf_paths (current_path @ [ `Int i ]) v)
+          (List.mapi (fun i v -> (i, v)) items)
+    | _ -> [ current_path ]
+  in
+  yield_many (List.map (fun p -> `List p) (find_leaf_paths [] json))
+
+and slice_expr ~ctx (start_expr : expression option)
+    (end_expr : expression option) (json : Json.t) =
+  let eval_to_int expr =
+    match collect ~ctx expr json with
+    | [ `Int n ] -> n
+    | [ `Float f ] -> int_of_float f
+    | _ -> failwith "slice index must evaluate to a number"
+  in
+  let start = Option.map eval_to_int start_expr in
+  let finish = Option.map eval_to_int end_expr in
+  slice ~ctx start finish json
+
 and assign ~ctx path value_expr json =
   (* Assignment is like setpath but path is an AST expression, not a value *)
-  (* For simple cases like .foo = 42, we can extract the path from AST *)
-  match path with
-  | Key key -> (
-      let values = collect ~ctx value_expr json in
-      match values with
-      | [ new_value ] -> (
-          match json with
-          | `Assoc fields ->
-              let updated =
-                List.map
-                  (fun (k, v) -> if k = key then (k, new_value) else (k, v))
-                  fields
-              in
-              let exists = List.mem_assoc key fields in
-              if exists then yield (`Assoc updated)
-              else yield (`Assoc (fields @ [ (key, new_value) ]))
-          | `Null -> yield (`Assoc [ (key, new_value) ])
-          | _ -> Error.make ~ctx "assignment" json)
-      | _ -> Error.message ~ctx "assignment value must be single")
-  | _ -> Error.message ~ctx "complex path assignment not yet fully implemented"
+  let values = collect ~ctx value_expr json in
+  let new_value = match values with [] -> `Null | v :: _ -> v in
+  let rec assign_path result p =
+    match p with
+    | Key key -> (
+        match result with
+        | `Assoc fields ->
+            let updated =
+              List.map
+                (fun (k, v) -> if k = key then (k, new_value) else (k, v))
+                fields
+            in
+            let exists = List.mem_assoc key fields in
+            if exists then `Assoc updated
+            else `Assoc (fields @ [ (key, new_value) ])
+        | `Null -> `Assoc [ (key, new_value) ]
+        | _ -> result)
+    | Pipe (Identity, right) -> assign_path result right
+    | Comma (left, right) ->
+        let result' = assign_path result left in
+        assign_path result' right
+    | _ -> result
+  in
+  yield (assign_path json path)
 
 let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
