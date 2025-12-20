@@ -30,7 +30,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.3.0))
+  (ocaml (>= 5.2.0))
   (dune (>= 3.17))
   dune-build-info
   (menhir (>= 20250903))
@@ -65,7 +65,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.3.0))
+  (ocaml (>= 5.2.0))
   mlx
   (melange (>= 5.0.1))
   melange-json

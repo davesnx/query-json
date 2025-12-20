@@ -3,6 +3,10 @@ opam_file = $(project_name).opam
 DUNE = opam exec -- dune
 VITE = ./node_modules/.bin/vite
 
+# Use ld.bfd instead of mold to work around linker bugs with oxcaml
+LD_OVERRIDE_DIR := /tmp/ld-override
+export PATH := $(LD_OVERRIDE_DIR):$(PATH)
+
 .PHONY: help
 help: ## Print this help message
 	@echo "";
@@ -86,11 +90,11 @@ pin: # pin dependencies
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.3.0 --deps-only --with-test --no-install -y
+	opam switch create . 5.2.0+ox --repos=ox=git+https://github.com/oxcaml/opam-repository.git,default --no-install -y
 
 .PHONY: install
 install: ## Install opam deps
-	opam install . --deps-only --with-test --with-doc --with-dev-setup -y
+	opam install . --deps-only --with-test -y
 
 .PHONY: npm-install
 npm-install: ## Install npm dependencies
