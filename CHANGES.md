@@ -1,6 +1,38 @@
 # Unreleased
 
 - Remove easy-format
+- Add `=` assignment operator (`.a = .b`, `(.a, .b) = expr`)
+- Fix `|=` to create paths that don't exist (`.a |= 42` on `null` creates `{"a": 42}`)
+- Fix `|=` to take first value when transform produces multiple results
+- Add User-defined functions
+  - Add `def name(args): body; expr` for user-defined functions
+  - Add function calls with semicolon-separated arguments: `func(a; b; c)`
+- Add Control flow
+  - Add `foreach expr as $var (init; update; extract)` loop construct
+  - Add `skip(n; expr)` to skip first n results from generator
+- Add `+=`, `-=`, `*=`, `/=` compound assignment operators
+- Add `//=` alternative assignment operator
+- Add `indices(s)` to find all occurrences of substring/element
+- Add `inside(b)` to check if value is contained in another
+- Add `ltrimstr(s)` and `rtrimstr(s)` to trim prefixes/suffixes
+- Add `trim`, `ltrim`, `rtrim` for whitespace trimming
+- Add `ascii_upcase` and `ascii_downcase` for case conversion
+- Add `map_values(f)` to transform values in arrays/objects
+- Add `bsearch(x)` for binary search
+- Add `first` and `last` (no args) for array head/tail
+- Add `first(expr)` and `last(expr)` for generator results
+- Add `nth(n; expr)` to get nth result from generator
+- Add `combinations` and `combinations(n)` for cartesian products
+- Add `repeat(f)` for infinite repetition until error
+- Add `add(expr)` variant that takes expression
+- Add `delpaths(paths)` to delete multiple paths at once
+- Improve `getpath`, `setpath`, `paths` implementations
+- Add `env` object for accessing all environment variables
+- Add `$ENV.VAR` syntax for environment variable access
+- Add `"\(expr)"` string interpolation syntax
+- Add string key access syntax: `.["key"]` and `.["key"]?`
+- Improve error messages for unimplemented jq builtins
+- Better error surfacing for parser semantic errors
 
 ## 0.6.1
 

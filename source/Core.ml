@@ -26,23 +26,21 @@ let position_to_string start end_ =
 
 let pretty_print_error ~colorize ~input ~(start : Lexing.position)
     ~(end_ : Lexing.position) =
-  let module Color = Ansi.To_string (struct
+  let open Formatting in
+  let open Ansi.To_string (struct
     let colorize = colorize
   end) in
   let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
-  Color.red (Color.bold "Parse error: ")
+  red (bold "Parse error: ")
   ^ "Problem parsing at position "
   ^ position_to_string start end_
-  ^ Formatting.enter 2 ^ "Input:" ^ Formatting.indent 1
-  ^ Color.green (Color.bold input)
-  ^ Formatting.enter 1 ^ Formatting.indent 4
+  ^ enter 2 ^ "Input:" ^ indent 1
+  ^ green (bold input)
+  ^ enter 1 ^ indent 4
   ^ String.make start.pos_cnum ' '
-  ^ Color.gray pointer_range
+  ^ gray pointer_range
 
-let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
-    (Ast.expression, string) result =
-  let _ = ignore verbose in
-  (* verbose will be used for parser warnings in the future *)
+let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
   match menhir next_token with
@@ -50,25 +48,28 @@ let parse ?(debug = false) ?(colorize = true) ?(verbose = false) input :
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
   | exception Lexer_error msg ->
-      (* TODO: Do we want to show the lexing error differently than the parser error? *)
       if debug then (
         print_endline "Lexer error";
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
+  | exception Failure msg ->
+      (* all failwith from Parser.mly most likely are semantic errors (e.g., "not implemented") *)
+      let open Ansi.To_string (struct
+        let colorize = colorize
+      end) in
+      Error (red (bold "Error: ") ^ msg)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run query json =
-  match parse ~debug:false ~colorize:false ~verbose:false query with
+let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
+    ?(summarize = false) query json =
+  match parse ~debug ~colorize query with
   | Ok runtime ->
-      let ( let* ) = Result.bind in
-      let* results =
-        Interpreter.execute ~colorize:false ~verbose:false runtime json
-      in
-      Ok
-        (results
-        |> List.map (Json.to_string ~colorize:false ~summarize:false ~raw:false)
-        |> String.concat "\n")
+      Interpreter.execute ~colorize ~verbose runtime json
+      |> Result.map (fun results ->
+          results
+          |> List.map (Json.to_string ~colorize ~summarize ~raw)
+          |> String.concat "\n")
   | Error err -> Error err

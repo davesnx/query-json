@@ -22,6 +22,23 @@ type builtin =
   | Round
   | Infinite
   | Now
+  | Sinh
+  | Cosh
+  | Tanh
+  | Asinh
+  | Acosh
+  | Atanh
+  | Isinfinite
+  | Isnormal
+  | Trunc
+  | Fabs
+  | Cbrt
+  | Expm1
+  | Exp2
+  | Log1p
+  | Log2
+  | Nearbyint
+  | Logb
 [@@deriving show { with_path = false }]
 
 type op =
@@ -49,6 +66,8 @@ type expression =
   | Comma of expression * expression (* expr1 , expr2 *)
   | Literal of literal
   | Variable of string (* $var *)
+  | Env (* env object containing all environment variables *)
+  | Env_var of string (* $ENV.VAR or env.VAR *)
   (* Constructors *)
   | List of expression option (* [ expr ] *)
   | Object of (expression * expression option) list (* {} *)
@@ -59,6 +78,15 @@ type expression =
   | Optional of expression (* ? *)
   | Has of expression (* has(x) *)
   | Keys (* keys *)
+  | Keys_unsorted (* keys_unsorted *)
+  | Leaf_paths (* leaf_paths *)
+  | Builtins (* builtins *)
+  | Formats (* formats *)
+  | Localtime (* localtime *)
+  | Gmtime (* gmtime *)
+  | Mktime (* mktime *)
+  | Debug (* debug *)
+  | Stderr (* stderr *)
   | Floor (* floor *)
   | Sqrt (* sqrt *)
   | Type (* type *)
@@ -73,6 +101,7 @@ type expression =
   | All (* all *)
   | In of expression (* in *)
   | Recurse (* recurse *)
+  | Recurse_expr of expression (* recurse(f) *)
   | Recurse_with of expression * expression (* recurse(f; condition) *)
   | Recurse_down (* recurse_down *)
   | To_entries (* to_entries *)
@@ -85,17 +114,24 @@ type expression =
   (* Array *)
   | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
   | Iterator (* .[] - currently represented as Index [], kept for future use *)
-  | Range of int * int option * int option (* range(1, 10) *)
-  | Flatten of int option (* flatten or flatten(n) *)
+  | Dynamic_access of expression (* .[$expr] - dynamic key/index access *)
+  | Range of
+      expression
+      * expression option
+      * expression option (* range(from; upto; step) *)
+  | Flatten of expression option (* flatten or flatten(expr) *)
   | Head (* head *)
   | Tail (* tail *)
   | Map of expression
+  | Map_values of expression (* map_values(x) *)
   (* .[] *)
   (* map(x) *)
   | Slice of int option * int option
+  | Slice_expr of expression option * expression option (* .[expr:expr] *)
   | Flat_map of expression (* flat_map(x) *)
   | Reduce of expression * string * expression * expression
     (* reduce EXPR as $VAR (INIT; UPDATE) *)
+  | As of expression * string * expression (* expr as $var | body *)
   | Select of expression (* select(x) *)
   | Sort_by of expression (* sort_by(x) *)
   | Group_by of expression (* group_by(x) *)
@@ -104,16 +140,19 @@ type expression =
   | Max_by of expression (* max_by(x) *)
   | All_with_condition of expression (* all(c) *)
   | Any_with_condition of expression (* any(c) *)
+  | Any_with_generator of expression * expression (* any(gen; cond) *)
+  | All_with_generator of expression * expression (* all(gen; cond) *)
   | Some_ of expression (* some, Some_ to not collide with option *)
   | Find of expression (* find(x) *)
   (* operations *)
   | Operation of expression * op * expression
   (* Generic *)
   | Length (* length *)
+  | Utf8bytelength (* utf8bytelength *)
   | Contains of expression (* contains *)
   (* Strings *)
   | Test of string
-  (* this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
+  (* TODO: this string is a regex, we could validate it in the parser and have a Regexp.t type here *)
   | Match of string (* match(regex) with captures *)
   | Scan of string (* scan(regex) *)
   | Capture of
@@ -128,34 +167,62 @@ type expression =
   | Endwith of expression (* endwith - deprecated *)
   | Index_of of expression (* index *)
   | Rindex_of of expression (* rindex *)
+  | Indices of expression (* indices *)
+  | Inside of expression (* inside *)
+  | Ltrimstr of expression (* left_trimstr *)
+  | Rtrimstr of expression (* right_trimstr *)
+  | Trim (* trim *)
+  | Ltrim (* left_trim *)
+  | Rtrim (* right_trim *)
+  | Ascii_upcase (* ascii_upcase *)
+  | Ascii_downcase (* ascii_downcase *)
   | Split of expression (* split *)
   | Join of expression (* join *)
+  | Bsearch of expression (* bsearch *)
+  | Combinations (* combinations - all combinations of input arrays *)
+  | Combinations_n of expression (* combinations(n) *)
+  | Repeat of expression (* repeat(expr) *)
+  | Add_expr of expression (* add(expr) *)
+  | First of expression option (* first or first(expr) *)
+  | Last of expression option (* last or last(expr) *)
+  | Nth of expression * expression (* nth(n; expr) *)
   | Path of expression (* path(x) *)
-  (* Logic *)
   | If_then_else of
       expression * expression * expression (* If then (elseif) else end *)
   | While of expression * expression (* while(condition; update) *)
   | Until of expression * expression (* until(condition; update) *)
+  | Atan2 of expression * expression (* atan2(y; x) *)
+  | Copysign of expression * expression (* copysign(x; y) *)
+  | Ldexp of expression * expression (* ldexp(m; e) *)
+  | Fdim of expression * expression (* fdim(x; y) *)
+  | Remainder of expression * expression (* remainder(x; y) *)
+  | Scalbn of expression * expression (* scalbn(x; n) *)
+  | Pow2 of expression * expression (* pow(x; y) - two argument version *)
+  | Fma of
+      expression
+      * expression
+      * expression (* fma(x; y; z) - fused multiply-add *)
   | Break (* break *)
   | Try of expression * expression option (* try expr catch handler *)
   | Limit of int * expression (* limit(n; expr) *)
+  | Skip of int * expression (* skip(n; expr) *)
   | Error_msg of expression option (* error or error(msg) *)
   | Halt (* halt *)
   | Halt_error of int option (* halt_error or halt_error(exit_code) *)
   | Isempty of expression (* isempty(expr) *)
-  | Foreach of expression * expression * expression * expression
+  | Foreach of expression * string * expression * expression * expression
     (* foreach EXPR as $VAR (INIT; UPDATE; EXTRACT) *)
   | Label of string * expression (* label(name; expr) *)
   | Del of expression (* del(path) *)
+  | Delpaths of expression (* delpaths(paths_array) *)
   | Assign of expression * expression (* .foo = value *)
   | Getpath of expression (* getpath(path) *)
   | Setpath of expression * expression (* setpath(path; value) *)
-  | Paths (* paths - all paths *)
+  | Pick of expression (* pick(.a, .b.c) *)
+  | Paths (* paths *)
   | Paths_filter of expression (* paths(filter) *)
   | Def of string * string list * expression (* def name(args): body *)
-  | Call of string * expression list (* function_name(args) *)
-  (* Conditionals *)
+  | Apply of string * expression list (* function_name(args) *)
   | Not (* not *)
-  (* builtin *)
   | Fun of builtin
 [@@deriving show { with_path = false }]

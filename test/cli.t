@@ -41,20 +41,12 @@ raw output for integer
 raw output for object (should still output JSON)
 
   $ query-json --no-color -r '.first.pages[0]' mock.json
-  {
-    "id": 1,
-    "title": "The Art of Flipping Coins",
-    "url": "http://example.com/398eb027/1"
-  }
+  { "id": 1, "title": "The Art of Flipping Coins", "url": "http://example.com/398eb027/1" }
 
 raw output for array (should still output JSON)
 
   $ query-json --no-color -r '.first.pages[0,1]' mock.json
-  {
-    "id": 1,
-    "title": "The Art of Flipping Coins",
-    "url": "http://example.com/398eb027/1"
-  }
+  { "id": 1, "title": "The Art of Flipping Coins", "url": "http://example.com/398eb027/1" }
   { "id": 2, "deleted": true }
 
 raw output with string containing escape sequences
