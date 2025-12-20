@@ -1007,6 +1007,250 @@ let decimal_number =
     (* TODO: test {|map([., . == 1]) | tojson == if have_decnum then "[[1,true],[1.000,true],[1.0,true],[1.00,true]]" else "[[1,true],[1,true],[1,true],[1,true]]" end|} {|[1, 1.000, 1.0, 100e-2]|} {|true|}; *)
     (* TODO: test {|. as $big | [$big, $big + 1] | map(. > 10000000000000000000000000000000) | . == if have_decnum then [true, false] else [false, false] end|} {|10000000000000000000000000000001|} {|true|}; *) ]
 
+let tobase =
+  [
+    test
+      {|def tobase($b; $digits):
+          def mod: . % $b;
+          def div: ((. - mod) / $b);
+          def getdigits: recurse(select(. >= $b) | div) | mod;
+          def getchar: (. as $i | $digits[$i]);
+          select(2 <= $b and $b <= 36)
+          | [getdigits] | map(getchar) | reverse | add;
+        42 | tobase(2; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
+      {|null|} {|"101010"|};
+    test
+      {|def tobase($b; $digits):
+          def mod: . % $b;
+          def div: ((. - mod) / $b);
+          def getdigits: recurse(select(. >= $b) | div) | mod;
+          def getchar: (. as $i | $digits[$i]);
+          select(2 <= $b and $b <= 36)
+          | [getdigits] | map(getchar) | reverse | add;
+        255 | tobase(16; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
+      {|null|} {|"FF"|};
+    test
+      {|def tobase($b; $digits):
+          def mod: . % $b;
+          def div: ((. - mod) / $b);
+          def getdigits: recurse(select(. >= $b) | div) | mod;
+          def getchar: (. as $i | $digits[$i]);
+          select(2 <= $b and $b <= 36)
+          | [getdigits] | map(getchar) | reverse | add;
+        64 | tobase(8; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
+      {|null|} {|"100"|};
+  ]
+
+let cumulative_sum =
+  [
+    test
+      {|def running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
+        [1,2,3,4,5] | running_total|}
+      {|null|} {|[ 1, 3, 6, 10, 15 ]|};
+    test {|reduce .[] as $item (0; . + $item.value)|}
+      {|[{"value": 10}, {"value": 20}, {"value": 30}]|} {|60|};
+    test {|[foreach .[] as $x (0; . + $x; .)]|} {|[1,2,3,4,5]|}
+      {|[ 1, 3, 6, 10, 15 ]|};
+  ]
+
+let flatten_nested =
+  [
+    test {|[.. | numbers]|} {|{"a": 1, "b": {"c": 2, "d": {"e": 3}}}|}
+      {|[ 1, 2, 3 ]|};
+    test {|[.. | strings]|}
+      {|{"name": "foo", "nested": {"title": "bar", "items": ["a", "b"]}}|}
+      {|[ "foo", "bar", "a", "b" ]|};
+    test {|flatten|} {|[[1, 2], [3, [4, 5]], 6]|} {|[ 1, 2, 3, 4, 5, 6 ]|};
+    test {|flatten(1)|} {|[[1, 2], [3, [4, 5]], 6]|}
+      {|[ 1, 2, 3, [ 4, 5 ], 6 ]|};
+  ]
+
+let walk_transforms =
+  [
+    test {|walk(if type == "number" then . * 2 else . end)|}
+      {|{"a": 1, "b": {"c": 2}}|} {|{ "a": 2, "b": { "c": 4 } }|};
+    test
+      {|walk(if type == "object" then with_entries(.key |= ascii_upcase) else . end)|}
+      {|{"foo": {"bar": 1}}|} {|{ "FOO": { "BAR": 1 } }|};
+    test
+      {|walk(if type == "object" then with_entries(select(.value != null)) else . end)|}
+      {|{"a": 1, "b": null, "c": {"d": null, "e": 2}}|}
+      {|{ "a": 1, "c": { "e": 2 } }|};
+  ]
+
+let group_aggregate =
+  [
+    test {|group_by(.category) | map({category: .[0].category, count: length})|}
+      {|[{"category": "A", "val": 1}, {"category": "B", "val": 2}, {"category": "A", "val": 3}]|}
+      {|[ { "category": "A", "count": 2 }, { "category": "B", "count": 1 } ]|};
+    test
+      {|group_by(.category) | map({category: .[0].category, total: (map(.val) | add)})|}
+      {|[{"category": "A", "val": 10}, {"category": "B", "val": 20}, {"category": "A", "val": 30}]|}
+      {|[ { "category": "A", "total": 40 }, { "category": "B", "total": 20 } ]|};
+    test
+      {|group_by(.region) | map({
+          region: .[0].region,
+          count: length,
+          total: (map(.sales) | add),
+          avg: ((map(.sales) | add) / length)
+        })|}
+      {|[{"region": "East", "sales": 100}, {"region": "West", "sales": 200}, {"region": "East", "sales": 150}]|}
+      {|[
+  {
+    "region": "East",
+    "count": 2,
+    "total": 250,
+    "avg": 125
+  },
+  {
+    "region": "West",
+    "count": 1,
+    "total": 200,
+    "avg": 200
+  }
+]|};
+  ]
+
+let recursive_functions =
+  [
+    test {|def fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 5 | fact|}
+      {|null|} {|120|};
+    test
+      {|def fib: if . <= 1 then . else ((. - 1) | fib) + ((. - 2) | fib) end; 10 | fib|}
+      {|null|} {|55|};
+    test
+      {|def depth: if type == "object" and has("children") then 1 + ([.children[] | depth] | max) else 0 end;
+        depth|}
+      {|{"name": "root", "children": [{"name": "a", "children": [{"name": "b"}]}, {"name": "c"}]}|}
+      {|2|};
+  ]
+
+let data_transforms =
+  [
+    test
+      {|group_by(.date) | map({date: .[0].date} + (map({(.product): .sales}) | add))|}
+      {|[{"date": "2024-01", "product": "A", "sales": 100}, {"date": "2024-01", "product": "B", "sales": 200}, {"date": "2024-02", "product": "A", "sales": 150}]|}
+      {|[ { "date": "2024-01", "A": 100, "B": 200 }, { "date": "2024-02", "A": 150 } ]|};
+    test {|[((.[0] | keys[]) as $k | {($k): [.[][$k]]})] | add|}
+      {|[{"a": 1, "b": 2}, {"a": 3, "b": 4}]|}
+      {|{ "a": [ 1, 3 ], "b": [ 2, 4 ] }|};
+    test
+      {|(.users[] as $user | .orders[] | select(.user_id == $user.id) | {user_name: $user.name, order_id: .id, amount: .amount})|}
+      {|{"users": [{"id": 1, "name": "Alice"}], "orders": [{"id": 101, "user_id": 1, "amount": 50}]}|}
+      {|{ "user_name": "Alice", "order_id": 101, "amount": 50 }|};
+  ]
+
+let string_processing =
+  [
+    test
+      {|split("\n") | map(split(",")) | .[1:][] | {name: .[0], age: (.[1] | tonumber)}|}
+      {|"name,age\nAlice,30\nBob,25"|}
+      "{ \"name\": \"Alice\", \"age\": 30 }\n{ \"name\": \"Bob\", \"age\": 25 }";
+    test
+      {|gsub("[^a-zA-Z ]"; "") | split(" ") | map(select(length > 0)) | group_by(.) | map({word: .[0], count: length}) | sort_by(.count) | reverse|}
+      {|"the cat and the dog"|}
+      {|[
+  {
+    "word": "the",
+    "count": 2
+  },
+  {
+    "word": "dog",
+    "count": 1
+  },
+  {
+    "word": "cat",
+    "count": 1
+  },
+  {
+    "word": "and",
+    "count": 1
+  }
+]|};
+  ]
+
+let path_operations =
+  [
+    test {|[paths(type != "object" and type != "array")]|}
+      {|{"a": 1, "b": {"c": 2}}|} {|[ [ "a" ], [ "b", "c" ] ]|};
+    test {|setpath(["a", "b"]; 99)|} {|{"a": {"b": 1, "c": 2}}|}
+      {|{ "a": { "b": 99, "c": 2 } }|};
+    test {|[getpath(["a"]), getpath(["b", "c"])]|} {|{"a": 1, "b": {"c": 2}}|}
+      {|[ 1, 2 ]|};
+  ]
+
+let complex_filtering =
+  [
+    test
+      {|.[] | select(.active == true and .age >= 18 and (.roles | contains(["admin"])))|}
+      {|[{"name": "Alice", "active": true, "age": 25, "roles": ["admin", "user"]}, {"name": "Bob", "active": true, "age": 17, "roles": ["admin"]}, {"name": "Carol", "active": false, "age": 30, "roles": ["admin"]}]|}
+      {|{ "name": "Alice", "active": true, "age": 25, "roles": [ "admin", "user" ] }|};
+    test {|.. | objects | select(has("target")) | .target|}
+      {|{"a": {"target": 1}, "b": {"c": {"target": 2}}}|} "1\n2";
+    test {|.[] | select(any(.tags[]; . == "important"))|}
+      {|[{"name": "a", "tags": ["foo", "bar"]}, {"name": "b", "tags": ["important", "urgent"]}]|}
+      {|{ "name": "b", "tags": [ "important", "urgent" ] }|};
+  ]
+
+let fizzbuzz =
+  [
+    test
+      {|def fizzbuzz:
+          if . % 15 == 0 then "FizzBuzz"
+          elif . % 3 == 0 then "Fizz"
+          elif . % 5 == 0 then "Buzz"
+          else . | tostring
+          end;
+        [range(1;16) | fizzbuzz]|}
+      {|null|}
+      {|[ "1", "2", "Fizz", "4", "Buzz", "Fizz", "7", "8", "Fizz", "Buzz", "11", "Fizz", "13", "14", "FizzBuzz" ]|};
+  ]
+
+let object_merge =
+  [
+    test {|reduce .[] as $obj ({}; . * $obj)|}
+      {|[{"a": 1}, {"b": 2}, {"c": 3}]|} {|{ "a": 1, "b": 2, "c": 3 }|};
+    test {|{"a": {"x": 1}} * {"a": {"y": 2}}|} {|null|}
+      {|{ "a": { "x": 1, "y": 2 } }|};
+    test {|reduce .[] as $obj ({}; . * $obj)|}
+      {|[{"a": 1, "b": 2}, {"b": 3, "c": 4}]|} {|{ "a": 1, "b": 3, "c": 4 }|};
+  ]
+
+let array_algorithms =
+  [
+    test
+      {|def chunk: if length <= 3 then [.] else [.[0:3]] + (.[3:] | chunk) end;
+        [1,2,3,4,5,6,7] | chunk|}
+      {|null|} {|[ [ 1, 2, 3 ], [ 4, 5, 6 ], [ 7 ] ]|};
+    test {|transpose | map({a: .[0], b: .[1]})|} {|[[1,2,3], ["a","b","c"]]|}
+      {|[ { "a": 1, "b": "a" }, { "a": 2, "b": "b" }, { "a": 3, "b": "c" } ]|};
+    test
+      {|def window: if length < 3 then empty else .[0:3], (.[1:] | window) end;
+        [[1,2,3,4,5] | window]|}
+      {|null|} {|[ [ 1, 2, 3 ], [ 2, 3, 4 ], [ 3, 4, 5 ] ]|};
+  ]
+
+let statistics =
+  [
+    test {|{count: length, sum: add, min: min, max: max, mean: (add / length)}|}
+      {|[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]|}
+      {|{ "count": 10, "sum": 55, "min": 1, "max": 10, "mean": 5.5 }|};
+    test
+      {|sort | ((length / 2 | floor) as $mid | (($mid - 1) as $prev | if length % 2 == 0 then (.[$prev] + .[$mid]) / 2 else .[$mid] end))|}
+      {|[3, 1, 4, 1, 5, 9, 2, 6]|} {|3.5|};
+  ]
+
+let index_operations =
+  [
+    test {|map({(.id | tostring): .}) | add|}
+      {|[{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]|}
+      {|{ "1": { "id": 1, "name": "a" }, "2": { "id": 2, "name": "b" } }|};
+    test
+      {|group_by(.category) | map({key: .[0].category, values: .}) | from_entries|}
+      {|[{"category": "x", "v": 1}, {"category": "y", "v": 2}, {"category": "x", "v": 3}]|}
+      {|{ "x": [ { "category": "x", "v": 1 }, { "category": "x", "v": 3 } ], "y": [ { "category": "y", "v": 2 } ] }|};
+  ]
+
 let tests =
   List.concat
     [
@@ -1113,4 +1357,20 @@ let tests =
       first_last_nth;
       generators_iterators;
       decimal_number;
+      (* programs *)
+      tobase;
+      cumulative_sum;
+      flatten_nested;
+      walk_transforms;
+      group_aggregate;
+      recursive_functions;
+      data_transforms;
+      string_processing;
+      path_operations;
+      complex_filtering;
+      fizzbuzz;
+      object_merge;
+      array_algorithms;
+      statistics;
+      index_operations;
     ]
