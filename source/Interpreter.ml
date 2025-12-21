@@ -96,13 +96,13 @@ let run fn ?and_then ?on_fail () =
               match and_then with
               | Some f ->
                   Some
-                    (fun (k : (a, _) continuation) ->
+                    (fun (k : (a, _) Effect.Deep.continuation) ->
                       f json;
                       Effect.Deep.continue k ())
               | None -> None)
           | Fail msg -> (
               match on_fail with
-              | Some f -> Some (fun (_ : (a, _) continuation) -> f msg)
+              | Some f -> Some (fun (_ : (a, _) Effect.Deep.continuation) -> f msg)
               | None -> None)
           | _ -> None);
     }
@@ -117,7 +117,7 @@ let run_while fn ~when_ =
           match eff with
           | Yield v ->
               Some
-                (fun (k : (a, _) continuation) ->
+                (fun (k : (a, _) Effect.Deep.continuation) ->
                   if when_ v then Effect.Deep.continue k () else ())
           | _ -> None);
     }
@@ -134,7 +134,7 @@ let run_and_collect_results fn =
           match eff with
           | Yield v ->
               Some
-                (fun (k : (a, _) continuation) ->
+                (fun (k : (a, _) Effect.Deep.continuation) ->
                   v :: Effect.Deep.continue k ())
           | _ -> None);
     }
@@ -3090,7 +3090,7 @@ let execute ~colorize ~verbose ?(env = []) expr json =
           | Fail msg -> Some (fun _ -> Error msg)
           | Break ->
               Some
-                (fun (_ : (a, _) continuation) ->
+                (fun (_ : (a, _) Effect.Deep.continuation) ->
                   Error (red "Error: " ^ "break used outside of loop context"))
           | Halt exit_code -> Some (fun _ -> exit exit_code)
           | _ -> None);

@@ -95,6 +95,15 @@ module Printer = struct
               check v;
               add 2)
             items
+      | `Tuple [] -> add 2
+      | `Tuple items ->
+          add 2;
+          List.iter
+            (fun x ->
+              check x;
+              add 2)
+            items
+      | `Variant _ -> add 2
     in
     match check json with () -> true | exception Not_compact -> false
 
@@ -389,6 +398,8 @@ let type_of (json : t) =
   | `Float _ | `Int _ | `Intlit _ -> "number"
   | `Null -> "null"
   | `String _ -> "string"
+  | `Tuple _ -> "tuple"
+  | `Variant _ -> "variant"
 
 let rec equal (a : t) (b : t) : bool =
   match (a, b) with
@@ -445,6 +456,7 @@ let rec compare (a : t) (b : t) : int =
   | `Intlit x, `Intlit y -> String.compare x y
   | `Intlit _, _ -> -1
   | _, `Intlit _ -> 1
+  | _, _ -> -1
 
 and compare_assoc xs ys =
   let keys_x = List.map fst xs |> List.sort String.compare in
