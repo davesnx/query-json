@@ -8,8 +8,7 @@ type t =
   | `String of string
   | `Stringlit of string
   | `Assoc of (string * t) list
-  | `List of t list
-  ]
+  | `List of t list ]
 
 exception Json_error of string
 
@@ -22,7 +21,8 @@ exception End_of_input
 type lexer_state = {
   buf : Buffer.t; (* Buffer used to accumulate substrings *)
   mutable lnum : int; (* Current line number (starting from 1) *)
-  mutable bol : int; (* Absolute position of the first character of the current line (starting from 0) *)
+  mutable bol : int;
+      (* Absolute position of the first character of the current line (starting from 0) *)
   mutable fname : string option; (* Name describing the input file *)
 }
 

@@ -102,7 +102,8 @@ let run fn ?and_then ?on_fail () =
               | None -> None)
           | Fail msg -> (
               match on_fail with
-              | Some f -> Some (fun (_ : (a, _) Effect.Deep.continuation) -> f msg)
+              | Some f ->
+                  Some (fun (_ : (a, _) Effect.Deep.continuation) -> f msg)
               | None -> None)
           | _ -> None);
     }
@@ -289,8 +290,8 @@ module Error = struct
       ^ single_quotes (bold op)
       ^ ": " ^ msg ^ "." ^ enter 1
       ^ gray
-          (Json.to_string_pretty actual_value ~colorize:ctx.colorize ~summarize:true
-             ~raw:false))
+          (Json.to_string_pretty actual_value ~colorize:ctx.colorize
+             ~summarize:true ~raw:false))
 
   let message ~ctx msg =
     let open Ansi.To_string (struct
@@ -310,8 +311,8 @@ module Error = struct
       ^ bold (prepend_article (Json.type_of json))
       ^ ":" ^ enter 1
       ^ gray
-          (Json.to_string_pretty json ~colorize:ctx.colorize ~summarize:true ~raw:false)
-      )
+          (Json.to_string_pretty json ~colorize:ctx.colorize ~summarize:true
+             ~raw:false))
 end
 
 module Operators = struct
@@ -849,7 +850,9 @@ let mktime_fn ~ctx json =
   | _ -> Error.make ~ctx "mktime" json
 
 let debug_fn json =
-  let str = Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json in
+  let str =
+    Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json
+  in
   Printf.eprintf "[\"DEBUG:\", %s]\n%!" str;
   yield json
 
@@ -924,7 +927,8 @@ let join ~ctx expr json =
         | `Float f -> Some (Printf.sprintf "%g" f)
         | other ->
             Some
-              (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:true other)
+              (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:true
+                 other)
       in
       `String (List.filter_map to_str l |> String.concat rcase)
   | _ -> Error.make ~ctx "join" json
@@ -983,7 +987,8 @@ let to_string ~ctx ~deprecated (json : Json.t) =
   (* for strings, return as-is (no extra quotes) *)
   | `String s -> `String s
   | _ ->
-      `String (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json)
+      `String
+        (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json)
 
 let min ~ctx (json : Json.t) =
   match json with
@@ -1331,8 +1336,7 @@ let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
       let rec slice_loop acc i = function
         | [] -> List.rev acc
         | x :: xs ->
-            if i >= start && i < finish
-            then slice_loop (x :: acc) (i + 1) xs
+            if i >= start && i < finish then slice_loop (x :: acc) (i + 1) xs
             else slice_loop acc (i + 1) xs
       in
       yield (`List (slice_loop [] 0 l))
@@ -2524,7 +2528,8 @@ and group_by ~ctx expr json =
           match keys with
           | [ key ] ->
               let key_str =
-                Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false key
+                Json.to_string_pretty ~colorize:false ~summarize:false
+                  ~raw:false key
               in
               let existing =
                 match Hashtbl.find_opt groups key_str with

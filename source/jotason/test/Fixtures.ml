@@ -32,15 +32,12 @@ let json_string_crlf = String.concat crlf snippets
 let unquoted_json = {|{foo: null}|}
 let unquoted_value : Json.t = `Assoc [ ("foo", `Null) ]
 let json_string_newline = json_string ^ "\n"
-
 let null_json = "null"
 let null_value : Json.t = `Null
-
 let true_json = "true"
 let true_value : Json.t = `Bool true
 let false_json = "false"
 let false_value : Json.t = `Bool false
-
 let zero_json = "0"
 let zero_value : Json.t = `Int 0
 let positive_int_json = "42"
@@ -51,7 +48,6 @@ let max_int_json = "9007199254740991"
 let max_int_value : Json.t = `Int 9007199254740991
 let big_int_json = "99999999999999999999999999999"
 let big_int_value : Json.t = `Intlit "99999999999999999999999999999"
-
 let float_json = "3.14159"
 let float_value : Json.t = `Float 3.14159
 let negative_float_json = "-2.718"
@@ -64,7 +60,6 @@ let exp_positive_json = "2.5E+3"
 let exp_positive_value : Json.t = `Float 2.5e3
 let zero_point_json = "0.0"
 let zero_point_value : Json.t = `Float 0.0
-
 let empty_string_json = {|""|}
 let empty_string_value : Json.t = `String ""
 let simple_string_json = {|"hello world"|}
@@ -97,47 +92,61 @@ let utf8_direct_json = {|"日本語"|}
 let utf8_direct_value : Json.t = `String "日本語"
 let utf8_emoji_json = "\"🎉\""
 let utf8_emoji_value : Json.t = `String "🎉"
-
 let empty_array_json = "[]"
 let empty_array_value : Json.t = `List []
 let single_array_json = "[1]"
-let single_array_value : Json.t = `List [`Int 1]
+let single_array_value : Json.t = `List [ `Int 1 ]
 let mixed_array_json = {|[1, "two", true, null, 3.14]|}
-let mixed_array_value : Json.t = `List [`Int 1; `String "two"; `Bool true; `Null; `Float 3.14]
-let nested_array_json = "[[1, 2], [3, 4]]"
-let nested_array_value : Json.t = `List [`List [`Int 1; `Int 2]; `List [`Int 3; `Int 4]]
-let deeply_nested_json = "[[[1]]]"
-let deeply_nested_value : Json.t = `List [`List [`List [`Int 1]]]
 
+let mixed_array_value : Json.t =
+  `List [ `Int 1; `String "two"; `Bool true; `Null; `Float 3.14 ]
+
+let nested_array_json = "[[1, 2], [3, 4]]"
+
+let nested_array_value : Json.t =
+  `List [ `List [ `Int 1; `Int 2 ]; `List [ `Int 3; `Int 4 ] ]
+
+let deeply_nested_json = "[[[1]]]"
+let deeply_nested_value : Json.t = `List [ `List [ `List [ `Int 1 ] ] ]
 let empty_object_json = "{}"
 let empty_object_value : Json.t = `Assoc []
 let single_object_json = {|{"key": "value"}|}
-let single_object_value : Json.t = `Assoc [("key", `String "value")]
+let single_object_value : Json.t = `Assoc [ ("key", `String "value") ]
 let multi_object_json = {|{"a": 1, "b": 2, "c": 3}|}
-let multi_object_value : Json.t = `Assoc [("a", `Int 1); ("b", `Int 2); ("c", `Int 3)]
+
+let multi_object_value : Json.t =
+  `Assoc [ ("a", `Int 1); ("b", `Int 2); ("c", `Int 3) ]
+
 let nested_object_json = {|{"outer": {"inner": 42}}|}
-let nested_object_value : Json.t = `Assoc [("outer", `Assoc [("inner", `Int 42)])]
+
+let nested_object_value : Json.t =
+  `Assoc [ ("outer", `Assoc [ ("inner", `Int 42) ]) ]
+
 let object_with_array_json = {|{"items": [1, 2, 3]}|}
-let object_with_array_value : Json.t = `Assoc [("items", `List [`Int 1; `Int 2; `Int 3])]
+
+let object_with_array_value : Json.t =
+  `Assoc [ ("items", `List [ `Int 1; `Int 2; `Int 3 ]) ]
+
 let array_of_objects_json = {|[{"id": 1}, {"id": 2}]|}
-let array_of_objects_value : Json.t = `List [`Assoc [("id", `Int 1)]; `Assoc [("id", `Int 2)]]
+
+let array_of_objects_value : Json.t =
+  `List [ `Assoc [ ("id", `Int 1) ]; `Assoc [ ("id", `Int 2) ] ]
 
 let key_with_space_json = {|{"key with space": 1}|}
-let key_with_space_value : Json.t = `Assoc [("key with space", `Int 1)]
+let key_with_space_value : Json.t = `Assoc [ ("key with space", `Int 1) ]
 let key_with_unicode_json = {|{"日本語キー": "value"}|}
-let key_with_unicode_value : Json.t = `Assoc [("日本語キー", `String "value")]
+
+let key_with_unicode_value : Json.t = `Assoc [ ("日本語キー", `String "value") ]
+
 let empty_key_json = {|{"": "empty key"}|}
-let empty_key_value : Json.t = `Assoc [("", `String "empty key")]
-
+let empty_key_value : Json.t = `Assoc [ ("", `String "empty key") ]
 let whitespace_json = "  {  \"a\"  :  1  ,  \"b\"  :  2  }  "
-let whitespace_value : Json.t = `Assoc [("a", `Int 1); ("b", `Int 2)]
+let whitespace_value : Json.t = `Assoc [ ("a", `Int 1); ("b", `Int 2) ]
 let newlines_json = "{\n  \"a\": 1,\n  \"b\": 2\n}"
-let newlines_value : Json.t = `Assoc [("a", `Int 1); ("b", `Int 2)]
+let newlines_value : Json.t = `Assoc [ ("a", `Int 1); ("b", `Int 2) ]
 let tabs_json = "{\t\"a\":\t1}"
-let tabs_value : Json.t = `Assoc [("a", `Int 1)]
-
+let tabs_value : Json.t = `Assoc [ ("a", `Int 1) ]
 let duplicate_keys_json = {|{"a": 1, "a": 2}|}
-let duplicate_keys_value : Json.t = `Assoc [("a", `Int 1); ("a", `Int 2)]
+let duplicate_keys_value : Json.t = `Assoc [ ("a", `Int 1); ("a", `Int 2) ]
 let leading_zero_float_json = "0.123"
 let leading_zero_float_value : Json.t = `Float 0.123
-

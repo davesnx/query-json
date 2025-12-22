@@ -44,6 +44,4 @@ let to_file_tests =
       fun () -> test ~suf:"" Fixtures.json_string );
   ]
 
-let single_json =
-  List.flatten [ to_file_tests; to_string_tests ]
-
+let single_json = List.flatten [ to_file_tests; to_string_tests ]

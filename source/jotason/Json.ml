@@ -35,12 +35,15 @@ let rec equal (a : t) (b : t) : bool =
   | `Null, `Null -> true
   | `List xs, `List ys ->
       List.length xs = List.length ys && List.for_all2 equal xs ys
-  | `Assoc xs, `Assoc ys ->
+  | `Assoc xs, `Assoc ys -> (
       let compare_keys (key, _) (key', _) = String.compare key key' in
       let xs = List.stable_sort compare_keys xs in
       let ys = List.stable_sort compare_keys ys in
-      (match List.for_all2 (fun (key, value) (key', value') ->
-        key = key' && equal value value') xs ys with
+      match
+        List.for_all2
+          (fun (key, value) (key', value') -> key = key' && equal value value')
+          xs ys
+      with
       | result -> result
       | exception Invalid_argument _ -> false)
   | _ -> false
@@ -124,11 +127,10 @@ let member name = function
   | `Assoc obj -> assoc name obj
   | js -> typerr ("Can't get member '" ^ name ^ "' of non-object type ") js
 
-let keys (json: t) =
-  to_assoc (json: t) |> List.map (fun (key, _) -> key)
+let keys (json : t) = to_assoc (json : t) |> List.map (fun (key, _) -> key)
 
-let values (json: t) =
-  to_assoc (json: t) |> List.map (fun (_, value) -> value)
+let values (json : t) =
+  to_assoc (json : t) |> List.map (fun (_, value) -> value)
 
 exception Undefined of string * t
 
@@ -142,7 +144,7 @@ let index i = function
   | js ->
       typerr ("Can't get index " ^ string_of_int i ^ " of non-array type ") js
 
-let combine (first : t) (second : t): t =
+let combine (first : t) (second : t) : t =
   match (first, second) with
   | `Assoc a, `Assoc b -> (`Assoc (a @ b) : t)
   | a, b -> raise (Invalid_argument "Expected two objects, check inputs")
