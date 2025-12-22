@@ -70,6 +70,6 @@ let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
       Interpreter.execute ~colorize ~verbose runtime json
       |> Result.map (fun results ->
           results
-          |> List.map (Json.to_string ~colorize ~summarize ~raw)
+          |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
           |> String.concat "\n")
   | Error err -> Error err

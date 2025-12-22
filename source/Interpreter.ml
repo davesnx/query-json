@@ -289,7 +289,7 @@ module Error = struct
       ^ single_quotes (bold op)
       ^ ": " ^ msg ^ "." ^ enter 1
       ^ gray
-          (Json.to_string actual_value ~colorize:ctx.colorize ~summarize:true
+          (Json.to_string_pretty actual_value ~colorize:ctx.colorize ~summarize:true
              ~raw:false))
 
   let message ~ctx msg =
@@ -310,7 +310,7 @@ module Error = struct
       ^ bold (prepend_article (Json.type_of json))
       ^ ":" ^ enter 1
       ^ gray
-          (Json.to_string json ~colorize:ctx.colorize ~summarize:true ~raw:false)
+          (Json.to_string_pretty json ~colorize:ctx.colorize ~summarize:true ~raw:false)
       )
 end
 
@@ -849,7 +849,7 @@ let mktime_fn ~ctx json =
   | _ -> Error.make ~ctx "mktime" json
 
 let debug_fn json =
-  let str = Json.to_string ~colorize:false ~summarize:false ~raw:false json in
+  let str = Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json in
   Printf.eprintf "[\"DEBUG:\", %s]\n%!" str;
   yield json
 
@@ -860,7 +860,7 @@ let stderr_fn json =
       yield json
   | _ ->
       let str =
-        Json.to_string ~colorize:false ~summarize:false ~raw:false json
+        Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json
       in
       Printf.eprintf "%s\n%!" str;
       yield json
@@ -924,7 +924,7 @@ let join ~ctx expr json =
         | `Float f -> Some (Printf.sprintf "%g" f)
         | other ->
             Some
-              (Json.to_string ~colorize:false ~summarize:false ~raw:true other)
+              (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:true other)
       in
       `String (List.filter_map to_str l |> String.concat rcase)
   | _ -> Error.make ~ctx "join" json
@@ -983,7 +983,7 @@ let to_string ~ctx ~deprecated (json : Json.t) =
   (* for strings, return as-is (no extra quotes) *)
   | `String s -> `String s
   | _ ->
-      `String (Json.to_string ~colorize:false ~summarize:false ~raw:false json)
+      `String (Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json)
 
 let min ~ctx (json : Json.t) =
   match json with
@@ -1009,12 +1009,12 @@ let flatten ~ctx depth (json : Json.t) =
       let rec flatten_n n lst =
         if n <= 0 then lst
         else
-          List.fold_left
-            (fun acc item ->
+          List.concat_map
+            (fun item ->
               match item with
-              | `List inner -> acc @ flatten_n (n - 1) inner
-              | other -> acc @ [ other ])
-            [] lst
+              | `List inner -> flatten_n (n - 1) inner
+              | other -> [ other ])
+            lst
       in
       `List (flatten_n depth l)
   | _ -> Error.make ~ctx "flatten" json
@@ -1328,14 +1328,14 @@ let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
   | `String s -> yield (`String (String.sub s start (finish - start)))
   | `List _l when finish < start -> yield (`List [])
   | `List l ->
-      let sliced =
-        List.fold_left
-          (fun (acc, i) x ->
-            if i >= start && i < finish then (x :: acc, i + 1) else (acc, i + 1))
-          ([], 0) l
-        |> fst |> List.rev
+      let rec slice_loop acc i = function
+        | [] -> List.rev acc
+        | x :: xs ->
+            if i >= start && i < finish
+            then slice_loop (x :: acc) (i + 1) xs
+            else slice_loop acc (i + 1) xs
       in
-      yield (`List sliced)
+      yield (`List (slice_loop [] 0 l))
   | _ ->
       Error.make ~ctx
         ("[" ^ Int.to_string start ^ ":" ^ Int.to_string finish ^ "]")
@@ -2524,7 +2524,7 @@ and group_by ~ctx expr json =
           match keys with
           | [ key ] ->
               let key_str =
-                Json.to_string ~colorize:false ~summarize:false ~raw:false key
+                Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false key
               in
               let existing =
                 match Hashtbl.find_opt groups key_str with

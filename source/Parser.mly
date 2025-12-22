@@ -107,7 +107,7 @@ sequence_expr:
   | left = sequence_expr; COMMA; right = sequence_expr;
     { Comma (left, right) }
 
-  | left = sequence_expr; PIPE; right = item_expr;
+  | left = sequence_expr; PIPE; right = sequence_expr;
     { Pipe (left, right) }
 
   | left = sequence_expr; UPDATE_ASSIGN; right = item_expr;
