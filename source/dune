@@ -3,8 +3,6 @@
  (wrapped false)
  (public_name query-json.core)
  (libraries menhirLib query-json.jotason sedlex str unix ansi)
- (ocamlopt_flags
-  (:standard -extension mode))
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation
