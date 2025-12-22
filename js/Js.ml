@@ -1,6 +1,8 @@
 let run query input =
   match Json.parse_string input with
-  | Ok json -> Core.run query json
+  | Ok json ->
+      Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
+        ~summarize:false query json
   | Error e -> Error e
 
 let () =
