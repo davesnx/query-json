@@ -205,7 +205,7 @@ let to_output ?buf ?(len = 4096) ?(suf = "") ?std out x =
   Buffer.clear ob
 
 let to_file ?len ?std ?(suf = "\n") file x =
-  let oc = open_out file in
+  let oc = open_out_bin file in
   try
     to_channel ?len ~suf ?std oc x;
     close_out oc

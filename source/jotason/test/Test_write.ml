@@ -23,7 +23,7 @@ let to_file_tests =
     let output_file = Filename.temp_file "test_jotason_to_file" ".json" in
     Json.to_file ?suf output_file Fixtures.json_value;
     let file_content =
-      let ic = open_in output_file in
+      let ic = open_in_bin output_file in
       let length = in_channel_length ic in
       let s = really_input_string ic length in
       close_in ic;
