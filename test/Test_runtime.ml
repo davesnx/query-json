@@ -398,6 +398,7 @@ let isempty =
     test {|isempty(.[])|} {|[]|} {|true|};
     test {|isempty(.[])|} {|[1]|} {|false|};
     test {|isempty(.[])|} {|[1,2,3]|} {|false|};
+    test {|isempty(range(3))|} {|null|} {|false|};
   ]
 
 let map =

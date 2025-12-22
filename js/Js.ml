@@ -3,7 +3,7 @@ let run query input =
   | Ok json ->
       Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
         ~summarize:false query json
-  | Error e -> Error e
+  | Error err -> Error err
 
 let () =
   Js_of_ocaml.Js.export "query-json"

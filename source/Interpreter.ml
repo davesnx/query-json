@@ -28,64 +28,6 @@ let user_error value =
 
 let yield_many items = List.iter yield items
 
-let rec get_path value components =
-  match components with
-  | [] -> value
-  | `String key :: rest -> (
-      match value with
-      | `Assoc fields -> (
-          match List.assoc_opt key fields with
-          | Some v -> get_path v rest
-          | None -> `Null)
-      | _ -> `Null)
-  | `Int idx :: rest -> (
-      match value with
-      | `List items ->
-          if idx >= 0 && idx < List.length items then
-            get_path (List.nth items idx) rest
-          else `Null
-      | _ -> `Null)
-  | _ :: rest -> get_path value rest
-
-let rec set_path value path_components new_value =
-  match path_components with
-  | [] -> new_value
-  | `String key :: rest -> (
-      match value with
-      | `Assoc fields ->
-          let updated =
-            List.map
-              (fun (k, v) ->
-                if k = key then (k, set_path v rest new_value) else (k, v))
-              fields
-          in
-          let exists = List.mem_assoc key fields in
-          if exists then `Assoc updated
-          else `Assoc (fields @ [ (key, set_path `Null rest new_value) ])
-      | `Null -> `Assoc [ (key, set_path `Null rest new_value) ]
-      | _ -> value)
-  | ((`Int _ | `Float _) as num) :: rest -> (
-      let idx =
-        match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
-      in
-      match value with
-      | `List items ->
-          let rec update_list i = function
-            | [] -> if i = idx then [ set_path `Null rest new_value ] else []
-            | x :: xs ->
-                if i = idx then set_path x rest new_value :: xs
-                else x :: update_list (i + 1) xs
-          in
-          `List (update_list 0 items)
-      | `Null ->
-          let arr =
-            List.init (idx + 1) (fun i ->
-                if i = idx then set_path `Null rest new_value else `Null)
-          in
-          `List arr
-      | _ -> value)
-  | _ :: rest -> set_path value rest new_value
-
 let run fn ?and_then ?on_fail () =
   let handler : 'a Effect.Deep.effect_handler =
     {
@@ -611,6 +553,64 @@ module Search = struct
     search 0 [] haystack
 end
 
+let rec get_path value components =
+  match components with
+  | [] -> value
+  | `String key :: rest -> (
+      match value with
+      | `Assoc fields -> (
+          match List.assoc_opt key fields with
+          | Some v -> get_path v rest
+          | None -> `Null)
+      | _ -> `Null)
+  | `Int idx :: rest -> (
+      match value with
+      | `List items ->
+          if idx >= 0 && idx < List.length items then
+            get_path (List.nth items idx) rest
+          else `Null
+      | _ -> `Null)
+  | _ :: rest -> get_path value rest
+
+let rec set_path value path_components new_value =
+  match path_components with
+  | [] -> new_value
+  | `String key :: rest -> (
+      match value with
+      | `Assoc fields ->
+          let updated =
+            List.map
+              (fun (k, v) ->
+                if k = key then (k, set_path v rest new_value) else (k, v))
+              fields
+          in
+          let exists = List.mem_assoc key fields in
+          if exists then `Assoc updated
+          else `Assoc (fields @ [ (key, set_path `Null rest new_value) ])
+      | `Null -> `Assoc [ (key, set_path `Null rest new_value) ]
+      | _ -> value)
+  | ((`Int _ | `Float _) as num) :: rest -> (
+      let idx =
+        match num with `Int i -> i | `Float f -> Float.to_int f | _ -> 0
+      in
+      match value with
+      | `List items ->
+          let rec update_list i = function
+            | [] -> if i = idx then [ set_path `Null rest new_value ] else []
+            | x :: xs ->
+                if i = idx then set_path x rest new_value :: xs
+                else x :: update_list (i + 1) xs
+          in
+          `List (update_list 0 items)
+      | `Null ->
+          let arr =
+            List.init (idx + 1) (fun i ->
+                if i = idx then set_path `Null rest new_value else `Null)
+          in
+          `List arr
+      | _ -> value)
+  | _ :: rest -> set_path value rest new_value
+
 let keys ~ctx (json : Json.t) =
   match json with
   | `Assoc _list ->
@@ -794,7 +794,7 @@ let tm_to_array (tm : Unix.tm) (is_dst : bool) : Json.t =
       `Int (if is_dst then 1 else 0);
     ]
 
-let localtime_fn ~ctx json =
+let localtime ~ctx json =
   match json with
   | `Float f ->
       let tm = Unix.localtime f in
@@ -804,7 +804,7 @@ let localtime_fn ~ctx json =
       tm_to_array tm tm.tm_isdst
   | _ -> Error.make ~ctx "localtime" json
 
-let gmtime_fn ~ctx json =
+let gmtime ~ctx json =
   match json with
   | `Float f ->
       let tm = Unix.gmtime f in
@@ -814,7 +814,7 @@ let gmtime_fn ~ctx json =
       tm_to_array tm false
   | _ -> Error.make ~ctx "gmtime" json
 
-let mktime_fn ~ctx json =
+let mktime ~ctx json =
   match json with
   | `List
       [
@@ -849,14 +849,14 @@ let mktime_fn ~ctx json =
          wday, yday, isdst]"
   | _ -> Error.make ~ctx "mktime" json
 
-let debug_fn json =
+let debug json =
   let str =
     Json.to_string_pretty ~colorize:false ~summarize:false ~raw:false json
   in
   Printf.eprintf "[\"DEBUG:\", %s]\n%!" str;
   yield json
 
-let stderr_fn json =
+let stderr json =
   match json with
   | `String s ->
       Printf.eprintf "%s\n%!" s;
@@ -1354,11 +1354,11 @@ let rec interp ~ctx expression json : unit =
   | Leaf_paths -> leaf_paths json
   | Builtins -> yield (builtins_list ())
   | Formats -> yield (formats_list ())
-  | Localtime -> yield (localtime_fn ~ctx json)
-  | Gmtime -> yield (gmtime_fn ~ctx json)
-  | Mktime -> yield (mktime_fn ~ctx json)
-  | Debug -> debug_fn json
-  | Stderr -> stderr_fn json
+  | Localtime -> yield (localtime ~ctx json)
+  | Gmtime -> yield (gmtime ~ctx json)
+  | Mktime -> yield (mktime ~ctx json)
+  | Debug -> debug json
+  | Stderr -> stderr json
   | Key key -> yield (member ~ctx key json)
   | Optional expr ->
       run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> ()) ()
@@ -1439,7 +1439,7 @@ let rec interp ~ctx expression json : unit =
       | _ -> Error.make ~ctx "reverse" json)
   | Split expr -> yield (split ~ctx expr json)
   | Join expr -> yield (join ~ctx expr json)
-  | Fun builtin -> builtin_fns ~ctx builtin json
+  | Fun builtin -> builtins ~ctx builtin json
   | If_then_else (cond, if_branch, else_branch) ->
       if_then_else ~ctx cond if_branch else_branch json
   | Sort_by expr -> sort_by ~ctx expr json
@@ -1831,7 +1831,7 @@ and objects ~ctx list json =
   let all_combinations = cartesian_product field_options_list in
   List.iter (fun pairs -> yield (`Assoc pairs)) all_combinations
 
-and builtin_fns ~ctx builtin json =
+and builtins ~ctx builtin json =
   match builtin with
   | Absolute -> (
       match json with
