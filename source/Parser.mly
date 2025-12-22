@@ -57,6 +57,9 @@
 %token DEF
 %token EOF
 
+/* DEF_PREC is a dummy precedence for function definitions - must be lower than PIPE and others so that operators are shifted into the 'rest' expression: def f: body; rest | x
+   should parse as: def f: body; (rest | x) */
+%nonassoc DEF_PREC
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE UPDATE_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN ALT_ASSIGN ASSIGN ALTERNATIVE /* lowest precedence */
 %left COMMA
@@ -138,11 +141,11 @@ sequence_expr:
     { Try (e, Some handler) }
 
   (* Nested function definitions within expressions *)
-  | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+  | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
     { Pipe (Def (name, [], body), rest) }
-  | DEF; name = IDENTIFIER; OPEN_PARENT; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+  | DEF; name = IDENTIFIER; OPEN_PARENT; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
     { Pipe (Def (name, params, body), rest) }
-  | DEF; name = FUNCTION; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr
+  | DEF; name = FUNCTION; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
     { Pipe (Def (name, params, body), rest) }
 
   | e = item_expr

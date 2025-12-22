@@ -2,12 +2,12 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (libraries menhirLib query-json.jotason sedlex str unix ansi)
+ (libraries menhirLib json sedlex str unix ansi)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation
   (backend bisect_ppx)))
 
 (menhir
- (flags --external-tokens Lexer --explain --dump)
+ (flags --strict --external-tokens Lexer --explain --dump)
  (modules Parser))

@@ -1,10 +1,6 @@
 (ocamllex Read)
 
 (library
- (name Json)
+ (name json)
  (public_name query-json.jotason)
- (libraries str ansi)
- (ocamlopt_flags
-  (:standard -w -27-32-34))
- (ocamlc_flags
-  (:standard -w -27-32-34)))
+ (libraries ansi str))

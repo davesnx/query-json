@@ -147,4 +147,4 @@ let index i = function
 let combine (first : t) (second : t) : t =
   match (first, second) with
   | `Assoc a, `Assoc b -> (`Assoc (a @ b) : t)
-  | a, b -> raise (Invalid_argument "Expected two objects, check inputs")
+  | _, _ -> raise (Invalid_argument "Expected two objects, check inputs")

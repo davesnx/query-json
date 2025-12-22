@@ -1,6 +1,8 @@
 (* JSON lexer *)
 
 {
+  [@@@warning "-32-34"]
+
   include Common
 
   (* Override Lexing.engine to avoid creating position records on each match *)
