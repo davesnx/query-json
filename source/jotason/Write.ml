@@ -1,7 +1,4 @@
-include T
-
-exception Json_error of string
-let json_error s = raise (Json_error s)
+include Common
 
 let hex n =
   Char.chr (
@@ -50,11 +47,6 @@ let write_string ob s =
   Buffer.add_char ob '"';
   write_string_body ob s;
   Buffer.add_char ob '"'
-
-(* let json_string_of_string s =
-  let ob = Buffer.create 10 in
-  write_string ob s;
-  Buffer.contents ob *)
 
 let write_null ob () =
   Buffer.add_string ob "null"
@@ -109,46 +101,6 @@ let write_float ob x =
       if float_needs_period s then
         Buffer.add_string ob ".0"
 
-(* let write_normal_float_prec significant_figures ob x =
-  let sprintf = Printf.sprintf in
-  let s =
-    match significant_figures with
-        1 -> sprintf "%.1g" x
-      | 2 -> sprintf "%.2g" x
-      | 3 -> sprintf "%.3g" x
-      | 4 -> sprintf "%.4g" x
-      | 5 -> sprintf "%.5g" x
-      | 6 -> sprintf "%.6g" x
-      | 7 -> sprintf "%.7g" x
-      | 8 -> sprintf "%.8g" x
-      | 9 -> sprintf "%.9g" x
-      | 10 -> sprintf "%.10g" x
-      | 11 -> sprintf "%.11g" x
-      | 12 -> sprintf "%.12g" x
-      | 13 -> sprintf "%.13g" x
-      | 14 -> sprintf "%.14g" x
-      | 15 -> sprintf "%.15g" x
-      | 16 -> sprintf "%.16g" x
-      | _ -> sprintf "%.17g" x
-  in
-  Buffer.add_string ob s;
-  if float_needs_period s then
-    Buffer.add_string ob ".0" *)
-
-(* let write_float_prec significant_figures ob x =
-  match classify_float x with
-    FP_nan ->
-      Buffer.add_string ob "NaN"
-  | FP_infinite ->
-      Buffer.add_string ob (if x > 0. then "Infinity" else "-Infinity")
-  | _ ->
-      write_normal_float_prec significant_figures ob x *)
-
-(* let json_string_of_float x =
-  let ob = Buffer.create 20 in
-  write_float ob x;
-  Buffer.contents ob *)
-
 let write_std_float ob x =
   match classify_float x with
     FP_nan ->
@@ -168,28 +120,6 @@ let write_std_float ob x =
       Buffer.add_string ob s;
       if float_needs_period s then
         Buffer.add_string ob ".0"
-
-(* let write_std_float_prec significant_figures ob x =
-  match classify_float x with
-    FP_nan ->
-      json_error "NaN value not allowed in standard JSON"
-  | FP_infinite ->
-      json_error
-        (if x > 0. then
-           "Infinity value not allowed in standard JSON"
-         else
-           "-Infinity value not allowed in standard JSON")
-  | _ ->
-      write_normal_float_prec significant_figures ob x *)
-
-(* let std_json_string_of_float x =
-  let ob = Buffer.create 20 in
-  write_std_float ob x;
-  Buffer.contents ob *)
-
-(* let write_intlit = Buffer.add_string *)
-(* let write_floatlit = Buffer.add_string *)
-(* let write_stringlit = Buffer.add_string *)
 
 let rec iter2_aux f_elt f_sep x = function
     [] -> ()

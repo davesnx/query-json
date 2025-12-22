@@ -35,7 +35,6 @@
   dune-build-info
   (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))
-  (yojson (>= "3.0.0"))
   sedlex
   ppx_deriving
   (alcotest :with-test)

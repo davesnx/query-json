@@ -1,4 +1,4 @@
-(ocamllex Read Lexer_utils)
+(ocamllex Read)
 
 (library
  (name Json)

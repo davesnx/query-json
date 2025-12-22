@@ -1,6 +1,6 @@
 (test
  (name Test)
- (libraries alcotest query-json.core yojson ppx_deriving.runtime))
+ (libraries alcotest query-json.core ppx_deriving.runtime))
 
 (cram
  (deps %{bin:query-json} ./mock.json))

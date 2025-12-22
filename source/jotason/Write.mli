@@ -1,7 +1,4 @@
-include module type of T
-
-exception Json_error of string
-val json_error : string -> 'a
+include module type of Common
 
 val to_buffer : ?suf:string -> ?std:bool -> Buffer.t -> t -> unit
 val to_string : ?buf:Buffer.t -> ?len:int -> ?suf:string -> ?std:bool -> t -> string

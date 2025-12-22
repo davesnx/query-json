@@ -1,4 +1,4 @@
-include T
+include Common
 include Read
 include Write
 
@@ -7,12 +7,12 @@ let to_string_pretty json ~colorize ~summarize ~raw =
   | true, `String s -> s
   | _ -> Write.Pretty.to_string_colored ~colorize ~summarize json
 
-let print_pretty (json : T.t) ~colorize ~summarize ~raw =
+let print_pretty (json : t) ~colorize ~summarize ~raw =
   match (raw, json) with
   | true, `String s -> print_endline s
   | _ -> Write.Pretty.print_colored ~colorize ~summarize json
 
-let type_of (json : T.t) =
+let type_of (json : t) =
   match json with
   | `List _ -> "array"
   | `Assoc _ -> "object"
@@ -21,7 +21,7 @@ let type_of (json : T.t) =
   | `Null -> "null"
   | `String _ | `Stringlit _ -> "string"
 
-let rec equal (a : T.t) (b : T.t) : bool =
+let rec equal (a : t) (b : t) : bool =
   match (a, b) with
   | `Int x, `Int y -> x = y
   | `Float x, `Float y -> x = y
@@ -54,7 +54,7 @@ let rec compare_list_with cmp xs ys =
       let c = cmp x y in
       if c <> 0 then c else compare_list_with cmp xs' ys'
 
-let rec compare (a : T.t) (b : T.t) : int =
+let rec compare (a : t) (b : t) : int =
   match (a, b) with
   | `Null, `Null -> 0
   | `Null, _ -> -1
@@ -94,7 +94,7 @@ and compare_assoc xs ys =
     in
     compare_values keys_x
 
-let rec contains (needle : T.t) (haystack : T.t) : bool =
+let rec contains (needle : t) (haystack : t) : bool =
   match (needle, haystack) with
   | `String n, `String h -> (
       try
@@ -124,11 +124,11 @@ let member name = function
   | `Assoc obj -> assoc name obj
   | js -> typerr ("Can't get member '" ^ name ^ "' of non-object type ") js
 
-let keys o =
-  to_assoc o |> List.map (fun (key, _) -> key)
+let keys (json: t) =
+  to_assoc (json: t) |> List.map (fun (key, _) -> key)
 
-let values o =
-  to_assoc o |> List.map (fun (_, value) -> value)
+let values (json: t) =
+  to_assoc (json: t) |> List.map (fun (_, value) -> value)
 
 exception Undefined of string * t
 
@@ -141,3 +141,8 @@ let index i = function
       else List.nth l wrapped_index
   | js ->
       typerr ("Can't get index " ^ string_of_int i ^ " of non-array type ") js
+
+let combine (first : t) (second : t): t =
+  match (first, second) with
+  | `Assoc a, `Assoc b -> (`Assoc (a @ b) : t)
+  | a, b -> raise (Invalid_argument "Expected two objects, check inputs")

@@ -1,6 +1,4 @@
-include module type of T
-
-exception Json_error of string
+include module type of Common
 
 val from_string : ?buf:Buffer.t -> ?fname:string -> ?lnum:int -> string -> t
 val from_channel : ?buf:Buffer.t -> ?fname:string -> ?lnum:int -> in_channel -> t
