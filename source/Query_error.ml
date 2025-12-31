@@ -30,7 +30,7 @@ let with_context ctx err = { err with contexts = ctx :: err.contexts }
 let with_suggestion s err = { err with suggestion = Some s }
 
 let format_location ~colorize loc =
-  let open Ansi.To_string (struct
+  let open Ansi_wrapper.To_string (struct
     let colorize = colorize
   end) in
   let { input; start_pos; end_pos } = loc in
@@ -41,7 +41,7 @@ let format_location ~colorize loc =
     (red pointer)
 
 let format_context ~colorize ctx =
-  let open Ansi.To_string (struct
+  let open Ansi_wrapper.To_string (struct
     let colorize = colorize
   end) in
   match ctx with
@@ -59,7 +59,7 @@ let format_context ~colorize ctx =
   | Note s -> Printf.sprintf "  %s %s" (gray "note:") s
 
 let format ~colorize err =
-  let open Ansi.To_string (struct
+  let open Ansi_wrapper.To_string (struct
     let colorize = colorize
   end) in
   let parts = ref [] in

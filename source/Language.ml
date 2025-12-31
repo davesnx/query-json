@@ -1366,6 +1366,18 @@ let all_function_names () =
   let aliases = List.concat_map (fun (f : function_info) -> f.aliases) funcs in
   List.sort_uniq Stdlib.String.compare (names @ aliases)
 
+let suggest_function_name (name : string) : string list =
+  let all_names = all_function_names () in
+  let name_lower = String.lowercase_ascii name in
+  List.filter
+    (fun n ->
+      let n_lower = String.lowercase_ascii n in
+      String.length n_lower >= String.length name_lower
+      && (String.sub n_lower 0 (String.length name_lower) = name_lower
+         || String.sub n_lower 0 (min 3 (String.length n_lower))
+            = String.sub name_lower 0 (min 3 (String.length name_lower))))
+    all_names
+
 let type_name_of_applicable = function
   | String -> "string"
   | Array -> "array"

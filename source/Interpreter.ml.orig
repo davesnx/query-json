@@ -43,29 +43,6 @@ let fail_with ~kind ?value ?suggestion message =
 
 let fail msg = fail_with ~kind:"error" msg
 
-let fail_key_not_found ~key ~value =
-  fail_with ~kind:"key_not_found" ~value
-    ~suggestion:("Use ." ^ key ^ "? for optional access")
-    ("Key '" ^ key ^ "' not found in object")
-
-let fail_null_access ~key ~value =
-  fail_with ~kind:"null_access" ~value
-    ("Cannot access key '" ^ key ^ "' on null")
-
-let fail_type_mismatch ~value message =
-  fail_with ~kind:"type_mismatch" ~value message
-
-let fail_index_out_of_bounds ~index ~length ~value =
-  fail_with ~kind:"index_out_of_bounds" ~value
-    ~suggestion:("Use .[" ^ Int.to_string index ^ "]? for optional access")
-    ("Index " ^ Int.to_string index ^ " out of bounds (array has "
-   ^ Int.to_string length ^ " elements)")
-
-let fail_empty_array op =
-  fail_with ~kind:"empty_array"
-    ~suggestion:("Use " ^ op ^ "? for optional access")
-    (op ^ ": empty array")
-
 let user_error value =
   Effect.perform (User_error value);
   assert false (* unreachable - handler never continues *)
@@ -150,10 +127,10 @@ let rec substitute_params (params : string list) (args : expression list)
   | Unique | Reverse | Explode | Implode | Any | All | Recurse | Recurse_down
   | To_entries | From_entries | Nan | Is_nan | Not | Ascii_upcase
   | Ascii_downcase | Trim | Ltrim | Rtrim | Head | Tail | Length
-  | Utf8bytelength | Min | Max | To_number | To_string | Env | Break | Paths
-  | Halt | Iterator | Combinations | Fun _ | Literal _ | Variable _ | Key _
-  | Test _ | Match _ | Scan _ | Capture _ | Env_var _ | Compact | Is_empty
-  | Is_blank | Descend | Dive ->
+  | Utf8bytelength | Min | Max | To_number | To_string
+  | Env | Break | Paths | Halt | Iterator | Combinations | Fun _ | Literal _
+  | Variable _ | Key _ | Test _ | Match _ | Scan _ | Capture _ | Env_var _
+  | Compact | Is_empty | Is_blank | Descend | Dive ->
       expr
   | Index indices -> Index indices
   | Dynamic_access e -> Dynamic_access (sub e)
@@ -242,7 +219,7 @@ let rec substitute_params (params : string list) (args : expression list)
   | Getpath e -> Getpath (sub e)
   | Setpath (e1, e2) -> Setpath (sub e1, sub e2)
   | Paths_filter e -> Paths_filter (sub e)
-  | Fn (name, params', body) -> Fn (name, params', sub body)
+  | Def (name, params', body) -> Def (name, params', sub body)
   | Apply (name, call_args) -> Apply (name, List.map sub call_args)
   | Pluck e -> Pluck (sub e)
   | Partition e -> Partition (sub e)
@@ -268,42 +245,34 @@ module Error = struct
 
   let empty_list ~ctx op =
     let open Formatting in
-    let open Ansi_wrapper.To_string (struct
-      let colorize = ctx.colorize
-    end) in
-    fail ("Trying to " ^ single_quotes (bold op) ^ " on an empty array.")
+    let t = Term_style.make ~colorize:ctx.colorize in
+    fail ("Trying to " ^ single_quotes (t.bold op) ^ " on an empty array.")
 
   let structure ~ctx op msg actual_value =
     let open Formatting in
-    let open Ansi_wrapper.To_string (struct
-      let colorize = ctx.colorize
-    end) in
+    let t = Term_style.make ~colorize:ctx.colorize in
     fail
       ("Invalid structure for "
-      ^ single_quotes (bold op)
+      ^ single_quotes (t.bold op)
       ^ ": " ^ msg ^ "." ^ enter 1
-      ^ gray
+      ^ t.gray
           (Json.to_string_pretty actual_value ~colorize:ctx.colorize
              ~summarize:true ~raw:false))
 
   let message ~ctx msg =
-    let open Ansi_wrapper.To_string (struct
-      let colorize = ctx.colorize
-    end) in
-    fail (red "Error: " ^ msg)
+    let t = Term_style.make ~colorize:ctx.colorize in
+    fail (t.red "Error: " ^ msg)
 
   let make ~ctx (name : string) (json : Json.t) =
     let open Formatting in
-    let open Ansi_wrapper.To_string (struct
-      let colorize = ctx.colorize
-    end) in
+    let t = Term_style.make ~colorize:ctx.colorize in
     fail
       ("Trying to "
-      ^ single_quotes (bold name)
+      ^ single_quotes (t.bold name)
       ^ " on "
-      ^ bold (prepend_article (Json.type_of json))
+      ^ t.bold (prepend_article (Json.type_of json))
       ^ ":" ^ enter 1
-      ^ gray
+      ^ t.gray
           (Json.to_string_pretty json ~colorize:ctx.colorize ~summarize:true
              ~raw:false))
 end
@@ -1216,10 +1185,15 @@ let member ~ctx:_ (key : string) (json : Json.t) =
   | `Assoc assoc -> (
       match List.assoc_opt key assoc with
       | Some value -> value
-      | None -> fail_key_not_found ~key ~value:json)
-  | `Null -> fail_null_access ~key ~value:json
+      | None ->
+          fail_with ~kind:"key_not_found" ~value:json
+            ~suggestion:("Use ." ^ key ^ "? for optional access")
+            ("Key '" ^ key ^ "' not found in object"))
+  | `Null ->
+      fail_with ~kind:"null_access" ~value:json
+        ("Cannot access key '" ^ key ^ "' on null")
   | _ ->
-      fail_type_mismatch ~value:json
+      fail_with ~kind:"type_mismatch" ~value:json
         ("Cannot index " ^ Json.type_of json ^ " with string \"" ^ key ^ "\"")
 
 let iterator ~ctx (json : Json.t) =
@@ -1239,7 +1213,11 @@ let rec index ~ctx (indices : int list) (json : Json.t) =
           let actual_index = if value < 0 then len + value else value in
           if actual_index >= 0 && actual_index < len then
             yield (List.nth list actual_index)
-          else fail_index_out_of_bounds ~index:value ~length:len ~value:json
+          else
+            fail
+              ("Index " ^ Int.to_string value ^ " out of bounds (array has "
+             ^ Int.to_string len ^ " elements). Hint: Use .["
+             ^ Int.to_string value ^ "]? for optional access")
       | _ -> Error.make ~ctx ("[" ^ Int.to_string value ^ "]") json)
   | multiple -> List.iter (fun idx -> index ~ctx [ idx ] json) multiple
 
@@ -1452,8 +1430,8 @@ let rec interp ~ctx expression json : unit =
   | Combinations_n expr -> combinations_n ~ctx expr json
   | Repeat expr -> repeat_expr ~ctx expr json
   | Add_expr expr -> add_expr ~ctx expr json
-  | Fn (_, _, _) ->
-      (* Fn on its own (not in a Pipe). IT shouldn't happen in well-formed programs *)
+  | Def (_, _, _) ->
+      (* Def on its own (not in a Pipe). IT shouldn't happen in well-formed programs *)
       yield json
   | Apply (fname, args) -> call_function ~ctx fname args json
   | Reduce (expr, var_name, init_expr, update_expr) ->
@@ -1600,7 +1578,7 @@ and select ~ctx conditional json =
 
 and pipe ~ctx left right json =
   match left with
-  | Fn (name, params, body) ->
+  | Def (name, params, body) ->
       let func = { params; body } in
       let new_ctx = { ctx with fns = (name, func) :: ctx.fns } in
       interp ~ctx:new_ctx right json
@@ -2420,7 +2398,7 @@ and binary_search ~ctx expr json =
 
 and first_of_array ~ctx json =
   match json with
-  | `List [] -> fail_empty_array "first"
+  | `List [] -> fail "first: empty array. Hint: Use first? for optional access"
   | `List (hd :: _) -> yield hd
   | _ -> Error.make ~ctx "first" json
 
@@ -2433,7 +2411,7 @@ and first_of_expr ~ctx expr json =
 
 and last_of_array ~ctx json =
   match json with
-  | `List [] -> fail_empty_array "last"
+  | `List [] -> fail "last: empty array. Hint: Use last? for optional access"
   | `List l -> yield (List.hd (List.rev l))
   | _ -> Error.make ~ctx "last" json
 
@@ -3239,9 +3217,7 @@ and paths_to ~ctx cond_expr json =
 
 let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
+  let t = Term_style.make ~colorize in
   let handler : ('a, ('a, string) result) Effect.Deep.handler =
     {
       retc = (fun results -> Ok results);
@@ -3253,7 +3229,7 @@ let execute ~colorize ~verbose ?(env = []) expr json =
           | Break ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  Error (red "Error: " ^ "break used outside of loop context"))
+                  Error (t.red "Error: " ^ "break used outside of loop context"))
           | Halt exit_code -> Some (fun _ -> exit exit_code)
           | _ -> None);
     }

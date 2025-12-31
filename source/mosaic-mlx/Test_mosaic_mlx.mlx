@@ -1,0 +1,198 @@
+open Mosaic_mlx
+
+type msg = unit
+
+let _test_null : msg Vnode.t = null
+let _test_raw (r : Mosaic_ui.Renderable.t) : msg Vnode.t = raw r
+
+let _test_fragment () : msg Vnode.t =
+  <fragment><text>"Item 1"</text> <text>"Item 2"</text></fragment>
+
+let _test_box () : msg Vnode.t =
+  <box flex_direction=Row gap=(gap 2) padding=(padding 1) border=true>
+    <text>"Hello"</text> <text>"World"</text>
+  </box>
+
+let _test_box_full () : msg Vnode.t =
+  <box
+    id="test-box"
+    key="box-key"
+    visible=true
+    z_index=1
+    display=Flex
+    position=Relative
+    size={ width = pct 100; height = px 50 }
+    min_size={ width = px 10; height = auto }
+    max_size={ width = auto; height = px 100 }
+    margin=(margin 2)
+    padding=(padding 1)
+    gap=(gap 1)
+    align_items=Center
+    justify_content=Space_between
+    flex_direction=Row
+    flex_wrap=Wrap
+    flex_grow=1.0
+    flex_shrink=0.0
+    background=(Ansi.Color.of_rgb 30 30 40)
+    border=true
+    border_color=(Ansi.Color.of_rgb 60 60 80)
+    title="Test Box"
+    title_alignment=`Left>
+    <text>"Content"</text>
+  </box>
+
+let _test_scroll_box () : msg Vnode.t =
+  <scroll_box
+    scroll_y=true
+    scroll_x=false
+    flex_grow=1.0
+    size={ width = pct 100; height = auto }
+    sticky_scroll=true>
+    <text>"Scrollable content line 1"</text>
+    <text>"Scrollable content line 2"</text>
+    <text>"Scrollable content line 3"</text>
+  </scroll_box>
+
+let _test_text () : msg Vnode.t =
+  let style =
+    Ansi.Style.make ~fg:(Ansi.Color.of_rgb 200 200 200) ~bold:true ()
+  in
+  <text style wrap_mode=`Word>"Hello, styled text!"</text>
+
+let _test_text_children () : msg Vnode.t = <text>"Hello " "World"</text>
+
+let _test_code () : msg Vnode.t =
+  <code filetype="json">{|{"key": "value", "number": 42}|}</code>
+
+let _test_markdown () : msg Vnode.t =
+  <markdown>"# Heading\n\nSome **bold** and _italic_ text."</markdown>
+
+let _test_canvas () : msg Vnode.t =
+  let draw _grid ~width:_ ~height:_ = () in
+  <canvas size={ width = px 40; height = px 10 } draw />
+
+let _test_table () : msg Vnode.t =
+  let columns =
+    [
+      Mosaic_ui.Table.column
+        ~header:(Mosaic_ui.Table.cell "Name")
+        ~justify:`Left "name";
+      Mosaic_ui.Table.column
+        ~header:(Mosaic_ui.Table.cell "Age")
+        ~justify:`Right "age";
+    ]
+  in
+  let rows =
+    [
+      Mosaic_ui.Table.row
+        [ Mosaic_ui.Table.cell "Alice"; Mosaic_ui.Table.cell "30" ];
+      Mosaic_ui.Table.row
+        [ Mosaic_ui.Table.cell "Bob"; Mosaic_ui.Table.cell "25" ];
+    ]
+  in
+  <table columns rows show_header=true />
+
+let _test_slider () : msg Vnode.t =
+  <slider
+    orientation=`Horizontal
+    min=0.0
+    max=100.0
+    value=50.0
+    size={ width = px 20; height = px 1 }
+  />
+
+let _test_select () : msg Vnode.t =
+  let items : Mosaic_ui.Select.item list =
+    [
+      { name = "Option 1"; description = None };
+      { name = "Option 2"; description = None };
+      { name = "Option 3"; description = Some "Third option" };
+    ]
+  in
+  <select items selected_index=0 autofocus=true />
+
+let _test_spinner () : msg Vnode.t =
+  <spinner preset=Dots autoplay=true color=(Ansi.Color.of_rgb 100 149 237) />
+
+let _test_tab_select () : msg Vnode.t =
+  let tabs =
+    [
+      ("Tab 1", Some "First tab"); ("Tab 2", None); ("Tab 3", Some "Third tab");
+    ]
+  in
+  <tab_select tabs show_underline=true autofocus=true />
+
+let _test_scroll_bar () : msg Vnode.t =
+  <scroll_bar
+    orientation=`Vertical show_arrows=true size={ width = px 1; height = px 10 }
+  />
+
+let _test_input () : msg option Vnode.t =
+  <input
+    value="initial text"
+    placeholder="Type here..."
+    autofocus=true
+    size={ width = pct 100; height = px 1 }
+    on_input=(fun _ -> Some ())
+    on_submit=(fun _ -> Some ())
+  />
+
+let _test_dimensions () =
+  let _ = px 10 in
+  let _ = pct 50 in
+  let _ = auto in
+  let _ = size ~width:100 ~height:50 in
+  let _ = gap 5 in
+  let _ = padding 2 in
+  let _ = margin 3 in
+  let _ = inset 1 in
+  ()
+
+let _test_render () =
+  let vnode : msg Vnode.t = <text>"Test"</text> in
+  let _ = render ~width:80 ~height:24 ~colors:false vnode in
+  ()
+
+let _test_map_handlers () =
+  let vnode : int Vnode.t = Vnode.text ~on_mouse:(fun _ -> 42) "Click me" in
+  let mapped : string Vnode.t = map_handlers string_of_int vnode in
+  let _ = mapped in
+  ()
+
+let _test_complex_layout () : msg Vnode.t =
+  let header_style =
+    Ansi.Style.make ~fg:(Ansi.Color.of_rgb 137 180 250) ~bold:true ()
+  in
+  let text_style = Ansi.Style.make ~fg:(Ansi.Color.of_rgb 205 214 244) () in
+  <box
+    flex_direction=Column
+    size={ width = pct 100; height = pct 100 }
+    background=(Ansi.Color.of_rgb 22 22 30)>
+    <fragment>
+      <box
+        padding=(padding 1)
+        border=true
+        border_color=(Ansi.Color.of_rgb 60 60 80)
+        title="Header">
+        <text style=header_style>"Welcome to Mosaic MLX"</text>
+      </box>
+      <box flex_direction=Row flex_grow=1.0>
+        <fragment>
+          <box flex_basis=(pct 30) border=true title="Sidebar">
+            <text style=text_style>"Navigation"</text>
+          </box>
+          <box flex_basis=(pct 70) border=true title="Content">
+            <scroll_box scroll_y=true flex_grow=1.0>
+              <fragment>
+                <text style=text_style>"Main content area"</text>
+                <code filetype="ocaml">"let x = 42"</code>
+              </fragment>
+            </scroll_box>
+          </box>
+        </fragment>
+      </box>
+      <box padding=(padding 1) background=(Ansi.Color.of_rgb 30 30 42)>
+        <text style=text_style>"Footer"</text>
+      </box>
+    </fragment>
+  </box>
