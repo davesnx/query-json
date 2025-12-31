@@ -16,29 +16,29 @@ let test query json_str expected_error_part =
 
 let tests =
   [
-    (* split argument type mismatch - now caught at parse time *)
-    test "split(1)" "\"a,b\"" "split() requires a string literal separator";
+    (* split argument type mismatch *)
+    test "split(1)" "\"a,b\"" "Invalid argument for 'split'";
     (* split input type mismatch *)
-    test "split(\",\")" "123" "cannot apply split to a number";
-    (* join argument type mismatch - now caught at parse time *)
-    test "join(1)" "[\"a\", \"b\"]" "join() requires a string literal separator";
+    test "split(\",\")" "123" "Trying to 'split' on a number";
+    (* join argument type mismatch *)
+    test "join(1)" "[\"a\", \"b\"]" "Invalid argument for 'join'";
     (* join input type mismatch *)
-    test "join(\",\")" "123" "cannot apply join to a number";
+    test "join(\",\")" "123" "Trying to 'join' on";
     (* from_entries invalid structure *)
-    test "from_entries" "[1, 2]" "invalid structure for from_entries";
-    test "from_entries" "[{\"key\": 1}]" "invalid structure for from_entries";
+    test "from_entries" "[1, 2]" "Invalid structure for 'from_entries'";
+    test "from_entries" "[{\"key\": 1}]" "Invalid structure for 'from_entries'";
     (* transpose invalid structure *)
-    test "transpose" "[1, [2]]" "invalid structure for transpose";
+    test "transpose" "[1, [2]]" "Invalid structure for 'transpose'";
     (* has invalid argument types *)
     test "has(true)" "{}" "is not allowed";
     (* Ast validation *)
 
     (* to_entries input type mismatch *)
-    test "to_entries" "[]" "invalid structure for to_entries";
+    test "to_entries" "[]" "Invalid structure for 'to_entries'";
     (* Undefined variables *)
-    test "$undefined" "null" "undefined variable: $undefined";
+    test "$undefined" "null" "Error: Undefined variable: $undefined";
     (* Unsupported break *)
-    test "break" "null" "break used outside of loop context";
+    test "break" "null" "Error: break used outside of loop context";
     (* Object shorthand validation *)
     test "{(1): 2}" "null" "object key must be string";
     (* Helpful error messages for deprecated/unimplemented jq functions *)
