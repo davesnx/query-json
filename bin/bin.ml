@@ -10,13 +10,9 @@ module Info = struct
      re-implementation of jq in OCaml"
 end
 
-let print_error_message ~colorize str =
+let print_error_message ~colorize:_ str =
   let open Formatting in
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
-  print_endline
-    (enter 1 ^ red (bold "Error") ^ red ":" ^ indent 1 ^ str ^ enter 1)
+  print_endline (enter 1 ^ str ^ enter 1)
 
 let usage ?(colorize = true) () =
   let open Formatting in

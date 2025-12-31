@@ -1525,6 +1525,10 @@ let tests =
       first_last_nth;
       generators_iterators;
       decimal_number;
+      index_operations;
+      snake_case_aliases;
+      collection_helpers;
+      deep_traversal;
       (* programs *)
       tobase;
       cumulative_sum;
@@ -1540,5 +1544,4 @@ let tests =
       object_merge;
       array_algorithms;
       statistics;
-      index_operations;
     ]

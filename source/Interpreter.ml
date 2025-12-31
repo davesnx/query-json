@@ -253,19 +253,6 @@ let rec substitute_params (params : string list) (args : expression list)
   | Paths_to e -> Paths_to (sub e)
 
 module Error = struct
-  let prepend_article (noun : string) =
-    let starts_with_any (str : string) (chars : string list) =
-      let rec loop (chars : string list) =
-        match chars with
-        | [] -> false
-        | x :: xs -> if String.starts_with ~prefix:x str then true else loop xs
-      in
-      loop chars
-    in
-    match starts_with_any noun [ "a"; "e"; "i"; "o"; "u" ] with
-    | true -> "an " ^ noun
-    | false -> "a " ^ noun
-
   let empty_list ~ctx op =
     let open Formatting in
     let open Ansi_wrapper.To_string (struct
@@ -286,11 +273,14 @@ module Error = struct
           (Json.to_string_pretty actual_value ~colorize:ctx.colorize
              ~summarize:true ~raw:false))
 
-  let message ~ctx msg =
-    let open Ansi_wrapper.To_string (struct
-      let colorize = ctx.colorize
-    end) in
-    fail (red "Error: " ^ msg)
+  let message ~ctx:_ msg = fail_with ~kind:"error" msg
+
+  let with_type_of (json : Json.t) =
+    match json with
+    | `Int _ | `Intlit _ | `List _ | `Assoc _ -> "an" ^ Json.type_of json
+    | `Float _ | `Floatlit _ | `String _ | `Stringlit _ | `Bool _ ->
+        "a" ^ Json.type_of json
+    | `Null -> "null"
 
   let make ~ctx (name : string) (json : Json.t) =
     let open Formatting in
@@ -301,7 +291,7 @@ module Error = struct
       ("Trying to "
       ^ single_quotes (bold name)
       ^ " on "
-      ^ bold (prepend_article (Json.type_of json))
+      ^ bold (with_type_of json)
       ^ ":" ^ enter 1
       ^ gray
           (Json.to_string_pretty json ~colorize:ctx.colorize ~summarize:true
@@ -2105,7 +2095,10 @@ and if_then_else ~ctx cond if_branch else_branch json =
 
 and call_function ~ctx fname args json =
   match List.assoc_opt fname ctx.fns with
-  | None -> Error.message ~ctx ("undefined function: " ^ fname)
+  | None ->
+      fail_with ~kind:"undefined_function"
+        ~suggestion:"check function name or define it with 'fn'"
+        ("undefined function: `" ^ fname ^ "`")
   | Some { params; body } ->
       if List.length params <> List.length args then
         Error.message ~ctx
@@ -3239,9 +3232,13 @@ and paths_to ~ctx cond_expr json =
 
 let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
+  let format_error (err : error) =
+    let qerr =
+      Query_error.runtime_error ~kind:err.kind ~message:err.message
+        ?value:err.value ?suggestion:err.suggestion ()
+    in
+    Query_error.format ~colorize qerr
+  in
   let handler : ('a, ('a, string) result) Effect.Deep.handler =
     {
       retc = (fun results -> Ok results);
@@ -3249,11 +3246,15 @@ let execute ~colorize ~verbose ?(env = []) expr json =
       effc =
         (fun (type a) (eff : a Effect.t) ->
           match eff with
-          | Fail err -> Some (fun _ -> Error err.message)
+          | Fail err -> Some (fun _ -> Error (format_error err))
           | Break ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  Error (red "Error: " ^ "break used outside of loop context"))
+                  let err =
+                    Query_error.context_error
+                      ~message:"break used outside of loop context"
+                  in
+                  Error (Query_error.format ~colorize err))
           | Halt exit_code -> Some (fun _ -> exit exit_code)
           | _ -> None);
     }
