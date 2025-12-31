@@ -17,7 +17,6 @@ type model = {
   completions : completion_item list;
   completion_index : int;
   completion_scroll_offset : int;
-  show_completions : bool;
   completion_context : completion_context;
   focus : focus;
   result_scroll : int;
@@ -33,8 +32,7 @@ type msg =
   | Switch_focus
   | Scroll_result_down
   | Scroll_result_up
-  | Copy_query
-  | Copy_result
+  | Copy
   | Clear_filter
   | Resize of int * int
   | Quit
@@ -143,19 +141,24 @@ let keys_from_json (json : Json.t) : completion_item list =
         lst
   | _ -> []
 
-let get_navigable_keys (model : model) : completion_item list =
+let identity_completion = Key { key = ""; value_type = Language.Any }
+
+let get_navigable_keys model =
   (* Get keys from the current output if it's navigable (object or array) *)
   (* Fall back to root JSON keys when query is empty or result is empty *)
-  match model.result with
-  | Ok result when String.length (String.trim result) > 0 -> (
-      try
-        let json = Json.from_string result in
-        keys_from_json json
-      with _ -> keys_from_json model.json)
-  | Ok _ -> keys_from_json model.json
-  | Error _ -> keys_from_json model.json
+  let keys =
+    match model.result with
+    | Ok result when String.length (String.trim result) > 0 -> (
+        try
+          let json = Json.from_string result in
+          keys_from_json json
+        with _ -> keys_from_json model.json)
+    | Ok _ -> keys_from_json model.json
+    | Error _ -> keys_from_json model.json
+  in
+  identity_completion :: keys
 
-let update_completions (model : model) : model =
+let update_completions model =
   let context = detect_completion_context model.query in
   let trimmed = String.trim model.query in
   let show_keys =
@@ -172,13 +175,12 @@ let update_completions (model : model) : model =
     | Key_context -> get_partial_key model.query
     | Function_context -> get_partial_function model.query
   in
-  let filtered = filter_completions all_completions partial in
+  let completions = filter_completions all_completions partial in
   {
     model with
-    completions = filtered;
+    completions;
     completion_index = 0;
     completion_scroll_offset = 0;
-    show_completions = List.length filtered > 0;
     completion_context = context;
   }
 
@@ -195,7 +197,6 @@ let init ~(json : Json.t) ~(path : string) () =
       completions = [];
       completion_index = 0;
       completion_scroll_offset = 0;
-      show_completions = false;
       completion_context = Key_context;
       focus = Filter_focus;
       result_scroll = 0;
@@ -206,7 +207,7 @@ let init ~(json : Json.t) ~(path : string) () =
   (update_completions model, Cmd.none)
 
 let apply_completion (model : model) : model =
-  if List.length model.completions = 0 then model
+  if List.length model.completions <= 0 then model
   else
     let completion = List.nth model.completions model.completion_index in
     let query = model.query in
@@ -235,13 +236,7 @@ let apply_completion (model : model) : model =
       | Function_context, Key _ -> query
     in
     let result = evaluate_query new_query model.json in
-    {
-      model with
-      query = new_query;
-      input_key = model.input_key + 1;
-      result;
-      show_completions = false;
-    }
+    { model with query = new_query; input_key = model.input_key + 1; result }
     |> update_completions
 
 let update msg model =
@@ -305,10 +300,12 @@ let update msg model =
       ({ model with result_scroll = model.result_scroll + 1 }, Cmd.none)
   | Scroll_result_up ->
       ({ model with result_scroll = max 0 (model.result_scroll - 1) }, Cmd.none)
-  | Copy_query -> (model, Cmd.static_print ("Query: " ^ model.query))
-  | Copy_result ->
-      let text = match model.result with Ok s -> s | Error e -> e in
-      (model, Cmd.static_print ("Result: " ^ text))
+  | Copy -> (
+      match model.focus with
+      | Filter_focus -> (model, Cmd.static_print ("Query: " ^ model.query))
+      | Result_focus ->
+          let text = match model.result with Ok s -> s | Error e -> e in
+          (model, Cmd.static_print ("Result: " ^ text)))
   | Clear_filter ->
       let new_query = "." in
       let result = evaluate_query new_query model.json in
@@ -354,65 +351,84 @@ let hpad n =
     left = Length_percentage.px (Float.of_int n);
   }
 
-let view_completion_item is_selected item =
+let completion_item ~is_selected ~item ~children:_ () =
   let background = if is_selected then bg_accent else bg_secondary in
   let fg = if is_selected then text_accent else text_primary in
+  let fg_style = Ansi.Style.make ~fg () in
+  let items =
+    match item with
+    | Key { key; value_type } ->
+        let key_text = "." ^ key in
+        let type_text = Language.type_name_of_applicable value_type in
+        <fragment>
+          <text style=fg_style>key_text</text>
+          <text style=style_type>type_text</text>
+        </fragment>
+    | Function f ->
+        let name_text = "| " ^ f.name in
+        <fragment>
+          <text style=fg_style>name_text</text>
+          <text style=style_muted>"function"</text>
+        </fragment>
+  in
   <box
     background
     padding=(hpad 1)
     flex_direction=Row
     justify_content=Space_between
     size={ width = pct 100; height = px 1 }>
-    (match item with
-    | Key { key; value_type } ->
-        [
-          text ~text_style:(Ansi.Style.make ~fg ()) ("." ^ key);
-          text ~text_style:style_type
-            (Language.type_name_of_applicable value_type);
-        ]
-    | Function f ->
-        [
-          text ~text_style:(Ansi.Style.make ~fg ()) ("| " ^ f.name);
-          text ~text_style:style_muted "function";
-        ])
+    items
   </box>
 
-let view_function_detail (f : Language.function_info) =
+let function_detail ~(info : Language.function_info) () =
   let example_text =
-    match f.example with
+    match info.example with
     | Some ex ->
         Some
-          (box ~flex_direction:Column ~gap:(gap 0)
-             [
-               text ~text_style:style_muted "example:";
-               box ~background:bg_accent ~padding:(hpad 1)
-                 [ text ~text_style:style_accent ex ];
-             ])
+          <box flex_direction=Column gap=(gap 0)>
+            <fragment>
+              <text style=style_muted>"example:"</text>
+              <box background=bg_accent padding=(hpad 1)>
+                <text style=style_accent>ex</text>
+              </box>
+            </fragment>
+          </box>
     | None -> None
   in
-  box ~border:true ~border_color:border_focused ~background:bg_secondary
-    ~padding:(padding 1) ~flex_direction:Column ~gap:(gap 1)
-    ~title:"Function Info" ~title_alignment:`Left
-    (List.filter_map Fun.id
-       [
-         Some
-           (box ~flex_direction:Row ~gap:(gap 1)
-              [
-                text ~text_style:style_accent f.name;
-                text ~text_style:style_muted "-";
-                text ~text_style:style_primary f.description;
-              ]);
-         example_text;
-       ])
+  let info_items =
+    List.filter_map Fun.id
+      [
+        Some
+          <box flex_direction=Row gap=(gap 1)>
+            <fragment>
+              <text style=style_accent>info.name</text>
+              <text style=style_muted>"-"</text>
+              <text style=style_primary>info.description</text>
+            </fragment>
+          </box>;
+        example_text;
+      ]
+  in
+  <box
+    border=true
+    border_color=border_focused
+    background=bg_secondary
+    padding=(padding 1)
+    flex_direction=Column
+    gap=(gap 1)
+    title="Function Info"
+    title_alignment=`Left>
+    (Vnode.fragment info_items)
+  </box>
 
-let view_completions model =
-  if (not model.show_completions) || List.length model.completions = 0 then null
+let completions ~model ~children:_ () =
+  if List.length model.completions = 0 then null
   else
     let single_function =
       match model.completions with [ Function f ] -> Some f | _ -> None
     in
     match single_function with
-    | Some f -> view_function_detail f
+    | Some info -> function_detail ~info ()
     | None ->
         let start_idx = model.completion_scroll_offset in
         let visible_completions =
@@ -422,48 +438,65 @@ let view_completions model =
               i >= start_idx && i < start_idx + max_visible_completions)
         in
         let items =
-          List.map
-            (fun (i, item) ->
+          visible_completions
+          |> List.map (fun (i, item) ->
               let is_selected = i = model.completion_index in
-              view_completion_item is_selected item)
-            visible_completions
+              <completion_item is_selected item />)
+          |> Vnode.fragment
         in
-        box ~border:true ~border_color ~background:bg_secondary
-          ~title:" Completions " ~title_alignment:`Left
-          ~max_size:{ width = auto; height = pct 100 }
-          ~flex_direction:Column
-          [
-            scroll_box ~scroll_y:true ~flex_grow:1.
-              ~size:{ width = pct 100; height = auto }
-              items;
-          ]
+        <box
+          border=true
+          border_color
+          background=bg_secondary
+          title=" Completions "
+          title_alignment=`Left
+          max_size={ width = auto; height = pct 100 }
+          flex_direction=Column>
+          <scroll_box
+            scroll_y=true flex_grow=1. size={ width = pct 100; height = auto }>
+            items
+          </scroll_box>
+        </box>
 
-let view_header model =
-  box ~padding:(padding 0) ~background:bg_secondary ~flex_direction:Row
-    ~justify_content:Space_between ~align_items:Center
-    ~size:{ width = pct 100; height = auto }
-    [
-      box ~padding:(padding 1) ~background:bg_secondary ~flex_direction:Row
-        ~align_items:Center
-        ~size:{ width = auto; height = auto }
-        [
-          text ~text_style:style_accent_bold "query-json ";
-          text ~text_style:style_accent_bold "R";
-          text ~text_style:style_accent "ead-";
-          text ~text_style:style_accent_bold "E";
-          text ~text_style:style_accent "val-";
-          text ~text_style:style_accent_bold "P";
-          text ~text_style:style_accent "rint-";
-          text ~text_style:style_accent_bold "L";
-          text ~text_style:style_accent "oop";
-        ];
-      box ~padding:(padding 1) ~background:bg_secondary ~flex_direction:Row
-        ~align_items:Center
-        ~size:{ width = auto; height = auto }
-        [ text ~text_style:style_muted model.path ];
-    ]
+let header ~model ~children:_ () =
+  <box
+    padding=(padding 0)
+    background=bg_secondary
+    flex_direction=Row
+    justify_content=Space_between
+    align_items=Center
+    size={ width = pct 100; height = auto }>
+    <fragment>
+      <box
+        padding=(padding 1)
+        background=bg_secondary
+        flex_direction=Row
+        align_items=Center
+        size={ width = auto; height = auto }>
+        <fragment>
+          <text style=style_accent_bold>"query-json "</text>
+          <text style=style_accent_bold>"R"</text>
+          <text style=style_accent>"ead-"</text>
+          <text style=style_accent_bold>"E"</text>
+          <text style=style_accent>"val-"</text>
+          <text style=style_accent_bold>"P"</text>
+          <text style=style_accent>"rint-"</text>
+          <text style=style_accent_bold>"L"</text>
+          <text style=style_accent>"oop"</text>
+        </fragment>
+      </box>
+      <box
+        padding=(padding 1)
+        background=bg_secondary
+        flex_direction=Row
+        align_items=Center
+        size={ width = auto; height = auto }>
+        <text style=style_muted>model.path</text>
+      </box>
+    </fragment>
+  </box>
 
-let view_main_content model =
+let main_content ~model ~children:_ () =
   let filter_border =
     match model.focus with
     | Filter_focus -> border_focused
@@ -474,136 +507,149 @@ let view_main_content model =
     | Result_focus -> border_focused
     | Filter_focus -> border_color
   in
-  box ~flex_direction:Row ~flex_grow:1.
-    ~size:{ width = pct 100; height = auto }
-    [
-      box ~flex_direction:Column ~flex_basis:(pct 50) ~flex_shrink:1.
-        ~border:true ~border_color:filter_border ~title:" Filter "
-        ~title_alignment:`Left ~padding:(padding 1)
-        [
-          box ~flex_direction:Row ~gap:(gap 1) ~align_items:Center
-            [
-              input
-                ~key:(string_of_int model.input_key)
-                ~autofocus:(model.focus = Filter_focus)
-                ~value:model.query ~background:bg_primary
-                ~text_color:text_primary ~focused_background:bg_secondary
-                ~focused_text_color:text_accent
-                ~placeholder:"Enter query (e.g., .user.name)"
-                ~on_input:(fun s -> Some (Input_changed s))
-                ~on_submit:(fun _ -> Some Apply_completion)
-                ~size:{ width = pct 100; height = px 1 }
-                ();
-            ];
-          view_completions model;
-        ];
-      box ~flex_direction:Column ~flex_basis:(pct 50) ~flex_shrink:1.
-        ~border:true ~border_color:result_border ~title:" Result "
-        ~title_alignment:`Left ~padding:(padding 1)
-        [
-          scroll_box ~scroll_y:true ~flex_grow:1.
-            ~size:{ width = pct 100; height = auto }
-            [
-              (match model.result with
-              | Ok result when String.length result > 0 ->
-                  code ~filetype:"json" result
-              | Ok _ -> text ~text_style:style_muted "(empty result)"
-              | Error err -> text ~text_style:style_error err);
-            ];
-        ];
-    ]
+  let result_content =
+    match model.result with
+    | Ok result when String.length result > 0 ->
+        <code filetype="json">result</code>
+    | Ok _ -> <text style=style_muted>"(empty result)"</text>
+    | Error err -> <text style=style_error>err</text>
+  in
+  <box flex_direction=Row flex_grow=1. size={ width = pct 100; height = auto }>
+    <fragment>
+      <box
+        flex_direction=Column
+        flex_basis=(pct 50)
+        flex_shrink=1.
+        border=true
+        border_color=filter_border
+        title=" Filter "
+        title_alignment=`Left
+        padding=(padding 1)>
+        <fragment>
+          <box flex_direction=Row gap=(gap 1) align_items=Center>
+            <input
+              key=(string_of_int model.input_key)
+              autofocus=(model.focus = Filter_focus)
+              value=model.query
+              background=bg_primary
+              text_color=text_primary
+              focused_background=bg_secondary
+              focused_text_color=text_accent
+              placeholder="Enter query (e.g., .user.name)"
+              on_input=(fun s -> Some (Input_changed s))
+              on_submit=(fun _ -> Some Apply_completion)
+              size={ width = pct 100; height = px 1 }
+            />
+          </box>
+          <fragment><completions model /></fragment>
+        </fragment>
+      </box>
+      <box
+        flex_direction=Column
+        flex_basis=(pct 50)
+        flex_shrink=1.
+        border=true
+        border_color=result_border
+        title=" Result "
+        title_alignment=`Left
+        padding=(padding 1)>
+        <scroll_box
+          scroll_y=true flex_grow=1. size={ width = pct 100; height = auto }>
+          result_content
+        </scroll_box>
+      </box>
+    </fragment>
+  </box>
 
-let view_input_preview model =
-  box ~background:bg_secondary ~padding:(padding 1) ~border:true ~border_color
-    ~size:{ width = pct 100; height = auto }
-    ~title:" Input JSON (preview) " ~title_alignment:`Left
-    [
-      code ~filetype:"json"
-        ~max_size:{ width = auto; height = px 6 }
-        (Json.to_string_pretty model.json ~colorize:false ~summarize:true
-           ~raw:false);
-    ]
-
-let view_footer model =
+let footer ~model ~children:_ () =
+  let copy_label =
+    match model.focus with
+    | Filter_focus -> "copy query"
+    | Result_focus -> "copy result"
+  in
   let filter_hints =
-    box ~flex_direction:Row ~gap:(gap 2)
-      [
-        text ~text_style:style_muted "Enter";
-        text ~text_style:style_primary "complete";
-        text ~text_style:style_muted "↑↓";
-        text ~text_style:style_primary "navigate";
-        text ~text_style:style_muted "Ctrl+L";
-        text ~text_style:style_primary "clear";
-        text ~text_style:style_muted "Tab";
-        text ~text_style:style_primary "→ result";
-      ]
+    <box flex_direction=Row gap=(gap 2)>
+      <fragment>
+        <text style=style_muted>"Enter"</text>
+        <text style=style_primary>"complete"</text>
+        <text style=style_muted>"↑↓"</text>
+        <text style=style_primary>"navigate"</text>
+        <text style=style_muted>"Ctrl+L"</text>
+        <text style=style_primary>"clear"</text>
+        <text style=style_muted>"Tab"</text>
+        <text style=style_primary>"→ result"</text>
+      </fragment>
+    </box>
   in
   let result_hints =
-    box ~flex_direction:Row ~gap:(gap 2)
-      [
-        text ~text_style:style_muted "j/k ↑↓";
-        text ~text_style:style_primary "scroll";
-        text ~text_style:style_muted "Tab";
-        text ~text_style:style_primary "→ filter";
-      ]
+    <box flex_direction=Row gap=(gap 2)>
+      <fragment>
+        <text style=style_muted>"j/k ↑↓"</text>
+        <text style=style_primary>"scroll"</text>
+        <text style=style_muted>"Tab"</text>
+        <text style=style_primary>"→ filter"</text>
+      </fragment>
+    </box>
   in
-  box ~padding:(padding 1) ~background:bg_secondary
-    ~size:{ width = pct 100; height = auto }
-    ~flex_direction:Row ~gap:(gap 2) ~justify_content:Space_between
-    [
-      (match model.focus with
-      | Filter_focus -> filter_hints
-      | Result_focus -> result_hints);
-      box ~flex_direction:Row ~gap:(gap 2)
-        [
-          text ~text_style:style_muted "Ctrl+C";
-          text ~text_style:style_primary "copy query";
-          text ~text_style:style_muted "Ctrl+R";
-          text ~text_style:style_primary "copy result";
-          text ~text_style:style_muted "Esc";
-          text ~text_style:style_primary "quit";
-        ];
-    ]
+  let hints =
+    match model.focus with
+    | Filter_focus -> filter_hints
+    | Result_focus -> result_hints
+  in
+  <box
+    padding=(padding 1)
+    background=bg_secondary
+    size={ width = pct 100; height = auto }
+    flex_direction=Row
+    gap=(gap 2)
+    justify_content=Space_between>
+    <fragment>
+      hints
+      <box flex_direction=Row gap=(gap 2)>
+        <fragment>
+          <text style=style_muted>"y"</text>
+          <text style=style_primary>copy_label</text>
+          <text style=style_muted>"Ctrl+C"</text>
+          <text style=style_primary>"quit"</text>
+        </fragment>
+      </box>
+    </fragment>
+  </box>
 
-let view model =
-  box ~background:bg_primary ~flex_direction:Column
-    ~size:{ width = pct 100; height = pct 100 }
-    [
-      view_header model;
-      view_main_content model;
-      view_input_preview model;
-      view_footer model;
-    ]
+let view (model : model) =
+  <box
+    background=bg_primary
+    flex_direction=Column
+    size={ width = pct 100; height = pct 100 }>
+    <fragment>
+      <header model /> <main_content model /> <footer model />
+    </fragment>
+  </box>
 
 let subscriptions model =
   Sub.batch
     [
       Sub.on_resize (fun ~width ~height -> Resize (width, height));
-      Sub.on_key (fun ev ->
+      Sub.on_key (fun key ->
           let open Mosaic_ui.Event.Key in
-          let data = data ev in
-          match data.key with
+          let event = data key in
+          match event.key with
           | Escape -> Some Quit
           | Tab -> Some Switch_focus
-          | Char c when Uchar.equal c (Uchar.of_char 'c') && data.modifier.ctrl
-            ->
-              Some Copy_query
-          | Char c when Uchar.equal c (Uchar.of_char 'r') && data.modifier.ctrl
-            ->
-              Some Copy_result
-          | Char c when Uchar.equal c (Uchar.of_char 'l') && data.modifier.ctrl
+          | Char c when Uchar.equal c (Uchar.of_char 'y') -> Some Copy
+          | Char c when Uchar.equal c (Uchar.of_char 'L') && event.modifier.ctrl
             ->
               Some Clear_filter
           | _ -> (
               match model.focus with
               | Filter_focus -> (
-                  match data.key with
+                  match event.key with
                   | Enter -> Some Apply_completion
                   | Up -> Some Prev_completion
                   | Down -> Some Next_completion
                   | _ -> None)
               | Result_focus -> (
-                  match data.key with
+                  match event.key with
                   | Up -> Some Scroll_result_up
                   | Down -> Some Scroll_result_down
                   | Char c when Uchar.equal c (Uchar.of_char 'k') ->

@@ -88,7 +88,7 @@ subst: ## Run dune substitute
 pin: # pin dependencies
 	opam pin add toffee.dev "https://github.com/tmattio/mosaic.git" -y
 	opam pin add matrix.dev "https://github.com/tmattio/mosaic.git" -y
-	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#9198ad3d3454bd73282ecd5470563ca9dc69edc4" -y
+	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#a1b798e0a9dd3734cf686da2e618606ba60637e6" -y
 	opam pin add mlx.dev "https://github.com/ocaml-mlx/mlx.git" -y
 	opam pin add ocamlmerlin-mlx.dev "https://github.com/ocaml-mlx/mlx.git" -y
 	opam pin add ocamlformat-mlx.dev "https://github.com/ocaml-mlx/ocamlformat-mlx.git" -y

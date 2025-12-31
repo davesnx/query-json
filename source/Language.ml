@@ -76,7 +76,7 @@ let string_functions =
         };
         {
           name = "starts_with";
-          aliases = [ "startswith" ];
+          aliases = [];
           description = "Check if string starts with prefix";
           example = Some {|"hello" | starts_with("he")  → true|};
           applicable_to = [ String ];
@@ -85,7 +85,7 @@ let string_functions =
         };
         {
           name = "ends_with";
-          aliases = [ "endswith" ];
+          aliases = [];
           description = "Check if string ends with suffix";
           example = Some {|"hello" | ends_with("lo")  → true|};
           applicable_to = [ String ];
@@ -1289,10 +1289,10 @@ let definition_functions =
     functions =
       [
         {
-          name = "def";
-          aliases = [ "fn" ];
+          name = "fn";
+          aliases = [];
           description = "Define a function";
-          example = Some {|def double: . * 2; 5 | double  → 10|};
+          example = Some {|fn double: . * 2; 5 | double  → 10|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1366,17 +1366,55 @@ let all_function_names () =
   let aliases = List.concat_map (fun (f : function_info) -> f.aliases) funcs in
   List.sort_uniq Stdlib.String.compare (names @ aliases)
 
-let suggest_function_name (name : string) : string list =
+(* Levenshtein distance for fuzzy matching *)
+let levenshtein s1 s2 =
+  let len1 = String.length s1 in
+  let len2 = String.length s2 in
+  if len1 = 0 then len2
+  else if len2 = 0 then len1
+  else
+    let matrix = Array.make_matrix (len1 + 1) (len2 + 1) 0 in
+    for i = 0 to len1 do
+      matrix.(i).(0) <- i
+    done;
+    for j = 0 to len2 do
+      matrix.(0).(j) <- j
+    done;
+    for i = 1 to len1 do
+      for j = 1 to len2 do
+        let cost = if s1.[i - 1] = s2.[j - 1] then 0 else 1 in
+        matrix.(i).(j) <-
+          min
+            (min (matrix.(i - 1).(j) + 1) (matrix.(i).(j - 1) + 1))
+            (matrix.(i - 1).(j - 1) + cost)
+      done
+    done;
+    matrix.(len1).(len2)
+
+(* Find similar function names for suggestions *)
+let suggest_function_name (typo : string) : string list =
   let all_names = all_function_names () in
-  let name_lower = String.lowercase_ascii name in
-  List.filter
-    (fun n ->
-      let n_lower = String.lowercase_ascii n in
-      String.length n_lower >= String.length name_lower
-      && (String.sub n_lower 0 (String.length name_lower) = name_lower
-         || String.sub n_lower 0 (min 3 (String.length n_lower))
-            = String.sub name_lower 0 (min 3 (String.length name_lower))))
+  let typo_lower = String.lowercase_ascii typo in
+  let typo_len = String.length typo in
+  (* Calculate distance and filter candidates *)
+  let candidates =
     all_names
+    |> List.map (fun name ->
+        let name_lower = String.lowercase_ascii name in
+        let dist = levenshtein typo_lower name_lower in
+        (name, dist))
+    |> List.filter (fun (name, dist) ->
+        (* Accept if distance is reasonable relative to length *)
+        let name_len = String.length name in
+        let max_dist = max 2 (min typo_len name_len / 3) in
+        dist <= max_dist)
+    |> List.sort (fun (_, d1) (_, d2) -> compare d1 d2)
+    |> List.map fst
+  in
+  (* Return top 3 suggestions *)
+  match candidates with
+  | [] -> []
+  | _ -> List.filteri (fun i _ -> i < 3) candidates
 
 let type_name_of_applicable = function
   | String -> "string"
@@ -1439,16 +1477,18 @@ let error_for_missing_arg (name : string) : string =
       let header =
         match f.arity with
         | No_args -> name ^ " takes no arguments"
-        | One_arg _ -> name ^ " requires an argument: " ^ usage
-        | Two_args _ -> name ^ " requires two arguments: " ^ usage
-        | Three_args _ -> name ^ " requires three arguments: " ^ usage
-        | Variable_args _ -> name ^ " requires arguments: " ^ usage
+        | One_arg arg -> name ^ "() requires " ^ arg
+        | Two_args (a, b) -> name ^ "() requires " ^ a ^ " and " ^ b
+        | Three_args (a, b, c) ->
+            name ^ "() requires " ^ a ^ ", " ^ b ^ ", and " ^ c
+        | Variable_args _ -> name ^ "() requires arguments"
       in
-      let parts = [ header; "" ] in
-      let parts = parts @ [ "  Description: " ^ f.description ] in
+      let parts = [ header ] in
+      let parts = parts @ [ "  usage: " ^ usage ] in
+      let parts = parts @ [ "  description: " ^ f.description ] in
       let parts =
         match f.example with
-        | Some ex -> parts @ [ "  Example: " ^ ex ]
+        | Some ex -> parts @ [ "  example: " ^ ex ]
         | None -> parts
       in
       let types =
@@ -1456,55 +1496,76 @@ let error_for_missing_arg (name : string) : string =
         |> List.map type_name_of_applicable
         |> String.concat ", "
       in
-      let parts = parts @ [ "  Applicable to: " ^ types ] in
+      let parts = parts @ [ "  applicable to: " ^ types ] in
       String.concat "\n" parts
-  | None -> name ^ " requires an expression"
+  | None -> name ^ "() requires an argument"
 
 (* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression)
     (arg2 : Ast.expression) : (Ast.expression, string) result =
+  let open Ast in
   match name with
-  | "while" -> Ok (Ast.While (arg1, arg2))
-  | "until" -> Ok (Ast.Until (arg1, arg2))
-  | "recurse" -> Ok (Ast.Recurse_with (arg1, arg2))
-  | "try" -> Ok (Ast.Try (arg1, Some arg2, None))
+  | "while" -> Ok (While (arg1, arg2))
+  | "until" -> Ok (Until (arg1, arg2))
+  | "recurse" -> Ok (Recurse_with (arg1, arg2))
+  | "try" -> Ok (Try (arg1, Some arg2, None))
   | "limit" -> (
       match arg1 with
-      | Ast.Literal (Ast.Number n) -> Ok (Ast.Limit (int_of_float n, arg2))
-      | _ -> Error "limit first argument must be a number literal")
+      | Literal (Number n) -> Ok (Limit (int_of_float n, arg2))
+      | _ ->
+          Error
+            "limit() first argument must be a number literal\n\
+            \  usage: limit(n; generator)\n\
+            \  example: limit(3; range(10)) → 0, 1, 2")
   | "skip" -> (
       match arg1 with
-      | Ast.Literal (Ast.Number n) -> Ok (Ast.Skip (int_of_float n, arg2))
-      | _ -> Error "skip first argument must be a number literal")
+      | Literal (Number n) -> Ok (Skip (int_of_float n, arg2))
+      | _ ->
+          Error
+            "skip() first argument must be a number literal\n\
+            \  usage: skip(n; generator)\n\
+            \  example: skip(2; range(5)) → 2, 3, 4")
   | "sub" -> (
       match (arg1, arg2) with
-      | Ast.Literal (Ast.String pattern), Ast.Literal (Ast.String replacement)
-        ->
-          Ok (Ast.Sub (pattern, replacement))
-      | Ast.Literal (Ast.String _), _ ->
-          Error "sub() second argument must be string literal"
-      | _, _ -> Error "sub() first argument must be string literal")
+      | Literal (String pattern), Literal (String replacement) ->
+          Ok (Sub (pattern, replacement))
+      | Literal (String _), _ ->
+          Error
+            "sub() second argument must be a string literal\n\
+            \  usage: sub(pattern; replacement)\n\
+            \  example: sub(\"l\"; \"L\") replaces first match"
+      | _, _ ->
+          Error
+            "sub() first argument must be a string literal pattern\n\
+            \  usage: sub(pattern; replacement)\n\
+            \  example: sub(\"l\"; \"L\") replaces first match")
   | "gsub" -> (
       match (arg1, arg2) with
-      | Ast.Literal (Ast.String pattern), Ast.Literal (Ast.String replacement)
-        ->
-          Ok (Ast.Gsub (pattern, replacement))
-      | Ast.Literal (Ast.String _), _ ->
-          Error "gsub() second argument must be string literal"
-      | _, _ -> Error "gsub() first argument must be string literal")
-  | "any" -> Ok (Ast.Any_with_generator (arg1, arg2))
-  | "all" -> Ok (Ast.All_with_generator (arg1, arg2))
-  | "setpath" | "set_path" -> Ok (Ast.Setpath (arg1, arg2))
-  | "nth" -> Ok (Ast.Nth (arg1, arg2))
-  | "raise" -> Ok (Ast.Raise (arg1, arg2))
-  | "assert" -> Ok (Ast.Assert (arg1, Some arg2))
-  | "atan2" | "atan" -> Ok (Ast.Atan2 (arg1, arg2))
-  | "copysign" -> Ok (Ast.Copysign (arg1, arg2))
-  | "ldexp" -> Ok (Ast.Ldexp (arg1, arg2))
-  | "fdim" -> Ok (Ast.Fdim (arg1, arg2))
-  | "remainder" | "drem" -> Ok (Ast.Remainder (arg1, arg2))
-  | "scalbn" | "scalbln" -> Ok (Ast.Scalbn (arg1, arg2))
-  | "pow" -> Ok (Ast.Pow2 (arg1, arg2))
+      | Literal (String pattern), Literal (String replacement) ->
+          Ok (Gsub (pattern, replacement))
+      | Literal (String _), _ ->
+          Error
+            "gsub() second argument must be a string literal\n\
+            \  usage: gsub(pattern; replacement)\n\
+            \  example: gsub(\"l\"; \"L\") replaces all matches"
+      | _, _ ->
+          Error
+            "gsub() first argument must be a string literal pattern\n\
+            \  usage: gsub(pattern; replacement)\n\
+            \  example: gsub(\"l\"; \"L\") replaces all matches")
+  | "any" -> Ok (Any_with_generator (arg1, arg2))
+  | "all" -> Ok (All_with_generator (arg1, arg2))
+  | "set_path" | "setpath" -> Ok (Setpath (arg1, arg2))
+  | "nth" -> Ok (Nth (arg1, arg2))
+  | "raise" -> Ok (Raise (arg1, arg2))
+  | "assert" -> Ok (Assert (arg1, Some arg2))
+  | "atan2" | "atan" -> Ok (Atan2 (arg1, arg2))
+  | "copysign" -> Ok (Copysign (arg1, arg2))
+  | "ldexp" -> Ok (Ldexp (arg1, arg2))
+  | "fdim" -> Ok (Fdim (arg1, arg2))
+  | "remainder" | "drem" -> Ok (Remainder (arg1, arg2))
+  | "scalbn" | "scalbln" -> Ok (Scalbn (arg1, arg2))
+  | "pow" -> Ok (Pow2 (arg1, arg2))
   (* Not implemented *)
   | "strftime" -> Error "strftime not implemented"
   | "strptime" -> Error "strptime not implemented"
@@ -1513,107 +1574,138 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   | "dateadd" | "datesub" -> Error "date arithmetic not implemented"
   | "modulemeta" -> Error "modulemeta not implemented"
   (* Default: generic function application *)
-  | _ -> Ok (Ast.Apply (name, [ arg1; arg2 ]))
+  | _ -> Ok (Apply (name, [ arg1; arg2 ]))
 
-(* Map 1-argument function names to AST nodes *)
 let map_unary_fn (name : string) (arg : Ast.expression) :
     (Ast.expression, string) result =
+  let open Ast in
   match name with
   (* Array/iteration functions *)
-  | "filter" -> Ok (Ast.Map (Ast.Select arg))
-  | "map" -> Ok (Ast.Map arg)
-  | "map_values" -> Ok (Ast.Map_values arg)
-  | "flat_map" -> Ok (Ast.Flat_map arg)
-  | "select" -> Ok (Ast.Select arg)
-  | "sort_by" -> Ok (Ast.Sort_by arg)
-  | "min_by" -> Ok (Ast.Min_by arg)
-  | "max_by" -> Ok (Ast.Max_by arg)
-  | "group_by" -> Ok (Ast.Group_by arg)
-  | "unique_by" -> Ok (Ast.Unique_by arg)
-  | "find" -> Ok (Ast.Find arg)
-  | "some" -> Ok (Ast.Some_ arg)
-  | "path" -> Ok (Ast.Path arg)
-  | "any" -> Ok (Ast.Any_with_condition arg)
-  | "all" -> Ok (Ast.All_with_condition arg)
-  | "walk" -> Ok (Ast.Walk arg)
+  | "filter" -> Ok (Map (Select arg))
+  | "map" -> Ok (Map arg)
+  | "map_values" -> Ok (Map_values arg)
+  | "flat_map" -> Ok (Flat_map arg)
+  | "select" -> Ok (Select arg)
+  | "sort_by" -> Ok (Sort_by arg)
+  | "min_by" -> Ok (Min_by arg)
+  | "max_by" -> Ok (Max_by arg)
+  | "group_by" -> Ok (Group_by arg)
+  | "unique_by" -> Ok (Unique_by arg)
+  | "find" -> Ok (Find arg)
+  | "some" -> Ok (Some_ arg)
+  | "path" -> Ok (Path arg)
+  | "any" -> Ok (Any_with_condition arg)
+  | "all" -> Ok (All_with_condition arg)
+  | "walk" -> Ok (Walk arg)
   (* Object functions *)
-  | "has" -> Ok (Ast.Has arg)
-  | "in" -> Ok (Ast.In arg)
-  | "with_entries" -> Ok (Ast.With_entries arg)
+  | "has" -> Ok (Has arg)
+  | "in" -> Ok (In arg)
+  | "with_entries" -> Ok (With_entries arg)
   (* String functions *)
-  | "startwith" | "startswith" ->
-      Error "startwith/startswith is deprecated. Use starts_with instead"
-  | "starts_with" -> Ok (Ast.Starts_with arg)
-  | "endwith" | "endswith" ->
-      Error "endwith/endswith is deprecated. Use ends_with instead"
-  | "ends_with" -> Ok (Ast.Ends_with arg)
-  | "index" -> Ok (Ast.Index_of arg)
-  | "rindex" -> Ok (Ast.Rindex_of arg)
-  | "indices" | "find_indices" -> Ok (Ast.Indices arg)
-  | "inside" -> Ok (Ast.Inside arg)
-  | "ltrimstr" | "trim_start" -> Ok (Ast.Ltrimstr arg)
-  | "rtrimstr" | "trim_end" -> Ok (Ast.Rtrimstr arg)
-  | "split" -> Ok (Ast.Split arg)
-  | "join" -> Ok (Ast.Join arg)
-  | "contains" -> Ok (Ast.Contains arg)
-  | "bsearch" -> Ok (Ast.Bsearch arg)
+  | "startwith" -> Error "startwith is deprecated. Use starts_with instead"
+  | "startswith" -> Error "startswith is deprecated. Use starts_with instead"
+  | "endwith" -> Error "endwith is deprecated. Use ends_with instead"
+  | "endswith" -> Error "endswith is deprecated. Use ends_with instead"
+  | "starts_with" -> Ok (Starts_with arg)
+  | "ends_with" -> Ok (Ends_with arg)
+  | "index" -> Ok (Index_of arg)
+  | "rindex" -> Ok (Rindex_of arg)
+  | "indices" | "find_indices" -> Ok (Indices arg)
+  | "inside" -> Ok (Inside arg)
+  | "ltrimstr" | "trim_start" -> Ok (Ltrimstr arg)
+  | "rtrimstr" | "trim_end" -> Ok (Rtrimstr arg)
+  | "split" -> (
+      match arg with
+      | Literal (String sep) -> Ok (Split (Literal (String sep)))
+      | _ ->
+          Error
+            "split() requires a string literal separator\n\
+            \  expected: string literal\n\
+            \  example: split(\",\") splits \"a,b,c\" into [\"a\", \"b\", \
+             \"c\"]")
+  | "join" -> (
+      match arg with
+      | Literal (String sep) -> Ok (Join (Literal (String sep)))
+      | _ ->
+          Error
+            "join() requires a string literal separator\n\
+            \  expected: string literal\n\
+            \  example: join(\",\") joins [\"a\", \"b\"] into \"a,b\"")
+  | "contains" -> Ok (Contains arg)
+  | "bsearch" -> Ok (Bsearch arg)
   (* Regex functions - require string literals *)
   | "test" -> (
       match arg with
-      | Ast.Literal (Ast.String pattern) -> Ok (Ast.Test pattern)
-      | _ -> Error "test() requires a string literal pattern")
+      | Literal (String pattern) -> Ok (Test pattern)
+      | _ ->
+          Error
+            "test() requires a string literal pattern\n\
+            \  expected: string literal (regex pattern)\n\
+            \  example: test(\"^hello\") checks if string starts with 'hello'")
   | "match" -> (
       match arg with
-      | Ast.Literal (Ast.String pattern) -> Ok (Ast.Match pattern)
-      | _ -> Error "match() requires a string literal pattern")
+      | Literal (String pattern) -> Ok (Match pattern)
+      | _ ->
+          Error
+            "match() requires a string literal pattern\n\
+            \  expected: string literal (regex pattern)\n\
+            \  example: match(\"[0-9]+\") returns match object with offset, \
+             captures")
   | "scan" -> (
       match arg with
-      | Ast.Literal (Ast.String pattern) -> Ok (Ast.Scan pattern)
-      | _ -> Error "scan() requires a string literal pattern")
+      | Literal (String pattern) -> Ok (Scan pattern)
+      | _ ->
+          Error
+            "scan() requires a string literal pattern\n\
+            \  expected: string literal (regex pattern)\n\
+            \  example: scan(\"[0-9]+\") yields all numeric matches")
   | "capture" -> (
       match arg with
-      | Ast.Literal (Ast.String pattern) -> Ok (Ast.Capture pattern)
-      | _ -> Error "capture() requires a string literal pattern")
+      | Literal (String pattern) -> Ok (Capture pattern)
+      | _ ->
+          Error
+            "capture() requires a string literal pattern\n\
+            \  expected: string literal (regex pattern with named groups)\n\
+            \  example: capture(\"(?<name>\\\\w+)\") returns {name: ...}")
   (* Iteration/limiting functions *)
-  | "first" -> Ok (Ast.First (Some arg))
-  | "last" -> Ok (Ast.Last (Some arg))
-  | "recurse" -> Ok (Ast.Recurse_expr arg)
-  | "combinations" -> Ok (Ast.Combinations_n arg)
-  | "repeat" -> Ok (Ast.Repeat arg)
-  | "add" -> Ok (Ast.Add_expr arg)
-  | "isempty" -> Ok (Ast.Isempty arg)
+  | "first" -> Ok (First (Some arg))
+  | "last" -> Ok (Last (Some arg))
+  | "recurse" -> Ok (Recurse_expr arg)
+  | "combinations" -> Ok (Combinations_n arg)
+  | "repeat" -> Ok (Repeat arg)
+  | "add" -> Ok (Add_expr arg)
+  | "isempty" -> Ok (Isempty arg)
   (* Path functions *)
-  | "delpaths" | "delete_paths" -> Ok (Ast.Delpaths arg)
-  | "del" -> Ok (Ast.Del arg)
-  | "pick" -> Ok (Ast.Pick arg)
-  | "getpath" | "get_path" -> Ok (Ast.Getpath arg)
-  | "paths" -> Ok (Ast.Paths_filter arg)
+  | "delete_paths" | "delpaths" -> Ok (Delpaths arg)
+  | "del" -> Ok (Del arg)
+  | "pick" -> Ok (Pick arg)
+  | "get_path" | "getpath" -> Ok (Getpath arg)
+  | "paths" -> Ok (Paths_filter arg)
   (* Custom functions *)
-  | "pluck" -> Ok (Ast.Pluck arg)
-  | "partition" -> Ok (Ast.Partition arg)
-  | "find_all" -> Ok (Ast.Find_all arg)
-  | "find_first" -> Ok (Ast.Find_first arg)
-  | "paths_to" -> Ok (Ast.Paths_to arg)
+  | "pluck" -> Ok (Pluck arg)
+  | "partition" -> Ok (Partition arg)
+  | "find_all" -> Ok (Find_all arg)
+  | "find_first" -> Ok (Find_first arg)
+  | "paths_to" -> Ok (Paths_to arg)
   (* Control flow *)
-  | "assert" -> Ok (Ast.Assert (arg, None))
-  | "try" -> Ok (Ast.Try (arg, None, None))
-  | "debug" -> Ok (Ast.Debug_msg (Some arg))
-  | "error" -> Ok (Ast.Error_msg (Some arg))
+  | "assert" -> Ok (Assert (arg, None))
+  | "try" -> Ok (Try (arg, None, None))
+  | "debug" -> Ok (Debug_msg (Some arg))
+  | "error" -> Ok (Error_msg (Some arg))
   | "halt_error" -> (
       match arg with
-      | Ast.Literal (Ast.Number n) ->
-          Ok (Ast.Halt_error (Some (int_of_float n)))
-      | _ -> Error "halt_error requires number literal")
+      | Literal (Number n) -> Ok (Halt_error (Some (int_of_float n)))
+      | _ ->
+          Error
+            "halt_error() requires a number literal exit code\n\
+            \  expected: number literal\n\
+            \  example: halt_error(1) terminates with exit code 1")
   (* isvalid(expr) -> try (expr | true) catch false *)
   | "isvalid" ->
       Ok
-        (Ast.Try
-           ( Ast.Pipe (arg, Ast.Literal (Ast.Bool true)),
-             Some (Ast.Literal (Ast.Bool false)),
-             None ))
+        (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None))
   (* Not implemented *)
-  | "format" ->
-      Error "format not implemented (use @base64, @uri, etc. if available)"
+  | "format" -> Error "format not implemented"
   | "strftime" -> Error "strftime not implemented"
   | "strptime" -> Error "strptime not implemented"
   | "todateiso8601" | "fromdateiso8601" ->
@@ -1637,175 +1729,150 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "until" | "while" ->
       Error (name ^ " requires two arguments: condition and update")
   (* Default: generic function application *)
-  | _ -> Ok (Ast.Apply (name, [ arg ]))
+  | _ -> Ok (Apply (name, [ arg ]))
 
 (* Map 0-argument function/identifier names to AST nodes *)
 let map_nullary_fn (name : string) : (Ast.expression, string) result =
+  let open Ast in
   match name with
   (* Basic values *)
-  | "empty" -> Ok Ast.Empty
-  | "null" -> Ok (Ast.Literal Ast.Null)
-  | "true" -> Ok (Ast.Literal (Ast.Bool true))
-  | "false" -> Ok (Ast.Literal (Ast.Bool false))
-  | "nan" -> Ok Ast.Nan
-  | "not" -> Ok Ast.Not
-  | "break" -> Ok Ast.Break
-  | "env" -> Ok Ast.Env
+  | "empty" -> Ok Empty
+  | "null" -> Ok (Literal Null)
+  | "true" -> Ok (Literal (Bool true))
+  | "false" -> Ok (Literal (Bool false))
+  | "nan" -> Ok Nan
+  | "not" -> Ok Not
+  | "break" -> Ok Break
+  | "env" -> Ok Env
   (* Object functions *)
-  | "keys" -> Ok Ast.Keys
-  | "keys_unsorted" -> Ok Ast.Keys_unsorted
-  | "to_entries" -> Ok Ast.To_entries
-  | "from_entries" -> Ok Ast.From_entries
+  | "keys" -> Ok Keys
+  | "keys_unsorted" -> Ok Keys_unsorted
+  | "to_entries" -> Ok To_entries
+  | "from_entries" -> Ok From_entries
   (* Array functions *)
-  | "head" -> Ok Ast.Head
-  | "tail" -> Ok Ast.Tail
-  | "length" -> Ok Ast.Length
-  | "utf8bytelength" -> Ok Ast.Utf8bytelength
-  | "type" -> Ok Ast.Type
-  | "sort" -> Ok Ast.Sort
-  | "uniq" | "unique" -> Ok Ast.Unique
-  | "reverse" -> Ok Ast.Reverse
-  | "min" -> Ok Ast.Min
-  | "max" -> Ok Ast.Max
-  | "any" -> Ok Ast.Any
-  | "all" -> Ok Ast.All
-  | "first" -> Ok (Ast.First None)
-  | "last" -> Ok (Ast.Last None)
-  | "combinations" -> Ok Ast.Combinations
-  | "transpose" -> Ok (Ast.Transpose Ast.Identity)
+  | "head" -> Ok Head
+  | "tail" -> Ok Tail
+  | "length" -> Ok Length
+  | "utf8bytelength" -> Ok Utf8bytelength
+  | "type" -> Ok Type
+  | "sort" -> Ok Sort
+  | "uniq" | "unique" -> Ok Unique
+  | "reverse" -> Ok Reverse
+  | "min" -> Ok Min
+  | "max" -> Ok Max
+  | "any" -> Ok Any
+  | "all" -> Ok All
+  | "first" -> Ok (First None)
+  | "last" -> Ok (Last None)
+  | "combinations" -> Ok Combinations
+  | "transpose" -> Ok (Transpose Identity)
   (* String functions *)
   | "tostring" -> Error "tostring is deprecated. Use to_string instead"
-  | "to_string" -> Ok Ast.To_string
+  | "to_string" -> Ok To_string
   | "tonumber" -> Error "tonumber is deprecated. Use to_number instead"
-  | "to_number" -> Ok Ast.To_number
-  | "explode" -> Ok Ast.Explode
-  | "implode" -> Ok Ast.Implode
-  | "ascii_upcase" | "to_uppercase" -> Ok Ast.Ascii_upcase
-  | "ascii_downcase" | "to_lowercase" -> Ok Ast.Ascii_downcase
-  | "trim" -> Ok Ast.Trim
-  | "ltrim" -> Ok Ast.Ltrim
-  | "rtrim" -> Ok Ast.Rtrim
+  | "to_number" -> Ok To_number
+  | "explode" -> Ok Explode
+  | "implode" -> Ok Implode
+  | "ascii_upcase" | "to_uppercase" -> Ok Ascii_upcase
+  | "ascii_downcase" | "to_lowercase" -> Ok Ascii_downcase
+  | "trim" -> Ok Trim
+  | "ltrim" -> Ok Ltrim
+  | "rtrim" -> Ok Rtrim
   (* Math functions *)
-  | "floor" -> Ok Ast.Floor
-  | "sqrt" -> Ok Ast.Sqrt
-  | "abs" -> Ok (Ast.Fun Ast.Absolute)
-  | "add" -> Ok (Ast.Fun Ast.Add)
-  | "sin" -> Ok (Ast.Fun Ast.Sin)
-  | "cos" -> Ok (Ast.Fun Ast.Cos)
-  | "tan" -> Ok (Ast.Fun Ast.Tan)
-  | "asin" -> Ok (Ast.Fun Ast.Asin)
-  | "acos" -> Ok (Ast.Fun Ast.Acos)
-  | "atan" -> Ok (Ast.Fun Ast.Atan)
-  | "log" -> Ok (Ast.Fun Ast.Log)
-  | "log10" -> Ok (Ast.Fun Ast.Log10)
-  | "exp" -> Ok (Ast.Fun Ast.Exp)
-  | "pow" -> Ok (Ast.Fun Ast.Pow)
-  | "ceil" -> Ok (Ast.Fun Ast.Ceil)
-  | "round" -> Ok (Ast.Fun Ast.Round)
-  | "infinite" -> Ok (Ast.Fun Ast.Infinite)
-  | "now" -> Ok (Ast.Fun Ast.Now)
-  | "sinh" -> Ok (Ast.Fun Ast.Sinh)
-  | "cosh" -> Ok (Ast.Fun Ast.Cosh)
-  | "tanh" -> Ok (Ast.Fun Ast.Tanh)
-  | "asinh" -> Ok (Ast.Fun Ast.Asinh)
-  | "acosh" -> Ok (Ast.Fun Ast.Acosh)
-  | "atanh" -> Ok (Ast.Fun Ast.Atanh)
-  | "isinfinite" | "is_infinite" -> Ok (Ast.Fun Ast.Isinfinite)
-  | "isnormal" | "is_normal" -> Ok (Ast.Fun Ast.Isnormal)
-  | "trunc" -> Ok (Ast.Fun Ast.Trunc)
-  | "fabs" -> Ok (Ast.Fun Ast.Fabs)
-  | "cbrt" -> Ok (Ast.Fun Ast.Cbrt)
-  | "expm1" -> Ok (Ast.Fun Ast.Expm1)
-  | "exp2" -> Ok (Ast.Fun Ast.Exp2)
-  | "log1p" -> Ok (Ast.Fun Ast.Log1p)
-  | "log2" -> Ok (Ast.Fun Ast.Log2)
-  | "nearbyint" | "rint" -> Ok (Ast.Fun Ast.Nearbyint)
-  | "logb" -> Ok (Ast.Fun Ast.Logb)
-  | "isnan" | "is_nan" -> Ok Ast.Is_nan
+  | "floor" -> Ok Floor
+  | "sqrt" -> Ok Sqrt
+  | "abs" -> Ok (Fun Absolute)
+  | "add" -> Ok (Fun Add)
+  | "sin" -> Ok (Fun Sin)
+  | "cos" -> Ok (Fun Cos)
+  | "tan" -> Ok (Fun Tan)
+  | "asin" -> Ok (Fun Asin)
+  | "acos" -> Ok (Fun Acos)
+  | "atan" -> Ok (Fun Atan)
+  | "log" -> Ok (Fun Log)
+  | "log10" -> Ok (Fun Log10)
+  | "exp" -> Ok (Fun Exp)
+  | "pow" -> Ok (Fun Pow)
+  | "ceil" -> Ok (Fun Ceil)
+  | "round" -> Ok (Fun Round)
+  | "infinite" -> Ok (Fun Infinite)
+  | "now" -> Ok (Fun Now)
+  | "sinh" -> Ok (Fun Sinh)
+  | "cosh" -> Ok (Fun Cosh)
+  | "tanh" -> Ok (Fun Tanh)
+  | "asinh" -> Ok (Fun Asinh)
+  | "acosh" -> Ok (Fun Acosh)
+  | "atanh" -> Ok (Fun Atanh)
+  | "is_infinite" | "isinfinite" -> Ok (Fun Isinfinite)
+  | "is_normal" | "isnormal" -> Ok (Fun Isnormal)
+  | "trunc" -> Ok (Fun Trunc)
+  | "fabs" -> Ok (Fun Fabs)
+  | "cbrt" -> Ok (Fun Cbrt)
+  | "expm1" -> Ok (Fun Expm1)
+  | "exp2" -> Ok (Fun Exp2)
+  | "log1p" -> Ok (Fun Log1p)
+  | "log2" -> Ok (Fun Log2)
+  | "nearbyint" | "rint" -> Ok (Fun Nearbyint)
+  | "logb" -> Ok (Fun Logb)
+  | "isnan" | "is_nan" -> Ok Is_nan
   (* Recursion *)
-  | "recurse" -> Ok Ast.Recurse
-  | "recurse_down" -> Ok Ast.Recurse_down
+  | "recurse" -> Ok Recurse
+  | "recurse_down" -> Ok Recurse_down
   (* Path functions *)
-  | "paths" -> Ok Ast.Paths
-  | "leaf_paths" -> Ok Ast.Leaf_paths
+  | "paths" -> Ok Paths
+  | "leaf_paths" -> Ok Leaf_paths
   (* Control flow *)
-  | "error" -> Ok (Ast.Error_msg None)
-  | "halt" -> Ok Ast.Halt
-  | "halt_error" -> Ok (Ast.Halt_error None)
+  | "error" -> Ok (Error_msg None)
+  | "halt" -> Ok Halt
+  | "halt_error" -> Ok (Halt_error None)
   (* Type selectors - equivalent to select(type == "...") *)
   | "numbers" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation
-              (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "number"))))
+      Ok (Select (Operation (Type, Equal, Literal (String "number"))))
   | "strings" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation
-              (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "string"))))
+      Ok (Select (Operation (Type, Equal, Literal (String "string"))))
   | "objects" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation
-              (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "object"))))
-  | "arrays" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "array"))))
+      Ok (Select (Operation (Type, Equal, Literal (String "object"))))
+  | "arrays" -> Ok (Select (Operation (Type, Equal, Literal (String "array"))))
   | "booleans" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation
-              (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "boolean"))))
-  | "nulls" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "null"))))
+      Ok (Select (Operation (Type, Equal, Literal (String "boolean"))))
+  | "nulls" -> Ok (Select (Operation (Type, Equal, Literal (String "null"))))
   | "iterables" ->
       Ok
-        (Ast.Select
-           (Ast.Operation
-              ( Ast.Operation
-                  (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "array")),
-                Ast.Or,
-                Ast.Operation
-                  (Ast.Type, Ast.Equal, Ast.Literal (Ast.String "object")) )))
-  | "values" ->
-      Ok
-        (Ast.Select
-           (Ast.Operation (Ast.Identity, Ast.Not_equal, Ast.Literal Ast.Null)))
+        (Select
+           (Operation
+              ( Operation (Type, Equal, Literal (String "array")),
+                Or,
+                Operation (Type, Equal, Literal (String "object")) )))
+  | "values" -> Ok (Select (Operation (Identity, Not_equal, Literal Null)))
   | "scalars" ->
       Ok
-        (Ast.Select
-           (Ast.Operation
-              ( Ast.Operation
-                  (Ast.Type, Ast.Not_equal, Ast.Literal (Ast.String "array")),
-                Ast.And,
-                Ast.Operation
-                  (Ast.Type, Ast.Not_equal, Ast.Literal (Ast.String "object"))
-              )))
+        (Select
+           (Operation
+              ( Operation (Type, Not_equal, Literal (String "array")),
+                And,
+                Operation (Type, Not_equal, Literal (String "object")) )))
   (* Debug/IO *)
-  | "debug" -> Ok (Ast.Debug_msg None)
-  | "stderr" -> Ok Ast.Stderr
+  | "debug" -> Ok (Debug_msg None)
+  | "stderr" -> Ok Stderr
   (* Custom functions *)
-  | "compact" -> Ok Ast.Compact
-  | "is_empty" -> Ok Ast.Is_empty
-  | "is_blank" -> Ok Ast.Is_blank
-  | "descend" -> Ok Ast.Descend
-  | "dive" -> Ok Ast.Dive
+  | "compact" -> Ok Compact
+  | "is_empty" -> Ok Is_empty
+  | "is_blank" -> Ok Is_blank
+  | "descend" -> Ok Descend
+  | "dive" -> Ok Dive
   (* Time functions *)
-  | "localtime" -> Ok Ast.Localtime
-  | "gmtime" -> Ok Ast.Gmtime
-  | "mktime" -> Ok Ast.Mktime
+  | "localtime" -> Ok Localtime
+  | "gmtime" -> Ok Gmtime
+  | "mktime" -> Ok Mktime
   (* isvalid without argument: try (. | true) catch false *)
   | "isvalid" ->
       Ok
-        (Ast.Try
-           ( Ast.Pipe (Ast.Identity, Ast.Literal (Ast.Bool true)),
-             Some (Ast.Literal (Ast.Bool false)),
+        (Try
+           ( Pipe (Identity, Literal (Bool true)),
+             Some (Literal (Bool false)),
              None ))
-  | "builtins" -> Ok Ast.Builtins
-  | "formats" -> Ok Ast.Formats
+  | "builtins" -> Ok Builtins
+  | "formats" -> Ok Formats
   (* Functions that require arguments - use rich error messages *)
   | "select" | "map" | "map_values" | "flat_map" | "walk" | "sort_by" | "min_by"
   | "max_by" | "group_by" | "unique_by" | "find" | "path" | "with_entries"
@@ -1840,4 +1907,4 @@ let map_nullary_fn (name : string) : (Ast.expression, string) result =
   | "setpath" | "set_path" | "delpaths" | "delete_paths" ->
       Error (name ^ " requires arguments")
   (* Default: generic function application with no args *)
-  | _ -> Ok (Ast.Apply (name, []))
+  | _ -> Ok (Apply (name, []))

@@ -2,8 +2,7 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (modules :standard \ Repl Term_style Help)
- (libraries menhirLib json sedlex str unix)
+ (libraries menhirLib json sedlex str unix mosaic.ui query-json.term-style)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation

@@ -3,4 +3,10 @@
  (modes native)
  (public_name query-json)
  (package query-json)
- (libraries query-json.core cmdliner unix dune-build-info))
+ (libraries
+  query-json.core
+  query-json.term-style
+  cmdliner
+  unix
+  dune-build-info
+  mosaic_mlx))

@@ -1,0 +1,5 @@
+(library
+ (name term_style)
+ (public_name query-json.term-style)
+ (modules term_style)
+ (libraries mosaic.ui))

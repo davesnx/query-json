@@ -74,12 +74,3 @@ val runtime_error :
   t
 
 val context_error : message:string -> t
-
-val json_error :
-  colorize:bool ->
-  message:string ->
-  ?input:string ->
-  ?start_pos:int ->
-  ?end_pos:int ->
-  unit ->
-  string

@@ -30,61 +30,60 @@ let with_context ctx err = { err with contexts = ctx :: err.contexts }
 let with_suggestion s err = { err with suggestion = Some s }
 
 let format_location ~colorize loc =
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
+  let t = Term_style.make ~colorize in
   let { input; start_pos; end_pos } = loc in
   let pointer_len = max 1 (end_pos - start_pos) in
   let pointer = String.make pointer_len '^' in
   let indent_space = String.make start_pos ' ' in
-  Printf.sprintf "  %s %s\n      %s%s" (gray "-->") input indent_space
-    (red pointer)
+  Printf.sprintf "  %s %s\n      %s%s" (t.blue "-->") input indent_space
+    (t.red pointer)
 
 let format_context ~colorize ctx =
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
+  let t = Term_style.make ~colorize in
   match ctx with
   | Json_value json ->
       let json_str =
         Json.to_string_pretty ~colorize ~summarize:true ~raw:false json
       in
-      Printf.sprintf "  %s %s" (gray "in:") json_str
-  | Expected s -> Printf.sprintf "  %s %s" (gray "expected:") s
-  | Found s -> Printf.sprintf "  %s %s" (gray "found:") s
+      Printf.sprintf "  %s %s" (t.gray "in:") json_str
+  | Expected s -> Printf.sprintf "  %s %s" (t.gray "expected:") s
+  | Found s -> Printf.sprintf "  %s %s" (t.gray "found:") s
   | Available_keys keys ->
-      Printf.sprintf "  %s %s" (gray "available keys:")
+      Printf.sprintf "  %s %s" (t.gray "available keys:")
         (String.concat ", " keys)
-  | Example s -> Printf.sprintf "  %s %s" (gray "example:") s
-  | Note s -> Printf.sprintf "  %s %s" (gray "note:") s
+  | Example s -> Printf.sprintf "  %s %s" (t.gray "example:") s
+  | Note s -> Printf.sprintf "  %s %s" (t.gray "note:") s
 
 let format ~colorize err =
-  let open Ansi_wrapper.To_string (struct
-    let colorize = colorize
-  end) in
+  let t = Term_style.make ~colorize in
   let parts = ref [] in
 
+  (* Header: error[kind]: message *)
   let header =
     Printf.sprintf "%s%s%s %s"
-      (red (bold "error"))
-      (red (Printf.sprintf "[%s]" err.kind))
-      (red ":") err.message
+      (t.red (t.bold "error"))
+      (t.red (Printf.sprintf "[%s]" err.kind))
+      (t.red ":") err.message
   in
   parts := [ header ];
 
+  (* Location with code snippet *)
   (match err.location with
   | Some loc -> parts := !parts @ [ format_location ~colorize loc ]
   | None -> ());
 
+  (* Empty line before context/hints if we have any *)
   let has_context = List.length err.contexts > 0 || err.suggestion <> None in
   if has_context then parts := !parts @ [ "" ];
 
+  (* Context items *)
   List.iter
     (fun ctx -> parts := !parts @ [ format_context ~colorize ctx ])
     err.contexts;
 
+  (* Suggestion/hint *)
   (match err.suggestion with
-  | Some s -> parts := !parts @ [ Printf.sprintf "  %s %s" (gray "hint:") s ]
+  | Some s -> parts := !parts @ [ Printf.sprintf "  %s %s" (t.cyan "hint:") s ]
   | None -> ());
 
   String.concat "\n" !parts
@@ -168,14 +167,3 @@ let runtime_error ~kind ~message ?value ?suggestion () =
   match value with Some v -> with_context (Json_value v) err | None -> err
 
 let context_error ~message = make ~kind:"context_error" ~message ()
-
-let json_error ~colorize ~message ?input ?start_pos ?end_pos () =
-  match (input, start_pos, end_pos) with
-  | Some input, Some start_pos, Some end_pos ->
-      let err =
-        make ~kind:"json" ~message ~location:{ input; start_pos; end_pos } ()
-      in
-      format ~colorize err
-  | _ ->
-      let err = make ~kind:"json" ~message () in
-      format ~colorize err
