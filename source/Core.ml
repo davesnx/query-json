@@ -61,11 +61,11 @@ let parse ~debug ~colorize input =
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
 
-let run ?(debug = false) ?(colorize = true) ?(raw = false) ?(summarize = false)
-    query json =
+let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
+    ?(summarize = false) query json =
   match parse ~debug ~colorize query with
   | Ok runtime ->
-      Interpreter.execute ~colorize runtime json
+      Interpreter.execute ~colorize ~verbose runtime json
       |> Result.map (fun results ->
           results
           |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)

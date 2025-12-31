@@ -2,13 +2,13 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
+ (modules :standard \ Repl Term_style Help)
  (libraries
   menhirLib
   json
   sedlex
   str
-  unix
-  ansi)
+  unix)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation

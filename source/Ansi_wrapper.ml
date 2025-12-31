@@ -28,3 +28,4 @@ struct
   let reset buf =
     if Config.colorize then Buffer.add_string buf "\027[39m\027[0m"
 end
+

@@ -11,9 +11,6 @@ let spinner = Vnode.spinner
 let tab_select = Vnode.tab_select
 let scroll_bar = Vnode.scroll_bar
 let markdown = Vnode.markdown
-
-(* MLX-compatible wrappers *)
-
 let fragment ?(children = []) () = Vnode.fragment children
 
 let box ?id ?key ?visible ?z_index ?live ?buffer ?ref ?on_mouse ?on_key
