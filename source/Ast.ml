@@ -203,10 +203,12 @@ type expression =
       * expression
       * expression (* fma(x; y; z) - fused multiply-add *)
   | Break (* break *)
-  | Try of expression * expression option (* try expr catch handler *)
+  | Try of expression * expression option * expression option
+    (* try expr catch handler finally cleanup *)
   | Limit of int * expression (* limit(n; expr) *)
   | Skip of int * expression (* skip(n; expr) *)
   | Error_msg of expression option (* error or error(msg) *)
+  | Raise of expression * expression (* raise(kind, message) *)
   | Halt (* halt *)
   | Halt_error of int option (* halt_error or halt_error(exit_code) *)
   | Isempty of expression (* isempty(expr) *)

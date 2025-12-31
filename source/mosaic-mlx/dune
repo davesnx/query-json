@@ -1,0 +1,4 @@
+(library
+ (name Mosaic_mlx)
+ (public_name query-json.mosaic-mlx)
+ (libraries mosaic.tea mosaic.ui))

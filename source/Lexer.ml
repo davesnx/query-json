@@ -63,6 +63,7 @@ type token =
   | AS
   | TRY
   | CATCH
+  | FINALLY
   | DEF
   | INTERP_START
   | INTERP_TEXT of string
@@ -227,6 +228,7 @@ and tokenize_impl buf =
       | '(' -> Ok (FUNCTION "try")
       | _ -> Ok TRY)
   | "catch" -> Ok CATCH
+  | "finally" -> Ok FINALLY
   | "." -> Ok DOT
   | ".." -> Ok RECURSE
   | '$' -> tokenize_variable buf

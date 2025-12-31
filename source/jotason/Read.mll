@@ -818,22 +818,49 @@ and finish_buffer_comment v = parse
   (* Re-export from Common *)
   exception Json_error = Common.Json_error
 
-  (* Result-based parsing wrappers *)
+  type json_parse_error = {
+    message : string;
+    start_pos : int option;
+    end_pos : int option;
+    input : string option;
+  }
+
+  (* Parse JSON error format: "Line N, bytes S-E:\nMessage" *)
+  let parse_error_location msg =
+    try
+      let newline_pos = String.index msg '\n' in
+      let location_part = String.sub msg 0 newline_pos in
+      let message = String.sub msg (newline_pos + 1) (String.length msg - newline_pos - 1) in
+      let r = Str.regexp {|Line \([0-9]+\), bytes \([0-9]+\)-\([0-9]+\):|} in
+      if Str.string_match r location_part 0 then
+        let start_pos = int_of_string (Str.matched_group 2 location_part) in
+        let end_pos = int_of_string (Str.matched_group 3 location_part) in
+        (message, Some start_pos, Some end_pos)
+      else (msg, None, None)
+    with _ -> (msg, None, None)
+
   let parse_string str =
     try Ok (from_string str)
     with
-    | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading the string")
+    | Common.Json_error msg ->
+        let message, start_pos, end_pos = parse_error_location msg in
+        Error { message; start_pos; end_pos; input = Some str }
+    | e -> Error { message = Printexc.to_string e; start_pos = None; end_pos = None; input = Some str }
 
   let parse_file file =
     try Ok (from_file file)
     with
-    | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading the file")
+    | Common.Json_error msg ->
+        let message, start_pos, end_pos = parse_error_location msg in
+        let input = try Some (In_channel.with_open_text file In_channel.input_all) with _ -> None in
+        Error { message; start_pos; end_pos; input }
+    | e -> Error { message = Printexc.to_string e; start_pos = None; end_pos = None; input = None }
 
   let parse_channel channel =
     try Ok (from_channel channel)
     with
-    | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading from standard input")
+    | Common.Json_error msg ->
+        let message, start_pos, end_pos = parse_error_location msg in
+        Error { message; start_pos; end_pos; input = None }
+    | e -> Error { message = Printexc.to_string e; start_pos = None; end_pos = None; input = None }
 }

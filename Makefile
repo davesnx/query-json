@@ -28,6 +28,10 @@ dev: ## Build everything in watch mode
 dev-core: ## Build in watch mode
 	$(DUNE) build -w source
 
+.PHONY: repl
+repl: ## Run repl with "package.json"
+	$(DUNE) exec ./bin/bin.exe -- repl package.json
+
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
 	$(VITE) --host --config website/vite.config.js --force
@@ -82,11 +86,19 @@ subst: ## Run dune substitute
 
 .PHONY: pin
 pin: # pin dependencies
-	echo "No pinning needed"
+	opam pin add toffee.dev "https://github.com/tmattio/mosaic.git" -y
+	opam pin add matrix.dev "https://github.com/tmattio/mosaic.git" -y
+	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#9198ad3d3454bd73282ecd5470563ca9dc69edc4" -y
+	opam pin add mlx.dev "https://github.com/ocaml-mlx/mlx.git" -y
+	opam pin add ocamlmerlin-mlx.dev "https://github.com/ocaml-mlx/mlx.git" -y
+	opam pin add ocamlformat-mlx.dev "https://github.com/ocaml-mlx/ocamlformat-mlx.git" -y
+	opam pin add ocamlformat-mlx-lib.dev "https://github.com/ocaml-mlx/ocamlformat-mlx.git" -y
+	opam pin add reason-react.dev "https://github.com/reasonml/reason-react.git" -y
+	opam pin add reason-react-ppx.dev "https://github.com/reasonml/reason-react.git" -y
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.3.0 --deps-only --with-test --no-install -y
+	opam switch create . 5.4.0 --deps-only --with-test --no-install -y
 
 .PHONY: install
 install: ## Install opam deps

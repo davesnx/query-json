@@ -9,6 +9,8 @@ struct
   let red str = wrap "\027[31m" str
   let green str = wrap "\027[32m" str
   let yellow str = wrap "\027[33m" str
+  let blue str = wrap "\027[34m" str
+  let cyan str = wrap "\027[36m" str
   let gray str = wrap "\027[90m" str
 end
 

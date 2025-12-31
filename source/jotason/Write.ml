@@ -654,15 +654,17 @@ module Pretty = struct
   let to_buffer_colored buf ~colorize ~summarize json =
     if (not colorize) && not summarize then write_json_plain buf ~indent:0 json
     else begin
-      let module Color = Ansi.To_buffer (struct
-        let colorize = colorize
-      end) in
+      let green buf = if colorize then Buffer.add_string buf "\027[32m" in
+      let blue_bold buf =
+        if colorize then Buffer.add_string buf "\027[1m\027[34m"
+      in
+      let gray buf = if colorize then Buffer.add_string buf "\027[90m" in
+      let reset buf =
+        if colorize then Buffer.add_string buf "\027[39m\027[0m"
+      in
       if summarize then
-        write_summarized buf json ~value:Color.green ~key:Color.blue_bold
-          ~meta:Color.gray ~reset:Color.reset
-      else
-        write_json buf json ~indent:0 ~value:Color.green ~key:Color.blue_bold
-          ~reset:Color.reset
+        write_summarized buf json ~value:green ~key:blue_bold ~meta:gray ~reset
+      else write_json buf json ~indent:0 ~value:green ~key:blue_bold ~reset
     end
 
   let to_string_colored ~colorize ~summarize json =

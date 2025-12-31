@@ -38,6 +38,7 @@
 %token CLOSE_PARENT
 %token TRY
 %token CATCH
+%token FINALLY
 
 (* String interpolation tokens *)
 %token INTERP_START
@@ -60,6 +61,8 @@
 /* DEF_PREC is a dummy precedence for function definitions - must be lower than PIPE and others so that operators are shifted into the 'rest' expression: def f: body; rest | x
    should parse as: def f: body; (rest | x) */
 %nonassoc DEF_PREC
+%nonassoc CATCH
+%nonassoc FINALLY
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE UPDATE_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN ALT_ASSIGN ASSIGN ALTERNATIVE /* lowest precedence */
 %left COMMA
@@ -137,8 +140,14 @@ sequence_expr:
   | left = sequence_expr; ALTERNATIVE; right = item_expr;
     { Alternative (left, right) }
 
-  | TRY; e = sequence_expr; CATCH; handler = item_expr
-    { Try (e, Some handler) }
+  | TRY; e = sequence_expr; CATCH; handler = item_expr; FINALLY; cleanup = item_expr
+    { Try (e, Some handler, Some cleanup) }
+
+  | TRY; e = sequence_expr; CATCH; handler = item_expr %prec CATCH
+    { Try (e, Some handler, None) }
+
+  | TRY; e = sequence_expr; FINALLY; cleanup = item_expr
+    { Try (e, None, Some cleanup) }
 
   (* Nested function definitions within expressions *)
   | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
@@ -248,7 +257,7 @@ term:
       | "while" -> While (cond, update)
       | "until" -> Until (cond, update)
       | "recurse" -> Recurse_with (cond, update)
-      | "try" -> Try (cond, Some update)
+      | "try" -> Try (cond, Some update, None)
       | "limit" -> (
           match cond with
           | Literal (Number n) -> Limit (int_of_float n, update)
@@ -275,6 +284,7 @@ term:
       | "all" -> All_with_generator (cond, update)
       | "setpath" -> Setpath (cond, update)
       | "nth" -> Nth (cond, update)
+      | "raise" -> Raise (cond, update)
       | "atan2" -> Atan2 (cond, update)
       | "atan" -> Atan2 (cond, update)
       | "copysign" -> Copysign (cond, update)
@@ -360,7 +370,7 @@ term:
       | "pick" -> Pick seq
       | "getpath" -> Getpath seq
       | "paths" -> Paths_filter seq
-      | "try" -> Try (seq, None)
+      | "try" -> Try (seq, None, None)
       | "error" -> Error_msg (Some seq)
       | "halt_error" -> (
           match seq with
@@ -375,7 +385,7 @@ term:
       | "mktime" -> failwith "mktime not implemented"
       | "tojsonstream" | "fromjsonstream" | "truncate_stream" -> failwith "JSON stream functions not implemented"
       | "splits" -> failwith "splits not implemented (use split)"
-      | "isvalid" -> Try (Pipe (seq, Literal (Bool true)), Some (Literal (Bool false)))
+      | "isvalid" -> Try (Pipe (seq, Literal (Bool true)), Some (Literal (Bool false)), None)
       | "tojson" | "fromjson" -> failwith "tojson/fromjson not implemented (use tostring/input is already JSON)"
       | "ascii" -> failwith "ascii not implemented"
       | "modulemeta" -> failwith "modulemeta not implemented"
@@ -394,6 +404,26 @@ term:
     { Foreach (expr, var, init, update, Identity) }
   | OPEN_PARENT; expr = sequence_expr; AS; var = VARIABLE; PIPE; body = sequence_expr; CLOSE_PARENT
     { As (expr, var, body) }
+  (* Optional function calls - identifier followed by ? *)
+  | f = IDENTIFIER; QUESTION_MARK
+    { match f with
+      | "first" -> Optional (First None)
+      | "last" -> Optional (Last None)
+      | _ -> failwith (f ^ "? is not a valid optional function. Only first? and last? are supported")
+    }
+  (* Optional function calls with arguments - first?(expr), last?(expr) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; seq = sequence_expr; CLOSE_PARENT
+    { match f with
+      | "first" -> Optional (First (Some seq))
+      | "last" -> Optional (Last (Some seq))
+      | _ -> failwith (f ^ "?(expr) is not a valid optional function")
+    }
+  (* Optional nth - nth?(n; expr) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; n = sequence_expr; SEMICOLON; expr = sequence_expr; CLOSE_PARENT
+    { match f with
+      | "nth" -> Optional (Nth (n, expr))
+      | _ -> failwith (f ^ "?(n; expr) is not a valid optional function")
+    }
   | f = IDENTIFIER;
     { match f with
       | "empty" -> Empty
@@ -499,7 +529,7 @@ term:
       | "gmtime" -> Gmtime
       | "mktime" -> Mktime
       | "strftime" | "strptime" -> failwith "time formatting not implemented"
-      | "isvalid" -> Try (Pipe (Identity, Literal (Bool true)), Some (Literal (Bool false)))
+      | "isvalid" -> Try (Pipe (Identity, Literal (Bool true)), Some (Literal (Bool false)), None)
       | "leaf_paths" -> Leaf_paths
       | "builtins" -> Builtins
       | "modulemeta" -> failwith "modulemeta not implemented"
@@ -533,6 +563,10 @@ term:
   /* Index: .[0] or .[0,1,2] */
   | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET
     { Pipe (e, Index (List.map int_of_float indices)) }
+
+  /* Optional index: .[0]? */
+  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET; QUESTION_MARK
+    { Pipe (e, Optional (Index (List.map int_of_float indices))) }
 
   /* String key access: .["foo"] */
   | e = term; OPEN_BRACKET; key = STRING; CLOSE_BRACKET

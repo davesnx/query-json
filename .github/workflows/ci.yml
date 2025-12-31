@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  OCAML_COMPILER: 5.3.0
+  OCAML_COMPILER: 5.4.0
 
 permissions:
   contents: write
@@ -49,14 +49,14 @@ jobs:
           dune-cache: true
           opam-disable-sandboxing: true
 
+      - name: Pin some deps
+        run: make pin
+
       - name: Install deps
         run: make install
 
       - name: Install npm deps
         run: make npm-install
-
-      - name: Pin some deps
-        run: make pin
 
       - name: Build
         run: make build-prod
@@ -112,14 +112,14 @@ jobs:
           dune-cache: true
           opam-disable-sandboxing: true
 
+      - name: Pin some deps
+        run: make pin
+
       - name: Install opam deps
         run: make install
 
       - name: Install npm deps
         run: make npm-install
-
-      - name: Pin some deps
-        run: make pin
 
       - name: Build
         run: make build-prod

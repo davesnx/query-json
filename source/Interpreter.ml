@@ -1,9 +1,30 @@
 open Ast
 
+type structured_error = {
+  kind : string;
+  message : string;
+  value : Json.t option;
+  suggestion : string option;
+}
+
+let error_to_json (err : structured_error) : Json.t =
+  let fields =
+    [ ("kind", `String err.kind); ("message", `String err.message) ]
+  in
+  let fields =
+    match err.value with Some v -> fields @ [ ("value", v) ] | None -> fields
+  in
+  let fields =
+    match err.suggestion with
+    | Some s -> fields @ [ ("suggestion", `String s) ]
+    | None -> fields
+  in
+  `Assoc fields
+
 type _ Effect.t += Yield : Json.t -> unit Effect.t
 type _ Effect.t += Break : unit Effect.t
 type _ Effect.t += Halt : int -> unit Effect.t
-type _ Effect.t += Fail : string -> unit Effect.t
+type _ Effect.t += Fail : structured_error -> unit Effect.t
 type _ Effect.t += User_error : Json.t -> unit Effect.t
 type fn_definition = { params : string list; body : expression }
 
@@ -18,9 +39,34 @@ let yield v = Effect.perform (Yield v)
 let break () = Effect.perform Break
 let halt ?(code = 0) () = Effect.perform (Halt code)
 
-let fail msg =
-  Effect.perform (Fail msg);
+let fail_with ~kind ?value ?suggestion message =
+  Effect.perform (Fail { kind; message; value; suggestion });
   assert false (* unreachable - handler never continues *)
+
+let fail msg = fail_with ~kind:"error" msg
+
+let fail_key_not_found ~key ~value =
+  fail_with ~kind:"key_not_found" ~value
+    ~suggestion:("Use ." ^ key ^ "? for optional access")
+    ("Key '" ^ key ^ "' not found in object")
+
+let fail_null_access ~key ~value =
+  fail_with ~kind:"null_access" ~value
+    ("Cannot access key '" ^ key ^ "' on null")
+
+let fail_type_mismatch ~value message =
+  fail_with ~kind:"type_mismatch" ~value message
+
+let fail_index_out_of_bounds ~index ~length ~value =
+  fail_with ~kind:"index_out_of_bounds" ~value
+    ~suggestion:("Use .[" ^ Int.to_string index ^ "]? for optional access")
+    ("Index " ^ Int.to_string index ^ " out of bounds (array has "
+   ^ Int.to_string length ^ " elements)")
+
+let fail_empty_array op =
+  fail_with ~kind:"empty_array"
+    ~suggestion:("Use " ^ op ^ "? for optional access")
+    (op ^ ": empty array")
 
 let user_error value =
   Effect.perform (User_error value);
@@ -42,10 +88,10 @@ let run fn ?and_then ?on_fail () =
                       f json;
                       Effect.Deep.continue k ())
               | None -> None)
-          | Fail msg -> (
+          | Fail err -> (
               match on_fail with
               | Some f ->
-                  Some (fun (_ : (a, _) Effect.Deep.continuation) -> f msg)
+                  Some (fun (_ : (a, _) Effect.Deep.continuation) -> f err)
               | None -> None)
           | _ -> None);
     }
@@ -185,8 +231,9 @@ let rec substitute_params (params : string list) (args : expression list)
   | Scalbn (e1, e2) -> Scalbn (sub e1, sub e2)
   | Pow2 (e1, e2) -> Pow2 (sub e1, sub e2)
   | Fma (e1, e2, e3) -> Fma (sub e1, sub e2, sub e3)
-  | Try (e, h) -> Try (sub e, sub_opt h)
+  | Try (e, h, f) -> Try (sub e, sub_opt h, sub_opt f)
   | Error_msg e -> Error_msg (sub_opt e)
+  | Raise (k, m) -> Raise (sub k, sub m)
   | Isempty e -> Isempty (sub e)
   | Foreach (e, var, init, update, extract) ->
       Foreach (sub e, var, sub init, sub update, sub extract)
@@ -267,10 +314,7 @@ module Operators = struct
     | `Int l, `Float r -> `Float (Int.to_float l +. r)
     | `Float l, `Int r -> `Float (l +. Int.to_float r)
     | `Int l, `Int r -> `Float (Int.to_float l +. Int.to_float r)
-    | `Null, `Int r | `Int r, `Null -> `Float (Int.to_float r)
-    | `Null, `Float r | `Float r, `Null -> `Float r
     | `String l, `String r -> `String (l ^ r)
-    | `Null, `String r | `String r, `Null -> `String r
     | `Assoc l_entries, `Assoc r_entries ->
         (* right side wins for duplicate keys (override, not merge) *)
         let updated_l =
@@ -288,10 +332,15 @@ module Operators = struct
             r_entries
         in
         `Assoc (updated_l @ new_keys)
-    | `Null, `Assoc r | `Assoc r, `Null -> `Assoc r
     | `List l, `List r -> `List (l @ r)
-    | `Null, `List r | `List r, `Null -> `List r
-    | `Null, `Null -> `Null
+    | `Null, r ->
+        fail
+          ("Cannot add null to " ^ Json.type_of r
+         ^ ". Hint: Use (.x ?? 0) for explicit null handling")
+    | l, `Null ->
+        fail
+          ("Cannot add " ^ Json.type_of l
+         ^ " to null. Hint: Use (.x ?? 0) for explicit null handling")
     | _ -> Error.make ~ctx str left
 
   let apply_operation ~ctx str fn (left : Json.t) (right : Json.t) =
@@ -302,13 +351,16 @@ module Operators = struct
     | `Int l, `Int r -> `Float (fn (Int.to_float l) (Int.to_float r))
     | _ -> Error.make ~ctx str left
 
-  let compare ~ctx str fn (left : Json.t) (right : Json.t) =
+  let compare ~ctx:_ str _fn (left : Json.t) (right : Json.t) =
     match (left, right) with
-    | `Float l, `Float r -> `Bool (fn l r)
-    | `Int l, `Float r -> `Bool (fn (Int.to_float l) r)
-    | `Float l, `Int r -> `Bool (fn l (Int.to_float r))
-    | `Int l, `Int r -> `Bool (fn (Int.to_float l) (Int.to_float r))
-    | _ -> Error.make ~ctx str right
+    | `Float l, `Float r -> `Bool (_fn l r)
+    | `Int l, `Float r -> `Bool (_fn (Int.to_float l) r)
+    | `Float l, `Int r -> `Bool (_fn l (Int.to_float r))
+    | `Int l, `Int r -> `Bool (_fn (Int.to_float l) (Int.to_float r))
+    | _ ->
+        fail
+          ("Cannot compare " ^ Json.type_of left ^ " with " ^ Json.type_of right
+         ^ " using '" ^ str ^ "'")
 
   let gt ~ctx = compare ~ctx ">" ( > )
   let gte ~ctx = compare ~ctx ">=" ( >= )
@@ -1283,10 +1335,14 @@ let tail ~ctx (json : Json.t) =
 
 let member ~ctx:_ (key : string) (json : Json.t) =
   match json with
-  | `Assoc _assoc -> Json.member key json
-  | `Null -> `Null
+  | `Assoc assoc -> (
+      match List.assoc_opt key assoc with
+      | Some value -> value
+      | None -> fail_key_not_found ~key ~value:json)
+  | `Null -> fail_null_access ~key ~value:json
   | _ ->
-      fail ("Cannot index " ^ Json.type_of json ^ " with string \"" ^ key ^ "\"")
+      fail_type_mismatch ~value:json
+        ("Cannot index " ^ Json.type_of json ^ " with string \"" ^ key ^ "\"")
 
 let iterator ~ctx (json : Json.t) =
   match json with
@@ -1300,9 +1356,12 @@ let rec index ~ctx (indices : int list) (json : Json.t) =
   | [] -> iterator ~ctx json
   | [ value ] -> (
       match json with
-      | `List list when List.length list > value ->
-          yield (Json.index value json)
-      | `List _ -> yield `Null
+      | `List list ->
+          let len = List.length list in
+          let actual_index = if value < 0 then len + value else value in
+          if actual_index >= 0 && actual_index < len then
+            yield (List.nth list actual_index)
+          else fail_index_out_of_bounds ~index:value ~length:len ~value:json
       | _ -> Error.make ~ctx ("[" ^ Int.to_string value ^ "]") json)
   | multiple -> List.iter (fun idx -> index ~ctx [ idx ] json) multiple
 
@@ -1361,7 +1420,7 @@ let rec interp ~ctx expression json : unit =
   | Stderr -> stderr json
   | Key key -> yield (member ~ctx key json)
   | Optional expr ->
-      run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> ()) ()
+      run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> yield `Null) ()
   | Index idx -> index ~ctx idx json
   | Dynamic_access expr -> dynamic_access ~ctx expr json
   | Iterator -> iterator ~ctx json
@@ -1527,10 +1586,12 @@ let rec interp ~ctx expression json : unit =
       reduce ~ctx expr var_name init_expr update_expr json
   | As (expr, var_name, body) -> as_binding ~ctx expr var_name body json
   | Break -> break ()
-  | Try (expr, handler) -> try_catch ~ctx expr handler json
+  | Try (expr, handler, finally_expr) ->
+      try_catch ~ctx expr handler finally_expr json
   | Limit (n, expr) -> limit ~ctx n expr json
   | Skip (n, expr) -> skip ~ctx n expr json
   | Error_msg msg_expr -> error_msg ~ctx msg_expr json
+  | Raise (kind_expr, msg_expr) -> raise_error ~ctx kind_expr msg_expr json
   | Halt -> halt ()
   | Halt_error exit_code -> halt ~code:(Option.value exit_code ~default:1) ()
   | Isempty expr -> isempty ~ctx expr json
@@ -1841,9 +1902,9 @@ and builtins ~ctx builtin json =
   | Add -> (
       match json with
       | `List [] -> yield `Null
-      | `List l ->
+      | `List (first :: rest) ->
           let sum =
-            List.fold_left (fun acc el -> Operators.add ~ctx acc el) `Null l
+            List.fold_left (fun acc el -> Operators.add ~ctx acc el) first rest
           in
           yield sum
       | _ -> Error.make ~ctx "add" json)
@@ -2483,22 +2544,27 @@ and binary_search ~ctx expr json =
 
 and first_of_array ~ctx json =
   match json with
-  | `List [] -> ()
+  | `List [] -> fail_empty_array "first"
   | `List (hd :: _) -> yield hd
   | _ -> Error.make ~ctx "first" json
 
 and first_of_expr ~ctx expr json =
-  match collect ~ctx expr json with [] -> () | hd :: _ -> yield hd
+  match collect ~ctx expr json with
+  | [] ->
+      fail
+        "first: empty expression result. Hint: Use first? for optional access"
+  | hd :: _ -> yield hd
 
 and last_of_array ~ctx json =
   match json with
-  | `List [] -> ()
+  | `List [] -> fail_empty_array "last"
   | `List l -> yield (List.hd (List.rev l))
   | _ -> Error.make ~ctx "last" json
 
 and last_of_expr ~ctx expr json =
   match collect ~ctx expr json with
-  | [] -> ()
+  | [] ->
+      fail "last: empty expression result. Hint: Use last? for optional access"
   | l -> yield (List.hd (List.rev l))
 
 and nth ~ctx n_expr expr json =
@@ -2512,8 +2578,12 @@ and nth ~ctx n_expr expr json =
   match n_opt with
   | Some n ->
       let results = collect ~ctx expr json in
-      if n >= 0 && n < List.length results then yield (List.nth results n)
-      else () (* out of bounds returns empty *)
+      let len = List.length results in
+      if n >= 0 && n < len then yield (List.nth results n)
+      else
+        fail
+          ("nth: index " ^ Int.to_string n ^ " out of bounds (expression has "
+         ^ Int.to_string len ^ " results). Hint: Use nth? for optional access")
   | None -> Error.make ~ctx "nth: first argument must be a number" json
 
 and group_by ~ctx expr json =
@@ -2751,7 +2821,24 @@ and walk_tree ~ctx expr json =
   in
   yield (walk json)
 
-and try_catch ~ctx expr handler json =
+and try_catch ~ctx expr handler finally_expr json =
+  let run_finally () =
+    match finally_expr with
+    | None -> ()
+    | Some cleanup -> ignore (collect ~ctx cleanup json)
+  in
+  let error_occurred = ref false in
+  let handle_error error_json input_for_handler =
+    error_occurred := true;
+    (match handler with
+    | None -> yield `Null (* try without catch returns null on error *)
+    | Some handler_expr ->
+        let ctx_with_error =
+          { ctx with env = ("error", error_json) :: ctx.env }
+        in
+        interp ~ctx:ctx_with_error handler_expr input_for_handler);
+    run_finally ()
+  in
   let try_handler : unit Effect.Deep.effect_handler =
     {
       effc =
@@ -2760,19 +2847,24 @@ and try_catch ~ctx expr handler json =
           | User_error value ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  match handler with
-                  | None -> () (* No catch handler, error is silently ignored *)
-                  | Some handler_expr -> interp ~ctx handler_expr value)
-          | Fail _ ->
+                  let error_json =
+                    `Assoc
+                      [
+                        ("kind", `String "user_error");
+                        ("message", `String (Json.to_string value));
+                        ("value", value);
+                      ]
+                  in
+                  handle_error error_json value)
+          | Fail err ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  match handler with
-                  | None -> ()
-                  | Some handler_expr -> interp ~ctx handler_expr json)
+                  handle_error (error_to_json err) (error_to_json err))
           | _ -> None);
     }
   in
-  Effect.Deep.try_with (fun () -> interp ~ctx expr json) () try_handler
+  Effect.Deep.try_with (fun () -> interp ~ctx expr json) () try_handler;
+  if not !error_occurred then run_finally ()
 
 and limit ~ctx n expr json =
   let count = ref 0 in
@@ -2801,6 +2893,19 @@ and error_msg ~ctx msg_expr json =
       match collect ~ctx expr json with
       | [ value ] -> user_error value
       | _ -> Error.message ~ctx "error expects single value")
+
+and raise_error ~ctx kind_expr msg_expr json =
+  let kind =
+    match collect ~ctx kind_expr json with
+    | [ `String k ] -> k
+    | _ -> Error.message ~ctx "raise: kind must be a string"
+  in
+  let message =
+    match collect ~ctx msg_expr json with
+    | [ `String m ] -> m
+    | _ -> Error.message ~ctx "raise: message must be a string"
+  in
+  fail_with ~kind ~value:json message
 
 and isempty ~ctx expr json =
   match collect ~ctx expr json with
@@ -3092,7 +3197,7 @@ let execute ~colorize ~verbose ?(env = []) expr json =
       effc =
         (fun (type a) (eff : a Effect.t) ->
           match eff with
-          | Fail msg -> Some (fun _ -> Error msg)
+          | Fail err -> Some (fun _ -> Error err.message)
           | Break ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
