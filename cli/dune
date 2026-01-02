@@ -1,11 +1,11 @@
 (executable
- (name bin)
+ (name cli)
  (modes native)
  (public_name query-json)
  (package query-json)
  (libraries
   query-json.core
-  query-json.term-style
+  query-json.console-style
   cmdliner
   unix
   dune-build-info
