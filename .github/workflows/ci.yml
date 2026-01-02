@@ -80,7 +80,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-artifact
-          path: _build/default/bin/bin.exe
+          path: _build/default/cli/cli.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -162,13 +162,13 @@ jobs:
 
       - name: Allow execution of query-json
         if: startsWith(github.ref, 'refs/tags/')
-        run: chmod +x _release/platform-linux-x64/bin.exe
+        run: chmod +x _release/platform-linux-x64/cli.exe
 
       - name: Get version
         if: startsWith(github.ref, 'refs/tags/')
         id: version
         run: |
-          VERSION=$(_release/platform-linux-x64/bin.exe --version)
+          VERSION=$(_release/platform-linux-x64/cli.exe --version)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate NPM package
@@ -191,22 +191,22 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd _release/platform-darwin-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-darwin-arm64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-darwin-arm64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
           cd _release/platform-windows-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 

@@ -30,7 +30,7 @@ dev-core: ## Build in watch mode
 
 .PHONY: repl
 repl: ## Run repl with "package.json"
-	$(DUNE) exec ./bin/bin.exe -- repl package.json
+	$(DUNE) exec ./cli/cli.exe -- --repl package.json
 
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
