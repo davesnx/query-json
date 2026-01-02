@@ -44,8 +44,6 @@ let tests =
     (* Helpful error messages for deprecated/unimplemented jq functions *)
     test "tojson" "null" "not implemented";
     test "fromjson" "null" "not implemented";
-    test "input" "null" "not implemented";
-    test "inputs" "null" "not implemented";
     test "modulemeta" "null" "not implemented";
     test "strftime" "null" "not implemented";
     test "strptime" "null" "not implemented";

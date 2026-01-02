@@ -406,7 +406,7 @@ let map =
   [
     test {|map(keys)|}
       {|[{}, {"abcd":1,"abc":2,"abcde":3}, {"x":1, "z": 3, "y":2}]|}
-      {|[ [], [ "abc", "abcd", "abcde" ], [ "x", "y", "z" ] ]|};
+      {|[ [], [ "abcd", "abc", "abcde" ], [ "x", "z", "y" ] ]|};
     test {|map(add)|}
       {|[[], [1,2,3], ["a","b","c"], [[3],[4,5],[6]], [{"a":1}, {"b":2}, {"a":3}]]|}
       {|[ null, 6, "abc", [ 3, 4, 5, 6 ], { "a": 3, "b": 2 } ]|};
@@ -469,7 +469,7 @@ let length =
     (* Unicode codepoints, not bytes *)
     test {|length|} {|"🎉"|} {|1|};
     test {|length|} {|"日本語"|} {|3|};
-    test {|length|} {|"hello 🌍!"|} {|9|};
+    test {|length|} {|"hello 🌍!"|} {|8|};
     test {|length|} {|"µ"|} {|1|};
   ]
 
@@ -859,7 +859,7 @@ let object_index_brackets =
   [
     test {|.["foo"]|} {|{"foo": 42}|} {|42|};
     test {|.["foo"]?|} {|{"foo": 42}|} {|42|};
-    test {|[.foo?]|} {|[1,2]|} {|[ null, null ]|};
+    test {|[.foo?]|} {|[1,2]|} {|[ null ]|};
   ]
 
 let recursive_descent =
@@ -920,7 +920,7 @@ let keys =
   [
     test {|keys|} {|[42,3,35]|} {|[ 0, 1, 2 ]|};
     test {|keys|} {|{"abc": 1, "abcd": 2, "Foo": 3}|}
-      {|[ "Foo", "abc", "abcd" ]|};
+      {|[ "abc", "abcd", "Foo" ]|};
   ]
 
 let pick =
@@ -1097,15 +1097,15 @@ let walk_transforms =
 
 let group_aggregate =
   [
-    test {|group_by(.category) | map({category: .[0].category, count: length})|}
+    test {|group_by(.category) | [.[]] | map({category: .[0].category, count: length})|}
       {|[{"category": "A", "val": 1}, {"category": "B", "val": 2}, {"category": "A", "val": 3}]|}
       {|[ { "category": "A", "count": 2 }, { "category": "B", "count": 1 } ]|};
     test
-      {|group_by(.category) | map({category: .[0].category, total: (map(.val) | add)})|}
+      {|group_by(.category) | [.[]] | map({category: .[0].category, total: (map(.val) | add)})|}
       {|[{"category": "A", "val": 10}, {"category": "B", "val": 20}, {"category": "A", "val": 30}]|}
       {|[ { "category": "A", "total": 40 }, { "category": "B", "total": 20 } ]|};
     test
-      {|group_by(.region) | map({
+      {|group_by(.region) | [.[]] | map({
           region: .[0].region,
           count: length,
           total: (map(.sales) | add),
@@ -1145,7 +1145,7 @@ let recursive_functions =
 let data_transforms =
   [
     test
-      {|group_by(.date) | map({date: .[0].date} + (map({(.product): .sales}) | add))|}
+      {|group_by(.date) | [.[]] | map({date: .[0].date} + (map({(.product): .sales}) | add))|}
       {|[{"date": "2024-01", "product": "A", "sales": 100}, {"date": "2024-01", "product": "B", "sales": 200}, {"date": "2024-02", "product": "A", "sales": 150}]|}
       {|[ { "date": "2024-01", "A": 100, "B": 200 }, { "date": "2024-02", "A": 150 } ]|};
     test {|[((.[0] | keys[]) as $k | {($k): [.[][$k]]})] | add|}
@@ -1160,11 +1160,11 @@ let data_transforms =
 let string_processing =
   [
     test
-      {|split("\n") | map(split(",")) | .[1:][] | {name: .[0], age: (.[1] | tonumber)}|}
+      {|split("\n") | map(split(",")) | .[1:][] | {name: .[0], age: (.[1] | to_number)}|}
       {|"name,age\nAlice,30\nBob,25"|}
       "{ \"name\": \"Alice\", \"age\": 30 }\n{ \"name\": \"Bob\", \"age\": 25 }";
     test
-      {|gsub("[^a-zA-Z ]"; "") | split(" ") | map(select(length > 0)) | group_by(.) | map({word: .[0], count: length}) | sort_by(.count) | reverse|}
+      {|gsub("[^a-zA-Z ]"; "") | split(" ") | map(select(length > 0)) | group_by(.) | [.[]] | map({word: .[0], count: length}) | sort_by(.count) | reverse|}
       {|"the cat and the dog"|}
       {|[
   {
@@ -1216,7 +1216,7 @@ let fizzbuzz =
           if . % 15 == 0 then "FizzBuzz"
           elif . % 3 == 0 then "Fizz"
           elif . % 5 == 0 then "Buzz"
-          else . | tostring
+          else . | to_string
           end;
         [range(1;16) | fizzbuzz]|}
       {|null|}

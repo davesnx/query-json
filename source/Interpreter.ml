@@ -645,19 +645,19 @@ let range ?step from upto =
   | None -> range_list 0 from
   | Some stop -> range_list ?step from stop
 
-(* Count the number of Unicode codepoints in a UTF-8 encoded string *)
-let utf8_codepoint_length s =
-  let byte_len = String.length s in
-  let rec count i n =
-    if i >= byte_len then n
-    else
-      let decode = String.get_utf_8_uchar s i in
-      let len = Uchar.utf_decode_length decode in
-      count (i + len) (n + 1)
-  in
-  count 0 0
-
 let length ~ctx (json : Json.t) =
+  let utf8_codepoint_length s =
+    (* Count the number of Unicode codepoints in a UTF-8 encoded string *)
+    let byte_len = String.length s in
+    let rec count i n =
+      if i >= byte_len then n
+      else
+        let decode = String.get_utf_8_uchar s i in
+        let len = Uchar.utf_decode_length decode in
+        count (i + len) (n + 1)
+    in
+    count 0 0
+  in
   match json with
   | `List list -> `Int (List.length list)
   | `String s -> `Int (utf8_codepoint_length s)
