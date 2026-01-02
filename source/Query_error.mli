@@ -16,6 +16,15 @@ type t = {
   suggestion : string option;
 }
 
+val make :
+  kind:string ->
+  message:string ->
+  ?location:location ->
+  ?contexts:context list ->
+  ?suggestion:string ->
+  unit ->
+  t
+
 val with_location : input:string -> start_pos:int -> end_pos:int -> t -> t
 val with_context : context -> t -> t
 val with_suggestion : string -> t -> t

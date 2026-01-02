@@ -57,6 +57,18 @@ let parse ~debug ~colorize input =
           ~end_pos:!last_position.loc_end.pos_cnum
       in
       Error (Query_error.format ~colorize err)
+  | exception Parse_errors.Parse_error (msg, start, end_) ->
+      let err =
+        Query_error.parse_error ~message:msg ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
+      in
+      Error (Query_error.format ~colorize err)
+  | exception Parse_errors.Rich_parse_error (err, start, end_) ->
+      let err =
+        Query_error.with_location ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum err
+      in
+      Error (Query_error.format ~colorize err)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)

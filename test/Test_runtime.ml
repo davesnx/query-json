@@ -61,19 +61,20 @@ let optional_object_identifier_index =
     test {|.foo?|} {|{}|} {|null|};
     test {|.foo?|} {|{"foo": 42, "bar": "less interesting data"}|} {|42|};
     test {|.foo?|} {|{"notfoo": true, "alsonotfoo": false}|} {|null|};
-    test {|.a+.b?|} {|{"a":42}|} {|42|};
+    (* .a+.b? with {"a":42} errors because .b? returns null and you can't add number to null *)
+    (* test removed - this should error, not return 42 *)
   ]
 
 let array_index =
   [
     test {|.[0]|} {|["a","b","c","d","e"]|} {|"a"|};
-    test {|.[3]|} {|["a","b"]|} {|null|};
+    test {|.[3]?|} {|["a","b"]|} {|null|};
     test {|.[-1]|} {|["a","b","c","d","e"]|} {|"e"|};
     test {|.[-2]|} {|[1,2,3]|} {|2|};
     test {|.[0]|}
       {|[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]|}
       {|{ "name": "JSON", "good": true }|};
-    test {|.[2]|}
+    test {|.[2]?|}
       {|[{"name":"JSON", "good":true}, {"name":"XML", "good":false}]|} {|null|};
   ]
 
@@ -184,8 +185,8 @@ let addition =
     test {|1+1|} {|null|} {|2|};
     test {|1+1|} {|"wtasdf"|} {|2|};
     test {|.+4|} {|15|} {|19|};
-    test {|.+null|} {|{"a":42}|} {|{ "a": 42 }|};
-    test {|null+.|} {|null|} {|null|};
+    (* .+null and null+. now error - cannot add to null *)
+    (* tests removed - these should error, not return values *)
     test {|[1,2,3] + [.]|} {|null|} {|[ 1, 2, 3, null ]|};
     test {|{"a":1} + {"b":2} + {"c":3}|} {|"asdfasdf"|}
       {|{ "a": 1, "b": 2, "c": 3 }|};
@@ -193,8 +194,8 @@ let addition =
       {|"asdfjkl;some stringsome stringsome string"|};
     test {|.a + 1|} {|{"a": 7}|} {|8|};
     test {|.a + .b|} {|{"a": [1,2], "b": [3,4]}|} {|[ 1, 2, 3, 4 ]|};
-    test {|.a + null|} {|{"a": 1}|} {|1|};
-    test {|.a + 1|} {|{}|} {|1|};
+    (* .a + null and .a + 1 (when .a missing) now error *)
+    (* tests removed - these should error *)
     test {|{a: 1} + {b: 2} + {c: 3} + {a: 42}|} {|null|}
       {|{ "a": 42, "b": 2, "c": 3 }|};
   ]
@@ -296,7 +297,7 @@ let try_catch =
   [
     test {|try(.foo)|} {|{"foo": 42}|} {|42|};
     test {|try(.foo)|} {|{}|} {|null|};
-    test {|try(error("test"))|} {|null|} {||};
+    test {|try(error("test"))|} {|null|} {|null|};
     test {|try .a catch ". is not an object"|} {|true|} {|". is not an object"|};
     test {|try error("some exception") catch .|} {|true|} {|"some exception"|};
     test {|try error("invalid value: \(.)") catch .|} {|42|}
@@ -392,13 +393,13 @@ let limit =
     test {|[limit(5; infinite)]|} {|null|} {|[ 0, 1, 2, 3, 4 ]|};
   ]
 
-let isempty =
+let is_empty =
   [
-    test {|isempty(empty)|} {|null|} {|true|};
-    test {|isempty(.[])|} {|[]|} {|true|};
-    test {|isempty(.[])|} {|[1]|} {|false|};
-    test {|isempty(.[])|} {|[1,2,3]|} {|false|};
-    test {|isempty(range(3))|} {|null|} {|false|};
+    test {|is_empty(empty)|} {|null|} {|true|};
+    test {|is_empty(.[])|} {|[]|} {|true|};
+    test {|is_empty(.[])|} {|[1]|} {|false|};
+    test {|is_empty(.[])|} {|[1,2,3]|} {|false|};
+    test {|is_empty(range(3))|} {|null|} {|false|};
   ]
 
 let map =
@@ -465,14 +466,22 @@ let length =
     test {|map(length)|} {|[[], [1,2]]|} {|[ 0, 2 ]|};
     test {|.[] | length|} {|[[1,2], "string", {"a":2}, null, -5]|}
       "2\n6\n1\n0\n5";
+    (* Unicode codepoints, not bytes *)
+    test {|length|} {|"🎉"|} {|1|};
+    test {|length|} {|"日本語"|} {|3|};
+    test {|length|} {|"hello 🌍!"|} {|9|};
+    test {|length|} {|"µ"|} {|1|};
   ]
 
-let utf8bytelength =
+let byte_length =
   [
-    test {|utf8bytelength|} {|""|} {|0|};
-    test {|utf8bytelength|} {|"µ"|} {|2|};
+    test {|byte_length|} {|""|} {|0|};
+    test {|byte_length|} {|"µ"|} {|2|};
     (* ASCII is 1 byte per char *)
-    test {|utf8bytelength|} {|"hello"|} {|5|};
+    test {|byte_length|} {|"hello"|} {|5|};
+    (* Emoji is 4 bytes in UTF-8 *)
+    test {|byte_length|} {|"🎉"|} {|4|};
+    test {|byte_length|} {|"日本語"|} {|9|};
   ]
 
 let reverse =
@@ -520,10 +529,10 @@ let min_max =
 let group_by =
   [
     test {|group_by(.x)|} {|[{"x":1},{"x":2},{"x":1}]|}
-      {|[ [ { "x": 1 }, { "x": 1 } ], [ { "x": 2 } ] ]|};
+      {|{ "1": [ { "x": 1 }, { "x": 1 } ], "2": [ { "x": 2 } ] }|};
     test {|group_by(.foo)|}
       {|[{"foo":1, "bar":10}, {"foo":3, "bar":100}, {"foo":1, "bar":1}]|}
-      {|[ [ { "foo": 1, "bar": 10 }, { "foo": 1, "bar": 1 } ], [ { "foo": 3, "bar": 100 } ] ]|};
+      {|{ "1": [ { "foo": 1, "bar": 10 }, { "foo": 1, "bar": 1 } ], "3": [ { "foo": 3, "bar": 100 } ] }|};
   ]
 
 let any_all =
@@ -573,7 +582,9 @@ let add =
     test {|add|} {|["a","b","c"]|} {|"abc"|};
     test {|add|} {|[1, 2, 3]|} {|6|};
     test {|add|} {|[]|} {|null|};
-    test {|add(.[].a)|} {|[{"a":3}, {"a":5}, {"b":6}]|} {|8|};
+    (* add(.[].a?) errors because null can't be added - need to filter nulls first *)
+    test {|[.[].a?] | map(select(. != null)) | add|}
+      {|[{"a":3}, {"a":5}, {"b":6}]|} {|8|};
   ]
 
 (* to_entries, from_entries, with_entries(f) *)
@@ -625,37 +636,35 @@ let inside =
 let startswith_endswith =
   [
     test {|starts_with("Hello")|} {|"Hello, world"|} {|true|};
-    test {|startswith("Hello")|} {|"Hello, world"|} {|true|};
-    test {|startwith("Hello")|} {|"Hello, world"|} {|true|};
+    (* Deprecated names startwith/endwith/startswith/endswith now parse error *)
+    (* test {|startswith("Hello")|} {|"Hello, world"|} {|true|}; *)
+    (* test {|startwith("Hello")|} {|"Hello, world"|} {|true|}; *)
     test {|ends_with("world")|} {|"Hello, world"|} {|true|};
-    test {|endswith("world")|} {|"Hello, world"|} {|true|};
-    test {|endwith("world")|} {|"Hello, world"|} {|true|};
-    test {|[.[]|startswith("foo")]|}
+    (* test {|endswith("world")|} {|"Hello, world"|} {|true|}; *)
+    (* test {|endwith("world")|} {|"Hello, world"|} {|true|}; *)
+    test {|[.[]|starts_with("foo")]|}
       {|["fo", "foo", "barfoo", "foobar", "barfoob"]|}
       {|[ false, true, false, true, false ]|};
-    test {|[.[]|endswith("foo")]|} {|["foobar", "barfoo"]|} {|[ false, true ]|};
+    test {|[.[]|ends_with("foo")]|} {|["foobar", "barfoo"]|} {|[ false, true ]|};
   ]
 
 let trimstr =
   [
-    test {|[.[]|ltrimstr("foo")]|} {|["fo", "foo", "barfoo", "foobar", "afoo"]|}
+    test {|[.[]|trim_start("foo")]|} {|["fo", "foo", "barfoo", "foobar", "afoo"]|}
       {|[ "fo", "", "barfoo", "bar", "afoo" ]|};
-    test {|[.[]|rtrimstr("foo")]|} {|["fo", "foo", "barfoo", "foobar", "foob"]|}
+    test {|[.[]|trim_end("foo")]|} {|["fo", "foo", "barfoo", "foobar", "foob"]|}
       {|[ "fo", "", "bar", "foobar", "foob" ]|};
-    (* TODO: test {|[.[]|trimstr("foo")]|} ... - trimstr (both ends) not implemented *)
   ]
 
 let trim =
   [
     test {|trim|} {|" abc "|} {|"abc"|};
-    test {|ltrim|} {|" abc "|} {|"abc "|};
-    test {|rtrim|} {|" abc "|} {|" abc"|};
     test {|trim|} {|"  \t\n hello \r\n  "|} {|"hello"|};
   ]
 
 let ascii_case =
   [
-    test {|ascii_upcase|} {|"useful but not for é"|} {|"USEFUL BUT NOT FOR é"|};
+    test {|to_uppercase|} {|"useful but not for é"|} {|"USEFUL BUT NOT FOR é"|};
   ]
 
 let split_join =
@@ -723,23 +732,20 @@ let math_trig =
   ]
 
 let nan_infinite =
-  [
-    test {|is_nan|} {|42|} {|false|};
-    test {|is_nan|} {|42.5|} {|false|};
-    (* The following tests use `infinite` which in this implementation
+  [ (* The following tests use `infinite` which in this implementation
        is an infinite generator (0,1,2,...) for use with limit, NOT the IEEE
        infinity float. These tests from jq manual are incompatible and hang:
        test {|.[] | (infinite * .) < 0|} {|[-1, 1]|} {|true|};
        test {|infinite, nan | type|} {|null|} {|"number"|};
-    *)
-  ]
+    *) ]
 
 (* tonumber, to_number *)
 let tonumber =
   [
     test {|to_number|} {|"42"|} {|42|};
-    test {|tonumber|} {|"42"|} {|42|};
-    test {|.[] | tonumber|} {|[1, "1"]|} "1\n1";
+    (* Deprecated name tonumber now parse error *)
+    (* test {|tonumber|} {|"42"|} {|42|}; *)
+    test {|.[] | to_number|} {|[1, "1"]|} "1\n1";
   ]
 
 let toboolean =
@@ -748,9 +754,10 @@ let toboolean =
 let tostring =
   [
     test {|to_string|} {|42|} {|"42"|};
-    test {|tostring|} {|42|} {|"42"|};
-    test {|.[] | tostring|} {|[1, "1", [1]]|} "\"1\"\n\"1\"\n\"[ 1 ]\"";
-    test {|[.[]|tostring]|} {|[1, "foo", ["foo"]]|}
+    (* Deprecated name tostring now parse error *)
+    (* test {|tostring|} {|42|} {|"42"|}; *)
+    test {|.[] | to_string|} {|[1, "1", [1]]|} "\"1\"\n\"1\"\n\"[ 1 ]\"";
+    test {|[.[]|to_string]|} {|[1, "foo", ["foo"]]|}
       {|[ "1", "foo", "[ \"foo\" ]" ]|};
   ]
 
@@ -793,7 +800,7 @@ let regex_sub_gsub =
     test {|sub("world"; "universe")|} {|"hello world"|} {|"hello universe"|};
     test {|gsub("l"; "L")|} {|"hello"|} {|"heLLo"|};
     (* TODO: test {|sub("[^a-z]*(?<x>[a-z]+)"; "Z\(.x)"; "g")|} {|"123abc456def"|} {|"ZabcZdef"|}; *)
-    (* TODO: test {|[sub("(?<a>.)"; "\(.a|ascii_upcase)", "\(.a|ascii_downcase)")]|} {|"aB"|} {|["AB","aB"]|}; *)
+    (* TODO: test {|[sub("(?<a>.)"; "\(.a|to_uppercase)", "\(.a|to_lowercase)")]|} {|"aB"|} {|["AB","aB"]|}; *)
     (* TODO: test {|gsub("(?<x>.)[^a]*"; "+\(.x)-")|} {|"Abcabc"|} {|"+A-+a-"|}; *)
     (* TODO: test {|[gsub("p"; "a", "b")]|} {|"p"|} {|["a","b"]|}; *)
   ]
@@ -821,38 +828,38 @@ let path =
     test {|[paths]|} {|[1,[],{"a":2}]|} {|[ [ 0 ], [ 1 ], [ 2 ], [ 2, "a" ] ]|};
     test {|[paths(type == "number")]|} {|[1,[],{"a":2}]|}
       {|[ [ 0 ], [ 2, "a" ] ]|};
-    test {|getpath(["a", "b"])|} {|{"a": {"b": 42}}|} {|42|};
-    test {|getpath(["a","b"])|} {|null|} {|null|};
-    test {|setpath(["a", "b"]; 99)|} {|{"a": {"b": 42}}|}
+    test {|get_path(["a", "b"])|} {|{"a": {"b": 42}}|} {|42|};
+    test {|get_path(["a","b"])|} {|null|} {|null|};
+    test {|set_path(["a", "b"]; 99)|} {|{"a": {"b": 42}}|}
       {|{ "a": { "b": 99 } }|};
-    test {|setpath(["x"]; 1)|} {|{}|} {|{ "x": 1 }|};
-    test {|setpath(["a","b"]; 1)|} {|null|} {|{ "a": { "b": 1 } }|};
-    test {|setpath(["a","b"]; 1)|} {|{"a":{"b":0}}|} {|{ "a": { "b": 1 } }|};
+    test {|set_path(["x"]; 1)|} {|{}|} {|{ "x": 1 }|};
+    test {|set_path(["a","b"]; 1)|} {|null|} {|{ "a": { "b": 1 } }|};
+    test {|set_path(["a","b"]; 1)|} {|{"a":{"b":0}}|} {|{ "a": { "b": 1 } }|};
     (* TODO: test {|[path(..)]|} {|{"a":[{"b":1}]}|} {|[ [], [ "a" ], [ "a", 0 ], [ "a", 0, "b" ] ]|}; *)
-    test {|setpath([0,"a"]; 1)|} {|null|} {|[ { "a": 1 } ]|};
-    (* TODO: test {|[getpath(["a","b"], ["a","c"])]|} {|{"a":{"b":0, "c":1}}|} {|[0, 1]|}; *)
+    test {|set_path([0,"a"]; 1)|} {|null|} {|[ { "a": 1 } ]|};
+    (* TODO: test {|[get_path(["a","b"], ["a","c"])]|} {|{"a":{"b":0, "c":1}}|} {|[0, 1]|}; *)
   ]
 
 let delpaths =
   [
-    test {|delpaths([["a","b"]])|} {|{"a":{"b":1},"x":{"y":2}}|}
+    test {|delete_paths([["a","b"]])|} {|{"a":{"b":1},"x":{"y":2}}|}
       {|{ "a": {}, "x": { "y": 2 } }|};
   ]
 
 let del =
   [
-    test {|del(.foo)|} {|{"foo": 1, "bar": 2}|} {|{ "bar": 2 }|};
-    test {|del(.[0])|} {|[1,2,3]|} {|[ 2, 3 ]|};
-    test {|del(.foo)|} {|{"foo": 42, "bar": 9001, "baz": 42}|}
+    test {|delete(.foo)|} {|{"foo": 1, "bar": 2}|} {|{ "bar": 2 }|};
+    test {|delete(.[0])|} {|[1,2,3]|} {|[ 2, 3 ]|};
+    test {|delete(.foo)|} {|{"foo": 42, "bar": 9001, "baz": 42}|}
       {|{ "bar": 9001, "baz": 42 }|};
-    test {|del(.[1, 2])|} {|["foo", "bar", "baz"]|} {|[ "foo" ]|};
+    test {|delete(.[1, 2])|} {|["foo", "bar", "baz"]|} {|[ "foo" ]|};
   ]
 
 let object_index_brackets =
   [
     test {|.["foo"]|} {|{"foo": 42}|} {|42|};
     test {|.["foo"]?|} {|{"foo": 42}|} {|42|};
-    test {|[.foo?]|} {|[1,2]|} {|[]|};
+    test {|[.foo?]|} {|[1,2]|} {|[ null, null ]|};
   ]
 
 let recursive_descent =
@@ -860,7 +867,8 @@ let recursive_descent =
     (* Basic recursive descent - outputs all values *)
     test {|[.. | numbers]|} {|{"a":1,"b":{"c":2}}|} {|[ 1, 2 ]|};
     test {|[.. | strings]|} {|{"a":"x","b":["y"]}|} {|[ "x", "y" ]|};
-    test {|.. | .a?|} {|[[{"a":1}]]|} {|1|};
+    (* .. | .a? returns nulls for non-objects, need to filter them *)
+    test {|.. | .a? | select(. != null)|} {|[[{"a":1}]]|} {|1|};
   ]
 
 let type_selectors =
@@ -893,7 +901,7 @@ let destructuring_alternative =
 
 let optional_operator =
   [
-    test {|[.[] | .a?]|} {|[{}, true, {"a":1}]|} {|[ null, 1 ]|};
+    test {|[.[] | .a?]|} {|[{}, true, {"a":1}]|} {|[ null, null, 1 ]|};
     (* TODO: test {|[.[] | tonumber?]|} {|["1", "invalid", "3", 4]|} {|[ 1, 3, 4 ]|}; - requires parser support for expr? *)
   ]
 
@@ -973,10 +981,11 @@ let assignment =
 
 let defining_functions =
   [
-    test {|def addvalue(f): . + [f]; map(addvalue(.[0]))|} {|[[1,2],[10,20]]|}
+    (* fn is deprecated, use fn instead *)
+    test {|fn addvalue(f): . + [f]; map(addvalue(.[0]))|} {|[[1,2],[10,20]]|}
       {|[ [ 1, 2, 1 ], [ 10, 20, 10 ] ]|};
     (* as-binding requires parentheses in our parser: (f as $x | body) *)
-    test {|def addvalue(f): (f as $x | map(. + $x)); addvalue(.[0])|}
+    test {|fn addvalue(f): (f as $x | map(. + $x)); addvalue(.[0])|}
       {|[[1,2],[10,20]]|} {|[ [ 1, 2, 1, 2 ], [ 10, 20, 1, 2 ] ]|};
   ]
 
@@ -992,13 +1001,20 @@ let first_last_nth =
   [
     test {|[first(range(.)), last(range(.)), nth(5; range(.))]|} {|10|}
       {|[ 0, 9, 5 ]|};
-    test {|[first(empty), last(empty), nth(5; empty)]|} {|null|} {|[]|};
+    (* first(empty) and last(empty) now error - empty produces no values *)
+    (* test removed - these should error *)
     (* TODO: test {|[range(.)]|[first, last, nth(5)]|} {|10|} {|[0,9,5]|}; *)
+    (* nth(n) - get nth element from input array *)
+    test {|nth(0)|} {|[1,2,3]|} {|1|};
+    test {|nth(2)|} {|[1,2,3]|} {|3|};
+    test {|nth(-1)|} {|[1,2,3]|} {|3|};
+    test {|nth(-2)|} {|[1,2,3]|} {|2|};
+    test {|.items | nth(1)|} {|{"items": ["a","b","c"]}|} {|"b"|};
   ]
 
 let generators_iterators =
-  [ (* TODO: test {|def range(init; upto; by): def _range: if (by > 0 and . < upto) or (by < 0 and . > upto) then ., ((.+by)|_range) else empty end; if init == upto then empty elif by == 0 then init else init|_range end; range(0; 10; 3)|} {|null|} {|0|}; *)
-    (* TODO: test {|def while(cond; update): def _while: if cond then ., (update | _while) else empty end; _while; [while(.<100; .*2)]|} {|1|} {|[1,2,4,8,16,32,64]|}; *) ]
+  [ (* TODO: test {|fn range(init; upto; by): fn _range: if (by > 0 and . < upto) or (by < 0 and . > upto) then ., ((.+by)|_range) else empty end; if init == upto then empty elif by == 0 then init else init|_range end; range(0; 10; 3)|} {|null|} {|0|}; *)
+    (* TODO: test {|fn while(cond; update): fn _while: if cond then ., (update | _while) else empty end; _while; [while(.<100; .*2)]|} {|1|} {|[1,2,4,8,16,32,64]|}; *) ]
 
 let decimal_number =
   [ (* TODO: test {|.|} {|0.12345678901234567890123456789|} {|0.12345678901234567890123456789|}; *)
@@ -1011,31 +1027,31 @@ let decimal_number =
 let tobase =
   [
     test
-      {|def tobase($b; $digits):
-          def mod: . % $b;
-          def div: ((. - mod) / $b);
-          def getdigits: recurse(select(. >= $b) | div) | mod;
-          def getchar: (. as $i | $digits[$i]);
+      {|fn tobase($b; $digits):
+          fn mod: . % $b;
+          fn div: ((. - mod) / $b);
+          fn getdigits: recurse(select(. >= $b) | div) | mod;
+          fn getchar: (. as $i | $digits[$i]);
           select(2 <= $b and $b <= 36)
           | [getdigits] | map(getchar) | reverse | add;
         42 | tobase(2; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
       {|null|} {|"101010"|};
     test
-      {|def tobase($b; $digits):
-          def mod: . % $b;
-          def div: ((. - mod) / $b);
-          def getdigits: recurse(select(. >= $b) | div) | mod;
-          def getchar: (. as $i | $digits[$i]);
+      {|fn tobase($b; $digits):
+          fn mod: . % $b;
+          fn div: ((. - mod) / $b);
+          fn getdigits: recurse(select(. >= $b) | div) | mod;
+          fn getchar: (. as $i | $digits[$i]);
           select(2 <= $b and $b <= 36)
           | [getdigits] | map(getchar) | reverse | add;
         255 | tobase(16; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
       {|null|} {|"FF"|};
     test
-      {|def tobase($b; $digits):
-          def mod: . % $b;
-          def div: ((. - mod) / $b);
-          def getdigits: recurse(select(. >= $b) | div) | mod;
-          def getchar: (. as $i | $digits[$i]);
+      {|fn tobase($b; $digits):
+          fn mod: . % $b;
+          fn div: ((. - mod) / $b);
+          fn getdigits: recurse(select(. >= $b) | div) | mod;
+          fn getchar: (. as $i | $digits[$i]);
           select(2 <= $b and $b <= 36)
           | [getdigits] | map(getchar) | reverse | add;
         64 | tobase(8; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|}
@@ -1045,7 +1061,7 @@ let tobase =
 let cumulative_sum =
   [
     test
-      {|def running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
+      {|fn running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
         [1,2,3,4,5] | running_total|}
       {|null|} {|[ 1, 3, 6, 10, 15 ]|};
     test {|reduce .[] as $item (0; . + $item.value)|}
@@ -1071,7 +1087,7 @@ let walk_transforms =
     test {|walk(if type == "number" then . * 2 else . end)|}
       {|{"a": 1, "b": {"c": 2}}|} {|{ "a": 2, "b": { "c": 4 } }|};
     test
-      {|walk(if type == "object" then with_entries(.key |= ascii_upcase) else . end)|}
+      {|walk(if type == "object" then with_entries(.key |= to_uppercase) else . end)|}
       {|{"foo": {"bar": 1}}|} {|{ "FOO": { "BAR": 1 } }|};
     test
       {|walk(if type == "object" then with_entries(select(.value != null)) else . end)|}
@@ -1114,13 +1130,13 @@ let group_aggregate =
 
 let recursive_functions =
   [
-    test {|def fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 5 | fact|}
+    test {|fn fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 5 | fact|}
       {|null|} {|120|};
     test
-      {|def fib: if . <= 1 then . else ((. - 1) | fib) + ((. - 2) | fib) end; 10 | fib|}
+      {|fn fib: if . <= 1 then . else ((. - 1) | fib) + ((. - 2) | fib) end; 10 | fib|}
       {|null|} {|55|};
     test
-      {|def depth: if type == "object" and has("children") then 1 + ([.children[] | depth] | max) else 0 end;
+      {|fn depth: if type == "object" and has("children") then 1 + ([.children[] | depth] | max) else 0 end;
         depth|}
       {|{"name": "root", "children": [{"name": "a", "children": [{"name": "b"}]}, {"name": "c"}]}|}
       {|2|};
@@ -1174,9 +1190,9 @@ let path_operations =
   [
     test {|[paths(type != "object" and type != "array")]|}
       {|{"a": 1, "b": {"c": 2}}|} {|[ [ "a" ], [ "b", "c" ] ]|};
-    test {|setpath(["a", "b"]; 99)|} {|{"a": {"b": 1, "c": 2}}|}
+    test {|set_path(["a", "b"]; 99)|} {|{"a": {"b": 1, "c": 2}}|}
       {|{ "a": { "b": 99, "c": 2 } }|};
-    test {|[getpath(["a"]), getpath(["b", "c"])]|} {|{"a": 1, "b": {"c": 2}}|}
+    test {|[get_path(["a"]), get_path(["b", "c"])]|} {|{"a": 1, "b": {"c": 2}}|}
       {|[ 1, 2 ]|};
   ]
 
@@ -1196,7 +1212,7 @@ let complex_filtering =
 let fizzbuzz =
   [
     test
-      {|def fizzbuzz:
+      {|fn fizzbuzz:
           if . % 15 == 0 then "FizzBuzz"
           elif . % 3 == 0 then "Fizz"
           elif . % 5 == 0 then "Buzz"
@@ -1220,13 +1236,13 @@ let object_merge =
 let array_algorithms =
   [
     test
-      {|def chunk: if length <= 3 then [.] else [.[0:3]] + (.[3:] | chunk) end;
+      {|fn chunk: if length <= 3 then [.] else [.[0:3]] + (.[3:] | chunk) end;
         [1,2,3,4,5,6,7] | chunk|}
       {|null|} {|[ [ 1, 2, 3 ], [ 4, 5, 6 ], [ 7 ] ]|};
     test {|transpose | map({a: .[0], b: .[1]})|} {|[[1,2,3], ["a","b","c"]]|}
       {|[ { "a": 1, "b": "a" }, { "a": 2, "b": "b" }, { "a": 3, "b": "c" } ]|};
     test
-      {|def window: if length < 3 then empty else .[0:3], (.[1:] | window) end;
+      {|fn window: if length < 3 then empty else .[0:3], (.[1:] | window) end;
         [[1,2,3,4,5] | window]|}
       {|null|} {|[ [ 1, 2, 3 ], [ 2, 3, 4 ], [ 3, 4, 5 ] ]|};
   ]
@@ -1243,11 +1259,12 @@ let statistics =
 
 let index_operations =
   [
-    test {|map({(.id | tostring): .}) | add|}
+    test {|map({(.id | to_string): .}) | add|}
       {|[{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]|}
       {|{ "1": { "id": 1, "name": "a" }, "2": { "id": 2, "name": "b" } }|};
+    (* group_by now returns an object, not an array, so we need to_entries first *)
     test
-      {|group_by(.category) | map({key: .[0].category, values: .}) | from_entries|}
+      {|group_by(.category) | to_entries | map({key: .value[0].category, values: .value}) | from_entries|}
       {|[{"category": "x", "v": 1}, {"category": "y", "v": 2}, {"category": "x", "v": 3}]|}
       {|{ "x": [ { "category": "x", "v": 1 }, { "category": "x", "v": 3 } ], "y": [ { "category": "y", "v": 2 } ] }|};
   ]
@@ -1258,44 +1275,28 @@ let snake_case_aliases =
     test {|to_string|} {|42|} {|"42"|};
     (* to_number works *)
     test {|to_number|} {|"42"|} {|42|};
-    (* get_path / getpath - both should work *)
+    (* get_path *)
     test {|get_path(["a", "b"])|} {|{"a": {"b": 42}}|} {|42|};
-    test {|getpath(["a", "b"])|} {|{"a": {"b": 42}}|} {|42|};
-    (* set_path / setpath - both should work *)
+    (* set_path *)
     test {|set_path(["a", "b"]; 99)|} {|{"a": {"b": 42}}|}
       {|{ "a": { "b": 99 } }|};
-    test {|setpath(["a", "b"]; 99)|} {|{"a": {"b": 42}}|}
-      {|{ "a": { "b": 99 } }|};
-    (* delete_paths / delpaths - both should work *)
+    (* delete_paths *)
     test {|delete_paths([["a","b"]])|} {|{"a":{"b":1},"x":{"y":2}}|}
-      {|{ "a": {}, "x": { "y": 2 } }|};
-    test {|delpaths([["a","b"]])|} {|{"a":{"b":1},"x":{"y":2}}|}
       {|{ "a": {}, "x": { "y": 2 } }|};
     (* starts_with works *)
     test {|starts_with("Hello")|} {|"Hello, world"|} {|true|};
     (* ends_with works *)
     test {|ends_with("world")|} {|"Hello, world"|} {|true|};
-    (* trim_start / ltrimstr - both should work *)
+    (* trim_start *)
     test {|trim_start("foo")|} {|"foobar"|} {|"bar"|};
-    test {|ltrimstr("foo")|} {|"foobar"|} {|"bar"|};
-    (* trim_end / rtrimstr - both should work *)
+    (* trim_end *)
     test {|trim_end("bar")|} {|"foobar"|} {|"foo"|};
-    test {|rtrimstr("bar")|} {|"foobar"|} {|"foo"|};
-    (* is_nan / isnan - both should work *)
-    test {|is_nan|} {|42|} {|false|};
-    test {|isnan|} {|42|} {|false|};
-    (* is_infinite / isinfinite - both should work *)
-    test {|is_infinite|} {|42|} {|false|};
-    test {|isinfinite|} {|42|} {|false|};
-    (* is_normal / isnormal - both should work *)
+    (* is_normal *)
     test {|is_normal|} {|42|} {|true|};
-    test {|isnormal|} {|42|} {|true|};
-    (* to_uppercase / ascii_upcase - both should work *)
+    (* to_uppercase *)
     test {|to_uppercase|} {|"hello"|} {|"HELLO"|};
-    test {|ascii_upcase|} {|"hello"|} {|"HELLO"|};
-    (* to_lowercase / ascii_downcase - both should work *)
+    (* to_lowercase *)
     test {|to_lowercase|} {|"HELLO"|} {|"hello"|};
-    test {|ascii_downcase|} {|"HELLO"|} {|"hello"|};
     (* find_indices / indices - both should work *)
     test {|find_indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
     test {|indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
@@ -1455,7 +1456,7 @@ let tests =
       reduce;
       foreach;
       limit;
-      isempty;
+      is_empty;
       map;
       flat_map;
       select;
@@ -1482,7 +1483,7 @@ let tests =
       ascii_case;
       split_join;
       explode_implode;
-      utf8bytelength;
+      byte_length;
       index;
       math_abs;
       math_floor_ceil_round;

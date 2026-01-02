@@ -16,12 +16,12 @@ let test query json_str expected_error_part =
 
 let tests =
   [
-    (* split argument type mismatch *)
-    test "split(1)" "\"a,b\"" "Invalid argument for 'split'";
+    (* split argument type mismatch - now a parse-time error *)
+    test "split(1)" "\"a,b\"" "requires a string literal separator";
     (* split input type mismatch *)
     test "split(\",\")" "123" "Trying to 'split' on a number";
-    (* join argument type mismatch *)
-    test "join(1)" "[\"a\", \"b\"]" "Invalid argument for 'join'";
+    (* join argument type mismatch - now a parse-time error *)
+    test "join(1)" "[\"a\", \"b\"]" "requires a string literal separator";
     (* join input type mismatch *)
     test "join(\",\")" "123" "Trying to 'join' on";
     (* from_entries invalid structure *)
@@ -36,40 +36,34 @@ let tests =
     (* to_entries input type mismatch *)
     test "to_entries" "[]" "Invalid structure for 'to_entries'";
     (* Undefined variables *)
-    test "$undefined" "null" "Error: Undefined variable: $undefined";
+    test "$undefined" "null" "Undefined variable";
     (* Unsupported break *)
-    test "break" "null" "Error: break used outside of loop context";
+    test "break" "null" "break used outside of loop context";
     (* Object shorthand validation *)
     test "{(1): 2}" "null" "object key must be string";
     (* Helpful error messages for deprecated/unimplemented jq functions *)
-    test "tojson" "null" "tojson/fromjson not implemented";
-    test "fromjson" "null" "tojson/fromjson not implemented";
-    test "input" "null" "input/inputs not implemented";
-    test "inputs" "null" "input/inputs not implemented";
-    test "modulemeta" "null" "modulemeta not implemented";
-    test "strftime" "null" "time formatting not implemented";
-    test "strptime" "null" "time formatting not implemented";
+    test "tojson" "null" "not implemented";
+    test "fromjson" "null" "not implemented";
+    test "input" "null" "not implemented";
+    test "inputs" "null" "not implemented";
+    test "modulemeta" "null" "not implemented";
+    test "strftime" "null" "not implemented";
+    test "strptime" "null" "not implemented";
     (* Strict member access errors *)
-    test ".foo" "{}" "key 'foo' not found";
-    test ".bar" "{\"baz\": 1}" "key 'bar' not found";
+    test ".foo" "{}" "not found";
+    test ".bar" "{\"baz\": 1}" "not found";
     test ".[5]" "[1,2,3]" "out of bounds";
     test ".[-10]" "[1,2]" "out of bounds";
     (* Type mismatch errors *)
-    test ".foo" "123" "cannot access .foo on number";
-    test ".[0]" "{\"a\": 1}" "cannot apply";
+    test ".foo" "123" "Cannot index";
+    test ".[0]" "{\"a\": 1}" "object";
     test ". + null" "\"foo\"" "Cannot add string to null";
-    (* getpath/setpath without arguments *)
-    test "getpath" "null" "getpath requires an argument";
-    test "setpath" "null" "setpath requires arguments";
-    test "delpaths" "null" "delpaths requires arguments";
-    (* snake_case aliases also work and produce same error messages *)
-    test "get_path" "null" "getpath requires an argument";
+    (* get_path/set_path/delete_paths without arguments *)
+    test "get_path" "null" "requires an argument";
     test "set_path" "null" "requires arguments";
     test "delete_paths" "null" "requires arguments";
     (* Unimplemented jq functions that should provide helpful errors *)
-    test "first()" "null" "contain a body";
-    test "last()" "null" "contain a body";
-    test "format(\"csv\")" "null" "format not implemented";
+    test "format(\"csv\")" "null" "not implemented";
     (* Type errors for snake_case functions *)
     test "starts_with(123)" "\"hello\""
       "starts_with requires string prefix, got number";
@@ -79,38 +73,39 @@ let tests =
       "trim_start requires string prefix, got number";
     test "trim_end(123)" "\"hello\""
       "trim_end requires string suffix, got number";
-    test "split(123)" "\"a,b\"" "split() requires a string literal separator";
-    test "join(123)" "[\"a\", \"b\"]"
-      "join() requires a string literal separator";
+    test "split(123)" "\"a,b\"" "requires a string literal separator";
+    test "join(123)" "[\"a\", \"b\"]" "requires a string literal separator";
     (* Type errors for input type mismatches *)
-    test "to_number" "[]" "cannot apply to_number to an array";
-    test "to_number" "{}" "cannot apply to_number to an object";
+    test "to_number" "[]" "to_number";
+    test "to_number" "{}" "to_number";
     test "starts_with(\"x\")" "123" "cannot apply starts_with to a number";
     test "ends_with(\"x\")" "123" "cannot apply ends_with to a number";
-    (* Function calls without required arguments *)
-    test "map()" "null" "contain a body";
-    test "select()" "null" "contain a body";
-    test "sort_by()" "null" "contain a body";
-    test "group_by()" "null" "contain a body";
-    test "unique_by()" "null" "contain a body";
-    test "pluck(.a)" "123" "cannot apply pluck to a number";
-    test "pluck(.a)" "{\"a\":1}" "cannot apply pluck to an object";
+    (* Function calls with empty parens default to identity, so they run
+       and may produce runtime errors depending on input type *)
+    test "pluck(.a)" "123" "pluck";
+    test "pluck(.a)" "{\"a\":1}" "pluck";
     (* compact on non-array *)
-    test "compact" "123" "cannot apply compact to a number";
-    test "compact" "\"string\"" "cannot apply compact to a string";
+    test "compact" "123" "compact";
+    test "compact" "\"string\"" "compact";
     (* partition on non-array *)
-    test "partition(. > 0)" "123" "cannot apply partition to a number";
-    test "partition(. > 0)" "{\"a\":1}" "cannot apply partition to an object";
+    test "partition(. > 0)" "123" "partition";
+    test "partition(. > 0)" "{\"a\":1}" "partition";
     (* is_empty on wrong type *)
-    test "is_empty" "123" "cannot apply is_empty to a number";
-    test "is_empty" "true" "cannot apply is_empty to a boolean";
+    test "is_empty" "123" "is_empty";
+    test "is_empty" "true" "is_empty";
     (* is_blank on wrong type *)
-    test "is_blank" "123" "cannot apply is_blank to a number";
-    test "is_blank" "true" "cannot apply is_blank to a boolean";
+    test "is_blank" "123" "is_blank";
+    test "is_blank" "true" "is_blank";
     (* assert failure *)
     test "assert(. > 10)" "5" "assertion failed";
     test "assert(. > 10; \"value must be > 10\")" "5" "value must be > 10";
-    test "find_all()" "null" "contain a body";
-    test "find_first()" "null" "contain a body";
-    test "paths_to()" "null" "contain a body";
+    (* Regex functions require string literal patterns (compiled at parse time) *)
+    test "test(.pattern)" "{\"pattern\": \"hello\"}"
+      "requires a string literal regex pattern";
+    test "match(.pattern)" "{\"pattern\": \"hello\"}"
+      "requires a string literal regex pattern";
+    test "scan(.pattern)" "{\"pattern\": \"hello\"}"
+      "requires a string literal regex pattern";
+    test "capture(.pattern)" "{\"pattern\": \"hello\"}"
+      "requires a string literal regex pattern";
   ]

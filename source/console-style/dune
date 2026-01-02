@@ -1,0 +1,5 @@
+(library
+ (name console_style)
+ (public_name query-json.console-style)
+ (modules console_style)
+ (libraries mosaic.ui))

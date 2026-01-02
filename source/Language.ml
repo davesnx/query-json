@@ -1,5 +1,7 @@
 type applicable_to = String | Array | Object | Number | Bool | Nil | Any
 
+let err = Query_error.make
+
 type arity =
   | No_args
   | One_arg of string (* description of the argument *)
@@ -33,7 +35,7 @@ let string_functions =
           name = "split";
           aliases = [];
           description = "Split string by separator";
-          example = Some {|"a,b,c" | split(",")  → ["a", "b", "c"]|};
+          example = Some {|"a,b,c" | split(",") → ["a", "b", "c"]|};
           applicable_to = [ String ];
           insert_text = None;
           arity = One_arg "separator";
@@ -42,7 +44,7 @@ let string_functions =
           name = "join";
           aliases = [];
           description = "Join array elements with separator";
-          example = Some {|["a", "b"] | join(",")  → "a,b"|};
+          example = Some {|["a", "b"] | join(",") → "a,b"|};
           applicable_to = [ Array ];
           insert_text = None;
           arity = One_arg "separator";
@@ -51,70 +53,70 @@ let string_functions =
           name = "trim";
           aliases = [];
           description = "Remove whitespace from both ends";
-          example = Some {|"  hello  " | trim  → "hello"|};
+          example = Some {|"  hello  " | trim → "hello"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = No_args;
         };
         {
           name = "trim_start";
-          aliases = [ "ltrimstr" ];
+          aliases = [];
           description = "Remove prefix string";
-          example = Some {|"foobar" | trim_start("foo")  → "bar"|};
+          example = Some {|"foobar" | trim_start("foo") → "bar"|};
           applicable_to = [ String ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "prefix";
         };
         {
           name = "trim_end";
-          aliases = [ "rtrimstr" ];
+          aliases = [];
           description = "Remove suffix string";
-          example = Some {|"foobar" | trim_end("bar")  → "foo"|};
+          example = Some {|"foobar" | trim_end("bar") → "foo"|};
           applicable_to = [ String ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "suffix";
         };
         {
           name = "starts_with";
           aliases = [];
           description = "Check if string starts with prefix";
-          example = Some {|"hello" | starts_with("he")  → true|};
+          example = Some {|"hello" | starts_with("he") → true|};
           applicable_to = [ String ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "prefix";
         };
         {
           name = "ends_with";
           aliases = [];
           description = "Check if string ends with suffix";
-          example = Some {|"hello" | ends_with("lo")  → true|};
+          example = Some {|"hello" | ends_with("lo") → true|};
           applicable_to = [ String ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "suffix";
         };
         {
           name = "contains";
           aliases = [];
           description = "Check if string contains substring";
-          example = Some {|"hello" | contains("ell")  → true|};
+          example = Some {|"hello" | contains("ell") → true|};
           applicable_to = [ String; Array; Object ];
           insert_text = None;
           arity = One_arg "json";
         };
         {
           name = "to_lowercase";
-          aliases = [ "ascii_downcase" ];
+          aliases = [];
           description = "Convert to lowercase";
-          example = Some {|"HELLO" | to_lowercase  → "hello"|};
+          example = Some {|"HELLO" | to_lowercase → "hello"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = No_args;
         };
         {
           name = "to_uppercase";
-          aliases = [ "ascii_upcase" ];
+          aliases = [];
           description = "Convert to uppercase";
-          example = Some {|"hello" | to_uppercase  → "HELLO"|};
+          example = Some {|"hello" | to_uppercase → "HELLO"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = No_args;
@@ -123,7 +125,7 @@ let string_functions =
           name = "length";
           aliases = [];
           description = "Get string length";
-          example = Some {|"hello" | length  → 5|};
+          example = Some {|"hello" | length → 5|};
           applicable_to = [ String; Array; Object ];
           insert_text = None;
           arity = No_args;
@@ -132,7 +134,7 @@ let string_functions =
           name = "test";
           aliases = [];
           description = "Test if string matches regex";
-          example = Some {|"hello" | test("^he")  → true|};
+          example = Some {|"hello" | test("^he") → true|};
           applicable_to = [ String ];
           insert_text = None;
           arity = One_arg "pattern";
@@ -141,7 +143,7 @@ let string_functions =
           name = "match";
           aliases = [];
           description = "Match regex and return match info";
-          example = Some {|"foo bar" | match("bar")  → {offset: 4, ...}|};
+          example = Some {|"foo bar" | match("bar") → {offset: 4, ...}|};
           applicable_to = [ String ];
           insert_text = None;
           arity = One_arg "pattern";
@@ -150,7 +152,7 @@ let string_functions =
           name = "scan";
           aliases = [];
           description = "Find all regex matches";
-          example = Some {|"a1b2c3" | [scan("[0-9]+")]  → ["1", "2", "3"]|};
+          example = Some {|"a1b2c3" | [scan("[0-9]+")] → ["1", "2", "3"]|};
           applicable_to = [ String ];
           insert_text = None;
           arity = One_arg "pattern";
@@ -159,7 +161,7 @@ let string_functions =
           name = "sub";
           aliases = [];
           description = "Replace first regex match";
-          example = Some {|"hello" | sub("l"; "L")  → "heLlo"|};
+          example = Some {|"hello" | sub("l"; "L") → "heLlo"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = Two_args ("pattern", "replacement");
@@ -168,7 +170,7 @@ let string_functions =
           name = "gsub";
           aliases = [];
           description = "Replace all regex matches";
-          example = Some {|"hello" | gsub("l"; "L")  → "heLLo"|};
+          example = Some {|"hello" | gsub("l"; "L") → "heLLo"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = Two_args ("pattern", "replacement");
@@ -177,7 +179,7 @@ let string_functions =
           name = "explode";
           aliases = [];
           description = "Convert string to array of codepoints";
-          example = Some {|"hi" | explode  → [104, 105]|};
+          example = Some {|"hi" | explode → [104, 105]|};
           applicable_to = [ String ];
           insert_text = None;
           arity = No_args;
@@ -186,7 +188,7 @@ let string_functions =
           name = "implode";
           aliases = [];
           description = "Convert array of codepoints to string";
-          example = Some {|[72, 105] | implode  → "Hi"|};
+          example = Some {|[72, 105] | implode → "Hi"|};
           applicable_to = [ Array ];
           insert_text = None;
           arity = No_args;
@@ -195,19 +197,19 @@ let string_functions =
           name = "index";
           aliases = [];
           description = "Find first index of substring";
-          example = Some {|"hello" | index("l")  → 2|};
+          example = Some {|"hello" | index("l") → 2|};
           applicable_to = [ String; Array ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "needle";
         };
         {
           name = "rindex";
           aliases = [];
           description = "Find last index of substring";
-          example = Some {|"hello" | rindex("l")  → 3|};
+          example = Some {|"hello" | rindex("l") → 3|};
           applicable_to = [ String; Array ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "needle";
         };
         {
           name = "find_indices";
@@ -216,7 +218,7 @@ let string_functions =
           example = Some {|"ababa" | find_indices("a") → [0, 2, 4]|};
           applicable_to = [ String; Array ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "needle";
         };
       ];
   }
@@ -276,7 +278,7 @@ let array_functions =
         };
         {
           name = "unique";
-          aliases = [ "uniq" ];
+          aliases = [];
           description = "Remove duplicate elements";
           example = Some {|[1, 2, 1, 3] | unique → [1, 2, 3]|};
           applicable_to = [ Array ];
@@ -476,17 +478,8 @@ let object_functions =
         {
           name = "keys";
           aliases = [];
-          description = "Get sorted array of keys";
-          example = Some {|{b:1, a:2} | keys  → ["a", "b"]|};
-          applicable_to = [ Object ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
-          name = "keys_unsorted";
-          aliases = [];
           description = "Get array of keys in original order";
-          example = Some {|{b:1, a:2} | keys_unsorted  → ["b", "a"]|};
+          example = Some {|{b:1, a:2} | keys → ["b", "a"]|};
           applicable_to = [ Object ];
           insert_text = None;
           arity = No_args;
@@ -495,7 +488,7 @@ let object_functions =
           name = "has";
           aliases = [];
           description = "Check if key exists";
-          example = Some {|{a:1} | has("a")  → true|};
+          example = Some {|{a:1} | has("a") → true|};
           applicable_to = [ Object; Array ];
           insert_text = None;
           arity = One_arg "key";
@@ -504,7 +497,7 @@ let object_functions =
           name = "in";
           aliases = [];
           description = "Check if key exists in object";
-          example = Some {|"a" | in({a:1})  → true|};
+          example = Some {|"a" | in({a:1}) → true|};
           applicable_to = [ String; Number ];
           insert_text = None;
           arity = One_arg "object";
@@ -513,7 +506,7 @@ let object_functions =
           name = "to_entries";
           aliases = [];
           description = "Convert to [{key, value}, ...]";
-          example = Some {|{a:1} | to_entries  → [{key:"a", value:1}]|};
+          example = Some {|{a:1} | to_entries → [{key:"a", value:1}]|};
           applicable_to = [ Object ];
           insert_text = None;
           arity = No_args;
@@ -522,7 +515,7 @@ let object_functions =
           name = "from_entries";
           aliases = [];
           description = "Convert from [{key, value}, ...] to object";
-          example = Some {|[{key:"a", value:1}] | from_entries  → {a:1}|};
+          example = Some {|[{key:"a", value:1}] | from_entries → {a:1}|};
           applicable_to = [ Array ];
           insert_text = None;
           arity = No_args;
@@ -531,28 +524,28 @@ let object_functions =
           name = "with_entries";
           aliases = [];
           description = "Transform each {key, value} entry";
-          example = Some {|{a:1} | with_entries(.value += 1)  → {a:2}|};
+          example = Some {|{a:1} | with_entries(.value += 1) → {a:2}|};
           applicable_to = [ Object ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "expr";
         };
         {
-          name = "del";
+          name = "delete";
           aliases = [];
           description = "Delete key at path";
-          example = Some {|{a:1, b:2} | del(.a)  → {b:2}|};
+          example = Some {|{a:1, b:2} | delete(.a) → {b:2}|};
           applicable_to = [ Object; Array ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "path";
         };
         {
           name = "pick";
           aliases = [];
           description = "Select only specified paths";
-          example = Some {|{a:1, b:2, c:3} | pick(.a, .c)  → {a:1, c:3}|};
+          example = Some {|{a:1, b:2, c:3} | pick(.a, .c) → {a:1, c:3}|};
           applicable_to = [ Object ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "paths";
         };
       ];
   }
@@ -567,7 +560,7 @@ let path_functions =
           name = "path";
           aliases = [];
           description = "Get path to expression result";
-          example = Some {|{a:{b:1}} | path(.a.b)  → ["a", "b"]|};
+          example = Some {|{a:{b:1}} | path(.a.b) → ["a", "b"]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = One_arg "expr";
@@ -576,7 +569,7 @@ let path_functions =
           name = "paths";
           aliases = [];
           description = "Get all paths in value";
-          example = Some {|{a:{b:1}} | [paths]  → [["a"], ["a","b"]]|};
+          example = Some {|{a:{b:1}} | [paths] → [["a"], ["a","b"]]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -585,43 +578,43 @@ let path_functions =
           name = "leaf_paths";
           aliases = [];
           description = "Get paths to leaf values only";
-          example = Some {|{a:{b:1}} | [leaf_paths]  → [["a", "b"]]|};
+          example = Some {|{a:{b:1}} | [leaf_paths] → [["a", "b"]]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
         };
         {
           name = "get_path";
-          aliases = [ "getpath" ];
+          aliases = [];
           description = "Get value at path";
-          example = Some {|{a:{b:1}} | get_path(["a","b"])  → 1|};
+          example = Some {|{a:{b:1}} | get_path(["a","b"]) → 1|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "path";
         };
         {
           name = "set_path";
-          aliases = [ "setpath" ];
+          aliases = [];
           description = "Set value at path";
-          example = Some {|{a:1} | set_path(["b"]; 2)  → {a:1, b:2}|};
+          example = Some {|{a:1} | set_path(["b"]; 2) → {a:1, b:2}|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = Two_args ("path", "value");
         };
         {
           name = "delete_paths";
-          aliases = [ "delpaths" ];
+          aliases = [];
           description = "Delete multiple paths";
-          example = Some {|{a:1, b:2} | delete_paths([["a"]])  → {b:2}|};
+          example = Some {|{a:1, b:2} | delete_paths([["a"]]) → {b:2}|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "paths";
         };
         {
           name = "recurse";
           aliases = [];
           description = "Recursively descend into structure";
-          example = Some {|{a:{b:1}} | [recurse | numbers]  → [1]|};
+          example = Some {|{a:{b:1}} | [recurse | numbers] → [1]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -630,7 +623,7 @@ let path_functions =
           name = "..";
           aliases = [];
           description = "Recursive descent";
-          example = Some {|{a:{b:1}} | [.. | numbers]  → [1]|};
+          example = Some {|{a:{b:1}} | [.. | numbers] → [1]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -639,7 +632,7 @@ let path_functions =
           name = "descend";
           aliases = [];
           description = "Breadth-first traversal of all nested values";
-          example = Some {|{a:{b:1}} | [descend]  → [{a:{b:1}}, {b:1}, 1]|};
+          example = Some {|{a:{b:1}} | [descend] → [{a:{b:1}}, {b:1}, 1]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -648,7 +641,7 @@ let path_functions =
           name = "dive";
           aliases = [];
           description = "Depth-first traversal of all nested values";
-          example = Some {|{a:1, b:2} | [dive]  → [{a:1,b:2}, 1, 2]|};
+          example = Some {|{a:1, b:2} | [dive] → [{a:1,b:2}, 1, 2]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -657,19 +650,19 @@ let path_functions =
           name = "find_all";
           aliases = [];
           description = "Find all values matching condition at any depth";
-          example = Some {|{a:1, b:{c:2}} | find_all(type=="number")  → [1, 2]|};
+          example = Some {|{a:1, b:{c:2}} | find_all(type=="number") → [1, 2]|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "condition";
         };
         {
           name = "find_first";
           aliases = [];
           description = "Find first value matching condition";
-          example = Some {|{a:"x", b:{c:1}} | find_first(type=="number")  → 1|};
+          example = Some {|{a:"x", b:{c:1}} | find_first(type=="number") → 1|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "condition";
         };
         {
           name = "paths_to";
@@ -677,18 +670,17 @@ let path_functions =
           description = "Get paths to all matching values";
           example =
             Some
-              {|{a:1, b:{c:2}} | paths_to(type=="number")  → [["a"], ["b","c"]]|};
+              {|{a:1, b:{c:2}} | paths_to(type=="number") → [["a"], ["b","c"]]|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "condition";
         };
         {
           name = "walk";
           aliases = [];
           description = "Transform all values recursively";
           example =
-            Some
-              {|{a:1} | walk(if type=="number" then .+1 else . end)  → {a:2}|};
+            Some {|{a:1} | walk(if type=="number" then .+1 else . end) → {a:2}|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = One_arg "expr";
@@ -706,7 +698,7 @@ let math_functions =
           name = "abs";
           aliases = [];
           description = "Absolute value";
-          example = Some {|-5 | abs  → 5|};
+          example = Some {|-5 | abs → 5|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -715,7 +707,7 @@ let math_functions =
           name = "floor";
           aliases = [];
           description = "Round down";
-          example = Some {|3.7 | floor  → 3|};
+          example = Some {|3.7 | floor → 3|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -724,7 +716,7 @@ let math_functions =
           name = "ceil";
           aliases = [];
           description = "Round up";
-          example = Some {|3.2 | ceil  → 4|};
+          example = Some {|3.2 | ceil → 4|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -733,7 +725,7 @@ let math_functions =
           name = "round";
           aliases = [];
           description = "Round to nearest integer";
-          example = Some {|3.5 | round  → 4|};
+          example = Some {|3.5 | round → 4|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -742,7 +734,7 @@ let math_functions =
           name = "sqrt";
           aliases = [];
           description = "Square root";
-          example = Some {|16 | sqrt  → 4|};
+          example = Some {|16 | sqrt → 4|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -760,7 +752,7 @@ let math_functions =
           name = "log10";
           aliases = [];
           description = "Base-10 logarithm";
-          example = Some {|100 | log10  → 2|};
+          example = Some {|100 | log10 → 2|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -778,7 +770,7 @@ let math_functions =
           name = "exp";
           aliases = [];
           description = "e^x";
-          example = Some {|0 | exp  → 1|};
+          example = Some {|0 | exp → 1|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -796,7 +788,7 @@ let math_functions =
           name = "pow";
           aliases = [];
           description = "x raised to power y";
-          example = Some {|pow(2; 3)  → 8|};
+          example = Some {|pow(2; 3) → 8|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -805,7 +797,7 @@ let math_functions =
           name = "sin";
           aliases = [];
           description = "Sine";
-          example = Some {|0 | sin  → 0|};
+          example = Some {|0 | sin → 0|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -814,7 +806,7 @@ let math_functions =
           name = "cos";
           aliases = [];
           description = "Cosine";
-          example = Some {|0 | cos  → 1|};
+          example = Some {|0 | cos → 1|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -862,7 +854,7 @@ let math_functions =
           example = None;
           applicable_to = [ Number ];
           insert_text = None;
-          arity = No_args;
+          arity = Two_args ("y", "x");
         };
         {
           name = "sinh";
@@ -946,26 +938,8 @@ let math_functions =
           arity = No_args;
         };
         {
-          name = "is_nan";
-          aliases = [ "isnan" ];
-          description = "Check if NaN";
-          example = Some {|42 | is_nan  → false|};
-          applicable_to = [ Number ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
-          name = "is_infinite";
-          aliases = [ "isinfinite" ];
-          description = "Check if infinite";
-          example = None;
-          applicable_to = [ Number ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
           name = "is_normal";
-          aliases = [ "isnormal" ];
+          aliases = [];
           description = "Check if normal number";
           example = None;
           applicable_to = [ Number ];
@@ -985,7 +959,7 @@ let math_functions =
           name = "infinite";
           aliases = [];
           description = "Infinite sequence 0, 1, 2, ...";
-          example = Some {|[limit(3; infinite)]  → [0, 1, 2]|};
+          example = Some {|[limit(3; infinite)] → [0, 1, 2]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1003,7 +977,7 @@ let type_functions =
           name = "type";
           aliases = [];
           description = "Get type as string";
-          example = Some {|42 | type  → "number"|};
+          example = Some {|42 | type → "number"|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1012,7 +986,7 @@ let type_functions =
           name = "to_string";
           aliases = [ "tostring" ];
           description = "Convert to string";
-          example = Some {|42 | to_string  → "42"|};
+          example = Some {|42 | to_string → "42"|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1021,7 +995,7 @@ let type_functions =
           name = "to_number";
           aliases = [ "tonumber" ];
           description = "Convert to number";
-          example = Some {|"42" | to_number  → 42|};
+          example = Some {|"42" | to_number → 42|};
           applicable_to = [ String; Number ];
           insert_text = None;
           arity = No_args;
@@ -1030,7 +1004,7 @@ let type_functions =
           name = "numbers";
           aliases = [];
           description = "Select only numbers";
-          example = Some {|[1, "a", 2] | .[] | numbers  → 1, 2|};
+          example = Some {|[1, "a", 2] | .[] | numbers → 1, 2|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1039,7 +1013,7 @@ let type_functions =
           name = "strings";
           aliases = [];
           description = "Select only strings";
-          example = Some {|[1, "a", 2] | .[] | strings  → "a"|};
+          example = Some {|[1, "a", 2] | .[] | strings → "a"|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1048,7 +1022,7 @@ let type_functions =
           name = "booleans";
           aliases = [];
           description = "Select only booleans";
-          example = Some {|[1, true, "a"] | .[] | booleans  → true|};
+          example = Some {|[1, true, "a"] | .[] | booleans → true|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1057,7 +1031,7 @@ let type_functions =
           name = "nulls";
           aliases = [];
           description = "Select only nulls";
-          example = Some {|[1, null] | .[] | nulls  → null|};
+          example = Some {|[1, null] | .[] | nulls → null|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1066,7 +1040,7 @@ let type_functions =
           name = "arrays";
           aliases = [];
           description = "Select only arrays";
-          example = Some {|[1, [], {}] | .[] | arrays  → []|};
+          example = Some {|[1, [], {}] | .[] | arrays → []|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1075,7 +1049,7 @@ let type_functions =
           name = "objects";
           aliases = [];
           description = "Select only objects";
-          example = Some {|[1, [], {}] | .[] | objects  → {}|};
+          example = Some {|[1, [], {}] | .[] | objects → {}|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1084,7 +1058,7 @@ let type_functions =
           name = "iterables";
           aliases = [];
           description = "Select arrays and objects";
-          example = Some {|[1, [], {}] | .[] | iterables  → [], {}|};
+          example = Some {|[1, [], {}] | .[] | iterables → [], {}|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1093,7 +1067,7 @@ let type_functions =
           name = "scalars";
           aliases = [];
           description = "Select non-iterables";
-          example = Some {|[1, [], "a"] | .[] | scalars  → 1, "a"|};
+          example = Some {|[1, [], "a"] | .[] | scalars → 1, "a"|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1102,7 +1076,7 @@ let type_functions =
           name = "values";
           aliases = [];
           description = "Select non-null values";
-          example = Some {|[1, null, 2] | .[] | values  → 1, 2|};
+          example = Some {|[1, null, 2] | .[] | values → 1, 2|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1111,7 +1085,7 @@ let type_functions =
           name = "is_empty";
           aliases = [];
           description = "Check if array/string/object is empty";
-          example = Some {|[] | is_empty  → true|};
+          example = Some {|[] | is_empty → true|};
           applicable_to = [ Array; String; Object; Nil ];
           insert_text = None;
           arity = No_args;
@@ -1120,7 +1094,7 @@ let type_functions =
           name = "is_blank";
           aliases = [];
           description = "Check if null, empty, or whitespace-only";
-          example = Some {|"  " | is_blank  → true|};
+          example = Some {|"  " | is_blank → true|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1156,8 +1130,7 @@ let control_functions =
           name = "//";
           aliases = [];
           description = "Alternative operator (on null or false)";
-          example =
-            Some {|.foo // "default"  → "default" if .foo is null/false|};
+          example = Some {|.foo // "default" → "default" if .foo is null/false|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1166,7 +1139,7 @@ let control_functions =
           name = "empty";
           aliases = [];
           description = "Produce no output";
-          example = Some {|1, empty, 2  → 1, 2|};
+          example = Some {|1, empty, 2 → 1, 2|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1187,7 +1160,7 @@ let control_functions =
           example = Some {|raise("validation"; "invalid input")|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = Two_args ("kind", "message");
         };
         {
           name = "assert";
@@ -1196,13 +1169,13 @@ let control_functions =
           example = Some {|assert(. > 0; "must be positive")|};
           applicable_to = [ Any ];
           insert_text = None;
-          arity = No_args;
+          arity = One_arg "condition";
         };
         {
           name = "range";
           aliases = [];
           description = "Generate number sequence";
-          example = Some {|[range(3)]  → [0, 1, 2]|};
+          example = Some {|[range(3)] → [0, 1, 2]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = Variable_args "n or from; to or from; to; step";
@@ -1211,7 +1184,7 @@ let control_functions =
           name = "while";
           aliases = [];
           description = "Repeat while condition holds";
-          example = Some {|1 | [while(. < 8; . * 2)]  → [1, 2, 4]|};
+          example = Some {|1 | [while(. < 8; . * 2)] → [1, 2, 4]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = Two_args ("condition", "update");
@@ -1220,7 +1193,7 @@ let control_functions =
           name = "until";
           aliases = [];
           description = "Repeat until condition holds";
-          example = Some {|1 | [until(. > 8; . * 2)]  → [16]|};
+          example = Some {|1 | [until(. > 8; . * 2)] → [16]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = Two_args ("condition", "update");
@@ -1229,7 +1202,7 @@ let control_functions =
           name = "repeat";
           aliases = [];
           description = "Repeat expression indefinitely";
-          example = Some {|1 | [limit(3; repeat(. * 2))]  → [2, 4, 8]|};
+          example = Some {|1 | [limit(3; repeat(. * 2))] → [2, 4, 8]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = One_arg "expr";
@@ -1256,7 +1229,7 @@ let control_functions =
           name = "limit";
           aliases = [];
           description = "Take first n outputs";
-          example = Some {|[limit(2; range(10))]  → [0, 1]|};
+          example = Some {|[limit(2; range(10))] → [0, 1]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = Two_args ("n", "generator");
@@ -1265,16 +1238,16 @@ let control_functions =
           name = "skip";
           aliases = [];
           description = "Skip first n outputs";
-          example = Some {|[skip(2; range(5))]  → [2, 3, 4]|};
+          example = Some {|[skip(2; range(5))] → [2, 3, 4]|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = Two_args ("n", "generator");
         };
         {
-          name = "isempty";
+          name = "is_empty";
           aliases = [];
           description = "Check if expression produces no output";
-          example = Some {|isempty(empty)  → true|};
+          example = Some {|is_empty(empty) → true|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1292,7 +1265,7 @@ let definition_functions =
           name = "fn";
           aliases = [];
           description = "Define a function";
-          example = Some {|fn double: . * 2; 5 | double  → 10|};
+          example = Some {|fn double: . * 2; 5 | double → 10|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;
@@ -1464,447 +1437,560 @@ let find_function (name : string) : function_info option =
 let arity_to_string (name : string) (arity : arity) : string =
   match arity with
   | No_args -> name
-  | One_arg arg -> name ^ "(" ^ arg ^ ")"
-  | Two_args (arg1, arg2) -> name ^ "(" ^ arg1 ^ "; " ^ arg2 ^ ")"
+  | One_arg arg -> Printf.sprintf "%s(%s)" name arg
+  | Two_args (arg1, arg2) -> Printf.sprintf "%s(%s; %s)" name arg1 arg2
   | Three_args (arg1, arg2, arg3) ->
-      name ^ "(" ^ arg1 ^ "; " ^ arg2 ^ "; " ^ arg3 ^ ")"
-  | Variable_args args -> name ^ "(" ^ args ^ ")"
+      Printf.sprintf "%s(%s; %s; %s)" name arg1 arg2 arg3
+  | Variable_args args -> Printf.sprintf "%s(%s)" name args
 
-let error_for_missing_arg (name : string) : string =
+let error_for_missing_arg (name : string) : Query_error.t =
   match find_function name with
   | Some f ->
       let usage = arity_to_string name f.arity in
-      let header =
+      let message =
         match f.arity with
-        | No_args -> name ^ " takes no arguments"
-        | One_arg arg -> name ^ "() requires " ^ arg
-        | Two_args (a, b) -> name ^ "() requires " ^ a ^ " and " ^ b
+        | No_args -> Printf.sprintf "%s takes no arguments" name
+        | One_arg arg -> Printf.sprintf "%s() requires %s" name arg
+        | Two_args (a, b) -> Printf.sprintf "%s() requires %s and %s" name a b
         | Three_args (a, b, c) ->
-            name ^ "() requires " ^ a ^ ", " ^ b ^ ", and " ^ c
-        | Variable_args _ -> name ^ "() requires arguments"
-      in
-      let parts = [ header ] in
-      let parts = parts @ [ "  usage: " ^ usage ] in
-      let parts = parts @ [ "  description: " ^ f.description ] in
-      let parts =
-        match f.example with
-        | Some ex -> parts @ [ "  example: " ^ ex ]
-        | None -> parts
+            Printf.sprintf "%s() requires %s, %s, and %s" name a b c
+        | Variable_args _ -> Printf.sprintf "%s() requires arguments" name
       in
       let types =
         f.applicable_to
         |> List.map type_name_of_applicable
         |> String.concat ", "
       in
-      let parts = parts @ [ "  applicable to: " ^ types ] in
-      String.concat "\n" parts
-  | None -> name ^ "() requires an argument"
+      let contexts =
+        [
+          Query_error.Note (Printf.sprintf "usage: %s" usage);
+          Query_error.Note f.description;
+          Query_error.Note (Printf.sprintf "applicable to: %s" types);
+        ]
+      in
+      let contexts =
+        match f.example with
+        | Some ex -> contexts @ [ Query_error.Example ex ]
+        | None -> contexts
+      in
+      err ~kind:"missing_argument" ~message ~contexts ()
+  | None ->
+      err ~kind:"missing_argument"
+        ~message:(Printf.sprintf "%s() requires an argument" name)
+        ()
+
+(* Check if a function name is a 1-arity function that can accept Identity as default *)
+let can_default_to_identity (name : string) : bool =
+  match name with
+  (* Array/iteration functions that make sense with identity *)
+  | "map" | "select" | "sort_by" | "group_by" | "unique_by" | "min_by"
+  | "max_by" | "find" | "any" | "all" | "pluck" | "partition" | "walk"
+  | "with_entries" | "path" | "paths" | "flat_map" | "map_values" | "repeat"
+  | "recurse" | "find_all" | "find_first" | "paths_to" | "is_empty" | "first"
+  | "last" | "flatten" | "combinations" | "transpose" | "add" | "delete"
+  | "pick" | "assert" | "debug" ->
+      true
+  (* Functions that require specific argument types (string literals, etc.) *)
+  | "test" | "match" | "scan" | "capture" | "split" | "join" | "sub" | "gsub"
+  | "starts_with" | "ends_with" | "contains" | "has" | "in" | "inside" | "index"
+  | "rindex" | "indices" | "find_indices" | "trim_start" | "trim_end"
+  | "bsearch" | "get_path" | "delete_paths" | "error" | "halt_error" | "nth" ->
+      false
+  | _ -> false
+
+let require_string_literal ~fn_name ~what ~example =
+  err ~kind:"invalid_argument"
+    ~message:(Printf.sprintf "`%s` requires a string literal %s" fn_name what)
+    ~contexts:
+      [ Query_error.Expected "string literal"; Query_error.Example example ]
+    ()
+
+let not_implemented feature =
+  err ~kind:"not_implemented"
+    ~message:(Printf.sprintf "`%s` is not implemented" feature)
+    ()
 
 (* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression)
-    (arg2 : Ast.expression) : (Ast.expression, string) result =
+    (arg2 : Ast.expression) : (Ast.expression, Query_error.t) result =
   let open Ast in
   match name with
-  | "while" -> Ok (While (arg1, arg2))
-  | "until" -> Ok (Until (arg1, arg2))
-  | "recurse" -> Ok (Recurse_with (arg1, arg2))
+  | "while" -> Ok (Fn2 (While, arg1, arg2))
+  | "until" -> Ok (Fn2 (Until, arg1, arg2))
+  | "recurse" -> Ok (Fn2 (Recurse_with, arg1, arg2))
   | "try" -> Ok (Try (arg1, Some arg2, None))
   | "limit" -> (
       match arg1 with
-      | Literal (Number n) -> Ok (Limit (int_of_float n, arg2))
+      | Literal (Number n) -> Ok (Fn2 (Limit, Literal (Number n), arg2))
       | _ ->
           Error
-            "limit() first argument must be a number literal\n\
-            \  usage: limit(n; generator)\n\
-            \  example: limit(3; range(10)) → 0, 1, 2")
+            (err ~kind:"invalid_argument"
+               ~message:"`limit` first argument must be a number literal"
+               ~contexts:
+                 [
+                   Query_error.Note "usage: limit(n; generator)";
+                   Query_error.Example "limit(3; range(10)) → 0, 1, 2";
+                 ]
+               ()))
   | "skip" -> (
       match arg1 with
-      | Literal (Number n) -> Ok (Skip (int_of_float n, arg2))
+      | Literal (Number n) -> Ok (Fn2 (Skip, Literal (Number n), arg2))
       | _ ->
           Error
-            "skip() first argument must be a number literal\n\
-            \  usage: skip(n; generator)\n\
-            \  example: skip(2; range(5)) → 2, 3, 4")
+            (err ~kind:"invalid_argument"
+               ~message:"`skip` first argument must be a number literal"
+               ~contexts:
+                 [
+                   Query_error.Note "usage: skip(n; generator)";
+                   Query_error.Example "skip(2; range(5)) → 2, 3, 4";
+                 ]
+               ()))
   | "sub" -> (
       match (arg1, arg2) with
-      | Literal (String pattern), Literal (String replacement) ->
-          Ok (Sub (pattern, replacement))
+      | Literal (String _pattern), Literal (String _replacement) ->
+          Ok (Fn2 (Sub, arg1, arg2))
       | Literal (String _), _ ->
           Error
-            "sub() second argument must be a string literal\n\
-            \  usage: sub(pattern; replacement)\n\
-            \  example: sub(\"l\"; \"L\") replaces first match"
+            (require_string_literal ~fn_name:"sub" ~what:"replacement"
+               ~example:{|sub("l"; "L") replaces first match|})
       | _, _ ->
           Error
-            "sub() first argument must be a string literal pattern\n\
-            \  usage: sub(pattern; replacement)\n\
-            \  example: sub(\"l\"; \"L\") replaces first match")
+            (require_string_literal ~fn_name:"sub" ~what:"pattern"
+               ~example:{|sub("l"; "L") replaces first match|}))
   | "gsub" -> (
       match (arg1, arg2) with
-      | Literal (String pattern), Literal (String replacement) ->
-          Ok (Gsub (pattern, replacement))
+      | Literal (String _pattern), Literal (String _replacement) ->
+          Ok (Fn2 (Gsub, arg1, arg2))
       | Literal (String _), _ ->
           Error
-            "gsub() second argument must be a string literal\n\
-            \  usage: gsub(pattern; replacement)\n\
-            \  example: gsub(\"l\"; \"L\") replaces all matches"
+            (require_string_literal ~fn_name:"gsub" ~what:"replacement"
+               ~example:{|gsub("l"; "L") replaces all matches|})
       | _, _ ->
           Error
-            "gsub() first argument must be a string literal pattern\n\
-            \  usage: gsub(pattern; replacement)\n\
-            \  example: gsub(\"l\"; \"L\") replaces all matches")
-  | "any" -> Ok (Any_with_generator (arg1, arg2))
-  | "all" -> Ok (All_with_generator (arg1, arg2))
-  | "set_path" | "setpath" -> Ok (Setpath (arg1, arg2))
-  | "nth" -> Ok (Nth (arg1, arg2))
-  | "raise" -> Ok (Raise (arg1, arg2))
-  | "assert" -> Ok (Assert (arg1, Some arg2))
-  | "atan2" | "atan" -> Ok (Atan2 (arg1, arg2))
-  | "copysign" -> Ok (Copysign (arg1, arg2))
-  | "ldexp" -> Ok (Ldexp (arg1, arg2))
-  | "fdim" -> Ok (Fdim (arg1, arg2))
-  | "remainder" | "drem" -> Ok (Remainder (arg1, arg2))
-  | "scalbn" | "scalbln" -> Ok (Scalbn (arg1, arg2))
-  | "pow" -> Ok (Pow2 (arg1, arg2))
+            (require_string_literal ~fn_name:"gsub" ~what:"pattern"
+               ~example:{|gsub("l"; "L") replaces all matches|}))
+  | "any" -> Ok (Fn2 (Any_gen, arg1, arg2))
+  | "all" -> Ok (Fn2 (All_gen, arg1, arg2))
+  | "set_path" -> Ok (Fn2 (Setpath, arg1, arg2))
+  | "nth" -> Ok (Fn2 (Nth, arg1, arg2))
+  | "raise" -> Ok (Fn2 (Raise, arg1, arg2))
+  | "assert" -> Ok (Fn2 (Assert_msg, arg1, arg2))
+  | "atan2" | "atan" -> Ok (Fn2 (Atan2, arg1, arg2))
+  | "copysign" -> Ok (Fn2 (Copysign, arg1, arg2))
+  | "ldexp" -> Ok (Fn2 (Ldexp, arg1, arg2))
+  | "fdim" -> Ok (Fn2 (Fdim, arg1, arg2))
+  | "remainder" | "drem" -> Ok (Fn2 (Remainder, arg1, arg2))
+  | "scalbn" | "scalbln" -> Ok (Fn2 (Scalbn, arg1, arg2))
+  | "pow" -> Ok (Fn2 (Pow2, arg1, arg2))
   (* Not implemented *)
-  | "strftime" -> Error "strftime not implemented"
-  | "strptime" -> Error "strptime not implemented"
-  | "splits" -> Error "splits not implemented (use split)"
-  | "sql" -> Error "sql not implemented"
-  | "dateadd" | "datesub" -> Error "date arithmetic not implemented"
-  | "modulemeta" -> Error "modulemeta not implemented"
+  | "strftime" -> Error (not_implemented "strftime")
+  | "strptime" -> Error (not_implemented "strptime")
+  | "splits" ->
+      Error
+        (err ~kind:"not_implemented" ~message:"`splits` is not implemented"
+           ~suggestion:"use `split` instead" ())
+  | "sql" -> Error (not_implemented "sql")
+  | "dateadd" | "datesub" -> Error (not_implemented "date arithmetic")
+  | "modulemeta" -> Error (not_implemented "modulemeta")
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg1; arg2 ]))
 
+let compile_regex (pattern : string) :
+    (Ast.compiled_regex, Query_error.t) result =
+  try Ok { Ast.pattern; regex = Str.regexp pattern }
+  with _ ->
+    Error
+      (err ~kind:"invalid_regex"
+         ~message:(Printf.sprintf "invalid regex pattern: `%s`" pattern)
+         ())
+
+let make_pattern_fn (fn : Ast.fn1_pattern) (pattern : string) :
+    (Ast.expression, Query_error.t) result =
+  match compile_regex pattern with
+  | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
+  | Error e -> Error e
+
+let make_separator_fn (fn : Ast.fn1_separator) (sep : string) : Ast.expression =
+  Ast.Fn1 (With_separator (fn, sep))
+
+let make_expr_fn (fn : Ast.fn1_expr) (expr : Ast.expression) : Ast.expression =
+  Ast.Fn1 (With_expr (fn, expr))
+
 let map_unary_fn (name : string) (arg : Ast.expression) :
-    (Ast.expression, string) result =
+    (Ast.expression, Query_error.t) result =
   let open Ast in
   match name with
   (* Array/iteration functions *)
-  | "filter" -> Ok (Map (Select arg))
-  | "map" -> Ok (Map arg)
-  | "map_values" -> Ok (Map_values arg)
-  | "flat_map" -> Ok (Flat_map arg)
-  | "select" -> Ok (Select arg)
-  | "sort_by" -> Ok (Sort_by arg)
-  | "min_by" -> Ok (Min_by arg)
-  | "max_by" -> Ok (Max_by arg)
-  | "group_by" -> Ok (Group_by arg)
-  | "unique_by" -> Ok (Unique_by arg)
-  | "find" -> Ok (Find arg)
-  | "some" -> Ok (Some_ arg)
-  | "path" -> Ok (Path arg)
-  | "any" -> Ok (Any_with_condition arg)
-  | "all" -> Ok (All_with_condition arg)
-  | "walk" -> Ok (Walk arg)
+  | "filter" -> Ok (make_expr_fn Map (make_expr_fn Select arg))
+  | "map" -> Ok (make_expr_fn Map arg)
+  | "map_values" -> Ok (make_expr_fn Map_values arg)
+  | "flat_map" -> Ok (make_expr_fn Flat_map arg)
+  | "select" -> Ok (make_expr_fn Select arg)
+  | "sort_by" -> Ok (make_expr_fn Sort_by arg)
+  | "min_by" -> Ok (make_expr_fn Min_by arg)
+  | "max_by" -> Ok (make_expr_fn Max_by arg)
+  | "group_by" -> Ok (make_expr_fn Group_by arg)
+  | "unique_by" -> Ok (make_expr_fn Unique_by arg)
+  | "find" -> Ok (make_expr_fn Find arg)
+  | "some" -> Ok (make_expr_fn Some_ arg)
+  | "path" -> Ok (make_expr_fn Path arg)
+  | "any" -> Ok (make_expr_fn Any_cond arg)
+  | "all" -> Ok (make_expr_fn All_cond arg)
+  | "walk" -> Ok (make_expr_fn Walk arg)
   (* Object functions *)
-  | "has" -> Ok (Has arg)
-  | "in" -> Ok (In arg)
-  | "with_entries" -> Ok (With_entries arg)
-  (* String functions *)
-  | "startwith" -> Error "startwith is deprecated. Use starts_with instead"
-  | "startswith" -> Error "startswith is deprecated. Use starts_with instead"
-  | "endwith" -> Error "endwith is deprecated. Use ends_with instead"
-  | "endswith" -> Error "endswith is deprecated. Use ends_with instead"
-  | "starts_with" -> Ok (Starts_with arg)
-  | "ends_with" -> Ok (Ends_with arg)
-  | "index" -> Ok (Index_of arg)
-  | "rindex" -> Ok (Rindex_of arg)
-  | "indices" | "find_indices" -> Ok (Indices arg)
-  | "inside" -> Ok (Inside arg)
-  | "ltrimstr" | "trim_start" -> Ok (Ltrimstr arg)
-  | "rtrimstr" | "trim_end" -> Ok (Rtrimstr arg)
+  | "has" -> Ok (make_expr_fn Has arg)
+  | "in" -> Ok (make_expr_fn In arg)
+  | "with_entries" -> Ok (make_expr_fn With_entries arg)
+  (* String functions - separator-based *)
   | "split" -> (
       match arg with
-      | Literal (String sep) -> Ok (Split (Literal (String sep)))
+      | Literal (String sep) -> Ok (make_separator_fn Split sep)
       | _ ->
           Error
-            "split() requires a string literal separator\n\
-            \  expected: string literal\n\
-            \  example: split(\",\") splits \"a,b,c\" into [\"a\", \"b\", \
-             \"c\"]")
+            (require_string_literal ~fn_name:"split" ~what:"separator"
+               ~example:{|split(",") splits "a,b,c" into ["a", "b", "c"]|}))
   | "join" -> (
       match arg with
-      | Literal (String sep) -> Ok (Join (Literal (String sep)))
+      | Literal (String sep) -> Ok (make_separator_fn Join sep)
       | _ ->
           Error
-            "join() requires a string literal separator\n\
-            \  expected: string literal\n\
-            \  example: join(\",\") joins [\"a\", \"b\"] into \"a,b\"")
-  | "contains" -> Ok (Contains arg)
-  | "bsearch" -> Ok (Bsearch arg)
-  (* Regex functions - require string literals *)
+            (require_string_literal ~fn_name:"join" ~what:"separator"
+               ~example:{|join(",") joins ["a", "b"] into "a,b"|}))
+  (* String functions - expression-based *)
+  | "starts_with" -> Ok (make_expr_fn Starts_with arg)
+  | "startswith" ->
+      Error
+        (Query_error.deprecated ~old_name:"startswith" ~new_name:"starts_with")
+  | "ends_with" -> Ok (make_expr_fn Ends_with arg)
+  | "endswith" ->
+      Error (Query_error.deprecated ~old_name:"endswith" ~new_name:"ends_with")
+  | "index" -> Ok (make_expr_fn Index_of arg)
+  | "rindex" -> Ok (make_expr_fn Rindex_of arg)
+  | "indices" | "find_indices" -> Ok (make_expr_fn Indices arg)
+  | "inside" -> Ok (make_expr_fn Inside arg)
+  | "trim_start" -> Ok (make_expr_fn Trim_start arg)
+  | "trim_end" -> Ok (make_expr_fn Trim_end arg)
+  | "contains" -> Ok (make_expr_fn Contains arg)
+  | "bsearch" -> Ok (make_expr_fn Bsearch arg)
+  (* Regex functions - pattern-based, compiled at parse time *)
   | "test" -> (
       match arg with
-      | Literal (String pattern) -> Ok (Test pattern)
+      | Literal (String pattern) -> make_pattern_fn Test pattern
       | _ ->
           Error
-            "test() requires a string literal pattern\n\
-            \  expected: string literal (regex pattern)\n\
-            \  example: test(\"^hello\") checks if string starts with 'hello'")
+            (require_string_literal ~fn_name:"test" ~what:"regex pattern"
+               ~example:{|test("^hello") checks if string starts with "hello"|})
+      )
   | "match" -> (
       match arg with
-      | Literal (String pattern) -> Ok (Match pattern)
+      | Literal (String pattern) -> make_pattern_fn Match pattern
       | _ ->
           Error
-            "match() requires a string literal pattern\n\
-            \  expected: string literal (regex pattern)\n\
-            \  example: match(\"[0-9]+\") returns match object with offset, \
-             captures")
+            (require_string_literal ~fn_name:"match" ~what:"regex pattern"
+               ~example:
+                 {|match("[0-9]+") returns match object with offset, captures|})
+      )
   | "scan" -> (
       match arg with
-      | Literal (String pattern) -> Ok (Scan pattern)
+      | Literal (String pattern) -> make_pattern_fn Scan pattern
       | _ ->
           Error
-            "scan() requires a string literal pattern\n\
-            \  expected: string literal (regex pattern)\n\
-            \  example: scan(\"[0-9]+\") yields all numeric matches")
+            (require_string_literal ~fn_name:"scan" ~what:"regex pattern"
+               ~example:{|scan("[0-9]+") yields all numeric matches|}))
   | "capture" -> (
       match arg with
-      | Literal (String pattern) -> Ok (Capture pattern)
+      | Literal (String pattern) -> make_pattern_fn Capture pattern
       | _ ->
           Error
-            "capture() requires a string literal pattern\n\
-            \  expected: string literal (regex pattern with named groups)\n\
-            \  example: capture(\"(?<name>\\\\w+)\") returns {name: ...}")
+            (require_string_literal ~fn_name:"capture" ~what:"regex pattern"
+               ~example:{|capture("(?<name>\\w+)") returns {name: ...}|}))
   (* Iteration/limiting functions *)
-  | "first" -> Ok (First (Some arg))
-  | "last" -> Ok (Last (Some arg))
-  | "recurse" -> Ok (Recurse_expr arg)
-  | "combinations" -> Ok (Combinations_n arg)
-  | "repeat" -> Ok (Repeat arg)
-  | "add" -> Ok (Add_expr arg)
-  | "isempty" -> Ok (Isempty arg)
+  | "first" -> Ok (make_expr_fn First_expr arg)
+  | "last" -> Ok (make_expr_fn Last_expr arg)
+  | "nth" -> Ok (make_expr_fn Nth_array arg)
+  | "recurse" -> Ok (make_expr_fn Recurse_expr arg)
+  | "combinations" -> Ok (make_expr_fn Combinations_n arg)
+  | "repeat" -> Ok (make_expr_fn Repeat arg)
+  | "add" -> Ok (make_expr_fn Add_expr arg)
+  | "is_empty" -> Ok (make_expr_fn Is_empty_expr arg)
+  | "flatten" -> Ok (make_expr_fn Flatten_n arg)
+  | "transpose" -> Ok (make_expr_fn Transpose_expr arg)
   (* Path functions *)
-  | "delete_paths" | "delpaths" -> Ok (Delpaths arg)
-  | "del" -> Ok (Del arg)
-  | "pick" -> Ok (Pick arg)
-  | "get_path" | "getpath" -> Ok (Getpath arg)
-  | "paths" -> Ok (Paths_filter arg)
+  | "delete_paths" -> Ok (make_expr_fn Delpaths arg)
+  | "delete" -> Ok (make_expr_fn Delete arg)
+  | "pick" -> Ok (make_expr_fn Pick arg)
+  | "get_path" -> Ok (make_expr_fn Getpath arg)
+  | "paths" -> Ok (make_expr_fn Paths_filter arg)
   (* Custom functions *)
-  | "pluck" -> Ok (Pluck arg)
-  | "partition" -> Ok (Partition arg)
-  | "find_all" -> Ok (Find_all arg)
-  | "find_first" -> Ok (Find_first arg)
-  | "paths_to" -> Ok (Paths_to arg)
+  | "pluck" -> Ok (make_expr_fn Pluck arg)
+  | "partition" -> Ok (make_expr_fn Partition arg)
+  | "find_all" -> Ok (make_expr_fn Find_all arg)
+  | "find_first" -> Ok (make_expr_fn Find_first arg)
+  | "paths_to" -> Ok (make_expr_fn Paths_to arg)
   (* Control flow *)
-  | "assert" -> Ok (Assert (arg, None))
+  | "assert" -> Ok (make_expr_fn Assert_simple arg)
   | "try" -> Ok (Try (arg, None, None))
-  | "debug" -> Ok (Debug_msg (Some arg))
-  | "error" -> Ok (Error_msg (Some arg))
+  | "debug" -> Ok (make_expr_fn Debug_msg arg)
+  | "error" -> Ok (make_expr_fn Error_msg arg)
   | "halt_error" -> (
       match arg with
-      | Literal (Number n) -> Ok (Halt_error (Some (int_of_float n)))
+      | Literal (Number _n) -> Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
-            "halt_error() requires a number literal exit code\n\
-            \  expected: number literal\n\
-            \  example: halt_error(1) terminates with exit code 1")
-  (* isvalid(expr) -> try (expr | true) catch false *)
-  | "isvalid" ->
+            (err ~kind:"invalid_argument"
+               ~message:"`halt_error` requires a number literal exit code"
+               ~contexts:
+                 [
+                   Query_error.Expected "number literal";
+                   Query_error.Example
+                     "halt_error(1) terminates with exit code 1";
+                 ]
+               ()))
+  (* is_valid(expr) -> try (expr | true) catch false *)
+  | "is_valid" ->
       Ok
         (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None))
   (* Not implemented *)
-  | "format" -> Error "format not implemented"
-  | "strftime" -> Error "strftime not implemented"
-  | "strptime" -> Error "strptime not implemented"
+  | "format" -> Error (not_implemented "format")
+  | "strftime" -> Error (not_implemented "strftime")
+  | "strptime" -> Error (not_implemented "strptime")
   | "todateiso8601" | "fromdateiso8601" ->
-      Error "ISO date functions not implemented"
-  | "localtime" | "gmtime" -> Error "time zone functions not implemented"
-  | "mktime" -> Error "mktime not implemented"
+      Error (not_implemented "ISO date functions")
+  | "localtime" | "gmtime" -> Error (not_implemented "time zone functions")
+  | "mktime" -> Error (not_implemented "mktime")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
-      Error "JSON stream functions not implemented"
-  | "splits" -> Error "splits not implemented (use split)"
+      Error (not_implemented "JSON stream functions")
+  | "splits" ->
+      Error
+        (err ~kind:"not_implemented" ~message:"`splits` is not implemented"
+           ~suggestion:"use `split` instead" ())
   | "tojson" | "fromjson" ->
       Error
-        "tojson/fromjson not implemented (use tostring/input is already JSON)"
-  | "ascii" -> Error "ascii not implemented"
-  | "modulemeta" -> Error "modulemeta not implemented"
+        (err ~kind:"not_implemented"
+           ~message:"`tojson`/`fromjson` not implemented"
+           ~suggestion:"use `to_string` (input is already JSON)" ())
+  | "ascii" -> Error (not_implemented "ascii")
+  | "modulemeta" -> Error (not_implemented "modulemeta")
   | "input" | "inputs" ->
-      Error "input/inputs not implemented (query-json reads all input upfront)"
+      Error
+        (err ~kind:"not_implemented" ~message:"`input`/`inputs` not implemented"
+           ~contexts:[ Query_error.Note "query-json reads all input upfront" ]
+           ())
   | "env" ->
-      Error "env() with arg not implemented (use $ENV.name or env object)"
-  | "builtins" -> Error "builtins not implemented"
-  | "limit" -> Error "limit first argument must be a number literal"
+      Error
+        (err ~kind:"invalid_argument"
+           ~message:"`env()` with argument is not supported"
+           ~suggestion:"use `$ENV.name` or `env.name` instead" ())
+  | "builtins" -> Error (not_implemented "builtins")
+  | "limit" ->
+      Error
+        (err ~kind:"invalid_argument"
+           ~message:"`limit` first argument must be a number literal"
+           ~contexts:
+             [
+               Query_error.Expected "number literal";
+               Query_error.Example "limit(3; range(10))";
+             ]
+           ())
   | "until" | "while" ->
-      Error (name ^ " requires two arguments: condition and update")
+      Error
+        (err ~kind:"missing_argument"
+           ~message:(Printf.sprintf "`%s` requires two arguments" name)
+           ~contexts:
+             [
+               Query_error.Note "usage: condition and update expressions";
+               Query_error.Example
+                 (if name = "while" then "[while(. < 100; . * 2)]"
+                  else "[until(. > 100; . * 2)]");
+             ]
+           ())
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg ]))
 
 (* Map 0-argument function/identifier names to AST nodes *)
-let map_nullary_fn (name : string) : (Ast.expression, string) result =
+let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   let open Ast in
   match name with
   (* Basic values *)
-  | "empty" -> Ok Empty
+  | "empty" -> Ok (Fn0 Empty)
   | "null" -> Ok (Literal Null)
   | "true" -> Ok (Literal (Bool true))
   | "false" -> Ok (Literal (Bool false))
-  | "nan" -> Ok Nan
-  | "not" -> Ok Not
-  | "break" -> Ok Break
-  | "env" -> Ok Env
+  | "nan" -> Ok (Fn0 Nan)
+  | "not" -> Ok (Fn0 Not)
+  | "break" -> Ok (Fn0 Break)
+  | "env" -> Ok (Fn0 Env)
   (* Object functions *)
-  | "keys" -> Ok Keys
-  | "keys_unsorted" -> Ok Keys_unsorted
-  | "to_entries" -> Ok To_entries
-  | "from_entries" -> Ok From_entries
+  | "keys" -> Ok (Fn0 Keys)
+  | "to_entries" -> Ok (Fn0 To_entries)
+  | "from_entries" -> Ok (Fn0 From_entries)
   (* Array functions *)
-  | "head" -> Ok Head
-  | "tail" -> Ok Tail
-  | "length" -> Ok Length
-  | "utf8bytelength" -> Ok Utf8bytelength
-  | "type" -> Ok Type
-  | "sort" -> Ok Sort
-  | "uniq" | "unique" -> Ok Unique
-  | "reverse" -> Ok Reverse
-  | "min" -> Ok Min
-  | "max" -> Ok Max
-  | "any" -> Ok Any
-  | "all" -> Ok All
-  | "first" -> Ok (First None)
-  | "last" -> Ok (Last None)
-  | "combinations" -> Ok Combinations
-  | "transpose" -> Ok (Transpose Identity)
+  | "head" -> Ok (Fn0 First)
+  | "tail" -> Ok (Fn0 Last)
+  | "length" -> Ok (Fn0 Length)
+  | "byte_length" -> Ok (Fn0 Byte_length)
+  | "type" -> Ok (Fn0 Type)
+  | "sort" -> Ok (Fn0 Sort)
+  | "unique" -> Ok (Fn0 Unique)
+  | "reverse" -> Ok (Fn0 Reverse)
+  | "min" -> Ok (Fn0 Min)
+  | "max" -> Ok (Fn0 Max)
+  | "any" -> Ok (Fn0 Any)
+  | "all" -> Ok (Fn0 All)
+  | "first" -> Ok (Fn0 First)
+  | "last" -> Ok (Fn0 Last)
+  | "combinations" -> Ok (Fn0 Combinations)
+  | "transpose" -> Ok (Fn0 Transpose)
+  | "flatten" -> Ok (Fn0 Flatten)
+  | "add" -> Ok (Fn0 Add)
+  | "compact" -> Ok (Fn0 Compact)
   (* String functions *)
-  | "tostring" -> Error "tostring is deprecated. Use to_string instead"
-  | "to_string" -> Ok To_string
-  | "tonumber" -> Error "tonumber is deprecated. Use to_number instead"
-  | "to_number" -> Ok To_number
-  | "explode" -> Ok Explode
-  | "implode" -> Ok Implode
-  | "ascii_upcase" | "to_uppercase" -> Ok Ascii_upcase
-  | "ascii_downcase" | "to_lowercase" -> Ok Ascii_downcase
-  | "trim" -> Ok Trim
-  | "ltrim" -> Ok Ltrim
-  | "rtrim" -> Ok Rtrim
+  | "tostring" ->
+      Error (Query_error.deprecated ~old_name:"tostring" ~new_name:"to_string")
+  | "to_string" -> Ok (Fn0 To_string)
+  | "tonumber" ->
+      Error (Query_error.deprecated ~old_name:"tonumber" ~new_name:"to_number")
+  | "to_number" -> Ok (Fn0 To_number)
+  | "explode" -> Ok (Fn0 Explode)
+  | "implode" -> Ok (Fn0 Implode)
+  | "to_uppercase" -> Ok (Fn0 To_uppercase)
+  | "to_lowercase" -> Ok (Fn0 To_lowercase)
+  | "trim" -> Ok (Fn0 Trim)
+  | "trim_left" ->
+      Error (Query_error.deprecated ~old_name:"trim_left" ~new_name:"trim")
+  | "left_trim" ->
+      Error (Query_error.deprecated ~old_name:"left_trim" ~new_name:"trim")
+  | "trim_right" ->
+      Error (Query_error.deprecated ~old_name:"trim_right" ~new_name:"trim")
+  | "right_trim" ->
+      Error (Query_error.deprecated ~old_name:"right_trim" ~new_name:"trim")
   (* Math functions *)
-  | "floor" -> Ok Floor
-  | "sqrt" -> Ok Sqrt
-  | "abs" -> Ok (Fun Absolute)
-  | "add" -> Ok (Fun Add)
-  | "sin" -> Ok (Fun Sin)
-  | "cos" -> Ok (Fun Cos)
-  | "tan" -> Ok (Fun Tan)
-  | "asin" -> Ok (Fun Asin)
-  | "acos" -> Ok (Fun Acos)
-  | "atan" -> Ok (Fun Atan)
-  | "log" -> Ok (Fun Log)
-  | "log10" -> Ok (Fun Log10)
-  | "exp" -> Ok (Fun Exp)
-  | "pow" -> Ok (Fun Pow)
-  | "ceil" -> Ok (Fun Ceil)
-  | "round" -> Ok (Fun Round)
-  | "infinite" -> Ok (Fun Infinite)
-  | "now" -> Ok (Fun Now)
-  | "sinh" -> Ok (Fun Sinh)
-  | "cosh" -> Ok (Fun Cosh)
-  | "tanh" -> Ok (Fun Tanh)
-  | "asinh" -> Ok (Fun Asinh)
-  | "acosh" -> Ok (Fun Acosh)
-  | "atanh" -> Ok (Fun Atanh)
-  | "is_infinite" | "isinfinite" -> Ok (Fun Isinfinite)
-  | "is_normal" | "isnormal" -> Ok (Fun Isnormal)
-  | "trunc" -> Ok (Fun Trunc)
-  | "fabs" -> Ok (Fun Fabs)
-  | "cbrt" -> Ok (Fun Cbrt)
-  | "expm1" -> Ok (Fun Expm1)
-  | "exp2" -> Ok (Fun Exp2)
-  | "log1p" -> Ok (Fun Log1p)
-  | "log2" -> Ok (Fun Log2)
-  | "nearbyint" | "rint" -> Ok (Fun Nearbyint)
-  | "logb" -> Ok (Fun Logb)
-  | "isnan" | "is_nan" -> Ok Is_nan
+  | "floor" -> Ok (Fn0 Floor)
+  | "sqrt" -> Ok (Fn0 Sqrt)
+  | "abs" -> Ok (Fn0 Abs)
+  | "sin" -> Ok (Fn0 Sin)
+  | "cos" -> Ok (Fn0 Cos)
+  | "tan" -> Ok (Fn0 Tan)
+  | "asin" -> Ok (Fn0 Asin)
+  | "acos" -> Ok (Fn0 Acos)
+  | "atan" -> Ok (Fn0 Atan)
+  | "log" -> Ok (Fn0 Log)
+  | "log10" -> Ok (Fn0 Log10)
+  | "exp" -> Ok (Fn0 Exp)
+  | "pow" -> Ok (Fn0 Pow)
+  | "ceil" -> Ok (Fn0 Ceil)
+  | "round" -> Ok (Fn0 Round)
+  | "infinite" -> Ok (Fn0 Infinite)
+  | "now" -> Ok (Fn0 Now)
+  | "sinh" -> Ok (Fn0 Sinh)
+  | "cosh" -> Ok (Fn0 Cosh)
+  | "tanh" -> Ok (Fn0 Tanh)
+  | "asinh" -> Ok (Fn0 Asinh)
+  | "acosh" -> Ok (Fn0 Acosh)
+  | "atanh" -> Ok (Fn0 Atanh)
+  | "is_normal" -> Ok (Fn0 Is_normal)
+  | "isnormal" ->
+      Error (Query_error.deprecated ~old_name:"isnormal" ~new_name:"is_normal")
+  | "trunc" -> Ok (Fn0 Trunc)
+  | "fabs" -> Ok (Fn0 Fabs)
+  | "cbrt" -> Ok (Fn0 Cbrt)
+  | "expm1" -> Ok (Fn0 Expm1)
+  | "exp2" -> Ok (Fn0 Exp2)
+  | "log1p" -> Ok (Fn0 Log1p)
+  | "log2" -> Ok (Fn0 Log2)
+  | "nearbyint" | "rint" -> Ok (Fn0 Nearbyint)
+  | "logb" -> Ok (Fn0 Logb)
+  | "isnan" -> Ok (Fn0 Is_nan)
   (* Recursion *)
-  | "recurse" -> Ok Recurse
-  | "recurse_down" -> Ok Recurse_down
+  | "recurse" -> Ok (Fn0 Recurse)
+  | "recurse_down" -> Ok (Fn0 Recurse_down)
   (* Path functions *)
-  | "paths" -> Ok Paths
-  | "leaf_paths" -> Ok Leaf_paths
+  | "paths" -> Ok (Fn0 Paths)
+  | "leaf_paths" -> Ok (Fn0 Leaf_paths)
   (* Control flow *)
-  | "error" -> Ok (Error_msg None)
-  | "halt" -> Ok Halt
-  | "halt_error" -> Ok (Halt_error None)
-  (* Type selectors - equivalent to select(type == "...") *)
-  | "numbers" ->
-      Ok (Select (Operation (Type, Equal, Literal (String "number"))))
-  | "strings" ->
-      Ok (Select (Operation (Type, Equal, Literal (String "string"))))
-  | "objects" ->
-      Ok (Select (Operation (Type, Equal, Literal (String "object"))))
-  | "arrays" -> Ok (Select (Operation (Type, Equal, Literal (String "array"))))
-  | "booleans" ->
-      Ok (Select (Operation (Type, Equal, Literal (String "boolean"))))
-  | "nulls" -> Ok (Select (Operation (Type, Equal, Literal (String "null"))))
-  | "iterables" ->
-      Ok
-        (Select
-           (Operation
-              ( Operation (Type, Equal, Literal (String "array")),
-                Or,
-                Operation (Type, Equal, Literal (String "object")) )))
-  | "values" -> Ok (Select (Operation (Identity, Not_equal, Literal Null)))
-  | "scalars" ->
-      Ok
-        (Select
-           (Operation
-              ( Operation (Type, Not_equal, Literal (String "array")),
-                And,
-                Operation (Type, Not_equal, Literal (String "object")) )))
+  | "error" -> Ok (make_expr_fn Error_msg Identity)
+  | "halt" -> Ok (Fn0 Halt)
+  | "halt_error" -> Ok (make_expr_fn Halt_error_n (Literal (Number 5.0)))
+  (* Type selectors *)
+  | "numbers" -> Ok (Fn0 Numbers)
+  | "strings" -> Ok (Fn0 Strings)
+  | "objects" -> Ok (Fn0 Objects)
+  | "arrays" -> Ok (Fn0 Arrays)
+  | "booleans" -> Ok (Fn0 Booleans)
+  | "nulls" -> Ok (Fn0 Nulls)
+  | "iterables" -> Ok (Fn0 Iterables)
+  | "values" -> Ok (Fn0 Values)
+  | "scalars" -> Ok (Fn0 Scalars)
   (* Debug/IO *)
-  | "debug" -> Ok (Debug_msg None)
-  | "stderr" -> Ok Stderr
+  | "debug" -> Ok (Fn0 Debug)
+  | "stderr" -> Ok (Fn0 Stderr)
   (* Custom functions *)
-  | "compact" -> Ok Compact
-  | "is_empty" -> Ok Is_empty
-  | "is_blank" -> Ok Is_blank
-  | "descend" -> Ok Descend
-  | "dive" -> Ok Dive
+  | "is_empty" -> Ok (Fn0 Is_empty)
+  | "is_blank" -> Ok (Fn0 Is_blank)
+  | "descend" -> Ok (Fn0 Descend)
+  | "dive" -> Ok (Fn0 Dive)
   (* Time functions *)
-  | "localtime" -> Ok Localtime
-  | "gmtime" -> Ok Gmtime
-  | "mktime" -> Ok Mktime
-  (* isvalid without argument: try (. | true) catch false *)
-  | "isvalid" ->
+  | "localtime" -> Ok (Fn0 Localtime)
+  | "gmtime" -> Ok (Fn0 Gmtime)
+  | "mktime" -> Ok (Fn0 Mktime)
+  (* is_valid without argument: try (. | true) catch false *)
+  | "is_valid" ->
       Ok
         (Try
            ( Pipe (Identity, Literal (Bool true)),
              Some (Literal (Bool false)),
              None ))
-  | "builtins" -> Ok Builtins
-  | "formats" -> Ok Formats
+  | "builtins" -> Ok (Fn0 Builtins)
   (* Functions that require arguments - use rich error messages *)
   | "select" | "map" | "map_values" | "flat_map" | "walk" | "sort_by" | "min_by"
   | "max_by" | "group_by" | "unique_by" | "find" | "path" | "with_entries"
   | "has" | "in" | "contains" | "split" | "join" | "starts_with" | "ends_with"
-  | "trim_start" | "trim_end" | "del" | "pick" | "pluck" | "partition"
+  | "trim_start" | "trim_end" | "delete" | "pick" | "pluck" | "partition"
   | "bsearch" | "inside" | "index" | "rindex" | "indices" | "find_indices"
-  | "test" | "match" | "scan" | "capture" | "isempty" | "assert" | "nth"
-  | "limit" | "skip" | "while" | "until" | "sub" | "gsub" ->
+  | "test" | "match" | "scan" | "capture" | "assert" | "nth" | "limit" | "skip"
+  | "while" | "until" | "sub" | "gsub" ->
       Error (error_for_missing_arg name)
   (* Not implemented *)
-  | "input" | "inputs" ->
-      Error "input/inputs not implemented (query-json reads all input upfront)"
-  | "strftime" | "strptime" -> Error "time formatting not implemented"
-  | "modulemeta" -> Error "modulemeta not implemented"
+  | "strftime" | "strptime" -> Error (not_implemented "time formatting")
+  | "modulemeta" -> Error (not_implemented "modulemeta")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
-      Error "JSON stream functions not implemented"
+      Error (not_implemented "JSON stream functions")
   | "tojson" | "fromjson" ->
       Error
-        "tojson/fromjson not implemented (use tostring/input is already JSON)"
+        (err ~kind:"not_implemented"
+           ~message:"`tojson`/`fromjson` not implemented"
+           ~suggestion:"use `to_string` (input is already JSON)" ())
   | "input_filename" | "input_line_number" ->
-      Error "input metadata not implemented"
-  | "fma" -> Error "fma requires three arguments: fma(x; y; z)"
+      Error (not_implemented "input metadata")
+  | "fma" ->
+      Error
+        (err ~kind:"missing_argument" ~message:"`fma` requires three arguments"
+           ~contexts:[ Query_error.Example "fma(x; y; z)" ]
+           ())
   | "atan2" | "copysign" | "ldexp" | "fdim" | "remainder" | "drem" | "scalbn"
   | "scalbln" ->
-      Error (name ^ " requires two arguments")
+      Error
+        (err ~kind:"missing_argument"
+           ~message:(Printf.sprintf "`%s` requires two arguments" name)
+           ())
   | "frexp" | "modf" ->
-      Error (name ^ " not implemented (returns multiple values)")
+      Error
+        (err ~kind:"not_implemented"
+           ~message:(Printf.sprintf "`%s` not implemented" name)
+           ~contexts:[ Query_error.Note "returns multiple values" ]
+           ())
   | "significand" | "lgamma" | "tgamma" | "j0" | "j1" | "y0" | "y1" ->
-      Error "special math functions not implemented"
-  | "exp10" -> Error "exp10 not implemented"
-  | "getpath" | "get_path" -> Error "getpath requires an argument"
-  | "setpath" | "set_path" | "delpaths" | "delete_paths" ->
-      Error (name ^ " requires arguments")
+      Error (not_implemented "special math functions")
+  | "exp10" -> Error (not_implemented "exp10")
+  | "get_path" ->
+      Error
+        (err ~kind:"missing_argument" ~message:"`get_path` requires an argument"
+           ~contexts:[ Query_error.Example "get_path([\"a\", \"b\"])" ]
+           ())
+  | "set_path" | "delete_paths" ->
+      Error
+        (err ~kind:"missing_argument"
+           ~message:(Printf.sprintf "`%s` requires arguments" name)
+           ())
   (* Default: generic function application with no args *)
   | _ -> Ok (Apply (name, []))

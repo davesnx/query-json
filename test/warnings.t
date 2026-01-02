@@ -1,111 +1,125 @@
-Deprecation warnings with verbose flag
+Deprecation errors for old function names
 
-tonumber warning appears with -v flag
-  $ echo '"42"' | query-json --no-color -v 'tonumber'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 8-8]
-    --> tonumber
-                ^
-  
-
-tostring warning appears with -v flag
-  $ echo '42' | query-json --no-color -v 'tostring'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 8-8]
-    --> tostring
-                ^
-  
-
-startwith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'startwith("Hello")'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 17-18]
-    --> startwith("Hello")
-                         ^
-  
-
-startswith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'startswith("Hello")'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 18-19]
-    --> startswith("Hello")
-                          ^
-  
-
-endwith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'endwith("world")'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 15-16]
-    --> endwith("world")
-                       ^
-  
-
-endswith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'endswith("world")'
-  
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 16-17]
-    --> endswith("world")
-                        ^
-  
-
-No warnings without -v flag
-
+tonumber is deprecated
   $ echo '"42"' | query-json --no-color 'tonumber'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 8-8]
+  error[deprecated]: `tonumber` is deprecated
     --> tonumber
-                ^
+        ^
+  
+    hint: use `to_number` instead
   
 
+tostring is deprecated
   $ echo '42' | query-json --no-color 'tostring'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 8-8]
+  error[deprecated]: `tostring` is deprecated
     --> tostring
-                ^
+        ^
+  
+    hint: use `to_string` instead
   
 
+startwith is undefined (typo)
   $ echo '"Hello, world"' | query-json --no-color 'startwith("Hello")'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 17-18]
-    --> startwith("Hello")
-                         ^
+  error[undefined_function]: undefined function: `startwith`
+  
+    hint: check function name or define it with 'fn'
   
 
+startswith is deprecated
   $ echo '"Hello, world"' | query-json --no-color 'startswith("Hello")'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 18-19]
+  error[deprecated]: `startswith` is deprecated
     --> startswith("Hello")
-                          ^
+                  ^
+  
+    hint: use `starts_with` instead
   
 
+endwith is undefined (typo)
   $ echo '"Hello, world"' | query-json --no-color 'endwith("world")'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 15-16]
-    --> endwith("world")
-                       ^
+  error[undefined_function]: undefined function: `endwith`
+  
+    hint: check function name or define it with 'fn'
   
 
+endswith is deprecated
   $ echo '"Hello, world"' | query-json --no-color 'endswith("world")'
   
-  Error:  error[parse_error]: problem parsing at [line: 1, char: 16-17]
+  error[deprecated]: `endswith` is deprecated
     --> endswith("world")
-                        ^
+                ^
+  
+    hint: use `ends_with` instead
   
 
-New names work without warnings
+isnormal is deprecated
+  $ echo '42' | query-json --no-color 'isnormal'
+  
+  error[deprecated]: `isnormal` is deprecated
+    --> isnormal
+        ^
+  
+    hint: use `is_normal` instead
+  
 
-  $ echo '"42"' | query-json --no-color -v 'to_number'
+trim_left is deprecated
+  $ echo '" hello "' | query-json --no-color 'trim_left'
+  
+  error[deprecated]: `trim_left` is deprecated
+    --> trim_left
+        ^
+  
+    hint: use `trim` instead
+  
+
+trim_right is deprecated
+  $ echo '" hello "' | query-json --no-color 'trim_right'
+  
+  error[deprecated]: `trim_right` is deprecated
+    --> trim_right
+        ^
+  
+    hint: use `trim` instead
+  
+
+New names work correctly
+
+  $ echo '"42"' | query-json --no-color 'to_number'
   42
 
-  $ echo '42' | query-json --no-color -v 'to_string'
+  $ echo '42' | query-json --no-color 'to_string'
   "42"
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'starts_with("Hello")'
+  $ echo '"Hello, world"' | query-json --no-color 'starts_with("Hello")'
   true
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'starts_with("boo")'
+  $ echo '"Hello, world"' | query-json --no-color 'starts_with("boo")'
   false
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'ends_with("world")'
+  $ echo '"Hello, world"' | query-json --no-color 'ends_with("world")'
   true
+
+  $ echo '42' | query-json --no-color 'is_normal'
+  true
+
+  $ echo '" hello "' | query-json --no-color 'trim'
+  "hello"
+
+head and tail are aliases for first and last
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'head'
+  1
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'tail'
+  3
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'first'
+  1
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'last'
+  3
 

@@ -191,9 +191,9 @@ interp_after_expr:
   | s = INTERP_TEXT; INTERP_END
     { [Literal (String s)] }
   | s = INTERP_TEXT; INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 interp_body:
   | INTERP_END
@@ -201,9 +201,9 @@ interp_body:
   | s = INTERP_TEXT; INTERP_END
     { [Literal (String s)] }
   | s = INTERP_TEXT; INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 interpolated_string:
   | INTERP_START; parts = interp_body
@@ -221,9 +221,9 @@ template_after_expr:
   | s = TEMPLATE_TEXT; TEMPLATE_END
     { [Literal (String s)] }
   | s = TEMPLATE_TEXT; TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 template_body:
   | TEMPLATE_END
@@ -231,9 +231,9 @@ template_body:
   | s = TEMPLATE_TEXT; TEMPLATE_END
     { [Literal (String s)] }
   | s = TEMPLATE_TEXT; TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 template_literal:
   | TEMPLATE_START; parts = template_body
@@ -249,7 +249,7 @@ term:
   | DOT;
     { Identity }
   | RECURSE;
-    { Recurse }
+    { Fn0 Recurse }
   | s = STRING;
     { Literal (String s) }
   | interp = interpolated_string
@@ -276,22 +276,28 @@ term:
       | _ -> Apply (f, [arg1; arg2; arg3])
     }
   | FLATTEN;
-    { Flatten None }
+    { Fn0 Flatten }
   | FLATTEN; OPEN_PARENT; CLOSE_PARENT;
-    { Flatten None }
+    { Fn0 Flatten }
   | FLATTEN; OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
-    { Flatten (Some e) }
+    { Fn1 (With_expr (Flatten_n, e)) }
   | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT;
     { match Language.map_binary_fn f arg1 arg2 with
       | Ok ast -> ast
-      | Error msg -> Parse_errors.raise_error msg $startpos(arg1) $endpos(arg2)
+      | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
     }
   | f = FUNCTION; CLOSE_PARENT;
-    { Parse_errors.raise_error (f ^ "(), should contain a body") $startpos(f) $endpos(f) }
+    { (* Check if this 1-arity function can default to identity *)
+      if Language.can_default_to_identity f then
+        match Language.map_unary_fn f Identity with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+      else
+        Parse_errors.raise_rich_error (Language.error_for_missing_arg f) $startpos(f) $endpos(f) }
   | f = FUNCTION; arg = sequence_expr; CLOSE_PARENT;
     { match Language.map_unary_fn f arg with
       | Ok ast -> ast
-      | Error msg -> Parse_errors.raise_error msg $startpos(arg) $endpos(arg)
+      | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
@@ -304,7 +310,7 @@ term:
   | f = IDENTIFIER;
     { match Language.map_nullary_fn f with
       | Ok ast -> ast
-      | Error msg -> Parse_errors.raise_error msg $startpos(f) $endpos(f)
+      | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }

@@ -11,6 +11,8 @@ let test input expected =
   in
   Alcotest.test_case input `Quick fn
 
+open Ast
+
 let tests =
   [
     test ".[-1]" (Pipe (Identity, Index [ -1 ]));
@@ -24,12 +26,12 @@ let tests =
     test "." Identity;
     test ".store | .books" (Pipe (Key "store", Key "books"));
     test ". | map(.price + 1)"
-      (Pipe (Identity, Map (Operation (Key "price", Add, Literal (Number 1.)))));
+      (Pipe (Identity, Fn1 (With_expr (Map, Operation (Key "price", Add, Literal (Number 1.))))));
     test ".WAT" (Key "WAT");
-    test "head" Head;
+    test "head" (Fn0 First);
     test ".WAT?" (Optional (Key "WAT"));
     test "1, 2" (Comma (Literal (Number 1.), Literal (Number 2.)));
-    test "empty" Empty;
+    test "empty" (Fn0 Empty);
     test "(1, 2) + 3"
       (Operation
          ( Comma (Literal (Number 1.), Literal (Number 2.)),
@@ -42,10 +44,10 @@ let tests =
            Operation (Literal (Number 2.), Multiply, Literal (Number 3.)) ));
     test "[1, 2]"
       (List (Some (Comma (Literal (Number 1.), Literal (Number 2.)))));
-    test "select(true)" (Select (Literal (Bool true)));
+    test "select(true)" (Fn1 (With_expr (Select, Literal (Bool true))));
     test "[1][0]" (Pipe (List (Some (Literal (Number 1.))), Index [ 0 ]));
     test "[1].foo" (Pipe (List (Some (Literal (Number 1.))), Key "foo"));
-    test "(empty).foo?" (Pipe (Empty, Optional (Key "foo")));
+    test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo")));
     test ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     test ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     test ".[:3]" (Pipe (Identity, Slice (None, Some 3)));
@@ -89,7 +91,7 @@ let tests =
              ( Literal (Bool false),
                Literal (String "Welcome"),
                Literal (String "Real") ) ));
-    test "map(add)" (Map (Fun Add));
+    test "map(add)" (Fn1 (With_expr (Map, Fn0 Add)));
     test "[.[] | { name: .name, city: .address.city}]"
       (List
          (Some
