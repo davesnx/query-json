@@ -9,10 +9,12 @@ let format_function_doc ~colorize (f : Language.function_info) =
     else ""
   in
   let base =
-    Console_style.indent 1 ^ t.bold f.name ^ aliases_str ^ t.gray (" - " ^ f.description)
+    Console_style.indent 1 ^ t.bold f.name ^ aliases_str
+    ^ t.gray (" - " ^ f.description)
   in
   match f.example with
-  | Some ex -> base ^ Console_style.enter 1 ^ Console_style.indent 2 ^ t.green ex
+  | Some ex ->
+      base ^ Console_style.enter 1 ^ Console_style.indent 2 ^ t.green ex
   | None -> base
 
 let format_group ~colorize (g : Language.category) =

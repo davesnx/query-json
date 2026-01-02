@@ -26,7 +26,11 @@ let tests =
     test "." Identity;
     test ".store | .books" (Pipe (Key "store", Key "books"));
     test ". | map(.price + 1)"
-      (Pipe (Identity, Fn1 (With_expr (Map, Operation (Key "price", Add, Literal (Number 1.))))));
+      (Pipe
+         ( Identity,
+           Fn1
+             (With_expr (Map, Operation (Key "price", Add, Literal (Number 1.))))
+         ));
     test ".WAT" (Key "WAT");
     test "head" (Fn0 First);
     test ".WAT?" (Optional (Key "WAT"));

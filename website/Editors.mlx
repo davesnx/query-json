@@ -1,19 +1,98 @@
+module Clipboard = struct
+  external write_text : string -> unit Js.Promise.t = "writeText"
+  [@@mel.scope "navigator", "clipboard"]
+end
+
+module FileReader = struct
+  type t
+
+  external create : unit -> t = "FileReader" [@@mel.new]
+  external readAsText : t -> Js.file -> unit = "readAsText" [@@mel.send]
+  external result : t -> string = "result" [@@mel.get]
+  external set_onload : t -> (unit -> unit) -> unit = "onload" [@@mel.set]
+end
+
+module DataTransfer = struct
+  type t
+
+  external files : t -> Js.file array = "files" [@@mel.get]
+end
+
 module Title = struct
-  let[@react.component] make ?subtitle ~children =
-    <div className="px-6 py-3 flex items-center gap-2">
-      <h2 className="text-sm font-medium text-muted-foreground">
-        (React.string children)
-      </h2>
-      (match subtitle with
-      | Some subtitle ->
-          <span className="text-xs text-muted-foreground leading-1">
-            (React.string subtitle)
-          </span>
-      | None -> React.null)
+  let[@react.component] make ?subtitle ?action ~children =
+    <div className="px-6 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <h2 className="text-sm font-medium text-muted-foreground">
+          (React.string children)
+        </h2>
+        (match subtitle with
+        | Some subtitle ->
+            <span className="text-xs text-muted-foreground leading-1">
+              (React.string subtitle)
+            </span>
+        | None -> React.null)
+      </div>
+      (match action with Some action -> action | None -> React.null)
     </div>
 end
 
+module CopyButton = struct
+  let[@react.component] make ~text =
+    let copied, set_copied = React.useState (fun () -> false) in
+    let on_click _ =
+      let _promise = Clipboard.write_text text in
+      set_copied (fun _ -> true);
+      let _timeout =
+        Js.Global.setTimeout ~f:(fun () -> set_copied (fun _ -> false)) 2000
+      in
+      ()
+    in
+    <button
+      onClick=on_click
+      className="flex items-center gap-1 px-2 py-1 text-xs \
+                 text-muted-foreground hover:text-foreground hover:bg-accent \
+                 rounded transition-colors cursor-pointer"
+      ariaLabel="Copy output">
+      (match copied with
+      | true ->
+          <React.Fragment>
+            <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
+          </React.Fragment>
+      | false ->
+          <React.Fragment>
+            <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
+          </React.Fragment>)
+    </button>
+end
+
 let[@react.component] make ~json_value ~on_json_change ~output =
+  let output_text =
+    match output with
+    | Some (Ok text) -> text
+    | Some (Error text) -> text
+    | None -> ""
+  in
+  let is_dragging, set_is_dragging = React.useState (fun () -> false) in
+  let on_drag_over event =
+    React.Event.Drag.preventDefault event;
+    set_is_dragging (fun _ -> true)
+  in
+  let on_drag_leave _ = set_is_dragging (fun _ -> false) in
+  let on_drop event =
+    React.Event.Drag.preventDefault event;
+    set_is_dragging (fun _ -> false);
+    let data_transfer : DataTransfer.t =
+      Obj.magic (React.Event.Drag.nativeEvent event)##dataTransfer
+    in
+    let files = DataTransfer.files data_transfer in
+    if Array.length files > 0 then (
+      let file = files.(0) in
+      let reader = FileReader.create () in
+      FileReader.set_onload reader (fun () ->
+          let content = FileReader.result reader in
+          on_json_change content);
+      FileReader.readAsText reader file)
+  in
   <main className="flex-1 flex flex-col overflow-hidden">
     <div className="w-full h-full border-b border-border bg-muted/20">
       <div className="max-w-[1400px] mx-auto w-full h-full flex">
@@ -23,7 +102,12 @@ let[@react.component] make ~json_value ~on_json_change ~output =
           <Title>"INPUT JSON"</Title>
         </div>
         <div className="flex-1 flex flex-col">
-          <Title subtitle="(READ ONLY)">"OUTPUT"</Title>
+          <Title
+            subtitle="(READ ONLY)"
+            action=(if output_text <> "" then <CopyButton text=output_text />
+                    else React.null)>
+            "OUTPUT"
+          </Title>
         </div>
       </div>
     </div>
@@ -31,8 +115,23 @@ let[@react.component] make ~json_value ~on_json_change ~output =
       className="w-full flex-1 flex flex-row border-b border-border \
                  bg-background">
       <div className="max-w-[1360px] mx-auto flex-1 flex flex">
-        <div className="overflow-auto flex-1 flex border-r border-border">
+        <div
+          className=("overflow-auto flex-1 flex border-r border-border relative"
+                    ^ if is_dragging then " ring-2 ring-ring ring-inset" else ""
+                    )
+          onDragOver=on_drag_over
+          onDragLeave=on_drag_leave
+          onDrop=on_drop>
           <Editor.Json value=json_value on_change=on_json_change />
+          (if is_dragging then
+             <div
+               className="absolute inset-0 bg-accent/50 flex items-center \
+                          justify-center pointer-events-none">
+               <span className="text-foreground font-medium">
+                 (React.string "Drop JSON file here")
+               </span>
+             </div>
+           else React.null)
         </div>
         <div className="overflow-auto flex-1 flex">
           (match output with

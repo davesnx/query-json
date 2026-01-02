@@ -37,9 +37,14 @@ val applicable_of_json_type : string -> applicable_to
 val find_function : string -> function_info option
 val error_for_missing_arg : string -> Query_error.t
 val map_nullary_fn : string -> (Ast.expression, Query_error.t) result
-val map_unary_fn : string -> Ast.expression -> (Ast.expression, Query_error.t) result
+
+val map_unary_fn :
+  string -> Ast.expression -> (Ast.expression, Query_error.t) result
 
 val map_binary_fn :
-  string -> Ast.expression -> Ast.expression -> (Ast.expression, Query_error.t) result
+  string ->
+  Ast.expression ->
+  Ast.expression ->
+  (Ast.expression, Query_error.t) result
 
 val can_default_to_identity : string -> bool

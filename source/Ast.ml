@@ -112,8 +112,7 @@ type fn0 =
 type fn1_pattern = Test | Match | Scan | Capture
 [@@deriving show { with_path = false }]
 
-type fn1_separator = Split | Join
-[@@deriving show { with_path = false }]
+type fn1_separator = Split | Join [@@deriving show { with_path = false }]
 
 type fn1_expr =
   (* Array functions *)

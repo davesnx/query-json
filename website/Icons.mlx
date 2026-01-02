@@ -74,3 +74,45 @@ module Delete = struct
   let[@react.component] make ?(size : size = Medium) ?(className = "") =
     <Binding size=(size_to_number size) className />
 end
+
+module Copy = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element = "Copy"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end
+
+module ChevronDown = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element
+      = "ChevronDown"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end
+
+module ChevronRight = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element
+      = "ChevronRight"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end
+
+module PanelLeft = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element = "PanelLeft"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end

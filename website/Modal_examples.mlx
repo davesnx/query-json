@@ -129,6 +129,96 @@ let examples =
       query = ".tags | flatten";
       input = {|{"tags": [["a", "b"], ["c", "d"]]}|};
     };
+    {
+      title = "FizzBuzz";
+      query =
+        {|fn fizzbuzz:
+  if . % 15 == 0 then "FizzBuzz"
+  elif . % 3 == 0 then "Fizz"
+  elif . % 5 == 0 then "Buzz"
+  else . | to_string
+  end;
+[range(1;16) | fizzbuzz]|};
+      input = "null";
+    };
+    {
+      title = "Factorial (recursive function)";
+      query =
+        {|fn fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 5 | fact|};
+      input = "null";
+    };
+    {
+      title = "Fibonacci (recursive function)";
+      query =
+        {|fn fib: if . <= 1 then . else ((. - 1) | fib) + ((. - 2) | fib) end; 10 | fib|};
+      input = "null";
+    };
+    {
+      title = "Running total (cumulative sum)";
+      query =
+        {|fn running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
+running_total|};
+      input = "[1,2,3,4,5]";
+    };
+    {
+      title = "Word frequency count";
+      query =
+        {|gsub("[^a-zA-Z ]"; "") | split(" ") | map(select(length > 0)) | group_by(.) | map({word: .[0], count: length}) | sort_by(.count) | reverse|};
+      input = {|"the cat and the dog"|};
+    };
+    {
+      title = "Group and aggregate by field";
+      query =
+        {|group_by(.category) | map({category: .[0].category, total: (map(.val) | add)})|};
+      input =
+        {|[{"category": "A", "val": 10}, {"category": "B", "val": 20}, {"category": "A", "val": 30}]|};
+    };
+    {
+      title = "Deep merge objects";
+      query = {|reduce .[] as $obj ({}; . * $obj)|};
+      input = {|[{"a": 1}, {"b": 2}, {"c": 3}]|};
+    };
+    {
+      title = "Statistics (count, sum, min, max, mean)";
+      query =
+        {|{count: length, sum: add, min: min, max: max, mean: (add / length)}|};
+      input = "[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]";
+    };
+    {
+      title = "Chunk array into groups";
+      query =
+        {|fn chunk: if length <= 3 then [.] else [.[0:3]] + (.[3:] | chunk) end;
+chunk|};
+      input = "[1,2,3,4,5,6,7]";
+    };
+    {
+      title = "Find all numbers in nested structure";
+      query = {|find_all(type == "number")|};
+      input = {|{"a": 1, "b": {"c": 2, "d": "str"}}|};
+    };
+    {
+      title = "Paths to all numbers";
+      query = {|paths_to(type == "number")|};
+      input = {|{"a": 1, "b": {"c": 2}}|};
+    };
+    {
+      title = "Partition array by condition";
+      query = {|partition(. > 2)|};
+      input = "[1,2,3,4,5]";
+    };
+    {
+      title = "Convert number to binary";
+      query =
+        {|fn tobase($b; $digits):
+  fn mod: . % $b;
+  fn div: ((. - mod) / $b);
+  fn getdigits: recurse(select(. >= $b) | div) | mod;
+  fn getchar: (. as $i | $digits[$i]);
+  select(2 <= $b and $b <= 36)
+  | [getdigits] | map(getchar) | reverse | add;
+42 | tobase(2; "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ" | split(""))|};
+      input = "null";
+    };
   ]
 
 module Card = struct

@@ -2,7 +2,14 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (libraries menhirLib json sedlex str unix matrix.ansi query-json.console-style)
+ (libraries
+  menhirLib
+  json
+  sedlex
+  str
+  unix
+  matrix.ansi
+  query-json.console-style)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation

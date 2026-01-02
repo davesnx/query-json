@@ -650,7 +650,8 @@ let startswith_endswith =
 
 let trimstr =
   [
-    test {|[.[]|trim_start("foo")]|} {|["fo", "foo", "barfoo", "foobar", "afoo"]|}
+    test {|[.[]|trim_start("foo")]|}
+      {|["fo", "foo", "barfoo", "foobar", "afoo"]|}
       {|[ "fo", "", "barfoo", "bar", "afoo" ]|};
     test {|[.[]|trim_end("foo")]|} {|["fo", "foo", "barfoo", "foobar", "foob"]|}
       {|[ "fo", "", "bar", "foobar", "foob" ]|};
@@ -1097,7 +1098,8 @@ let walk_transforms =
 
 let group_aggregate =
   [
-    test {|group_by(.category) | [.[]] | map({category: .[0].category, count: length})|}
+    test
+      {|group_by(.category) | [.[]] | map({category: .[0].category, count: length})|}
       {|[{"category": "A", "val": 1}, {"category": "B", "val": 2}, {"category": "A", "val": 3}]|}
       {|[ { "category": "A", "count": 2 }, { "category": "B", "count": 1 } ]|};
     test
