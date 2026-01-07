@@ -8,6 +8,7 @@
   sedlex
   str
   unix
+  zarith
   matrix.ansi
   query-json.console-style)
  (preprocess

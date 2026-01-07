@@ -1,7 +1,8 @@
 open Sedlexing.Utf8
 
 let digit = [%sedlex.regexp? '0' .. '9']
-let number = [%sedlex.regexp? Plus digit, Opt '.', Opt (Plus digit)]
+let integer = [%sedlex.regexp? Plus digit]
+let float_number = [%sedlex.regexp? Plus digit, '.', Plus digit]
 let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
 
 let identifier =
@@ -10,8 +11,14 @@ let identifier =
 let not_double_quotes = [%sedlex.regexp? Compl '"']
 let comment = [%sedlex.regexp? '#', Star (Compl '\n')]
 
+(* Custom pp for Z.t since ppx_deriving can't derive it *)
+let pp_z fmt z = Format.fprintf fmt "%s" (Z.to_string z)
+
 type token =
-  | NUMBER of float
+  | INT of int (* small integers *)
+  | INT64 of int64 (* large integers *)
+  | BIG_INT of Z.t [@printer fun fmt z -> pp_z fmt z] (* huge integers *)
+  | FLOAT of float
   | STRING of string
   | BOOL of bool
   | IDENTIFIER of string
@@ -317,9 +324,18 @@ and tokenize_impl buf =
   | '"' -> tokenize_string buf
   | '`' -> tokenize_template buf
   | identifier -> tokenize_apply buf
-  | number ->
+  | float_number ->
       let num = lexeme buf in
-      Ok (NUMBER (Float.of_string num))
+      Ok (FLOAT (Float.of_string num))
+  | integer ->
+      let num = lexeme buf in
+      (* Parse into smallest fitting type: int -> int64 -> Big_int *)
+      (match int_of_string_opt num with
+      | Some i -> Ok (INT i)
+      | None ->
+        match Int64.of_string_opt num with
+        | Some i -> Ok (INT64 i)
+        | None -> Ok (BIG_INT (Z.of_string num)))
   | space -> tokenize buf
   | comment -> tokenize buf (* Skip comments *)
   | any -> Error ("Unexpected character '" ^ lexeme buf ^ "'")

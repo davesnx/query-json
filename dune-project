@@ -38,6 +38,7 @@
   sedlex
   ppx_deriving
   mosaic
+  zarith
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)

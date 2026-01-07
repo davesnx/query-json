@@ -60,6 +60,12 @@ let write_int ob x =
     write_digits ob x)
   else Buffer.add_char ob '0'
 
+let write_int64 ob x =
+  Buffer.add_string ob (Int64.to_string x)
+
+let write_big_int ob x =
+  Buffer.add_string ob (Z.to_string x)
+
 let float_needs_period s =
   try
     for i = 0 to String.length s - 1 do
@@ -112,11 +118,10 @@ let rec write_json ob (x : t) =
   | `Null -> write_null ob ()
   | `Bool b -> write_bool ob b
   | `Int i -> write_int ob i
-  | `Intlit s -> Buffer.add_string ob s
+  | `Int64 i -> write_int64 ob i
+  | `Big_int z -> write_big_int ob z
   | `Float f -> write_float ob f
-  | `Floatlit s -> Buffer.add_string ob s
   | `String s -> write_string ob s
-  | `Stringlit s -> Buffer.add_string ob s
   | `Assoc l -> write_assoc ob l
   | `List l -> write_list ob l
 
@@ -140,11 +145,10 @@ let rec write_std_json ob (x : t) =
   | `Null -> write_null ob ()
   | `Bool b -> write_bool ob b
   | `Int i -> write_int ob i
-  | `Intlit s -> Buffer.add_string ob s
+  | `Int64 i -> write_int64 ob i
+  | `Big_int z -> write_big_int ob z
   | `Float f -> write_std_float ob f
-  | `Floatlit s -> Buffer.add_string ob s
   | `String s -> write_string ob s
-  | `Stringlit s -> Buffer.add_string ob s
   | `Assoc l -> write_std_assoc ob l
   | `List l -> write_std_list ob l
 
@@ -270,24 +274,20 @@ let rec pp fmt = function
       Format.fprintf fmt "`Int (@[<hov>";
       Format.fprintf fmt "%d" x;
       Format.fprintf fmt "@])"
-  | `Intlit x ->
-      Format.fprintf fmt "`Intlit (@[<hov>";
-      Format.fprintf fmt "%S" x;
+  | `Int64 x ->
+      Format.fprintf fmt "`Int64 (@[<hov>";
+      Format.fprintf fmt "%Ld" x;
+      Format.fprintf fmt "@])"
+  | `Big_int x ->
+      Format.fprintf fmt "`Big_int (@[<hov>";
+      Format.fprintf fmt "%s" (Z.to_string x);
       Format.fprintf fmt "@])"
   | `Float x ->
       Format.fprintf fmt "`Float (@[<hov>";
       Format.fprintf fmt "%F" x;
       Format.fprintf fmt "@])"
-  | `Floatlit x ->
-      Format.fprintf fmt "`Floatlit (@[<hov>";
-      Format.fprintf fmt "%S" x;
-      Format.fprintf fmt "@])"
   | `String x ->
       Format.fprintf fmt "`String (@[<hov>";
-      Format.fprintf fmt "%S" x;
-      Format.fprintf fmt "@])"
-  | `Stringlit x ->
-      Format.fprintf fmt "`Stringlit (@[<hov>";
       Format.fprintf fmt "%S" x;
       Format.fprintf fmt "@])"
   | `Assoc xs ->
@@ -326,11 +326,16 @@ let rec equal a b =
   | `Null, `Null -> true
   | `Bool a, `Bool b -> a = b
   | `Int a, `Int b -> a = b
-  | `Intlit a, `Intlit b -> a = b
+  | `Int64 a, `Int64 b -> Int64.equal a b
+  | `Int a, `Int64 b -> Int64.equal (Int64.of_int a) b
+  | `Int64 a, `Int b -> Int64.equal a (Int64.of_int b)
+  | `Big_int a, `Big_int b -> Z.equal a b
+  | `Big_int a, `Int b -> Z.equal a (Z.of_int b)
+  | `Int a, `Big_int b -> Z.equal (Z.of_int a) b
+  | `Big_int a, `Int64 b -> Z.equal a (Z.of_int64 b)
+  | `Int64 a, `Big_int b -> Z.equal (Z.of_int64 a) b
   | `Float a, `Float b -> a = b
-  | `Floatlit a, `Floatlit b -> a = b
   | `String a, `String b -> a = b
-  | `Stringlit a, `Stringlit b -> a = b
   | `Assoc xs, `Assoc ys -> (
       let compare_keys = fun (key, _) (key', _) -> String.compare key key' in
       let xs = List.stable_sort compare_keys xs in
@@ -365,15 +370,14 @@ module Pretty = struct
       | `Null -> add 4
       | `Bool b -> add (if b then 4 else 5)
       | `Int i -> add (String.length (Int.to_string i))
-      | `Intlit s -> add (String.length s)
+      | `Int64 i -> add (String.length (Int64.to_string i))
+      | `Big_int z -> add (String.length (Z.to_string z))
       | `Float f ->
           add
             (if Float.equal (Float.round f) f then
                String.length (Int.to_string (Float.to_int f))
              else String.length (Printf.sprintf "%g" f))
-      | `Floatlit s -> add (String.length s)
       | `String s -> add (String.length s + 2)
-      | `Stringlit s -> add (String.length s)
       | `List [] -> add 2
       | `List items ->
           add 2;
@@ -423,25 +427,21 @@ module Pretty = struct
         value buf;
         Buffer.add_string buf (Int.to_string i);
         reset buf
-    | `Intlit s ->
+    | `Int64 i ->
         value buf;
-        Buffer.add_string buf s;
+        Buffer.add_string buf (Int64.to_string i);
+        reset buf
+    | `Big_int z ->
+        value buf;
+        Buffer.add_string buf (Z.to_string z);
         reset buf
     | `Float f ->
         value buf;
         write_float buf f;
         reset buf
-    | `Floatlit s ->
-        value buf;
-        Buffer.add_string buf s;
-        reset buf
     | `String s ->
         value buf;
         write_quoted_string buf s;
-        reset buf
-    | `Stringlit s ->
-        value buf;
-        Buffer.add_string buf s;
         reset buf
     | _ -> ()
 
@@ -450,11 +450,10 @@ module Pretty = struct
     | `Null -> Buffer.add_string buf "null"
     | `Bool b -> Buffer.add_string buf (if b then "true" else "false")
     | `Int i -> Buffer.add_string buf (Int.to_string i)
-    | `Intlit s -> Buffer.add_string buf s
+    | `Int64 i -> Buffer.add_string buf (Int64.to_string i)
+    | `Big_int z -> Buffer.add_string buf (Z.to_string z)
     | `Float f -> write_float buf f
-    | `Floatlit s -> Buffer.add_string buf s
     | `String s -> write_quoted_string buf s
-    | `Stringlit s -> Buffer.add_string buf s
     | _ -> ()
 
   let write_key buf ~key ~reset k =

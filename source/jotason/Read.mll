@@ -90,7 +90,8 @@
     let extra_junk = Buffer.contents buf in
     custom_error (Printf.sprintf "%s '%s%s'" descr junk extra_junk) v lexbuf
 
-  (* Integer parsing with overflow detection *)
+  (* Integer parsing with overflow detection.
+     Strategy: try int (63-bit) -> int64 (64-bit) -> Big_int (arbitrary) *)
   let min10 = min_int / 10 - (if min_int mod 10 = 0 then 0 else 1)
   let max10 = max_int / 10 + (if max_int mod 10 = 0 then 0 else 1)
 
@@ -118,13 +119,20 @@
     done;
     if !n > 0 then raise Int_overflow else !n
 
+  (* Parse integer into smallest fitting type: int -> int64 -> Big_int *)
   let make_positive_int _v lexbuf =
     try `Int (extract_positive_int lexbuf)
-    with Int_overflow -> `Intlit (Lexing.lexeme lexbuf)
+    with Int_overflow ->
+      let s = Lexing.lexeme lexbuf in
+      try `Int64 (Int64.of_string s)
+      with Failure _ -> `Big_int (Z.of_string s)
 
   let make_negative_int _v lexbuf =
     try `Int (extract_negative_int lexbuf)
-    with Int_overflow -> `Intlit (Lexing.lexeme lexbuf)
+    with Int_overflow ->
+      let s = Lexing.lexeme lexbuf in
+      try `Int64 (Int64.of_string s)
+      with Failure _ -> `Big_int (Z.of_string s)
 
   (* Position tracking *)
   let newline v (lexbuf : Lexing.lexbuf) =

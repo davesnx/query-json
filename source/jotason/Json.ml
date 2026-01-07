@@ -17,20 +17,29 @@ let type_of (json : t) =
   | `List _ -> "array"
   | `Assoc _ -> "object"
   | `Bool _ -> "boolean"
-  | `Float _ | `Int _ | `Intlit _ | `Floatlit _ -> "number"
+  | `Float _ | `Int _ | `Int64 _ | `Big_int _ -> "number"
   | `Null -> "null"
-  | `String _ | `Stringlit _ -> "string"
+  | `String _ -> "string"
 
 let rec equal (a : t) (b : t) : bool =
   match (a, b) with
   | `Int x, `Int y -> x = y
+  | `Int64 x, `Int64 y -> Int64.equal x y
+  | `Int x, `Int64 y -> Int64.equal (Int64.of_int x) y
+  | `Int64 x, `Int y -> Int64.equal x (Int64.of_int y)
+  | `Big_int x, `Big_int y -> Z.equal x y
+  | `Big_int x, `Int y -> Z.equal x (Z.of_int y)
+  | `Int x, `Big_int y -> Z.equal (Z.of_int x) y
+  | `Big_int x, `Int64 y -> Z.equal x (Z.of_int64 y)
+  | `Int64 x, `Big_int y -> Z.equal (Z.of_int64 x) y
   | `Float x, `Float y -> x = y
   | `Int x, `Float y -> Float.of_int x = y
   | `Float x, `Int y -> x = Float.of_int y
+  | `Int64 x, `Float y -> Int64.to_float x = y
+  | `Float x, `Int64 y -> x = Int64.to_float y
+  | `Big_int x, `Float y -> Z.to_float x = y
+  | `Float x, `Big_int y -> x = Z.to_float y
   | `String x, `String y -> x = y
-  | `Stringlit x, `Stringlit y -> x = y
-  | `Intlit x, `Intlit y -> x = y
-  | `Floatlit x, `Floatlit y -> x = y
   | `Bool x, `Bool y -> x = y
   | `Null, `Null -> true
   | `List xs, `List ys ->
@@ -66,11 +75,23 @@ let rec compare (a : t) (b : t) : int =
   | `Bool _, _ -> -1
   | _, `Bool _ -> 1
   | `Int x, `Int y -> Int.compare x y
+  | `Int64 x, `Int64 y -> Int64.compare x y
+  | `Int x, `Int64 y -> Int64.compare (Int64.of_int x) y
+  | `Int64 x, `Int y -> Int64.compare x (Int64.of_int y)
+  | `Big_int x, `Big_int y -> Z.compare x y
+  | `Big_int x, `Int y -> Z.compare x (Z.of_int y)
+  | `Int x, `Big_int y -> Z.compare (Z.of_int x) y
+  | `Big_int x, `Int64 y -> Z.compare x (Z.of_int64 y)
+  | `Int64 x, `Big_int y -> Z.compare (Z.of_int64 x) y
   | `Float x, `Float y -> Float.compare x y
   | `Int x, `Float y -> Float.compare (float_of_int x) y
   | `Float x, `Int y -> Float.compare x (float_of_int y)
-  | (`Int _ | `Float _), _ -> -1
-  | _, (`Int _ | `Float _) -> 1
+  | `Int64 x, `Float y -> Float.compare (Int64.to_float x) y
+  | `Float x, `Int64 y -> Float.compare x (Int64.to_float y)
+  | `Big_int x, `Float y -> Float.compare (Z.to_float x) y
+  | `Float x, `Big_int y -> Float.compare x (Z.to_float y)
+  | (`Int _ | `Int64 _ | `Big_int _ | `Float _), _ -> -1
+  | _, (`Int _ | `Int64 _ | `Big_int _ | `Float _) -> 1
   | `String x, `String y -> String.compare x y
   | `String _, _ -> -1
   | _, `String _ -> 1
@@ -78,10 +99,6 @@ let rec compare (a : t) (b : t) : int =
   | `List _, _ -> -1
   | _, `List _ -> 1
   | `Assoc xs, `Assoc ys -> compare_assoc xs ys
-  | `Intlit x, `Intlit y -> String.compare x y
-  | `Intlit _, _ -> -1
-  | _, `Intlit _ -> 1
-  | _, _ -> -1
 
 and compare_assoc xs ys =
   let keys_x = List.map fst xs |> List.sort String.compare in

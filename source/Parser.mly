@@ -3,7 +3,10 @@
 %}
 
 %token <string> STRING
-%token <float> NUMBER
+%token <int> INT
+%token <int64> INT64
+%token <Z.t> BIG_INT
+%token <float> FLOAT
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
@@ -179,11 +182,43 @@ item_expr:
   | e = term
     { e }
 
-number:
-  | n = NUMBER;
+(* number_literal returns an Ast.literal for use in expressions *)
+number_literal:
+  | n = INT;
+    { Int n }
+  | SUB; n = INT;
+    { Int (-n) }
+  | n = INT64;
+    { Int64 n }
+  | SUB; n = INT64;
+    { Int64 (Int64.neg n) }
+  | n = BIG_INT;
+    { Big_int n }
+  | SUB; n = BIG_INT;
+    { Big_int (Z.neg n) }
+  | n = FLOAT;
+    { Float n }
+  | SUB; n = FLOAT;
+    { Float (-.n) }
+
+(* index_number returns an int for array indexing *)
+index_number:
+  | n = INT;
     { n }
-  | SUB; n = NUMBER;
-    { -.n }
+  | SUB; n = INT;
+    { -n }
+  | n = INT64;
+    { Int64.to_int n }
+  | SUB; n = INT64;
+    { Int64.to_int (Int64.neg n) }
+  | n = BIG_INT;
+    { Z.to_int n }
+  | SUB; n = BIG_INT;
+    { Z.to_int (Z.neg n) }
+  | n = FLOAT;
+    { int_of_float n }
+  | SUB; n = FLOAT;
+    { int_of_float (-.n) }
 
 interp_after_expr:
   | INTERP_END
@@ -256,8 +291,8 @@ term:
     { interp }
   | template = template_literal
     { template }
-  | n = number;
-    { Literal (Number n) }
+  | n = number_literal;
+    { Literal n }
   | b = BOOL;
     { Literal (Bool b) }
   | NULL
@@ -374,8 +409,8 @@ term:
     }
 
   /* Index: .[0] or .[0,1,2], optionally with ? for optional access */
-  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET; opt = boption(QUESTION_MARK)
-    { let idx_expr = Index (List.map int_of_float indices) in
+  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, index_number); CLOSE_BRACKET; opt = boption(QUESTION_MARK)
+    { let idx_expr = Index indices in
       match opt with
       | true -> Pipe (e, Optional idx_expr)
       | false -> Pipe (e, idx_expr) }
@@ -401,16 +436,16 @@ term:
     { Pipe (e, Optional (Index [])) }
 
   /* Full slice with both indices: .[1:5] */
-  | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
-    { Pipe (e, Slice (Some (int_of_float start), Some (int_of_float end_))) }
+  | e = term; OPEN_BRACKET; start = index_number; COLON; end_ = index_number; CLOSE_BRACKET
+    { Pipe (e, Slice (Some start, Some end_)) }
 
   /* Start-only slice: .[3:] */
-  | e = term; OPEN_BRACKET; start = number; COLON; CLOSE_BRACKET
-    { Pipe (e, Slice (Some (int_of_float start), None)) }
+  | e = term; OPEN_BRACKET; start = index_number; COLON; CLOSE_BRACKET
+    { Pipe (e, Slice (Some start, None)) }
 
   /* End-only slice: .[:3] */
-  | e = term; OPEN_BRACKET; COLON; end_ = number; CLOSE_BRACKET
-    { Pipe (e, Slice (None, Some (int_of_float end_))) }
+  | e = term; OPEN_BRACKET; COLON; end_ = index_number; CLOSE_BRACKET
+    { Pipe (e, Slice (None, Some end_)) }
 
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
   | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)

@@ -1,15 +1,15 @@
 type arity = {
   type_ : string; [@mel.as "type"]
-  arg1 : string Js.Undefined.t;
-  arg2 : string Js.Undefined.t;
-  arg3 : string Js.Undefined.t;
+  arg1 : string option;
+  arg2 : string option;
+  arg3 : string option;
 }
 
 type function_info = {
   name : string;
   aliases : string array;
   description : string;
-  example : string Js.Undefined.t;
+  example : string option;
   applicableTo : string array;
   arity : arity;
 }
@@ -25,38 +25,27 @@ let get_categories : unit -> category array =
 
 module FunctionCard = struct
   let[@react.component] make ~(fn : function_info) ~on_try =
-    let example_text =
-      match Js.Undefined.toOption fn.example with
-      | Some ex -> Some ex
-      | None -> None
-    in
+    let example_text = fn.example in
     let aliases = Array.to_list fn.aliases in
     let applicable_types = Array.to_list fn.applicableTo in
     let arity_text =
       match fn.arity.type_ with
       | "no_args" -> fn.name
       | "one_arg" -> (
-          match Js.Undefined.toOption fn.arity.arg1 with
+          match fn.arity.arg1 with
           | Some arg -> fn.name ^ "(" ^ arg ^ ")"
           | None -> fn.name ^ "(...)")
       | "two_args" -> (
-          match
-            ( Js.Undefined.toOption fn.arity.arg1,
-              Js.Undefined.toOption fn.arity.arg2 )
-          with
+          match (fn.arity.arg1, fn.arity.arg2) with
           | Some a1, Some a2 -> fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ ")"
           | _ -> fn.name ^ "(...; ...)")
       | "three_args" -> (
-          match
-            ( Js.Undefined.toOption fn.arity.arg1,
-              Js.Undefined.toOption fn.arity.arg2,
-              Js.Undefined.toOption fn.arity.arg3 )
-          with
+          match (fn.arity.arg1, fn.arity.arg2, fn.arity.arg3) with
           | Some a1, Some a2, Some a3 ->
               fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ "; " ^ a3 ^ ")"
           | _ -> fn.name ^ "(...)")
       | "variable_args" -> (
-          match Js.Undefined.toOption fn.arity.arg1 with
+          match fn.arity.arg1 with
           | Some args -> fn.name ^ "(" ^ args ^ ")"
           | None -> fn.name ^ "(...)")
       | _ -> fn.name

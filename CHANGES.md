@@ -2,6 +2,12 @@
 
 ## v1.0.0~beta-1
 
+- [FEATURE] **Full Int64 precision for large integers**: Numbers are now stored in the smallest fitting type
+  - Small integers (63-bit) use native `int` for fast arithmetic
+  - Large integers (64-bit) use `Int64` for values outside native int range
+  - Huge integers use arbitrary precision (`zarith`) for values beyond Int64
+  - `1152921504606846976 + 1` now correctly returns `1152921504606846977` (jq returns `1152921504606847000`)
+  - Removed `Intlit`/`Floatlit`/`Stringlit` variants (string representations no longer needed)
 
 - [BREAKING CHANGE] **Stricter null handling**: Operations on null now error instead of silently propagating
   - `null + 1` errors instead of returning `1`

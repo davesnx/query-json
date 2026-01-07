@@ -1,15 +1,15 @@
 type arity = {
   type_ : string; [@mel.as "type"]
-  arg1 : string Js.Undefined.t;
-  arg2 : string Js.Undefined.t;
-  arg3 : string Js.Undefined.t;
+  arg1 : string option;
+  arg2 : string option;
+  arg3 : string option;
 }
 
 type function_info = {
   name : string;
   aliases : string array;
   description : string;
-  example : string Js.Undefined.t;
+  example : string option;
   applicableTo : string array;
   arity : arity;
 }
@@ -50,11 +50,7 @@ module CategorySection = struct
          <div className="pb-2">
            (functions
            |> List.map (fun (fn : function_info) ->
-               let example_text =
-                 match Js.Undefined.toOption fn.example with
-                 | Some ex -> ex
-                 | None -> ""
-               in
+              let example_text = Option.value fn.example ~default:"" in
                <button
                  key=fn.name
                  onClick=(fun _ -> on_select_function fn.name)

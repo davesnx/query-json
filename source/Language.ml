@@ -1512,7 +1512,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   | "try" -> Ok (Try (arg1, Some arg2, None))
   | "limit" -> (
       match arg1 with
-      | Literal (Number n) -> Ok (Fn2 (Limit, Literal (Number n), arg2))
+      | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Limit, Literal n, arg2))
       | _ ->
           Error
             (err ~kind:"invalid_argument"
@@ -1525,7 +1525,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
                ()))
   | "skip" -> (
       match arg1 with
-      | Literal (Number n) -> Ok (Fn2 (Skip, Literal (Number n), arg2))
+      | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Skip, Literal n, arg2))
       | _ ->
           Error
             (err ~kind:"invalid_argument"
@@ -1725,7 +1725,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "error" -> Ok (make_expr_fn Error_msg arg)
   | "halt_error" -> (
       match arg with
-      | Literal (Number _n) -> Ok (make_expr_fn Halt_error_n arg)
+      | Literal (Int _ | Int64 _ | Big_int _ | Float _) -> Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
             (err ~kind:"invalid_argument"
@@ -1900,7 +1900,7 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   (* Control flow *)
   | "error" -> Ok (make_expr_fn Error_msg Identity)
   | "halt" -> Ok (Fn0 Halt)
-  | "halt_error" -> Ok (make_expr_fn Halt_error_n (Literal (Number 5.0)))
+  | "halt_error" -> Ok (make_expr_fn Halt_error_n (Literal (Int 5)))
   (* Type selectors *)
   | "numbers" -> Ok (Fn0 Numbers)
   | "strings" -> Ok (Fn0 Strings)

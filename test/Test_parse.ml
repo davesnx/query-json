@@ -17,7 +17,7 @@ let tests =
   [
     test ".[-1]" (Pipe (Identity, Index [ -1 ]));
     test ".[1]" (Pipe (Identity, Index [ 1 ]));
-    test "[1]" (List (Some (Literal (Number 1.))));
+    test "[1]" (List (Some (Literal (Int 1))));
     test ".store.books" (Pipe (Key "store", Key "books"));
     test ".books[1]" (Pipe (Key "books", Index [ 1 ]));
     test ".books[1].author"
@@ -28,29 +28,25 @@ let tests =
     test ". | map(.price + 1)"
       (Pipe
          ( Identity,
-           Fn1
-             (With_expr (Map, Operation (Key "price", Add, Literal (Number 1.))))
+           Fn1 (With_expr (Map, Operation (Key "price", Add, Literal (Int 1))))
          ));
     test ".WAT" (Key "WAT");
     test "head" (Fn0 First);
     test ".WAT?" (Optional (Key "WAT"));
-    test "1, 2" (Comma (Literal (Number 1.), Literal (Number 2.)));
+    test "1, 2" (Comma (Literal (Int 1), Literal (Int 2)));
     test "empty" (Fn0 Empty);
     test "(1, 2) + 3"
       (Operation
-         ( Comma (Literal (Number 1.), Literal (Number 2.)),
-           Add,
-           Literal (Number 3.) ));
+         (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3)));
     test "1 + 2 * 3"
       (Operation
-         ( Literal (Number 1.),
+         ( Literal (Int 1),
            Add,
-           Operation (Literal (Number 2.), Multiply, Literal (Number 3.)) ));
-    test "[1, 2]"
-      (List (Some (Comma (Literal (Number 1.), Literal (Number 2.)))));
+           Operation (Literal (Int 2), Multiply, Literal (Int 3)) ));
+    test "[1, 2]" (List (Some (Comma (Literal (Int 1), Literal (Int 2)))));
     test "select(true)" (Fn1 (With_expr (Select, Literal (Bool true))));
-    test "[1][0]" (Pipe (List (Some (Literal (Number 1.))), Index [ 0 ]));
-    test "[1].foo" (Pipe (List (Some (Literal (Number 1.))), Key "foo"));
+    test "[1][0]" (Pipe (List (Some (Literal (Int 1))), Index [ 0 ]));
+    test "[1].foo" (Pipe (List (Some (Literal (Int 1))), Key "foo"));
     test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo")));
     (* Optional access on nullary functions *)
     test "first?" (Optional (Fn0 First));
@@ -64,7 +60,7 @@ let tests =
     (* Optional function call syntax: fn?(args) is equivalent to fn(args)? *)
     test "first?(range(3))"
       (Optional
-         (Fn1 (With_expr (First_expr, Range (Literal (Number 3.), None, None)))));
+         (Fn1 (With_expr (First_expr, Range (Literal (Int 3), None, None)))));
     test "last?(empty)" (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty))));
     (* Optional access on parenthesized expressions *)
     test "(first)?" (Optional (Fn0 First));
@@ -83,23 +79,18 @@ let tests =
     test "{\"foo\": 42, bar: [\"hello world\", 42], user}"
       (Object
          [
-           (Literal (String "foo"), Some (Literal (Number 42.)));
+           (Literal (String "foo"), Some (Literal (Int 42)));
            ( Literal (String "bar"),
              Some
                (List
                   (Some
-                     (Comma
-                        (Literal (String "hello world"), Literal (Number 42.)))))
+                     (Comma (Literal (String "hello world"), Literal (Int 42)))))
            );
            (Literal (String "user"), None);
          ]);
-    test "range(1;2)"
-      (Range (Literal (Number 1.), Some (Literal (Number 2.)), None));
+    test "range(1;2)" (Range (Literal (Int 1), Some (Literal (Int 2)), None));
     test "range(1;2;3)"
-      (Range
-         ( Literal (Number 1.),
-           Some (Literal (Number 2.)),
-           Some (Literal (Number 3.)) ));
+      (Range (Literal (Int 1), Some (Literal (Int 2)), Some (Literal (Int 3))));
     test "if true then \"Hello\" else \"Welcome\" end"
       (If_then_else
          ( Literal (Bool true),

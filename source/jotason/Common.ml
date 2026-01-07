@@ -1,12 +1,11 @@
 type t =
   [ `Null
   | `Bool of bool
-  | `Int of int
-  | `Intlit of string
-  | `Float of float
-  | `Floatlit of string
+  | `Int of int (* Small integers: 63-bit, fast arithmetic *)
+  | `Int64 of int64 (* Large integers: 64-bit, for values outside int range *)
+  | `Float of float (* Floating point *)
+  | `Big_int of Z.t (* Huge integers: arbitrary precision *)
   | `String of string
-  | `Stringlit of string
   | `Assoc of (string * t) list
   | `List of t list ]
 
@@ -35,12 +34,13 @@ let init_lexer ?buf ?fname ?(lnum = 1) () =
 let is_truthy (json : t) : bool =
   match json with `Bool false | `Null -> false | _ -> true
 
-(** Get numeric value for comparison, None for non-numeric types *)
-let to_number (json : t) : float option =
+(** Get numeric value as float for comparison, None for non-numeric types *)
+let to_float (json : t) : float option =
   match json with
   | `Int n -> Some (Float.of_int n)
+  | `Int64 n -> Some (Int64.to_float n)
   | `Float n -> Some n
-  | `Intlit s | `Floatlit s -> ( try Some (Float.of_string s) with _ -> None)
+  | `Big_int z -> Some (Z.to_float z)
   | _ -> None
 
 (** Compare two JSON values for ordering (jq semantics) *)
@@ -57,20 +57,16 @@ let rec compare_values (a : t) (b : t) : int =
   | `Bool _, _ -> -1
   | _, `Bool _ -> 1
   (* Numbers - compare numerically *)
-  | ( (`Int _ | `Float _ | `Intlit _ | `Floatlit _),
-      (`Int _ | `Float _ | `Intlit _ | `Floatlit _) ) -> (
-      match (to_number a, to_number b) with
+  | (`Int _ | `Int64 _ | `Float _ | `Big_int _), (`Int _ | `Int64 _ | `Float _ | `Big_int _) -> (
+      match (to_float a, to_float b) with
       | Some na, Some nb -> Float.compare na nb
       | _ -> 0)
-  | (`Int _ | `Float _ | `Intlit _ | `Floatlit _), _ -> -1
-  | _, (`Int _ | `Float _ | `Intlit _ | `Floatlit _) -> 1
+  | (`Int _ | `Int64 _ | `Float _ | `Big_int _), _ -> -1
+  | _, (`Int _ | `Int64 _ | `Float _ | `Big_int _) -> 1
   (* Strings - lexicographic *)
   | `String sa, `String sb -> String.compare sa sb
-  | `Stringlit sa, `Stringlit sb -> String.compare sa sb
-  | `String sa, `Stringlit sb -> String.compare sa sb
-  | `Stringlit sa, `String sb -> String.compare sa sb
-  | (`String _ | `Stringlit _), _ -> -1
-  | _, (`String _ | `Stringlit _) -> 1
+  | `String _, _ -> -1
+  | _, `String _ -> 1
   (* Arrays - lexicographic element-wise *)
   | `List la, `List lb -> compare_lists la lb
   | `List _, _ -> -1

@@ -46,6 +46,45 @@ let large_numbers =
       {|{ "large": 4611686018427387928, "small": 42 }|};
   ]
 
+let int64_precision =
+  (* Int64 precision tests - query-json preserves full Int64 precision unlike jq *)
+  [
+    (* 2^53 is the IEEE 754 double precision limit - jq loses precision here *)
+    test {|9007199254740993|} {|null|} {|9007199254740993|};
+    test {|9007199254740993 + 1|} {|null|} {|9007199254740994|};
+    (* The original example from the plan: 2^60 *)
+    test {|1152921504606846976 + 0|} {|null|} {|1152921504606846976|};
+    test {|1152921504606846976 + 1|} {|null|} {|1152921504606846977|};
+    (* Int64 max boundary: 2^63-1 *)
+    test {|9223372036854775807|} {|null|} {|9223372036854775807|};
+    (* Int64 arithmetic preserves precision *)
+    test {|9223372036854775807 - 1|} {|null|} {|9223372036854775806|};
+    test {|1000000000000000000 * 2|} {|null|} {|2000000000000000000|};
+    test {|9000000000000000000 + 223372036854775807|} {|null|}
+      {|9223372036854775807|};
+    (* Mixed Int64/Float - result is Float *)
+    test {|5 + 0.5|} {|null|} {|5.5|};
+    test {|9007199254740993 + 0.0|} {|null|} {|9007199254740992|};
+    (* loses precision when mixed with float *)
+    (* Division always produces Float *)
+    test {|10 / 3|} {|null|} {|3.33333|};
+    test {|9007199254740994 / 1|} {|null|} {|9007199254740994|};
+    (* but integer division preserves when result is integer *)
+    (* Modulo preserves Int64 *)
+    test {|9007199254740993 % 10|} {|null|} {|3|};
+    test {|9223372036854775807 % 1000000000000000000|} {|null|}
+      {|223372036854775807|};
+    (* JSON input preserves Int64 precision *)
+    test {|. + 1|} {|9007199254740993|} {|9007199254740994|};
+    test {|.a + .b|} {|{"a": 9007199254740993, "b": 1}|} {|9007199254740994|};
+    (* Comparison with Int64 *)
+    test {|9007199254740993 == 9007199254740993|} {|null|} {|true|};
+    test {|9007199254740993 < 9007199254740994|} {|null|} {|true|};
+    (* Negative Int64 *)
+    test {|-9007199254740993|} {|null|} {|-9007199254740993|};
+    test {|-9007199254740993 - 1|} {|null|} {|-9007199254740994|};
+  ]
+
 let object_identifier_index =
   [
     test {|.foo|} {|{"foo": 42, "bar": "less interesting data"}|} {|42|};
@@ -1462,6 +1501,7 @@ let tests =
       identity;
       literals;
       large_numbers;
+      int64_precision;
       object_identifier_index;
       optional_object_identifier_index;
       array_index;
