@@ -1013,6 +1013,46 @@ let first_last_nth =
     test {|.items | nth(1)|} {|{"items": ["a","b","c"]}|} {|"b"|};
   ]
 
+let optional_functions =
+  [
+    (* first? on empty array returns null instead of error *)
+    test {|first?|} {|[]|} {|null|};
+    test {|first?|} {|[1, 2, 3]|} {|1|};
+    (* last? on empty array returns null instead of error *)
+    test {|last?|} {|[]|} {|null|};
+    test {|last?|} {|[1, 2, 3]|} {|3|};
+    (* first?(expr) - optional first of expression results *)
+    test {|first?(empty)|} {|null|} {|null|};
+    test {|first?(range(3))|} {|null|} {|0|};
+    (* last?(expr) - optional last of expression results *)
+    test {|last?(empty)|} {|null|} {|null|};
+    test {|last?(range(3))|} {|null|} {|2|};
+    (* nth? with out of bounds index returns null *)
+    test {|nth(10)?|} {|[1, 2, 3]|} {|null|};
+    test {|nth(1)?|} {|[1, 2, 3]|} {|2|};
+    (* nth?(n; expr) - optional nth of expression results *)
+    test {|nth(10; range(3))?|} {|null|} {|null|};
+    test {|nth(1; range(3))?|} {|null|} {|1|};
+    (* Parenthesized expression with optional *)
+    test {|(first)?|} {|[]|} {|null|};
+    test {|(first)?|} {|[42]|} {|42|};
+    (* Chained with pipes *)
+    test {|.items | first?|} {|{"items": []}|} {|null|};
+    test {|.items | first?|} {|{"items": [1, 2]}|} {|1|};
+    (* Multiple optional functions *)
+    test {|[first?, last?]|} {|[]|} {|[ null, null ]|};
+    test {|[first?, last?]|} {|[1, 2, 3]|} {|[ 1, 3 ]|};
+    (* empty? still produces nothing since empty doesn't error, it just yields nothing *)
+    (* The ? operator only catches errors, not empty results *)
+    test {|[empty?]|} {|null|} {|[]|};
+    (* Optional on functions that would otherwise error *)
+    test {|keys?|} {|123|} {|null|};
+    test {|keys?|} {|{"a": 1}|} {|[ "a" ]|};
+    (* Optional with alternative *)
+    test {|first? // "default"|} {|[]|} {|"default"|};
+    test {|first? // "default"|} {|[1]|} {|1|};
+  ]
+
 let generators_iterators =
   [ (* TODO: test {|fn range(init; upto; by): fn _range: if (by > 0 and . < upto) or (by < 0 and . > upto) then ., ((.+by)|_range) else empty end; if init == upto then empty elif by == 0 then init else init|_range end; range(0; 10; 3)|} {|null|} {|0|}; *)
     (* TODO: test {|fn while(cond; update): fn _while: if cond then ., (update | _while) else empty end; _while; [while(.<100; .*2)]|} {|1|} {|[1,2,4,8,16,32,64]|}; *) ]
@@ -1343,12 +1383,6 @@ let collection_helpers =
       {|[ "alice", "bob" ]|};
     test {|pluck(.x)|} {|[{"x":1,"y":2},{"y":3}]|} {|[ 1, null ]|};
     test {|pluck(.a.b)|} {|[{"a":{"b":1}},{"a":{"b":2}}]|} {|[ 1, 2 ]|};
-    (* compact - remove null values from array *)
-    test {|compact|} {|[1,null,2,null,3]|} {|[ 1, 2, 3 ]|};
-    test {|compact|} {|[null,null]|} {|[]|};
-    test {|compact|} {|[1,2,3]|} {|[ 1, 2, 3 ]|};
-    test {|compact|} {|[]|} {|[]|};
-    test {|[1,null,2] | compact|} {|null|} {|[ 1, 2 ]|};
     (* partition - split into [matching, non-matching] *)
     test {|partition(. > 2)|} {|[1,2,3,4,5]|} {|[ [ 3, 4, 5 ], [ 1, 2 ] ]|};
     test {|partition(. > 10)|} {|[1,2,3]|} {|[ [], [ 1, 2, 3 ] ]|};
@@ -1526,6 +1560,7 @@ let tests =
       defining_functions;
       skip;
       first_last_nth;
+      optional_functions;
       generators_iterators;
       decimal_number;
       index_operations;

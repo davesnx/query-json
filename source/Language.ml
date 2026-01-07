@@ -413,15 +413,6 @@ let array_functions =
           arity = One_arg "expr";
         };
         {
-          name = "compact";
-          aliases = [];
-          description = "Remove null values from array";
-          example = Some {|[1, null, 2] | compact → [1, 2]|};
-          applicable_to = [ Array ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
           name = "partition";
           aliases = [];
           description = "Split into [matching, non-matching]";
@@ -1843,7 +1834,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "transpose" -> Ok (Fn0 Transpose)
   | "flatten" -> Ok (Fn0 Flatten)
   | "add" -> Ok (Fn0 Add)
-  | "compact" -> Ok (Fn0 Compact)
   (* String functions *)
   | "tostring" ->
       Error (Query_error.deprecated ~old_name:"tostring" ~new_name:"to_string")

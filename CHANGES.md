@@ -1,32 +1,64 @@
 # Unreleased
 
-- Remove easy-format
+## v1.0.0~beta-1
+
+
+- [BREAKING CHANGE] **Stricter null handling**: Operations on null now error instead of silently propagating
+  - `null + 1` errors instead of returning `1`
+  - `.missing.key` errors instead of returning `null`
+  - Use `?` for optional access: `.missing?`, `.foo.bar?`
+- [BREAKING CHANGE] **`group_by` returns an object**: Keys are the grouped values, not nested arrays
+- [BREAKING CHANGE] **`keys` preserves insertion order**: Use `keys | sort` if you need sorted keys
+- [BREAKING CHANGE] **`unique` preserves insertion order**: Use `unique | sort` if you need sorted unique values
+- [BREAKING CHANGE] **`first`/`last`/`min`/`max` error on empty**: Use `first?` for optional access
+- [BREAKING CHANGE] **Deprecated functions removed**: Use snake_case versions (`to_string` not `tostring`)
+- [BREAKING CHANGE] **`fn` keyword** for user-defined functions (replaces jq's `def`)
+  - `fn double: . * 2;`
+  - `fn add(x; y): x + y;`
+- [BREAKING CHANGE] **Snake_case naming convention** for all functions
+  - `to_string`, `to_number` (not `tostring`, `tonumber`)
+  - `starts_with`, `ends_with` (not `startswith`, `endswith`)
+  - `get_path`, `set_path`, `delete_paths` (not `getpath`, `setpath`, `delpaths`)
+  - `find_indices` (not `indices`)
+  - `is_nan`, `is_normal`, `is_empty` (not `isnan`, `isnormal`, `isempty`)
+- [BREAKING CHANGE] **Clearer function names**
+  - `trim_start`, `trim_end` (not `ltrimstr`, `rtrimstr`)
+  - `to_uppercase`, `to_lowercase` (not `ascii_upcase`, `ascii_downcase`)
+  - `byte_length` (not `utf8bytelength`)
+  - `descend` (readable name for `..`)
+- [FEATURE] **Optional access on functions**: `?` works on any expression
+  - `first?`, `last?`, `keys?` return null instead of error
+  - `first?(expr)`, `nth(n; expr)?` for optional generator access
+  - `(expr)?` for optional parenthesized expressions
+- [FEATURE] **Interactive REPL with autocomplete**: `query-json --repl data.json`
+  - Context-aware suggestions based on data type
+  - Tab completion for functions and keys
+- [FEATURE] **Built-in function reference**: `query-json --functions [category]`
+- [FEATURE] **`--null-input` / `-n` flag**: Run filter with `null` as input, useful for constructing JSON or as a calculator
+- [FEATURE] **Helpful error messages** with context, hints, and suggestions
+  - Key not found shows available keys and suggests `?`
+  - Type mismatch shows expected vs found types
+  - Missing argument shows usage and examples
+
+- [FEATURE] Functions added
+  - **Traversal**: `descend`, `dive`, `find_all(expr)`, `find_first(expr)`, `paths_to(expr)`
+  - **Collection**: `filter(expr)` (alias for `map(select(expr))`), `flat_map(expr)`, `find(expr)`, `some(expr)`, `pluck(expr)`, `partition(expr)`
+  - **Predicates**: `is_empty`, `is_blank`
+  - **Control flow**: `assert(cond)`, `assert(cond; msg)`, `raise(kind; msg)`
+
+### Improvements
+
+- [] Remove easy-format dependency
 - Add `=` assignment operator (`.a = .b`, `(.a, .b) = expr`)
 - Fix `|=` to create paths that don't exist (`.a |= 42` on `null` creates `{"a": 42}`)
 - Fix `|=` to take first value when transform produces multiple results
-- Add User-defined functions
-  - Add `def name(args): body; expr` for user-defined functions
-  - Add function calls with semicolon-separated arguments: `func(a; b; c)`
-- Add Control flow
-  - Add `foreach expr as $var (init; update; extract)` loop construct
-  - Add `skip(n; expr)` to skip first n results from generator
 - Add `+=`, `-=`, `*=`, `/=` compound assignment operators
 - Add `//=` alternative assignment operator
-- Add `indices(s)` to find all occurrences of substring/element
-- Add `inside(b)` to check if value is contained in another
-- Add `ltrimstr(s)` and `rtrimstr(s)` to trim prefixes/suffixes
-- Add `trim`, `ltrim`, `rtrim` for whitespace trimming
-- Add `ascii_upcase` and `ascii_downcase` for case conversion
-- Add `map_values(f)` to transform values in arrays/objects
-- Add `bsearch(x)` for binary search
-- Add `first` and `last` (no args) for array head/tail
-- Add `first(expr)` and `last(expr)` for generator results
-- Add `nth(n; expr)` to get nth result from generator
+- Add `foreach expr as $var (init; update; extract)` loop construct
+- Add `skip(n; expr)` to skip first n results from generator
 - Add `combinations` and `combinations(n)` for cartesian products
 - Add `repeat(f)` for infinite repetition until error
 - Add `add(expr)` variant that takes expression
-- Add `delpaths(paths)` to delete multiple paths at once
-- Improve `getpath`, `setpath`, `paths` implementations
 - Add `env` object for accessing all environment variables
 - Add `$ENV.VAR` syntax for environment variable access
 - Add `"\(expr)"` string interpolation syntax

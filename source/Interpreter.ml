@@ -253,13 +253,13 @@ module Operators = struct
         `Assoc (updated_l @ new_keys)
     | `List l, `List r -> `List (l @ r)
     | `Null, r ->
-        fail
-          ("Cannot add null to " ^ Json.type_of r
-         ^ ". Hint: Use (.x ?? 0) for explicit null handling")
+        fail_with ~kind:"type_mismatch"
+          ~suggestion:"Use (.x ?? 0) for explicit null handling"
+          ("Cannot add null to " ^ Json.type_of r)
     | l, `Null ->
-        fail
-          ("Cannot add " ^ Json.type_of l
-         ^ " to null. Hint: Use (.x ?? 0) for explicit null handling")
+        fail_with ~kind:"type_mismatch"
+          ~suggestion:"Use (.x ?? 0) for explicit null handling"
+          ("Cannot add " ^ Json.type_of l ^ " to null")
     | _ -> Error.make ~ctx str left
 
   let apply_operation ~ctx str fn (left : Json.t) (right : Json.t) =
@@ -1235,7 +1235,6 @@ and interp_fn0 ~ctx f json =
   | Flatten -> yield (flatten ~ctx max_int json)
   | Combinations -> combinations ~ctx json
   | Transpose -> yield (transpose ~ctx json)
-  | Compact -> compact ~ctx json
   (* Object functions *)
   | Keys -> yield (keys ~ctx json)
   | To_entries -> yield (to_entries ~ctx json)
@@ -2337,8 +2336,9 @@ and first_of_array ~ctx json =
 and first_of_expr ~ctx expr json =
   match collect ~ctx expr json with
   | [] ->
-      fail
-        "first: empty expression result. Hint: Use first? for optional access"
+      fail_with ~kind:"empty_result"
+        ~suggestion:"Use first? for optional access"
+        "first: empty expression result"
   | hd :: _ -> yield hd
 
 and last_of_array ~ctx json =
@@ -2350,7 +2350,8 @@ and last_of_array ~ctx json =
 and last_of_expr ~ctx expr json =
   match collect ~ctx expr json with
   | [] ->
-      fail "last: empty expression result. Hint: Use last? for optional access"
+      fail_with ~kind:"empty_result" ~suggestion:"Use last? for optional access"
+        "last: empty expression result"
   | l -> yield (List.hd (List.rev l))
 
 and nth ~ctx n_expr expr json =
@@ -2367,9 +2368,10 @@ and nth ~ctx n_expr expr json =
       let len = List.length results in
       if n >= 0 && n < len then yield (List.nth results n)
       else
-        fail
+        fail_with ~kind:"index_out_of_bounds"
+          ~suggestion:"Use nth? for optional access"
           ("nth: index " ^ Int.to_string n ^ " out of bounds (expression has "
-         ^ Int.to_string len ^ " results). Hint: Use nth? for optional access")
+         ^ Int.to_string len ^ " results)")
   | None -> Error.make ~ctx "nth: first argument must be a number" json
 
 and nth_array ~ctx n_expr json =
@@ -2386,10 +2388,10 @@ and nth_array ~ctx n_expr json =
       let actual_n = if n < 0 then len + n else n in
       if actual_n >= 0 && actual_n < len then yield (List.nth items actual_n)
       else
-        fail
+        fail_with ~kind:"index_out_of_bounds"
+          ~suggestion:"Use nth? for optional access"
           ("nth: index " ^ Int.to_string n ^ " out of bounds (array has "
-         ^ Int.to_string len ^ " elements). Hint: Use nth? for optional access"
-          )
+         ^ Int.to_string len ^ " elements)")
   | Some _, _ -> Error.make ~ctx "nth" json
   | None, _ -> Error.make ~ctx "nth: argument must be a number" json
 
@@ -3015,13 +3017,6 @@ and pluck ~ctx expr json =
       in
       yield (`List results)
   | _ -> Error.make ~ctx "pluck" json
-
-and compact ~ctx json =
-  match json with
-  | `List items ->
-      let filtered = List.filter (fun item -> item <> `Null) items in
-      yield (`List filtered)
-  | _ -> Error.make ~ctx "compact" json
 
 and partition ~ctx expr json =
   match json with

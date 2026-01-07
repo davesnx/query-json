@@ -1,13 +1,15 @@
 # Benchmark Results
 
-**Date:** Saturday, November 22, 2025
+**Date:** 22 November 2025
 **query-json version:** 0.5.52
 **jq version:** jq-1.8.1
 **System:** MacBook Pro (2020) with 1.4 GHz Quad-Core i5, 16GB RAM
 
+> NOTE: query-json version 0.6.x supports compatibility with jq, and those benchmarks are designed to not cause any behavioral difference. We can't ensure further versions starting from v1 to follow that rule.
+
 ## Summary
 
-query-json consistently outperforms jq 1.8.1 across most file sizes and operations, with performance improvements ranging from **1.5x to 4.5x faster** depending on the file size and operation.
+query-json consistently outperforms jq across most file sizes and operations, with performance improvements ranging from **1.5x to 4.5x faster** depending on the file size and operation.
 
 ## Running Benchmarks
 
@@ -28,7 +30,7 @@ The benchmark suite uses [hyperfine](https://github.com/sharkdp/hyperfine) for a
 
 ### Small File Tests (1.3KB)
 
-| Operation | query-json | jq 1.8.1 | Speedup |
+| Operation | query-json | jq | Speedup |
 |-----------|------------|----------|---------|
 | Identity (`.`) | 0.005s | 0.012s | **2.4x faster** |
 | Select field (`.first.id`) | 0.004s | 0.012s | **3.0x faster** |
@@ -36,7 +38,7 @@ The benchmark suite uses [hyperfine](https://github.com/sharkdp/hyperfine) for a
 
 ### Medium File Tests (104KB)
 
-| Operation | query-json | jq 1.8.1 | Speedup |
+| Operation | query-json | jq | Speedup |
 |-----------|------------|----------|---------|
 | Identity (`.`) | 0.014s | 0.027s | **1.9x faster** |
 | Map identity (`map(.)`) | 0.014s | 0.029s | **2.1x faster** |
@@ -45,17 +47,17 @@ The benchmark suite uses [hyperfine](https://github.com/sharkdp/hyperfine) for a
 
 ### Big File Tests (575KB)
 
-| Operation | query-json | jq 1.8.1 | Speedup |
+| Operation | query-json | jq | Speedup |
 |-----------|------------|----------|---------|
 | Identity (`.`) | 0.045s | 0.074s | **1.6x faster** |
 | Map identity (`map(.)`) | 0.045s | 0.077s | **1.7x faster** |
-| Keys (`keys`) | 0.056s | 0.054s | **~same** ⚠️ |
+| Keys (`keys`) | 0.056s | 0.054s | **~same** |
 | Length (`length`) | 0.012s | 0.040s | **3.3x faster** |
 | First element (`.[0]`) | 0.012s | 0.039s | **3.3x faster** |
 
 ### Huge File Tests (97MB)
 
-| Operation | query-json | jq 1.8.1 | Speedup |
+| Operation | query-json | jq | Speedup |
 |-----------|------------|----------|---------|
 | Keys (`keys`) | 1.270s | 2.233s | **1.8x faster** |
 | Identity (`.`) | 7.312s | 10.764s | **1.5x faster** |
@@ -82,7 +84,7 @@ The benchmark suite uses [hyperfine](https://github.com/sharkdp/hyperfine) for a
 
 ### Key Observations
 
-- **query-json outperforms jq 1.8.1** in almost all scenarios
+- **query-json outperforms jq** in almost all scenarios
 - **One exception:** `keys` on big.json is nearly tied (56ms vs 54ms)
 - **Simple operations** like `length`, `.[0]` show the largest speedups (3-4x)
 - **Complex operations** like `map(.)` maintain good speedups (1.7-2x)
@@ -109,10 +111,9 @@ query-json is compiled to native code with OCaml, which produces highly optimize
 
 ### 2. Simpler Runtime Model
 
-Unlike jq, query-json doesn't support user-defined functions (`def`). While this reduces flexibility, it eliminates the need for:
-- A complex linker to resolve function definitions
+Unlike jq, query-json doesn't support modules neither tests. While this reduces flexibility, it eliminates the need for:
+- A complex linker to resolve modules
 - Runtime function compilation and binding
-- Dynamic function lookup overhead
 
 ### 3. Architecture Differences
 
@@ -123,11 +124,7 @@ The OCaml compiler can optimize tail-recursive functions very effectively, often
 
 ### 4. Parser Performance
 
-query-json uses [Menhir](http://gallium.inria.fr/~fpottier/menhir/), an LR(1) parser generator that has been proven to be very fast for creating high-performance parsers and compilers.
-
-### 5. Focused Feature Set
-
-By implementing a focused subset of jq's functionality, query-json can make optimization decisions that wouldn't be possible with jq's full feature set. This is the classic "80/20 rule" - covering 80% of use cases with 20% of the features, but doing it really well.
+query-json uses [Menhir](http://gallium.inria.fr/~fpottier/menhir/), an LR(1) parser generator that has been proven to be very fast for creating high-performance parsers and compilers and a forked version of [yojson](https://opam.ocaml.org/packages/yojson/), an optimized parsing and printing library for the JSON format.
 
 ## Benchmarking Other Tools
 
@@ -146,7 +143,7 @@ BENCH_FAQ=1 BENCH_FX=1 BENCH_JET=1 ./benchmarks/bench.sh
 
 ## Conclusion
 
-query-json maintains a strong performance advantage over jq 1.8.1 across nearly all tested scenarios, showing consistent 1.5-4.5x speedups.
+query-json maintains a strong performance advantage over jq across nearly all tested scenarios, showing consistent 1.5-4.5x speedups.
 
 For JSON processing tasks where performance matters, query-json is a compelling alternative to jq, offering significantly faster execution times while maintaining a familiar query syntax.
 
@@ -161,4 +158,3 @@ For JSON processing tasks where performance matters, query-json is a compelling 
 ---
 
 **Want to see other jq-like tools benchmarked?** Please open an issue! If the queries match 1-to-1 with jq, we can easily add them to the comparison.
-

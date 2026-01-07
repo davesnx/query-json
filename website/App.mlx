@@ -35,12 +35,15 @@ let initial_json =
 }
 |}
 
+type page = Playground | FunctionsPage
+
 type t = {
   query : string;
   json : string option;
   copied : bool;
   isModalOpen : bool;
   isSidebarOpen : bool;
+  current_page : page;
 }
 
 type actions =
@@ -49,6 +52,7 @@ type actions =
   | Set_copied of bool
   | Set_modal_open of bool
   | Set_sidebar_open of bool
+  | Navigate_to of page
 
 let reduce state = function
   | Update_query query -> { state with query }
@@ -56,6 +60,7 @@ let reduce state = function
   | Set_copied copied -> { state with copied }
   | Set_modal_open isModalOpen -> { state with isModalOpen }
   | Set_sidebar_open isSidebarOpen -> { state with isSidebarOpen }
+  | Navigate_to page -> { state with current_page = page }
 
 module Query_params = struct
   open Melange_json.Primitives
@@ -104,12 +109,126 @@ module Clipboard = struct
   [@@mel.scope "navigator", "clipboard"]
 end
 
+module PlaygroundPage = struct
+  let[@react.component] make ~state ~dispatch ~is_ready ~on_navigate_functions =
+    let on_query_change = fun value -> dispatch (Update_query value) in
+    let on_json_change = fun value -> dispatch (Update_json value) in
+
+    let output =
+      React.useMemo3
+        (fun () ->
+          if not is_ready then None
+          else
+            match (state.json, state.query) with
+            | Some _, "" | None, _ -> None
+            | Some json, _ -> Some (Query_json.run state.query json))
+        (state.json, state.query, is_ready)
+    in
+
+    let on_share_click =
+      React.useCallback2
+        (fun _ ->
+          let hash =
+            Query_params.toHash { query = state.query; json = state.json }
+          in
+          match hash with
+          | Some hash ->
+              let url =
+                Web.window |> Web.Window.location |> Web.Location.origin
+              in
+              let fullUrl = url ^ "#" ^ hash in
+              Router.set_hash hash;
+              let _promise =
+                Clipboard.write_text fullUrl
+                |> Js.Promise.then_ (fun () ->
+                    dispatch (Set_copied true);
+                    let _timeout =
+                      Js.Global.setTimeout
+                        ~f:(fun () -> dispatch (Set_copied false))
+                        2000
+                    in
+                    Js.Promise.resolve ())
+                |> Js.Promise.catch (fun _err ->
+                    Printf.eprintf "Failed to copy to clipboard";
+                    Js.Promise.resolve ())
+              in
+              ()
+          | None -> Printf.eprintf "Error encoding state")
+        (state.query, state.json)
+    in
+
+    let on_examples_click = fun _ -> dispatch (Set_modal_open true) in
+    let on_close_modal = fun () -> dispatch (Set_modal_open false) in
+    let on_select_example =
+     fun query json ->
+      dispatch (Update_query query);
+      dispatch (Update_json json)
+    in
+    let on_sidebar_toggle =
+     fun _ -> dispatch (Set_sidebar_open (not state.isSidebarOpen))
+    in
+    let on_close_sidebar = fun () -> dispatch (Set_sidebar_open false) in
+    let on_select_function =
+     fun fn_name ->
+      let new_query =
+        if state.query = "" then fn_name else state.query ^ " | " ^ fn_name
+      in
+      dispatch (Update_query new_query)
+    in
+
+    <div className="flex flex-col min-h-screen bg-background">
+      <Header>
+        <div className="flex items-center gap-2">
+          <Button kind=Secondary size=Sm on_click=on_navigate_functions>
+            <span className="flex items-center gap-2">
+              <Icons.Book size=Small /> (React.string "Functions")
+            </span>
+          </Button>
+          <Button kind=Secondary size=Sm on_click=on_examples_click>
+            <span className="flex items-center gap-2">
+              <Icons.FileJson size=Small /> (React.string "Examples")
+            </span>
+          </Button>
+          <Button
+            kind=Secondary
+            size=Sm
+            on_click=on_share_click
+            className="min-w-[110px]">
+            (match state.copied with
+            | true ->
+                <span className="flex items-center gap-2">
+                  <Icons.Check size=Small /> (React.string "Copied!")
+                </span>
+            | false ->
+                <span className="flex items-center gap-2">
+                  <Icons.Link2 size=Small /> (React.string "Copy unique URL")
+                </span>)
+          </Button>
+        </div>
+      </Header>
+      <TextInput
+        value=state.query
+        on_change=on_query_change
+        on_functions_click=on_sidebar_toggle
+        placeholder="Type your filter (e.g., '.store.books[0]')"
+      />
+      <Editors
+        json_value=(Option.value state.json ~default:"") on_json_change output
+      />
+      <Footer />
+      <Modal_examples
+        is_open=state.isModalOpen on_close=on_close_modal on_select_example
+      />
+      <Sidebar
+        is_open=state.isSidebarOpen on_close=on_close_sidebar on_select_function
+      />
+    </div>
+end
+
 let[@react.component] make () =
   let is_ready, set_is_ready = React.useState (fun () -> false) in
 
-  (* Poll for query-json to be loaded *)
   React.useEffect0 (fun () ->
-      (* Check immediately *)
       if Query_json.is_loaded () then (
         set_is_ready (fun _ -> true);
         None)
@@ -143,6 +262,7 @@ let[@react.component] make () =
           copied = false;
           isModalOpen = false;
           isSidebarOpen = false;
+          current_page = Playground;
         }
     | None ->
         {
@@ -151,115 +271,25 @@ let[@react.component] make () =
           copied = false;
           isModalOpen = false;
           isSidebarOpen = false;
+          current_page = Playground;
         }
   in
 
   let state, dispatch = React.useReducer reduce initial_state in
 
-  let on_query_change = fun value -> dispatch (Update_query value) in
-  let on_json_change = fun value -> dispatch (Update_json value) in
-
-  let output =
-    React.useMemo3
-      (fun () ->
-        if not is_ready then None
-        else
-          match (state.json, state.query) with
-          | Some _, "" | None, _ -> None
-          | Some json, _ -> Some (Query_json.run state.query json))
-      (state.json, state.query, is_ready)
-  in
-
-  let on_share_click =
-    React.useCallback2
-      (fun _ ->
-        let hash =
-          Query_params.toHash { query = state.query; json = state.json }
-        in
-        match hash with
-        | Some hash ->
-            let url =
-              Web.window |> Web.Window.location |> Web.Location.origin
-            in
-            let fullUrl = url ^ "#" ^ hash in
-            Router.set_hash hash;
-            let _promise =
-              Clipboard.write_text fullUrl
-              |> Js.Promise.then_ (fun () ->
-                  dispatch (Set_copied true);
-                  let _timeout =
-                    Js.Global.setTimeout
-                      ~f:(fun () -> dispatch (Set_copied false))
-                      2000
-                  in
-                  Js.Promise.resolve ())
-              |> Js.Promise.catch (fun _err ->
-                  Printf.eprintf "Failed to copy to clipboard";
-                  Js.Promise.resolve ())
-            in
-            ()
-        | None -> Printf.eprintf "Error encoding state")
-      (state.query, state.json)
-  in
-
-  let on_examples_click = fun _ -> dispatch (Set_modal_open true) in
-  let on_close_modal = fun () -> dispatch (Set_modal_open false) in
-  let on_select_example =
-   fun query json ->
-    dispatch (Update_query query);
-    dispatch (Update_json json)
-  in
-  let on_sidebar_toggle =
-   fun _ -> dispatch (Set_sidebar_open (not state.isSidebarOpen))
-  in
-  let on_close_sidebar = fun () -> dispatch (Set_sidebar_open false) in
-  let on_select_function =
+  let on_navigate_functions = fun _ -> dispatch (Navigate_to FunctionsPage) in
+  let on_navigate_home = fun () -> dispatch (Navigate_to Playground) in
+  let on_try_function =
    fun fn_name ->
     let new_query =
-      if state.query = "" then fn_name else state.query ^ " | " ^ fn_name
+      if state.query = "" || state.query = "." then fn_name
+      else state.query ^ " | " ^ fn_name
     in
-    dispatch (Update_query new_query)
+    dispatch (Update_query new_query);
+    dispatch (Navigate_to Playground)
   in
 
-  <div className="flex flex-col min-h-screen bg-background">
-    <Header>
-      <div className="flex items-center gap-2">
-        <Button kind=Secondary size=Sm on_click=on_examples_click>
-          <span className="flex items-center gap-2">
-            <Icons.FileJson size=Small /> (React.string "Examples")
-          </span>
-        </Button>
-        <Button
-          kind=Secondary
-          size=Sm
-          on_click=on_share_click
-          className="min-w-[110px]">
-          (match state.copied with
-          | true ->
-              <span className="flex items-center gap-2">
-                <Icons.Check size=Small /> (React.string "Copied!")
-              </span>
-          | false ->
-              <span className="flex items-center gap-2">
-                <Icons.Link2 size=Small /> (React.string "Copy unique URL")
-              </span>)
-        </Button>
-      </div>
-    </Header>
-    <TextInput
-      value=state.query
-      on_change=on_query_change
-      on_functions_click=on_sidebar_toggle
-      placeholder="Type your filter (e.g., '.store.books[0]')"
-    />
-    <Editors
-      json_value=(Option.value state.json ~default:"") on_json_change output
-    />
-    <Footer />
-    <Modal_examples
-      is_open=state.isModalOpen on_close=on_close_modal on_select_example
-    />
-    <Sidebar
-      is_open=state.isSidebarOpen on_close=on_close_sidebar on_select_function
-    />
-  </div>
+  match state.current_page with
+  | Playground ->
+      <PlaygroundPage state dispatch is_ready on_navigate_functions />
+  | FunctionsPage -> <Functions on_navigate_home on_try_function />

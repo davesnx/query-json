@@ -26,7 +26,6 @@ type fn0 =
   | Flatten
   | Combinations
   | Transpose
-  | Compact
   (* Object functions *)
   | Keys
   | To_entries

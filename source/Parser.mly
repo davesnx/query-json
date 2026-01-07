@@ -270,10 +270,14 @@ term:
     { Range (from, Some upto, None) }
   | RANGE; OPEN_PARENT; from = sequence_expr; SEMICOLON; upto = sequence_expr; SEMICOLON; step = sequence_expr; CLOSE_PARENT;
     { Range (from, Some upto, Some step) }
-  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT;
-    { match f with
-      | "fma" -> Fma (arg1, arg2, arg3)
-      | _ -> Apply (f, [arg1; arg2; arg3])
+  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match f with
+        | "fma" -> Fma (arg1, arg2, arg3)
+        | _ -> Apply (f, [arg1; arg2; arg3])
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
     }
   | FLATTEN;
     { Fn0 Flatten }
@@ -281,23 +285,37 @@ term:
     { Fn0 Flatten }
   | FLATTEN; OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
     { Fn1 (With_expr (Flatten_n, e)) }
-  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT;
-    { match Language.map_binary_fn f arg1 arg2 with
-      | Ok ast -> ast
-      | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
-    }
-  | f = FUNCTION; CLOSE_PARENT;
-    { (* Check if this 1-arity function can default to identity *)
-      if Language.can_default_to_identity f then
-        match Language.map_unary_fn f Identity with
+  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_binary_fn f arg1 arg2 with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
-      else
-        Parse_errors.raise_rich_error (Language.error_for_missing_arg f) $startpos(f) $endpos(f) }
-  | f = FUNCTION; arg = sequence_expr; CLOSE_PARENT;
-    { match Language.map_unary_fn f arg with
-      | Ok ast -> ast
-      | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
+    }
+  | f = FUNCTION; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { (* Check if this 1-arity function can default to identity *)
+      let ast =
+        if Language.can_default_to_identity f then
+          match Language.map_unary_fn f Identity with
+          | Ok ast -> ast
+          | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+        else
+          Parse_errors.raise_rich_error (Language.error_for_missing_arg f) $startpos(f) $endpos(f)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
+    }
+  | f = FUNCTION; arg = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_unary_fn f arg with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
@@ -307,10 +325,38 @@ term:
     { Foreach (expr, var, init, update, Identity) }
   | OPEN_PARENT; expr = sequence_expr; AS; var = VARIABLE; PIPE; body = sequence_expr; CLOSE_PARENT
     { As (expr, var, body) }
-  | f = IDENTIFIER;
-    { match Language.map_nullary_fn f with
-      | Ok ast -> ast
-      | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+  | f = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_nullary_fn f with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
+    }
+  (* Optional function call: first?(expr) is equivalent to first(expr)? *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg = sequence_expr; CLOSE_PARENT
+    { let ast = match Language.map_unary_fn f arg with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+      in
+      Optional ast
+    }
+  (* Optional function call with two args: nth?(n; expr) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT
+    { let ast = match Language.map_binary_fn f arg1 arg2 with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+      in
+      Optional ast
+    }
+  (* Optional function call with three args: fn?(a; b; c) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT
+    { let ast = match f with
+        | "fma" -> Fma (arg1, arg2, arg3)
+        | _ -> Apply (f, [arg1; arg2; arg3])
+      in
+      Optional ast
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }
@@ -321,8 +367,11 @@ term:
   | e = delimited(OPEN_BRACE, separated_nonempty_list(COMMA, key_value (term)), CLOSE_BRACE);
     { Object e }
 
-  | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
-    { e }
+  | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { match opt with
+      | true -> Optional e
+      | false -> e
+    }
 
   /* Index: .[0] or .[0,1,2], optionally with ? for optional access */
   | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET; opt = boption(QUESTION_MARK)

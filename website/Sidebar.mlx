@@ -23,10 +23,6 @@ type category = {
 let get_categories : unit -> category array =
   [%mel.raw {| function () { return window['query-json'].categories(); }|}]
 
-let is_loaded : unit -> bool =
-  [%mel.raw
-    {| function () { return typeof window['query-json'] !== 'undefined' && typeof window['query-json'].categories === 'function'; }|}]
-
 module CategorySection = struct
   let[@react.component] make ~category ~on_select_function =
     let is_open, set_is_open = React.useState (fun () -> false) in
@@ -89,16 +85,6 @@ module CategorySection = struct
 end
 
 let[@react.component] make ~is_open ~on_close ~on_select_function =
-  let categories, set_categories = React.useState (fun () -> []) in
-
-  (* Fetch categories when sidebar opens and library is loaded *)
-  React.useEffect1
-    (fun () ->
-      if is_open && is_loaded () && List.length categories = 0 then
-        set_categories (fun _ -> get_categories () |> Array.to_list);
-      None)
-    [| is_open |];
-
   if not is_open then React.null
   else
     <div
@@ -137,7 +123,7 @@ let[@react.component] make ~is_open ~on_close ~on_select_function =
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
-        (categories
+        (get_categories () |> Array.to_list
         |> List.map (fun category ->
             <CategorySection key=category.name category on_select_function />)
         |> Array.of_list |> React.array)

@@ -4,7 +4,7 @@
 (using melange 0.1)
 
 (name query-json)
-(version 0.6.1)
+(version 1.0.0~beta-1)
 
 (generate_opam_files true)
 

@@ -52,6 +52,24 @@ let tests =
     test "[1][0]" (Pipe (List (Some (Literal (Number 1.))), Index [ 0 ]));
     test "[1].foo" (Pipe (List (Some (Literal (Number 1.))), Key "foo"));
     test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo")));
+    (* Optional access on nullary functions *)
+    test "first?" (Optional (Fn0 First));
+    test "last?" (Optional (Fn0 Last));
+    test "empty?" (Optional (Fn0 Empty));
+    test "keys?" (Optional (Fn0 Keys));
+    (* Optional access on function calls with arguments *)
+    test "first(.)?" (Optional (Fn1 (With_expr (First_expr, Identity))));
+    test "last(.)?" (Optional (Fn1 (With_expr (Last_expr, Identity))));
+    test "map(.x)?" (Optional (Fn1 (With_expr (Map, Key "x"))));
+    (* Optional function call syntax: fn?(args) is equivalent to fn(args)? *)
+    test "first?(range(3))"
+      (Optional
+         (Fn1 (With_expr (First_expr, Range (Literal (Number 3.), None, None)))));
+    test "last?(empty)" (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty))));
+    (* Optional access on parenthesized expressions *)
+    test "(first)?" (Optional (Fn0 First));
+    test "(.foo)?" (Optional (Key "foo"));
+    test ".foo?" (Optional (Key "foo"));
     test ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     test ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     test ".[:3]" (Pipe (Identity, Slice (None, Some 3)));

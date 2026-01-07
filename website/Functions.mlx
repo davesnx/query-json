@@ -1,0 +1,307 @@
+type arity = {
+  type_ : string; [@mel.as "type"]
+  arg1 : string Js.Undefined.t;
+  arg2 : string Js.Undefined.t;
+  arg3 : string Js.Undefined.t;
+}
+
+type function_info = {
+  name : string;
+  aliases : string array;
+  description : string;
+  example : string Js.Undefined.t;
+  applicableTo : string array;
+  arity : arity;
+}
+
+type category = {
+  name : string;
+  description : string;
+  functions : function_info array;
+}
+
+let get_categories : unit -> category array =
+  [%mel.raw {| function () { return window['query-json'].categories(); }|}]
+
+module FunctionCard = struct
+  let[@react.component] make ~(fn : function_info) ~on_try =
+    let example_text =
+      match Js.Undefined.toOption fn.example with
+      | Some ex -> Some ex
+      | None -> None
+    in
+    let aliases = Array.to_list fn.aliases in
+    let applicable_types = Array.to_list fn.applicableTo in
+    let arity_text =
+      match fn.arity.type_ with
+      | "no_args" -> fn.name
+      | "one_arg" -> (
+          match Js.Undefined.toOption fn.arity.arg1 with
+          | Some arg -> fn.name ^ "(" ^ arg ^ ")"
+          | None -> fn.name ^ "(...)")
+      | "two_args" -> (
+          match
+            ( Js.Undefined.toOption fn.arity.arg1,
+              Js.Undefined.toOption fn.arity.arg2 )
+          with
+          | Some a1, Some a2 -> fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ ")"
+          | _ -> fn.name ^ "(...; ...)")
+      | "three_args" -> (
+          match
+            ( Js.Undefined.toOption fn.arity.arg1,
+              Js.Undefined.toOption fn.arity.arg2,
+              Js.Undefined.toOption fn.arity.arg3 )
+          with
+          | Some a1, Some a2, Some a3 ->
+              fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ "; " ^ a3 ^ ")"
+          | _ -> fn.name ^ "(...)")
+      | "variable_args" -> (
+          match Js.Undefined.toOption fn.arity.arg1 with
+          | Some args -> fn.name ^ "(" ^ args ^ ")"
+          | None -> fn.name ^ "(...)")
+      | _ -> fn.name
+    in
+    <div
+      className="bg-card border border-border rounded-lg p-4 hover:border-ring \
+                 transition-colors">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <code className="text-lg font-semibold text-foreground">
+          (React.string arity_text)
+        </code>
+        (match example_text with
+        | Some _ ->
+            <button
+              onClick=(fun _ -> on_try fn.name)
+              className="text-xs px-2 py-1 bg-secondary \
+                         text-secondary-foreground rounded hover:bg-accent \
+                         transition-colors cursor-pointer">
+              (React.string "Try it")
+            </button>
+        | None -> React.null)
+      </div>
+      <p className="text-sm text-muted-foreground mb-3">
+        (React.string fn.description)
+      </p>
+      (if List.length aliases > 0 then
+         <div className="text-xs text-muted-foreground mb-2">
+           <span className="font-medium">(React.string "Aliases: ")</span>
+           (React.string (String.concat ", " aliases))
+         </div>
+       else React.null)
+      (match example_text with
+      | Some ex ->
+          <div
+            className="bg-background rounded p-2 font-mono text-sm \
+                       text-foreground overflow-x-auto">
+            <code>(React.string ex)</code>
+          </div>
+      | None -> React.null)
+      <div className="flex flex-wrap gap-1 mt-3">
+        (applicable_types
+        |> List.map (fun t ->
+            <span
+              key=t
+              className="text-xs px-2 py-0.5 bg-secondary rounded \
+                         text-muted-foreground">
+              (React.string t)
+            </span>)
+        |> Array.of_list |> React.array)
+      </div>
+    </div>
+end
+
+module CategorySection = struct
+  let[@react.component] make ~(category : category) ~on_try =
+    let functions = Array.to_list category.functions in
+    <section className="mb-12">
+      <div className="mb-4">
+        <h2
+          className="text-2xl font-bold text-foreground capitalize"
+          id=category.name>
+          (React.string category.name)
+        </h2>
+        <p className="text-muted-foreground">
+          (React.string category.description)
+        </p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        (functions
+        |> List.map (fun (func : function_info) ->
+            <FunctionCard key=func.name fn=func on_try />)
+        |> Array.of_list |> React.array)
+      </div>
+    </section>
+end
+
+module SearchBar = struct
+  let[@react.component] make ~value ~on_change =
+    <div className="relative mb-8">
+      <input
+        type_="text"
+        value
+        onChange=(fun e -> on_change (React.Event.Form.target e)##value)
+        placeholder="Search functions..."
+        className="w-full px-4 py-3 bg-card border border-border rounded-lg \
+                   text-foreground placeholder:text-muted-foreground \
+                   focus:outline-none focus:ring-2 focus:ring-ring"
+      />
+      <svg
+        className="absolute right-4 top-1/2 -translate-y-1/2 \
+                   text-muted-foreground"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round">
+        <circle cx="11" cy="11" r="8" /> <path d="m21 21-4.3-4.3" />
+      </svg>
+    </div>
+end
+
+module CategoryNav = struct
+  let[@react.component] make ~categories ~active_category ~on_select =
+    <nav
+      className="sticky top-0 bg-background/95 backdrop-blur py-4 mb-8 \
+                 border-b border-border -mx-6 px-6">
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick=(fun _ -> on_select None)
+          className=(if Option.is_none active_category then
+                       "px-3 py-1.5 rounded-md text-sm font-medium bg-primary \
+                        text-primary-foreground cursor-pointer"
+                     else
+                       "px-3 py-1.5 rounded-md text-sm font-medium \
+                        text-muted-foreground hover:text-foreground \
+                        hover:bg-secondary transition-colors cursor-pointer")>
+          (React.string "All")
+        </button>
+        (categories
+        |> List.map (fun (cat : category) ->
+            let is_active =
+              match active_category with
+              | Some c -> c = cat.name
+              | None -> false
+            in
+            <button
+              key=cat.name
+              onClick=(fun _ -> on_select (Some cat.name))
+              className=(if is_active then
+                           "px-3 py-1.5 rounded-md text-sm font-medium \
+                            bg-primary text-primary-foreground capitalize \
+                            cursor-pointer"
+                         else
+                           "px-3 py-1.5 rounded-md text-sm font-medium \
+                            text-muted-foreground hover:text-foreground \
+                            hover:bg-secondary transition-colors capitalize \
+                            cursor-pointer")>
+              (React.string cat.name)
+            </button>)
+        |> Array.of_list |> React.array)
+      </div>
+    </nav>
+end
+
+let[@react.component] make ~on_navigate_home ~on_try_function =
+  let search, set_search = React.useState (fun () -> "") in
+  let active_category, set_active_category = React.useState (fun () -> None) in
+  let categories = get_categories () |> Array.to_list in
+
+  let filtered_categories =
+    let search_lower = Js.String.toLowerCase search in
+    if String.length search = 0 && Option.is_none active_category then
+      categories
+    else
+      categories
+      |> List.filter_map (fun (cat : category) ->
+          let matches_category =
+            match active_category with Some c -> c = cat.name | None -> true
+          in
+          if not matches_category then None
+          else
+            let filtered_functions =
+              cat.functions |> Array.to_list
+              |> List.filter (fun (fn : function_info) ->
+                  if String.length search = 0 then true
+                  else
+                    let name_matches =
+                      Js.String.includes ~search:search_lower
+                        (Js.String.toLowerCase fn.name)
+                    in
+                    let desc_matches =
+                      Js.String.includes ~search:search_lower
+                        (Js.String.toLowerCase fn.description)
+                    in
+                    let alias_matches =
+                      Array.to_list fn.aliases
+                      |> List.exists (fun alias ->
+                          Js.String.includes ~search:search_lower
+                            (Js.String.toLowerCase alias))
+                    in
+                    name_matches || desc_matches || alias_matches)
+            in
+            if List.length filtered_functions = 0 then None
+            else Some { cat with functions = Array.of_list filtered_functions })
+  in
+
+  let total_functions =
+    filtered_categories
+    |> List.fold_left (fun acc cat -> acc + Array.length cat.functions) 0
+  in
+
+  <div className="min-h-screen bg-background">
+    <header className="border-b border-border bg-card">
+      <div
+        className="max-w-[1400px] mx-auto px-6 py-4 flex items-center \
+                   justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick=(fun _ -> on_navigate_home ())
+            className="text-muted-foreground hover:text-foreground \
+                       transition-colors cursor-pointer">
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round">
+              <path d="m12 19-7-7 7-7" /> <path d="M19 12H5" />
+            </svg>
+          </button>
+          <h1 className="text-xl font-bold text-foreground">
+            (React.string "Function Reference")
+          </h1>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          (React.string (string_of_int total_functions ^ " functions"))
+        </div>
+      </div>
+    </header>
+    <main className="max-w-[1400px] mx-auto px-6 py-8">
+      <SearchBar value=search on_change=(fun v -> set_search (fun _ -> v)) />
+      <CategoryNav
+        categories
+        active_category
+        on_select=(fun c -> set_active_category (fun _ -> c))
+      />
+      (if List.length filtered_categories = 0 then
+         <div className="text-center py-12">
+           <p className="text-muted-foreground">
+             (React.string "No functions found matching your search.")
+           </p>
+         </div>
+       else
+         <div>
+           (filtered_categories
+           |> List.map (fun cat ->
+               <CategorySection key=cat.name category=cat on_try=on_try_function
+               />)
+           |> Array.of_list |> React.array)
+         </div>)
+    </main>
+  </div>

@@ -116,3 +116,13 @@ module PanelLeft = struct
   let[@react.component] make ?(size : size = Medium) ?(className = "") =
     <Binding size=(size_to_number size) className />
 end
+
+module Book = struct
+  module Binding = struct
+    external make : size:int -> className:string -> React.element = "Book"
+    [@@react.component] [@@mel.module "lucide-react"]
+  end
+
+  let[@react.component] make ?(size : size = Medium) ?(className = "") =
+    <Binding size=(size_to_number size) className />
+end
