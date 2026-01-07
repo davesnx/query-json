@@ -89,8 +89,8 @@ pin: # pin dependencies
 	opam pin add toffee.dev "https://github.com/tmattio/mosaic.git" -y
 	opam pin add matrix.dev "https://github.com/tmattio/mosaic.git" -y
 	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#a1b798e0a9dd3734cf686da2e618606ba60637e6" -y
-	opam pin add reason-react.dev "https://github.com/reasonml/reason-react.git" -y
 	opam pin add reason-react-ppx.dev "https://github.com/reasonml/reason-react.git" -y
+	opam pin add reason-react.dev "https://github.com/reasonml/reason-react.git" -y
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
