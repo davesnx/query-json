@@ -84,8 +84,8 @@ let rec compare (a : t) (b : t) : int =
   | `Big_int x, `Int64 y -> Z.compare x (Z.of_int64 y)
   | `Int64 x, `Big_int y -> Z.compare (Z.of_int64 x) y
   | `Float x, `Float y -> Float.compare x y
-  | `Int x, `Float y -> Float.compare (float_of_int x) y
-  | `Float x, `Int y -> Float.compare x (float_of_int y)
+  | `Int x, `Float y -> Float.compare (Int.to_float x) y
+  | `Float x, `Int y -> Float.compare x (Int.to_float y)
   | `Int64 x, `Float y -> Float.compare (Int64.to_float x) y
   | `Float x, `Int64 y -> Float.compare x (Int64.to_float y)
   | `Big_int x, `Float y -> Float.compare (Z.to_float x) y
@@ -156,10 +156,10 @@ let index i = function
       let len = List.length l in
       let wrapped_index = if i < 0 then len + i else i in
       if wrapped_index < 0 || wrapped_index >= len then
-        raise (Undefined ("Index " ^ string_of_int i ^ " out of bounds", js))
+        raise (Undefined ("Index " ^ Int.to_string i ^ " out of bounds", js))
       else List.nth l wrapped_index
   | js ->
-      typerr ("Can't get index " ^ string_of_int i ^ " of non-array type ") js
+      typerr ("Can't get index " ^ Int.to_string i ^ " of non-array type ") js
 
 let combine (first : t) (second : t) : t =
   match (first, second) with

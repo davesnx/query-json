@@ -135,7 +135,7 @@ let keys_from_json (json : Json.t) : completion_item list =
         (fun i v ->
           Key
             {
-              key = string_of_int i;
+              key = Int.to_string i;
               value_type = Language.applicable_of_json_type (Json.type_of v);
             })
         lst
@@ -528,7 +528,7 @@ let main_content ~model ~children:_ () =
         <fragment>
           <box flex_direction=Row gap=(gap 1) align_items=Center>
             <input
-              key=(string_of_int model.input_key)
+              key=(Int.to_string model.input_key)
               autofocus=(model.focus = Filter_focus)
               value=model.query
               background=bg_primary

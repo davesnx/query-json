@@ -1172,11 +1172,11 @@ let join_sep ~ctx sep json =
             | `Null -> None (* null values are filtered out *)
             | `Bool true -> Some "true"
             | `Bool false -> Some "false"
-            | `Int i -> Some (string_of_int i)
+            | `Int i -> Some (Int.to_string i)
             | `Int64 i -> Some (Int64.to_string i)
             | `Float f ->
-                if Float.is_integer f then Some (string_of_int (Float.to_int f))
-                else Some (string_of_float f)
+                if Float.is_integer f then Some (Int.to_string (Float.to_int f))
+                else Some (Float.to_string f)
             | other ->
                 Some
                   (Json.to_string_pretty other ~colorize:false ~summarize:false
@@ -3088,7 +3088,7 @@ and slice_expr ~ctx (start_expr : expression option)
     match collect ~ctx expr json with
     | [ `Int n ] -> n
     | [ `Int64 n ] -> Int64.to_int n
-    | [ `Float f ] -> int_of_float f
+    | [ `Float f ] -> Float.to_int f
     | _ -> failwith "slice index must evaluate to a number"
   in
   let start = Option.map eval_to_int start_expr in

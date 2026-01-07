@@ -267,7 +267,7 @@ let[@react.component] make ~on_navigate_home ~on_try_function =
           </h1>
         </div>
         <div className="text-sm text-muted-foreground">
-          (React.string (string_of_int total_functions ^ " functions"))
+          (React.string (Int.to_string total_functions ^ " functions"))
         </div>
       </div>
     </header>

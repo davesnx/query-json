@@ -40,7 +40,7 @@ module CategorySection = struct
           </span>
           <span className="text-xs text-muted-foreground">
             (React.string
-               (string_of_int (List.length functions) ^ " functions"))
+               (Int.to_string (List.length functions) ^ " functions"))
           </span>
         </div>
         (if is_open then <Icons.ChevronDown size=Small />

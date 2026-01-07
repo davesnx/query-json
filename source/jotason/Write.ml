@@ -78,7 +78,7 @@ let write_float ob x =
       Buffer.add_string ob (if x > 0. then "Infinity" else "-Infinity")
   | _ ->
       let s1 = Printf.sprintf "%.16g" x in
-      let s = if float_of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
+      let s = if Float.of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
 
@@ -91,7 +91,7 @@ let write_std_float ob x =
          else "-Infinity value not allowed in standard JSON")
   | _ ->
       let s1 = Printf.sprintf "%.16g" x in
-      let s = if float_of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
+      let s = if Float.of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
 
