@@ -1,5 +1,5 @@
 (library
- (name mosaic_mlx)
+ (name mosaic_mlx_wrapper)
  (public_name query-json.mosaic-mlx)
- (modules mosaic_mlx)
- (libraries mosaic mosaic.ui))
+ (modules mosaic_mlx_wrapper)
+ (libraries mosaic.mlx))

@@ -1,4 +1,4 @@
-open Mosaic_mlx
+open Mosaic_mlx_wrapper
 module Length_percentage = Toffee.Style.Length_percentage
 
 type completion_item =
