@@ -2,7 +2,7 @@
  (name js)
  (public_name query-json-js)
  (package query-json-js)
- (libraries query-json.core js_of_ocaml)
+ (libraries query-json.core js_of_ocaml zarith_stubs_js)
  (preprocess
   (pps js_of_ocaml-ppx))
  (js_of_ocaml

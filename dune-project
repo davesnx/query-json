@@ -56,6 +56,7 @@
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
+  zarith_stubs_js
 ))
 
 (package
