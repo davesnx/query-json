@@ -57,7 +57,8 @@ let rec compare_values (a : t) (b : t) : int =
   | `Bool _, _ -> -1
   | _, `Bool _ -> 1
   (* Numbers - compare numerically *)
-  | (`Int _ | `Int64 _ | `Float _ | `Big_int _), (`Int _ | `Int64 _ | `Float _ | `Big_int _) -> (
+  | ( (`Int _ | `Int64 _ | `Float _ | `Big_int _),
+      (`Int _ | `Int64 _ | `Float _ | `Big_int _) ) -> (
       match (to_float a, to_float b) with
       | Some na, Some nb -> Float.compare na nb
       | _ -> 0)

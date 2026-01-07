@@ -47,7 +47,10 @@ let negative_int_value : Json.t = `Int (-123)
 let max_int_json = "9007199254740991"
 let max_int_value : Json.t = `Int 9007199254740991
 let big_int_json = "99999999999999999999999999999"
-let big_int_value : Json.t = `Big_int (Z.of_string "99999999999999999999999999999")
+
+let big_int_value : Json.t =
+  `Big_int (Z.of_string "99999999999999999999999999999")
+
 let float_json = "3.14159"
 let float_value : Json.t = `Float 3.14159
 let negative_float_json = "-2.718"

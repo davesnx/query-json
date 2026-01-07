@@ -6,7 +6,8 @@ type literal =
   | String of string (* "TEXT" *)
   | Int of int (* small integers that fit in native int *)
   | Int64 of int64 (* large integers that need 64-bit *)
-  | Big_int of Z.t [@printer fun fmt z -> pp_z fmt z] (* huge integers beyond int64 range *)
+  | Big_int of Z.t [@printer fun fmt z -> pp_z fmt z]
+    (* huge integers beyond int64 range *)
   | Float of float (* 123.0 - floating point literals *)
   | Null (* null *)
 [@@deriving show { with_path = false }]

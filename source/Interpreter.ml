@@ -756,7 +756,9 @@ let length ~ctx (json : Json.t) =
 
 let byte_length ~ctx (json : Json.t) =
   match json with
-  | `String s -> `Int64 (Int64.of_int (String.length s)) (* OCaml strings are byte arrays *)
+  | `String s ->
+      `Int64 (Int64.of_int (String.length s))
+      (* OCaml strings are byte arrays *)
   | _ -> Error.make ~ctx "byte_length" json
 
 (* Type selectors - filter input to only yield if it matches the type *)
@@ -961,7 +963,8 @@ let explode ~ctx (json : Json.t) =
   match json with
   | `String s ->
       let codepoints =
-        List.init (String.length s) (fun i -> `Int64 (Int64.of_int (Char.code (String.get s i))))
+        List.init (String.length s) (fun i ->
+            `Int64 (Int64.of_int (Char.code (String.get s i))))
       in
       `List codepoints
   | _ -> Error.make ~ctx "explode" json
@@ -970,10 +973,12 @@ let implode ~ctx (json : Json.t) =
   match json with
   | `List l ->
       let chars =
-        List.map (function
-          | `Int n -> Char.chr n
-          | `Int64 n -> Char.chr (Int64.to_int n)
-          | _ -> Char.chr 0) l
+        List.map
+          (function
+            | `Int n -> Char.chr n
+            | `Int64 n -> Char.chr (Int64.to_int n)
+            | _ -> Char.chr 0)
+          l
       in
       `String (String.of_seq (List.to_seq chars))
   | _ -> Error.make ~ctx "implode" json
@@ -1480,7 +1485,9 @@ and interp_fn1 ~ctx fn1 json =
       (* Object functions *)
       | Has -> (
           match expr with
-          | Literal ((String _ | Int _ | Int64 _ | Big_int _ | Float _) as lit) -> yield (has ~ctx json lit)
+          | Literal ((String _ | Int _ | Int64 _ | Big_int _ | Float _) as lit)
+            ->
+              yield (has ~ctx json lit)
           | _ -> Error.message ~ctx (show_expression expr ^ " is not allowed"))
       | In -> in_ ~ctx json expr
       | With_entries -> with_entries ~ctx expr json
@@ -2259,7 +2266,10 @@ and contains ~ctx expr json =
   | _ -> Error.message ~ctx "contains expects single value"
 
 and index_of ~ctx expr json =
-  let yield_opt = function Some p -> yield (`Int64 (Int64.of_int p)) | None -> yield `Null in
+  let yield_opt = function
+    | Some p -> yield (`Int64 (Int64.of_int p))
+    | None -> yield `Null
+  in
   collect ~ctx expr json
   |> List.iter (fun needle ->
       match (json, needle) with
@@ -2272,7 +2282,10 @@ and index_of ~ctx expr json =
       | _ -> Error.make ~ctx "index" json)
 
 and rindex_of ~ctx expr json =
-  let yield_opt = function Some p -> yield (`Int64 (Int64.of_int p)) | None -> yield `Null in
+  let yield_opt = function
+    | Some p -> yield (`Int64 (Int64.of_int p))
+    | None -> yield `Null
+  in
   collect ~ctx expr json
   |> List.iter (fun needle ->
       match (json, needle) with

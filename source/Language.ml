@@ -1725,7 +1725,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "error" -> Ok (make_expr_fn Error_msg arg)
   | "halt_error" -> (
       match arg with
-      | Literal (Int _ | Int64 _ | Big_int _ | Float _) -> Ok (make_expr_fn Halt_error_n arg)
+      | Literal (Int _ | Int64 _ | Big_int _ | Float _) ->
+          Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
             (err ~kind:"invalid_argument"

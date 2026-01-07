@@ -50,7 +50,7 @@ module CategorySection = struct
          <div className="pb-2">
            (functions
            |> List.map (fun (fn : function_info) ->
-              let example_text = Option.value fn.example ~default:"" in
+               let example_text = Option.value fn.example ~default:"" in
                <button
                  key=fn.name
                  onClick=(fun _ -> on_select_function fn.name)

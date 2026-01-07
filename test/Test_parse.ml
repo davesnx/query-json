@@ -36,8 +36,7 @@ let tests =
     test "1, 2" (Comma (Literal (Int 1), Literal (Int 2)));
     test "empty" (Fn0 Empty);
     test "(1, 2) + 3"
-      (Operation
-         (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3)));
+      (Operation (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3)));
     test "1 + 2 * 3"
       (Operation
          ( Literal (Int 1),

@@ -327,15 +327,15 @@ and tokenize_impl buf =
   | float_number ->
       let num = lexeme buf in
       Ok (FLOAT (Float.of_string num))
-  | integer ->
+  | integer -> (
       let num = lexeme buf in
       (* Parse into smallest fitting type: int -> int64 -> Big_int *)
-      (match int_of_string_opt num with
+      match int_of_string_opt num with
       | Some i -> Ok (INT i)
-      | None ->
-        match Int64.of_string_opt num with
-        | Some i -> Ok (INT64 i)
-        | None -> Ok (BIG_INT (Z.of_string num)))
+      | None -> (
+          match Int64.of_string_opt num with
+          | Some i -> Ok (INT64 i)
+          | None -> Ok (BIG_INT (Z.of_string num))))
   | space -> tokenize buf
   | comment -> tokenize buf (* Skip comments *)
   | any -> Error ("Unexpected character '" ^ lexeme buf ^ "'")

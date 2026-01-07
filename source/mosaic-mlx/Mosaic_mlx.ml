@@ -81,8 +81,8 @@ let text ?id ?key ?visible ?z_index ?live ?buffer ?ref ?on_mouse ?on_key
     ?flex_direction ?flex_wrap ?flex_grow ?flex_shrink ?flex_basis
     ?grid_template_rows ?grid_template_columns ?grid_auto_rows
     ?grid_auto_columns ?grid_auto_flow ?grid_template_areas ?grid_row
-    ?grid_column ?text_style:style ?wrap_mode ?tab_indicator ?tab_indicator_color
-    ?selection_bg ?selection_fg ?selectable
+    ?grid_column ?text_style:style ?wrap_mode ?tab_indicator
+    ?tab_indicator_color ?selection_bg ?selection_fg ?selectable
     (String.concat " " children)
 
 let code ?id ?key ?visible ?z_index ?live ?buffer ?ref ?on_mouse ?on_key

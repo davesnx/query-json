@@ -60,11 +60,8 @@ let write_int ob x =
     write_digits ob x)
   else Buffer.add_char ob '0'
 
-let write_int64 ob x =
-  Buffer.add_string ob (Int64.to_string x)
-
-let write_big_int ob x =
-  Buffer.add_string ob (Z.to_string x)
+let write_int64 ob x = Buffer.add_string ob (Int64.to_string x)
+let write_big_int ob x = Buffer.add_string ob (Z.to_string x)
 
 let float_needs_period s =
   try
