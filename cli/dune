@@ -6,7 +6,7 @@
  (libraries
   query-json.core
   query-json.console-style
+  query-json.mosaic-mlx
   cmdliner
   unix
-  dune-build-info
-  mosaic_mlx))
+  dune-build-info))

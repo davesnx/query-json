@@ -2,4 +2,4 @@
  (name mosaic_mlx)
  (public_name query-json.mosaic-mlx)
  (modules mosaic_mlx)
- (libraries mosaic.tea mosaic.ui))
+ (libraries mosaic mosaic.ui))
