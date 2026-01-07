@@ -50,7 +50,24 @@ jobs:
           opam-disable-sandboxing: true
 
       - name: Pin some deps
+        if: matrix.os != 'windows-latest'
         run: make pin
+
+      - name: Pin some deps (Windows with retry)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          do {
+            $retryCount++
+            Write-Host "Attempt $retryCount of $maxRetries"
+            make pin
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "Attempt failed, waiting 10 seconds before retry..."
+            Start-Sleep -Seconds 10
+          } while ($retryCount -lt $maxRetries)
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install deps
         run: make install
