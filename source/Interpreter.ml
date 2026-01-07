@@ -991,13 +991,13 @@ let is_nan ~ctx (json : Json.t) =
 
 let get_envs () =
   (* TODO: Do I need to escape stuff here? *)
-  (* Unix.environment is not available in js_of_ocaml, so we catch the failure *)
   try
     Unix.environment () |> Array.to_list
     |> List.filter_map (fun s ->
         match String.split_on_char '=' s with
         | k :: rest -> Some (k, `String (String.concat "=" rest))
         | [] -> None)
+    (* Unix.environment is not available in js_of_ocaml, so we catch the failure *)
   with Failure _ -> []
 
 let transpose ~ctx (json : Json.t) =
