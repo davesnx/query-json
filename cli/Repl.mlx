@@ -5,7 +5,6 @@ type completion_item =
   | Key of { key : string; value_type : Language.applicable_to }
   | Function of Language.function_info
 
-type completion_context = Key_context | Function_context
 type focus = Filter_focus | Result_focus
 
 type model = {
@@ -14,10 +13,10 @@ type model = {
   json : Json.t;
   path : string;
   result : (string, string) result;
+  last_valid_type : string;
   completions : completion_item list;
   completion_index : int;
   completion_scroll_offset : int;
-  completion_context : completion_context;
   focus : focus;
   result_scroll : int;
   width : int; [@warning "-69"]
@@ -37,42 +36,62 @@ type msg =
   | Resize of int * int
   | Quit
 
-let max_visible_completions = 10
+let max_visible_completions = 15
 
-let get_partial_key (query : string) : string =
-  let query = String.trim query in
-  if String.length query = 0 then ""
-  else
-    match String.rindex_opt query '.' with
-    | Some idx ->
-        if idx + 1 < String.length query then
-          String.sub query (idx + 1) (String.length query - idx - 1)
-        else ""
-    | None -> ""
+type partial_type = Typing_key | Typing_function
 
-let get_partial_function (query : string) : string =
-  let query = String.trim query in
-  if String.length query = 0 then ""
-  else
-    match String.rindex_opt query '|' with
-    | Some idx ->
-        if idx + 1 < String.length query then
-          String.sub query (idx + 1) (String.length query - idx - 1)
-          |> String.trim
-        else ""
-    | None -> ""
+type query_state = {
+  base_expression : string;
+  current_partial : string;
+  partial_type : partial_type;
+}
 
-let detect_completion_context (query : string) : completion_context =
-  let query = String.trim query in
-  if String.length query = 0 then Key_context
+let parse_query_state (query : string) : query_state =
+  let trimmed = String.trim query in
+  if String.length trimmed = 0 then
+    { base_expression = "."; current_partial = ""; partial_type = Typing_key }
   else
-    let last_dot = String.rindex_opt query '.' in
-    let last_pipe = String.rindex_opt query '|' in
-    match (last_dot, last_pipe) with
-    | Some d, Some p -> if p > d then Function_context else Key_context
-    | None, Some _ -> Function_context
-    | Some _, None -> Key_context
-    | None, None -> Key_context
+    let last_dot = String.rindex_opt trimmed '.' in
+    let last_pipe = String.rindex_opt trimmed '|' in
+    let last_delim =
+      match (last_dot, last_pipe) with
+      | Some d, Some p -> Some (max d p, if p > d then `Pipe else `Dot)
+      | Some d, None -> Some (d, `Dot)
+      | None, Some p -> Some (p, `Pipe)
+      | None, None -> None
+    in
+    match last_delim with
+    | None ->
+        {
+          base_expression = ".";
+          current_partial = trimmed;
+          partial_type = Typing_function;
+        }
+    | Some (idx, `Pipe) ->
+        let base = String.trim (String.sub trimmed 0 idx) in
+        let partial =
+          if idx + 1 < String.length trimmed then
+            String.trim
+              (String.sub trimmed (idx + 1) (String.length trimmed - idx - 1))
+          else ""
+        in
+        {
+          base_expression = (if String.length base = 0 then "." else base);
+          current_partial = partial;
+          partial_type = Typing_function;
+        }
+    | Some (idx, `Dot) ->
+        let base = String.sub trimmed 0 (idx + 1) in
+        let partial =
+          if idx + 1 < String.length trimmed then
+            String.sub trimmed (idx + 1) (String.length trimmed - idx - 1)
+          else ""
+        in
+        {
+          base_expression = base;
+          current_partial = partial;
+          partial_type = Typing_key;
+        }
 
 let filter_completions (items : completion_item list) (partial : string) :
     completion_item list =
@@ -84,43 +103,41 @@ let filter_completions (items : completion_item list) (partial : string) :
       && String.sub (String.lowercase_ascii s) 0 (String.length partial_lower)
          = partial_lower
     in
-    List.filter
-      (fun item ->
-        match item with
-        | Key { key; _ } -> starts_with key
-        | Function f -> starts_with f.name)
-      items
+    let filtered =
+      List.filter
+        (fun item ->
+          match item with
+          | Key { key; _ } -> starts_with key
+          | Function f -> starts_with f.name)
+        items
+    in
+    if List.length filtered = 0 then items else filtered
 
 let evaluate_query (query : string) (json : Json.t) : (string, string) result =
   if String.length (String.trim query) = 0 then Ok ""
   else
     Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false query json
 
-let get_base_query (query : string) : string =
-  let trimmed = String.trim query in
-  let has_dot = String.contains trimmed '.' in
-  let has_pipe = String.contains trimmed '|' in
-  if (not has_dot) && not has_pipe then "."
-  else
-    match String.rindex_opt trimmed '|' with
-    | Some idx ->
-        let before_pipe = String.trim (String.sub trimmed 0 idx) in
-        if String.length before_pipe > 0 then before_pipe else "."
-    | None -> trimmed
-
-let get_current_output_type (model : model) : string =
-  let base_query = get_base_query model.query in
-  match evaluate_query (base_query ^ " | type") model.json with
+let get_input_type (base_expression : string) (json : Json.t) : string option =
+  let query =
+    if String.length base_expression = 0 then ". | type"
+    else base_expression ^ " | type"
+  in
+  match
+    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false query json
+  with
   | Ok t ->
       let t = String.trim t in
       if String.length t >= 2 && t.[0] = '"' then
-        String.sub t 1 (String.length t - 2)
-      else t
-  | Error _ -> "unknown"
+        Some (String.sub t 1 (String.length t - 2))
+      else Some t
+  | Error _ -> None
 
-let get_functions_for_output_type (model : model) : completion_item list =
-  let type_name = get_current_output_type model in
-  Language.functions_for_type type_name |> List.map (fun f -> Function f)
+let get_functions_for_type (type_name : string) : completion_item list =
+  let functions = Language.functions_for_type type_name in
+  if List.length functions = 0 then
+    Language.all_functions () |> List.map (fun f -> Function f)
+  else List.map (fun f -> Function f) functions
 
 let keys_from_json (json : Json.t) : completion_item list =
   match json with
@@ -146,57 +163,46 @@ let keys_from_json (json : Json.t) : completion_item list =
 
 let identity_completion = Key { key = ""; value_type = Language.Any }
 
-let get_navigable_keys model =
-  (* Get keys from the current output if it's navigable (object or array) *)
-  (* Fall back to root JSON keys when query is empty or result is empty *)
-  let keys =
-    match model.result with
-    | Ok result when String.length (String.trim result) > 0 -> (
-        try
-          let json = Json.from_string result in
-          keys_from_json json
-        with _ -> keys_from_json model.json)
-    | Ok _ -> keys_from_json model.json
-    | Error _ -> keys_from_json model.json
-  in
-  identity_completion :: keys
+let get_navigable_keys_for_expression (base_expression : string) (json : Json.t)
+    : completion_item list =
+  match
+    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
+      base_expression json
+  with
+  | Ok result when String.length (String.trim result) > 0 -> (
+      try
+        let result_json = Json.from_string result in
+        identity_completion :: keys_from_json result_json
+      with _ -> identity_completion :: keys_from_json json)
+  | Ok _ -> identity_completion :: keys_from_json json
+  | Error _ -> identity_completion :: keys_from_json json
 
 let update_completions model =
-  let context = detect_completion_context model.query in
-  let trimmed = String.trim model.query in
-  let is_bare_word =
-    String.length trimmed > 0
-    && (not (String.contains trimmed '.'))
-    && not (String.contains trimmed '|')
+  let state = parse_query_state model.query in
+  let input_type =
+    match get_input_type state.base_expression model.json with
+    | Some t -> t
+    | None -> model.last_valid_type
   in
-  let show_keys =
-    String.length trimmed = 0
-    || trimmed = "."
-    || (context = Key_context && not (String.contains trimmed '|'))
+  let functions = get_functions_for_type input_type in
+  let candidates =
+    match state.partial_type with
+    | Typing_key ->
+        let keys =
+          get_navigable_keys_for_expression state.base_expression model.json
+        in
+        keys @ functions
+    | Typing_function -> functions
   in
-  let functions = get_functions_for_output_type model in
-  let all_completions =
-    if show_keys && not is_bare_word then get_navigable_keys model @ functions
-    else functions
-  in
-  let partial =
-    match context with
-    | _ when is_bare_word -> trimmed
-    | Key_context -> get_partial_key model.query
-    | Function_context -> get_partial_function model.query
-  in
-  let completions = filter_completions all_completions partial in
-  {
-    model with
-    completions;
-    completion_index = 0;
-    completion_scroll_offset = 0;
-    completion_context = context;
-  }
+  let completions = filter_completions candidates state.current_partial in
+  { model with completions; completion_index = 0; completion_scroll_offset = 0 }
 
 let init ~(json : Json.t) ~(path : string) () =
   let initial_query = "." in
   let result = evaluate_query initial_query json in
+  let initial_type =
+    match get_input_type "." json with Some t -> t | None -> "any"
+  in
   let model =
     {
       query = initial_query;
@@ -204,10 +210,10 @@ let init ~(json : Json.t) ~(path : string) () =
       json;
       path;
       result;
+      last_valid_type = initial_type;
       completions = [];
       completion_index = 0;
       completion_scroll_offset = 0;
-      completion_context = Key_context;
       focus = Filter_focus;
       result_scroll = 0;
       width = 80;
@@ -220,30 +226,25 @@ let apply_completion (model : model) : model =
   if List.length model.completions <= 0 then model
   else
     let completion = List.nth model.completions model.completion_index in
-    let query = model.query in
+    let state = parse_query_state model.query in
     let new_query =
-      match (model.completion_context, completion) with
-      | Key_context, Key { key; _ } -> (
-          match String.rindex_opt query '.' with
-          | Some idx -> String.sub query 0 (idx + 1) ^ key
-          | None -> "." ^ key)
-      | Key_context, Function f ->
+      match (state.partial_type, completion) with
+      | Typing_key, Key { key; _ } -> state.base_expression ^ key
+      | Typing_key, Function f ->
           let insert = Option.value f.insert_text ~default:f.name in
-          let base_query =
-            match String.rindex_opt query '.' with
-            | Some idx ->
-                let partial = get_partial_key query in
-                if String.length partial > 0 then String.sub query 0 idx
-                else query
-            | None -> query
+          let base =
+            if String.length state.current_partial > 0 then
+              let len = String.length state.base_expression in
+              if len > 0 && state.base_expression.[len - 1] = '.' then
+                String.sub state.base_expression 0 (len - 1)
+              else state.base_expression
+            else state.base_expression
           in
-          base_query ^ " | " ^ insert
-      | Function_context, Function f -> (
+          base ^ " | " ^ insert
+      | Typing_function, Function f ->
           let insert = Option.value f.insert_text ~default:f.name in
-          match String.rindex_opt query '|' with
-          | Some idx -> String.sub query 0 (idx + 1) ^ " " ^ insert
-          | None -> query ^ " | " ^ insert)
-      | Function_context, Key _ -> query
+          state.base_expression ^ " | " ^ insert
+      | Typing_function, Key _ -> model.query
     in
     let result = evaluate_query new_query model.json in
     { model with query = new_query; input_key = model.input_key + 1; result }
@@ -253,8 +254,22 @@ let update msg model =
   match msg with
   | Input_changed new_query ->
       let result = evaluate_query new_query model.json in
+      let last_valid_type =
+        match result with
+        | Ok _ -> (
+            match get_input_type new_query model.json with
+            | Some t -> t
+            | None -> model.last_valid_type)
+        | Error _ -> model.last_valid_type
+      in
       let model =
-        { model with query = new_query; result; result_scroll = 0 }
+        {
+          model with
+          query = new_query;
+          result;
+          last_valid_type;
+          result_scroll = 0;
+        }
         |> update_completions
       in
       (model, Cmd.none)
@@ -426,7 +441,7 @@ let function_detail ~(info : Language.function_info) () =
     padding=(padding 1)
     flex_direction=Column
     gap=(gap 1)
-    title="Function Info"
+    title=" Function Info "
     title_alignment=`Left>
     (Vnode.fragment info_items)
   </box>
