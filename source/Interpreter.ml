@@ -1329,8 +1329,8 @@ and interp_fn0 ~ctx f json =
   | Trim -> trim ~ctx json
   | To_uppercase -> to_uppercase ~ctx json
   | To_lowercase -> to_lowercase ~ctx json
-  | Explode -> yield (explode ~ctx json)
-  | Implode -> yield (implode ~ctx json)
+  | To_codepoints -> yield (explode ~ctx json)
+  | From_codepoints -> yield (implode ~ctx json)
   (* Array functions *)
   | Sort -> yield (sort ~ctx json)
   | Unique -> yield (unique ~ctx json)
@@ -1394,9 +1394,8 @@ and interp_fn0 ~ctx f json =
   | Expm1 -> yield (math_fn ~ctx Float.expm1 "expm1" json)
   | Log1p -> yield (math_fn ~ctx Float.log1p "log1p" json)
   | Pow -> yield (math_fn ~ctx (fun x -> x ** 2.0) "pow" json)
-  | Cbrt -> yield (math_fn ~ctx Float.cbrt "cbrt" json)
-  | Trunc -> yield (math_fn ~ctx Float.trunc "trunc" json)
-  | Fabs -> yield (math_fn ~ctx Float.abs "fabs" json)
+  | Cube_root -> yield (math_fn ~ctx Float.cbrt "cube_root" json)
+  | Truncate -> yield (math_fn ~ctx Float.trunc "truncate" json)
   | Is_normal -> yield (is_normal_op ~ctx json)
   | Is_nan -> yield (is_nan ~ctx json)
   | Nearbyint -> yield (math_fn ~ctx Float.round "nearbyint" json)
@@ -1484,7 +1483,7 @@ and interp_fn1 ~ctx fn1 json =
       | Nth_array -> nth_array ~ctx expr json
       | Add_expr -> add_expr ~ctx expr json
       | Repeat -> repeat_expr ~ctx expr json
-      | Bsearch -> binary_search ~ctx expr json
+      | Binary_search -> binary_search ~ctx expr json
       (* Object functions *)
       | Has -> (
           match expr with
@@ -1502,7 +1501,7 @@ and interp_fn1 ~ctx fn1 json =
       | Starts_with -> starts_with ~ctx expr json
       | Ends_with -> ends_with ~ctx expr json
       | Index_of -> index_of ~ctx expr json
-      | Rindex_of -> rindex_of ~ctx expr json
+      | Last_index_of -> rindex_of ~ctx expr json
       | Indices -> indices ~ctx expr json
       | Inside -> inside ~ctx expr json
       | Trim_start -> trim_start_impl ~ctx expr json
@@ -1539,16 +1538,19 @@ and interp_fn1 ~ctx fn1 json =
 and interp_fn2 ~ctx f e1 e2 json =
   match f with
   (* String functions *)
-  | Sub -> (
+  | Replace -> (
       match (e1, e2) with
       | Literal (String pattern), Literal (String replacement) ->
           yield (sub_regex ~ctx pattern replacement json)
-      | _ -> Error.message ~ctx "sub expects string pattern and replacement")
-  | Gsub -> (
+      | _ -> Error.message ~ctx "replace expects string pattern and replacement"
+      )
+  | Replace_all -> (
       match (e1, e2) with
       | Literal (String pattern), Literal (String replacement) ->
           yield (gsub_regex ~ctx pattern replacement json)
-      | _ -> Error.message ~ctx "gsub expects string pattern and replacement")
+      | _ ->
+          Error.message ~ctx
+            "replace_all expects string pattern and replacement")
   (* Control flow *)
   | While -> while_loop ~ctx e1 e2 json
   | Until -> until_loop ~ctx e1 e2 json

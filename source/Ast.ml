@@ -17,8 +17,8 @@ type fn0 =
   | Trim
   | To_uppercase
   | To_lowercase
-  | Explode
-  | Implode
+  | To_codepoints
+  | From_codepoints
   (* Array functions *)
   | Sort
   | Unique
@@ -79,9 +79,8 @@ type fn0 =
   | Expm1
   | Log1p
   | Pow
-  | Cbrt
-  | Trunc
-  | Fabs
+  | Cube_root
+  | Truncate
   | Is_normal
   | Is_nan
   | Nearbyint
@@ -145,7 +144,7 @@ type fn1_expr =
   | Nth_array
   | Add_expr
   | Repeat
-  | Bsearch
+  | Binary_search
   (* Object functions *)
   | Has
   | In
@@ -158,7 +157,7 @@ type fn1_expr =
   | Starts_with
   | Ends_with
   | Index_of
-  | Rindex_of
+  | Last_index_of
   | Indices
   | Inside
   | Trim_start
@@ -187,8 +186,8 @@ let pp_compiled_regex fmt r = Format.fprintf fmt "/%s/" r.pattern
 
 type fn2 =
   (* String functions *)
-  | Sub
-  | Gsub
+  | Replace
+  | Replace_all
   (* Control flow *)
   | While
   | Until

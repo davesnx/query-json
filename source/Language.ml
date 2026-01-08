@@ -158,37 +158,37 @@ let string_functions =
           arity = One_arg "pattern";
         };
         {
-          name = "sub";
-          aliases = [];
+          name = "replace";
+          aliases = [ "sub" ];
           description = "Replace first regex match";
-          example = Some {|"hello" | sub("l"; "L") → "heLlo"|};
+          example = Some {|"hello" | replace("l"; "L") → "heLlo"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = Two_args ("pattern", "replacement");
         };
         {
-          name = "gsub";
-          aliases = [];
+          name = "replace_all";
+          aliases = [ "gsub" ];
           description = "Replace all regex matches";
-          example = Some {|"hello" | gsub("l"; "L") → "heLLo"|};
+          example = Some {|"hello" | replace_all("l"; "L") → "heLLo"|};
           applicable_to = [ String ];
           insert_text = None;
           arity = Two_args ("pattern", "replacement");
         };
         {
-          name = "explode";
-          aliases = [];
-          description = "Convert string to array of codepoints";
-          example = Some {|"hi" | explode → [104, 105]|};
+          name = "to_codepoints";
+          aliases = [ "explode" ];
+          description = "Convert string to array of Unicode codepoints";
+          example = Some {|"hi" | to_codepoints → [104, 105]|};
           applicable_to = [ String ];
           insert_text = None;
           arity = No_args;
         };
         {
-          name = "implode";
-          aliases = [];
-          description = "Convert array of codepoints to string";
-          example = Some {|[72, 105] | implode → "Hi"|};
+          name = "from_codepoints";
+          aliases = [ "implode" ];
+          description = "Convert array of Unicode codepoints to string";
+          example = Some {|[72, 105] | from_codepoints → "Hi"|};
           applicable_to = [ Array ];
           insert_text = None;
           arity = No_args;
@@ -203,10 +203,10 @@ let string_functions =
           arity = One_arg "needle";
         };
         {
-          name = "rindex";
-          aliases = [];
-          description = "Find last index of substring";
-          example = Some {|"hello" | rindex("l") → 3|};
+          name = "last_index";
+          aliases = [ "rindex" ];
+          description = "Find last index of substring or element";
+          example = Some {|"hello" | last_index("l") → 3|};
           applicable_to = [ String; Array ];
           insert_text = None;
           arity = One_arg "needle";
@@ -449,10 +449,10 @@ let array_functions =
           arity = One_arg "condition";
         };
         {
-          name = "bsearch";
-          aliases = [];
+          name = "binary_search";
+          aliases = [ "bsearch" ];
           description = "Binary search (array must be sorted)";
-          example = Some {|[1, 2, 3] | bsearch(2) → 1|};
+          example = Some {|[1, 2, 3] | binary_search(2) → 1|};
           applicable_to = [ Array ];
           insert_text = None;
           arity = One_arg "target";
@@ -611,18 +611,11 @@ let path_functions =
           arity = No_args;
         };
         {
-          name = "..";
-          aliases = [];
-          description = "Recursive descent";
-          example = Some {|{a:{b:1}} | [.. | numbers] → [1]|};
-          applicable_to = [ Any ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
           name = "descend";
           aliases = [];
-          description = "Breadth-first traversal of all nested values";
+          description =
+            "Breadth-first traversal: yields values level by level, parents \
+             before children";
           example = Some {|{a:{b:1}} | [descend] → [{a:{b:1}}, {b:1}, 1]|};
           applicable_to = [ Any ];
           insert_text = None;
@@ -631,7 +624,9 @@ let path_functions =
         {
           name = "dive";
           aliases = [];
-          description = "Depth-first traversal of all nested values";
+          description =
+            "Depth-first traversal: yields each value then immediately its \
+             children";
           example = Some {|{a:1, b:2} | [dive] → [{a:1,b:2}, 1, 2]|};
           applicable_to = [ Any ];
           insert_text = None;
@@ -902,28 +897,19 @@ let math_functions =
           arity = No_args;
         };
         {
-          name = "cbrt";
-          aliases = [];
+          name = "cube_root";
+          aliases = [ "cbrt" ];
           description = "Cube root";
-          example = None;
+          example = Some {|27 | cube_root → 3|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
         };
         {
-          name = "trunc";
-          aliases = [];
+          name = "truncate";
+          aliases = [ "trunc" ];
           description = "Truncate toward zero";
-          example = None;
-          applicable_to = [ Number ];
-          insert_text = None;
-          arity = No_args;
-        };
-        {
-          name = "fabs";
-          aliases = [];
-          description = "Floating-point absolute value";
-          example = None;
+          example = Some {|3.7 | truncate → 3|};
           applicable_to = [ Number ];
           insert_text = None;
           arity = No_args;
@@ -1234,15 +1220,6 @@ let control_functions =
           insert_text = None;
           arity = Two_args ("n", "generator");
         };
-        {
-          name = "is_empty";
-          aliases = [];
-          description = "Check if expression produces no output";
-          example = Some {|is_empty(empty) → true|};
-          applicable_to = [ Any ];
-          insert_text = None;
-          arity = No_args;
-        };
       ];
   }
 
@@ -1536,30 +1513,30 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
                    Query_error.Example "skip(2; range(5)) → 2, 3, 4";
                  ]
                ()))
-  | "sub" -> (
+  | "replace" | "sub" -> (
       match (arg1, arg2) with
       | Literal (String _pattern), Literal (String _replacement) ->
-          Ok (Fn2 (Sub, arg1, arg2))
+          Ok (Fn2 (Replace, arg1, arg2))
       | Literal (String _), _ ->
           Error
-            (require_string_literal ~fn_name:"sub" ~what:"replacement"
-               ~example:{|sub("l"; "L") replaces first match|})
+            (require_string_literal ~fn_name:"replace" ~what:"replacement"
+               ~example:{|replace("l"; "L") replaces first match|})
       | _, _ ->
           Error
-            (require_string_literal ~fn_name:"sub" ~what:"pattern"
-               ~example:{|sub("l"; "L") replaces first match|}))
-  | "gsub" -> (
+            (require_string_literal ~fn_name:"replace" ~what:"pattern"
+               ~example:{|replace("l"; "L") replaces first match|}))
+  | "replace_all" | "gsub" -> (
       match (arg1, arg2) with
       | Literal (String _pattern), Literal (String _replacement) ->
-          Ok (Fn2 (Gsub, arg1, arg2))
+          Ok (Fn2 (Replace_all, arg1, arg2))
       | Literal (String _), _ ->
           Error
-            (require_string_literal ~fn_name:"gsub" ~what:"replacement"
-               ~example:{|gsub("l"; "L") replaces all matches|})
+            (require_string_literal ~fn_name:"replace_all" ~what:"replacement"
+               ~example:{|replace_all("l"; "L") replaces all matches|})
       | _, _ ->
           Error
-            (require_string_literal ~fn_name:"gsub" ~what:"pattern"
-               ~example:{|gsub("l"; "L") replaces all matches|}))
+            (require_string_literal ~fn_name:"replace_all" ~what:"pattern"
+               ~example:{|replace_all("l"; "L") replaces all matches|}))
   | "any" -> Ok (Fn2 (Any_gen, arg1, arg2))
   | "all" -> Ok (Fn2 (All_gen, arg1, arg2))
   | "set_path" -> Ok (Fn2 (Setpath, arg1, arg2))
@@ -1656,13 +1633,13 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "endswith" ->
       Error (Query_error.deprecated ~old_name:"endswith" ~new_name:"ends_with")
   | "index" -> Ok (make_expr_fn Index_of arg)
-  | "rindex" -> Ok (make_expr_fn Rindex_of arg)
+  | "last_index" | "rindex" -> Ok (make_expr_fn Last_index_of arg)
   | "indices" | "find_indices" -> Ok (make_expr_fn Indices arg)
   | "inside" -> Ok (make_expr_fn Inside arg)
   | "trim_start" -> Ok (make_expr_fn Trim_start arg)
   | "trim_end" -> Ok (make_expr_fn Trim_end arg)
   | "contains" -> Ok (make_expr_fn Contains arg)
-  | "bsearch" -> Ok (make_expr_fn Bsearch arg)
+  | "binary_search" | "bsearch" -> Ok (make_expr_fn Binary_search arg)
   (* Regex functions - pattern-based, compiled at parse time *)
   | "test" -> (
       match arg with
@@ -1842,8 +1819,8 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "tonumber" ->
       Error (Query_error.deprecated ~old_name:"tonumber" ~new_name:"to_number")
   | "to_number" -> Ok (Fn0 To_number)
-  | "explode" -> Ok (Fn0 Explode)
-  | "implode" -> Ok (Fn0 Implode)
+  | "to_codepoints" | "explode" -> Ok (Fn0 To_codepoints)
+  | "from_codepoints" | "implode" -> Ok (Fn0 From_codepoints)
   | "to_uppercase" -> Ok (Fn0 To_uppercase)
   | "to_lowercase" -> Ok (Fn0 To_lowercase)
   | "trim" -> Ok (Fn0 Trim)
@@ -1882,9 +1859,9 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "is_normal" -> Ok (Fn0 Is_normal)
   | "isnormal" ->
       Error (Query_error.deprecated ~old_name:"isnormal" ~new_name:"is_normal")
-  | "trunc" -> Ok (Fn0 Trunc)
-  | "fabs" -> Ok (Fn0 Fabs)
-  | "cbrt" -> Ok (Fn0 Cbrt)
+  | "truncate" | "trunc" -> Ok (Fn0 Truncate)
+  | "fabs" -> Error (Query_error.deprecated ~old_name:"fabs" ~new_name:"abs")
+  | "cube_root" | "cbrt" -> Ok (Fn0 Cube_root)
   | "expm1" -> Ok (Fn0 Expm1)
   | "exp2" -> Ok (Fn0 Exp2)
   | "log1p" -> Ok (Fn0 Log1p)
@@ -1939,7 +1916,7 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "trim_start" | "trim_end" | "delete" | "pick" | "pluck" | "partition"
   | "bsearch" | "inside" | "index" | "rindex" | "indices" | "find_indices"
   | "test" | "match" | "scan" | "capture" | "assert" | "nth" | "limit" | "skip"
-  | "while" | "until" | "sub" | "gsub" ->
+  | "while" | "until" | "replace" | "sub" | "replace_all" | "gsub" ->
       Error (error_for_missing_arg name)
   (* Not implemented *)
   | "strftime" | "strptime" -> Error (not_implemented "time formatting")

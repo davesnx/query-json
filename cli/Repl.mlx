@@ -97,13 +97,16 @@ let evaluate_query (query : string) (json : Json.t) : (string, string) result =
     Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false query json
 
 let get_base_query (query : string) : string =
-  (* Get the query without trailing | and partial function name *)
   let trimmed = String.trim query in
-  match String.rindex_opt trimmed '|' with
-  | Some idx ->
-      let before_pipe = String.trim (String.sub trimmed 0 idx) in
-      if String.length before_pipe > 0 then before_pipe else "."
-  | None -> trimmed
+  let has_dot = String.contains trimmed '.' in
+  let has_pipe = String.contains trimmed '|' in
+  if (not has_dot) && not has_pipe then "."
+  else
+    match String.rindex_opt trimmed '|' with
+    | Some idx ->
+        let before_pipe = String.trim (String.sub trimmed 0 idx) in
+        if String.length before_pipe > 0 then before_pipe else "."
+    | None -> trimmed
 
 let get_current_output_type (model : model) : string =
   let base_query = get_base_query model.query in
@@ -161,6 +164,11 @@ let get_navigable_keys model =
 let update_completions model =
   let context = detect_completion_context model.query in
   let trimmed = String.trim model.query in
+  let is_bare_word =
+    String.length trimmed > 0
+    && (not (String.contains trimmed '.'))
+    && not (String.contains trimmed '|')
+  in
   let show_keys =
     String.length trimmed = 0
     || trimmed = "."
@@ -168,10 +176,12 @@ let update_completions model =
   in
   let functions = get_functions_for_output_type model in
   let all_completions =
-    if show_keys then get_navigable_keys model @ functions else functions
+    if show_keys && not is_bare_word then get_navigable_keys model @ functions
+    else functions
   in
   let partial =
     match context with
+    | _ when is_bare_word -> trimmed
     | Key_context -> get_partial_key model.query
     | Function_context -> get_partial_function model.query
   in
