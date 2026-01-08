@@ -1,5 +1,10 @@
 # Unreleased
 
+- Rename functions for clarity
+- Deprecate `..` syntax, use `descend`
+- Improve REPL completions
+- Update REPL demo
+
 ## v1.0.0~beta-1
 
 - [FEATURE] **Full Int64 precision for large integers**: Numbers are now stored in the smallest fitting type
