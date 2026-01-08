@@ -33,7 +33,6 @@ type token =
   | SEMICOLON
   | COLON
   | DOT
-  | RECURSE
   | PIPE
   | UPDATE_ASSIGN
   | PLUS_ASSIGN
@@ -319,7 +318,7 @@ and tokenize_impl buf =
   | "catch" -> Ok CATCH
   | "finally" -> Ok FINALLY
   | "." -> Ok DOT
-  | ".." -> Ok RECURSE
+  | ".." -> Error "'..' is deprecated, use 'descend' instead"
   | '$' -> tokenize_variable buf
   | '"' -> tokenize_string buf
   | '`' -> tokenize_template buf

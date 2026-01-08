@@ -905,10 +905,10 @@ let object_index_brackets =
 let recursive_descent =
   [
     (* Basic recursive descent - outputs all values *)
-    test {|[.. | numbers]|} {|{"a":1,"b":{"c":2}}|} {|[ 1, 2 ]|};
-    test {|[.. | strings]|} {|{"a":"x","b":["y"]}|} {|[ "x", "y" ]|};
-    (* .. | .a? returns nulls for non-objects, need to filter them *)
-    test {|.. | .a? | select(. != null)|} {|[[{"a":1}]]|} {|1|};
+    test {|[descend | numbers]|} {|{"a":1,"b":{"c":2}}|} {|[ 1, 2 ]|};
+    test {|[descend | strings]|} {|{"a":"x","b":["y"]}|} {|[ "x", "y" ]|};
+    (* descend | .a? returns nulls for non-objects, need to filter them *)
+    test {|descend | .a? | select(. != null)|} {|[[{"a":1}]]|} {|1|};
   ]
 
 let type_selectors =
@@ -1152,9 +1152,9 @@ let cumulative_sum =
 
 let flatten_nested =
   [
-    test {|[.. | numbers]|} {|{"a": 1, "b": {"c": 2, "d": {"e": 3}}}|}
+    test {|[descend | numbers]|} {|{"a": 1, "b": {"c": 2, "d": {"e": 3}}}|}
       {|[ 1, 2, 3 ]|};
-    test {|[.. | strings]|}
+    test {|[descend | strings]|}
       {|{"name": "foo", "nested": {"title": "bar", "items": ["a", "b"]}}|}
       {|[ "foo", "bar", "a", "b" ]|};
     test {|flatten|} {|[[1, 2], [3, [4, 5]], 6]|} {|[ 1, 2, 3, 4, 5, 6 ]|};
@@ -1283,7 +1283,7 @@ let complex_filtering =
       {|.[] | select(.active == true and .age >= 18 and (.roles | contains(["admin"])))|}
       {|[{"name": "Alice", "active": true, "age": 25, "roles": ["admin", "user"]}, {"name": "Bob", "active": true, "age": 17, "roles": ["admin"]}, {"name": "Carol", "active": false, "age": 30, "roles": ["admin"]}]|}
       {|{ "name": "Alice", "active": true, "age": 25, "roles": [ "admin", "user" ] }|};
-    test {|.. | objects | select(has("target")) | .target|}
+    test {|descend | objects | select(has("target")) | .target|}
       {|{"a": {"target": 1}, "b": {"c": {"target": 2}}}|} "1\n2";
     test {|.[] | select(any(.tags[]; . == "important"))|}
       {|[{"name": "a", "tags": ["foo", "bar"]}, {"name": "b", "tags": ["important", "urgent"]}]|}

@@ -17,7 +17,6 @@
 %token FOREACH
 %token IF THEN ELSE ELIF END
 %token DOT
-%token RECURSE
 %token PIPE
 %token UPDATE_ASSIGN
 %token PLUS_ASSIGN
@@ -283,8 +282,6 @@ template_literal:
 term:
   | DOT;
     { Identity }
-  | RECURSE;
-    { Fn0 Recurse }
   | s = STRING;
     { Literal (String s) }
   | interp = interpolated_string
