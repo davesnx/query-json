@@ -296,24 +296,24 @@ let boolean_operators =
 
 let alternative =
   [
-    test {|.email // "no-email@example.com"|} {|{"email": "test@example.com"}|}
+    test {|.email ?? "no-email@example.com"|} {|{"email": "test@example.com"}|}
       {|"test@example.com"|};
-    test {|.email // "no-email@example.com"|} {|{"name": "John"}|}
+    test {|.email ?? "no-email@example.com"|} {|{"name": "John"}|}
       {|"no-email@example.com"|};
-    test {|.email // "no-email@example.com"|} {|{"email": null}|}
+    test {|.email ?? "no-email@example.com"|} {|{"email": null}|}
       {|"no-email@example.com"|};
-    test {|.email // "no-email@example.com"|} {|{"email": false}|}
+    test {|.email ?? "no-email@example.com"|} {|{"email": false}|}
       {|"no-email@example.com"|};
-    test {|.email // "no-email@example.com"|} {|{"email": ""}|} {|""|};
-    test {|.count // 0|} {|{"count": 5}|} {|5|};
-    test {|.count // 0|} {|{}|} {|0|};
-    test {|.value // 10 // 20|} {|{"value": null}|} {|10|};
-    test {|.value // 10 // 20|} {|{}|} {|10|};
-    test {|empty // 42|} {|null|} {|42|};
-    test {|.foo // 42|} {|{"foo": 19}|} {|19|};
-    test {|.foo // 42|} {|{}|} {|42|};
-    test {|(false, null, 1) // 42|} {|null|} {|1|};
-    (* TODO: test {|(false, null, 1) | . // 42|} {|null|} {|42|}; *)
+    test {|.email ?? "no-email@example.com"|} {|{"email": ""}|} {|""|};
+    test {|.count ?? 0|} {|{"count": 5}|} {|5|};
+    test {|.count ?? 0|} {|{}|} {|0|};
+    test {|.value ?? 10 ?? 20|} {|{"value": null}|} {|10|};
+    test {|.value ?? 10 ?? 20|} {|{}|} {|10|};
+    test {|empty ?? 42|} {|null|} {|42|};
+    test {|.foo ?? 42|} {|{"foo": 19}|} {|19|};
+    test {|.foo ?? 42|} {|{}|} {|42|};
+    test {|(false, null, 1) ?? 42|} {|null|} {|1|};
+    (* TODO: test {|(false, null, 1) | . ?? 42|} {|null|} {|42|}; *)
   ]
 
 let update =
@@ -456,7 +456,7 @@ let map =
     test {|map_values(.+1)|} {|{"a": 1, "b": 2, "c": 3}|}
       {|{ "a": 2, "b": 3, "c": 4 }|};
     test {|map(., .)|} {|[1,2]|} {|[ 1, 1, 2, 2 ]|};
-    test {|map_values(. // empty)|} {|{"a": null, "b": true, "c": false}|}
+    test {|map_values(. ?? empty)|} {|{"a": null, "b": true, "c": false}|}
       {|{ "b": true }|};
   ]
 
@@ -951,9 +951,9 @@ let arithmetic_update =
     test {|.foo -= 2|} {|{"foo": 42}|} {|{ "foo": 40 }|};
     test {|.foo *= 2|} {|{"foo": 21}|} {|{ "foo": 42 }|};
     test {|.foo /= 2|} {|{"foo": 42}|} {|{ "foo": 21 }|};
-    (* //= works when field exists with non-null/false value - keeps original *)
-    test {|.foo //= 10|} {|{"foo": 42}|} {|{ "foo": 42 }|};
-    test {|.foo //= 10|} {|{"foo": false}|} {|{ "foo": 10 }|};
+    (* ??= works when field exists with non-null/false value - keeps original *)
+    test {|.foo ??= 10|} {|{"foo": 42}|} {|{ "foo": 42 }|};
+    test {|.foo ??= 10|} {|{"foo": false}|} {|{ "foo": 10 }|};
   ]
 
 let keys =
@@ -1088,8 +1088,8 @@ let optional_functions =
     test {|keys?|} {|123|} {|null|};
     test {|keys?|} {|{"a": 1}|} {|[ "a" ]|};
     (* Optional with alternative *)
-    test {|first? // "default"|} {|[]|} {|"default"|};
-    test {|first? // "default"|} {|[1]|} {|1|};
+    test {|first? ?? "default"|} {|[]|} {|"default"|};
+    test {|first? ?? "default"|} {|[1]|} {|1|};
   ]
 
 let generators_iterators =
@@ -1141,7 +1141,7 @@ let tobase =
 let cumulative_sum =
   [
     test
-      {|fn running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
+      {|fn running_total: reduce .[] as $x ([]; . + [((. | last) ?? 0) + $x]);
         [1,2,3,4,5] | running_total|}
       {|null|} {|[ 1, 3, 6, 10, 15 ]|};
     test {|reduce .[] as $item (0; . + $item.value)|}

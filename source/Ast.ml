@@ -240,7 +240,7 @@ and expression =
   (* Pipes and operators *)
   | Pipe of expression * expression (* | *)
   | Update of expression * expression (* |= *)
-  | Alternative of expression * expression (* // *)
+  | Alternative of expression * expression (* ?? *)
   | Comma of expression * expression (* expr1 , expr2 *)
   | Operation of expression * op * expression
   | Assign of expression * expression (* .foo = value *)

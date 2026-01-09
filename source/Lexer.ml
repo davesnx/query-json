@@ -271,8 +271,8 @@ and tokenize_impl buf =
   | "-=" -> Ok MINUS_ASSIGN
   | "*=" -> Ok MULT_ASSIGN
   | "/=" -> Ok DIV_ASSIGN
-  | "//=" -> Ok ALT_ASSIGN
-  | "//" -> Ok ALTERNATIVE
+  | "??=" -> Ok ALT_ASSIGN
+  | "??" -> Ok ALTERNATIVE
   | "|" -> Ok PIPE
   | ";" -> Ok SEMICOLON
   | ":" -> Ok COLON

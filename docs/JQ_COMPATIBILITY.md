@@ -397,7 +397,7 @@ This makes error handling more consistent. Can use `?` in places that aren't sur
 
 - **Basic filters**: `.`, `.foo`, `.foo.bar`, `.[]`, `.[0]`, `.[2:5]`, `.foo?`
 - **Operators**: `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `and`, `or`, `not`
-- **Pipes and composition**: `|`, `,`, `//` (alternative)
+- **Pipes and composition**: `|`, `,`, `??` (alternative)
 - **Conditionals**: `if-then-else-end`, `if-then-elif-else-end`
 - **Variables**: `. as $x | ...`, `$ENV.VAR`
 - **String interpolation**: `"Hello \(.name)"`

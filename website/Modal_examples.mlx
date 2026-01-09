@@ -121,7 +121,7 @@ let examples =
     };
     {
       title = "Get object with default value";
-      query = ".email // \"no-email@example.com\"";
+      query = ".email ?? \"no-email@example.com\"";
       input = {|{"name": "Alice", "age": 30}|};
     };
     {
@@ -156,7 +156,7 @@ let examples =
     {
       title = "Running total (cumulative sum)";
       query =
-        {|fn running_total: reduce .[] as $x ([]; . + [((. | last) // 0) + $x]);
+        {|fn running_total: reduce .[] as $x ([]; . + [((. | last) ?? 0) + $x]);
 running_total|};
       input = "[1,2,3,4,5]";
     };

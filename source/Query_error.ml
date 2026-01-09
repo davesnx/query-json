@@ -157,8 +157,14 @@ let semantic_error ~message ~input ~start_pos ~end_pos =
     ~location:{ input; start_pos; end_pos }
     ()
 
-let runtime_error ~kind ~message ?value ?suggestion () =
+let runtime_error ~kind ~message ?value ?suggestion ?expected ?found () =
   let err = make ~kind ~message ?suggestion () in
-  match value with Some v -> with_context (Json_value v) err | None -> err
+  let err =
+    match value with Some v -> with_context (Json_value v) err | None -> err
+  in
+  let err =
+    match expected with Some e -> with_context (Expected e) err | None -> err
+  in
+  match found with Some f -> with_context (Found f) err | None -> err
 
 let context_error ~message = make ~kind:"context_error" ~message ()

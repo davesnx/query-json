@@ -79,6 +79,8 @@ val runtime_error :
   message:string ->
   ?value:Json.t ->
   ?suggestion:string ->
+  ?expected:string ->
+  ?found:string ->
   unit ->
   t
 

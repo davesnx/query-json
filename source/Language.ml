@@ -1104,10 +1104,10 @@ let control_functions =
           arity = One_arg "handler";
         };
         {
-          name = "//";
+          name = "??";
           aliases = [];
           description = "Alternative operator (on null or false)";
-          example = Some {|.foo // "default" → "default" if .foo is null/false|};
+          example = Some {|.foo ?? "default" → "default" if .foo is null/false|};
           applicable_to = [ Any ];
           insert_text = None;
           arity = No_args;

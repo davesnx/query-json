@@ -3,6 +3,7 @@ module Length_percentage = Toffee.Style.Length_percentage
 
 type completion_item =
   | Key of { key : string; value_type : Language.applicable_to }
+  | Index of { index : int; value_type : Language.applicable_to }
   | Function of Language.function_info
 
 type focus = Filter_focus | Result_focus
@@ -108,6 +109,7 @@ let filter_completions (items : completion_item list) (partial : string) :
         (fun item ->
           match item with
           | Key { key; _ } -> starts_with key
+          | Index { index; _ } -> starts_with (Int.to_string index)
           | Function f -> starts_with f.name)
         items
     in
@@ -153,9 +155,9 @@ let keys_from_json (json : Json.t) : completion_item list =
   | `List lst ->
       List.mapi
         (fun i v ->
-          Key
+          Index
             {
-              key = Int.to_string i;
+              index = i;
               value_type = Language.applicable_of_json_type (Json.type_of v);
             })
         lst
@@ -230,6 +232,14 @@ let apply_completion (model : model) : model =
     let new_query =
       match (state.partial_type, completion) with
       | Typing_key, Key { key; _ } -> state.base_expression ^ key
+      | Typing_key, Index { index; _ } ->
+          let base =
+            let len = String.length state.base_expression in
+            if len > 0 && state.base_expression.[len - 1] = '.' then
+              String.sub state.base_expression 0 (len - 1)
+            else state.base_expression
+          in
+          base ^ ".[" ^ Int.to_string index ^ "]"
       | Typing_key, Function f ->
           let insert = Option.value f.insert_text ~default:f.name in
           let base =
@@ -245,6 +255,7 @@ let apply_completion (model : model) : model =
           let insert = Option.value f.insert_text ~default:f.name in
           state.base_expression ^ " | " ^ insert
       | Typing_function, Key _ -> model.query
+      | Typing_function, Index _ -> model.query
     in
     let result = evaluate_query new_query model.json in
     { model with query = new_query; input_key = model.input_key + 1; result }
@@ -387,6 +398,13 @@ let completion_item ~is_selected ~item ~children:_ () =
         let type_text = Language.type_name_of_applicable value_type in
         <fragment>
           <text style=fg_style>key_text</text>
+          <text style=style_type>type_text</text>
+        </fragment>
+    | Index { index; value_type } ->
+        let index_text = ".[" ^ Int.to_string index ^ "]" in
+        let type_text = Language.type_name_of_applicable value_type in
+        <fragment>
+          <text style=fg_style>index_text</text>
           <text style=style_type>type_text</text>
         </fragment>
     | Function f ->
@@ -535,16 +553,16 @@ let main_content ~model ~children:_ () =
   let result_content =
     match model.result with
     | Ok result when String.length result > 0 ->
-        <code filetype="json">result</code>
-    | Ok _ -> <text style=style_muted>"(empty result)"</text>
-    | Error err -> <text style=style_error>err</text>
+        <code filetype="json" wrap_mode=`Word>result</code>
+    | Ok _ -> <text style=style_muted wrap_mode=`Word>"(empty result)"</text>
+    | Error err -> <text style=style_error wrap_mode=`Word>err</text>
   in
   <box flex_direction=Row flex_grow=1. size={ width = pct 100; height = auto }>
     <fragment>
       <box
         flex_direction=Column
         flex_basis=(pct 50)
-        flex_shrink=1.
+        flex_shrink=0.
         border=true
         border_color=filter_border
         title=" Filter "
@@ -572,6 +590,7 @@ let main_content ~model ~children:_ () =
       <box
         flex_direction=Column
         flex_basis=(pct 50)
+        flex_grow=0.
         flex_shrink=1.
         border=true
         border_color=result_border

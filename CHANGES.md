@@ -4,9 +4,6 @@
 - Deprecate `..` syntax, use `descend`
 - Improve REPL completions
 - Update REPL demo
-
-## v1.0.0~beta-1
-
 - [FEATURE] **Full Int64 precision for large integers**: Numbers are now stored in the smallest fitting type
   - Small integers (63-bit) use native `int` for fast arithmetic
   - Large integers (64-bit) use `Int64` for values outside native int range
@@ -64,7 +61,7 @@
 - Fix `|=` to create paths that don't exist (`.a |= 42` on `null` creates `{"a": 42}`)
 - Fix `|=` to take first value when transform produces multiple results
 - Add `+=`, `-=`, `*=`, `/=` compound assignment operators
-- Add `//=` alternative assignment operator
+- Add `??=` alternative assignment operator
 - Add `foreach expr as $var (init; update; extract)` loop construct
 - Add `skip(n; expr)` to skip first n results from generator
 - Add `combinations` and `combinations(n)` for cartesian products
@@ -111,7 +108,7 @@
 - [core] Add `now` for current Unix timestamp
 - [core] Support [.[] | {...}]
 - [core] Support |=
-- [core] Support //
+- [core] Support ?? (alternative operator)
 - [core] Add `nan` and `is_nan` functions for NaN handling
 - [core] Add `transpose` function for matrix transposition
 - [core] Add `flat_map` function for mapping and flattening
