@@ -19,28 +19,29 @@ let tests =
     (* split argument type mismatch - now a parse-time error *)
     test "split(1)" "\"a,b\"" "requires a string literal separator";
     (* split input type mismatch *)
-    test "split(\",\")" "123" "Trying to 'split' on a number";
+    test "split(\",\")" "123" "Cannot apply 'split' to a number";
     (* join argument type mismatch - now a parse-time error *)
     test "join(1)" "[\"a\", \"b\"]" "requires a string literal separator";
     (* join input type mismatch *)
-    test "join(\",\")" "123" "Trying to 'join' on";
+    test "join(\",\")" "123" "Cannot apply 'join' to a number";
     (* from_entries invalid structure *)
-    test "from_entries" "[1, 2]" "Invalid structure for 'from_entries'";
-    test "from_entries" "[{\"key\": 1}]" "Invalid structure for 'from_entries'";
+    test "from_entries" "[1, 2]" "from_entries requires an array of objects";
+    test "from_entries" "[{\"key\": 1}]"
+      "from_entries requires objects with 'key' (string) and 'value' fields";
     (* transpose invalid structure *)
-    test "transpose" "[1, [2]]" "Invalid structure for 'transpose'";
+    test "transpose" "[1, [2]]" "transpose requires an array of arrays";
     (* has invalid argument types *)
-    test "has(true)" "{}" "is not allowed";
+    test "has(true)" "{}" "expected string or number literal";
     (* Ast validation *)
 
     (* to_entries input type mismatch *)
-    test "to_entries" "[]" "Invalid structure for 'to_entries'";
+    test "to_entries" "[]" "to_entries requires an object";
     (* Undefined variables *)
-    test "$undefined" "null" "Undefined variable";
+    test "$undefined" "null" "undefined $undefined";
     (* Unsupported break *)
     test "break" "null" "break used outside of loop context";
     (* Object shorthand validation *)
-    test "{(1): 2}" "null" "object key must be string";
+    test "{(1): 2}" "null" "expected string key, found number";
     (* Helpful error messages for deprecated/unimplemented jq functions *)
     test "tojson" "null" "not implemented";
     test "fromjson" "null" "not implemented";
@@ -63,21 +64,17 @@ let tests =
     (* Unimplemented jq functions that should provide helpful errors *)
     test "format(\"csv\")" "null" "not implemented";
     (* Type errors for snake_case functions *)
-    test "starts_with(123)" "\"hello\""
-      "starts_with requires string prefix, got number";
-    test "ends_with(123)" "\"hello\""
-      "ends_with requires string suffix, got number";
-    test "trim_start(123)" "\"hello\""
-      "trim_start requires string prefix, got number";
-    test "trim_end(123)" "\"hello\""
-      "trim_end requires string suffix, got number";
+    test "starts_with(123)" "\"hello\"" "expected string prefix, found number";
+    test "ends_with(123)" "\"hello\"" "expected string suffix, found number";
+    test "trim_start(123)" "\"hello\"" "expected string prefix, found number";
+    test "trim_end(123)" "\"hello\"" "expected string suffix, found number";
     test "split(123)" "\"a,b\"" "requires a string literal separator";
     test "join(123)" "[\"a\", \"b\"]" "requires a string literal separator";
     (* Type errors for input type mismatches *)
     test "to_number" "[]" "to_number";
     test "to_number" "{}" "to_number";
-    test "starts_with(\"x\")" "123" "cannot apply starts_with to a number";
-    test "ends_with(\"x\")" "123" "cannot apply ends_with to a number";
+    test "starts_with(\"x\")" "123" "expected string, found number";
+    test "ends_with(\"x\")" "123" "expected string, found number";
     (* Function calls with empty parens default to identity, so they run
        and may produce runtime errors depending on input type *)
     test "pluck(.a)" "123" "pluck";
