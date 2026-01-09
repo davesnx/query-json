@@ -2,6 +2,7 @@
 # This tape demonstrates basic CLI operations
 
 Output docs/cli-basic.gif
+Require query-json
 
 Set FontSize 32
 Set Width 1200

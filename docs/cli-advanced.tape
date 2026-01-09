@@ -2,6 +2,7 @@
 # This tape demonstrates advanced queries: reduce, foreach, user functions
 
 Output docs/cli-advanced.gif
+Require query-json
 
 Set FontSize 32
 Set Width 1200

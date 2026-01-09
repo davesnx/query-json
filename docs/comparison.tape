@@ -2,6 +2,7 @@
 # Side-by-side comparison showing syntax differences
 
 Output docs/comparison.gif
+Require query-json
 
 Set FontSize 32
 Set Width 1200
