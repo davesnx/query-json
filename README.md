@@ -52,7 +52,7 @@ $ jq ".naem" <<< '{"name": "Alice", "age": 30}'
 null
 ```
 
-![query-json REPL demo](docs/repl-demo.gif)
+<video src="docs/repl-demo.mp4" autoplay loop muted playsinline></video>
 
 ### Portable
 
