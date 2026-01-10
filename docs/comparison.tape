@@ -1,7 +1,7 @@
 # query-json vs jq Comparison
 # Side-by-side comparison showing syntax differences
 
-Output docs/comparison.gif
+Output docs/comparison.mp4
 Require query-json
 
 Set FontSize 32
@@ -21,13 +21,13 @@ Enter
 Sleep 500ms
 Type "# jq:"
 Enter
-Type "echo '\"hello\"' | jq 'ascii_upcase'"
+Type `echo '"hello"' | jq 'ascii_upcase'`
 Enter
 Sleep 1.5s
 
 Type "# query-json:"
 Enter
-Type "echo '\"hello\"' | query-json 'to_uppercase'"
+Type `echo '"hello"' | query-json 'to_uppercase'`
 Enter
 Sleep 2s
 
@@ -37,13 +37,13 @@ Enter
 Sleep 500ms
 Type "# jq:"
 Enter
-Type "echo '\"hello world\"' | jq 'startswith(\"hello\")'"
+Type `echo '"hello world"' | jq 'startswith("hello")'`
 Enter
 Sleep 1.5s
 
 Type "# query-json:"
 Enter
-Type "echo '\"hello world\"' | query-json 'starts_with(\"hello\")'"
+Type `echo '"hello world"' | query-json 'starts_with("hello")'`
 Enter
 Sleep 2s
 
@@ -85,13 +85,13 @@ Enter
 Sleep 500ms
 Type "# jq returns array of arrays:"
 Enter
-Type "echo '[{\"x\":1},{\"x\":2},{\"x\":1}]' | jq 'group_by(.x)'"
+Type `echo '[{"x":1},{"x":2},{"x":1}]' | jq 'group_by(.x)'`
 Enter
 Sleep 1.5s
 
 Type "# query-json returns object:"
 Enter
-Type "echo '[{\"x\":1},{\"x\":2},{\"x\":1}]' | query-json 'group_by(.x)'"
+Type `echo '[{"x":1},{"x":2},{"x":1}]' | query-json 'group_by(.x)'`
 Enter
 Sleep 2s
 

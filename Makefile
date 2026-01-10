@@ -107,6 +107,15 @@ npm-install: ## Install npm dependencies
 .PHONY: init
 init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
 
+.PHONY: demo
+demo: ## Generate demo from tape file (usage: make demo FILE=cli-basic)
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE is required. Usage: make demo FILE=cli-basic"; \
+		exit 1; \
+	fi
+	$(DUNE) install
+	vhs "docs/$(FILE).tape"
+
 .PHONY: bench
 bench: ## Run benchmarks
 	./benchmarks/bench.sh

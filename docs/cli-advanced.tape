@@ -1,7 +1,7 @@
 # query-json Advanced Usage
 # This tape demonstrates advanced queries: reduce, foreach, user functions
 
-Output docs/cli-advanced.gif
+Output docs/cli-advanced.mp4
 Require query-json
 
 Set FontSize 32
@@ -54,7 +54,7 @@ Sleep 2.5s
 Type "# String interpolation"
 Enter
 Sleep 500ms
-Type "query-json '.second.store.books[] | \"\\(.title) by \\(.author)\"' test/mock.json"
+Type `query-json '.second.store.books[] | "\(.title) by \(.author)"' test/mock.json`
 Enter
 Sleep 2.5s
 
@@ -70,7 +70,7 @@ Sleep 2.5s
 Type "# Error handling"
 Enter
 Sleep 500ms
-Type "query-json 'try .missing.field catch \"not found\"' '{\"data\": 1}'"
+Type `query-json 'try .missing.field catch "not found"' '{"data": 1}'`
 Enter
 Sleep 2s
 

@@ -1,7 +1,7 @@
 # query-json Basic CLI Usage
 # This tape demonstrates basic CLI operations
 
-Output docs/cli-basic.gif
+Output docs/cli-basic.mp4
 Require query-json
 
 Set FontSize 32
@@ -35,7 +35,7 @@ Sleep 2s
 Type "# Query inline JSON"
 Enter
 Sleep 500ms
-Type "query-json '.users | map(.name)' '{\"users\": [{\"name\": \"Alice\"}, {\"name\": \"Bob\"}]}'"
+Type `query-json '.users | map(.name)' '{"users": [{"name": "Alice"}, {"name": "Bob"}]}'`
 Enter
 Sleep 2s
 
@@ -59,7 +59,7 @@ Sleep 2s
 Type "# Get object keys"
 Enter
 Sleep 500ms
-Type "query-json 'keys' '{\"a\": 1, \"b\": 2, \"c\": 3}'"
+Type `query-json 'keys' '{"a": 1, "b": 2, "c": 3}'`
 Enter
 Sleep 2s
 

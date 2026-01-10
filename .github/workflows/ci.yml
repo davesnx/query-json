@@ -70,7 +70,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install deps
+        if: matrix.os != 'windows-latest'
         run: make install
+
+      - name: Install deps (Windows with retry)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          do {
+            $retryCount++
+            Write-Host "Attempt $retryCount of $maxRetries"
+            make install
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "Attempt failed, waiting 10 seconds before retry..."
+            Start-Sleep -Seconds 10
+          } while ($retryCount -lt $maxRetries)
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install npm deps
         run: make npm-install
