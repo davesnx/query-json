@@ -1431,9 +1431,9 @@ let error_for_missing_arg (name : string) : Query_error.t =
       in
       let contexts =
         [
-          Query_error.Note (Printf.sprintf "usage: %s" usage);
-          Query_error.Note f.description;
-          Query_error.Note (Printf.sprintf "applicable to: %s" types);
+          Query_error.Usage usage;
+          Query_error.Description f.description;
+          Query_error.Applicable_to types;
         ]
       in
       let contexts =
@@ -1496,7 +1496,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
                ~message:"`limit` first argument must be a number literal"
                ~contexts:
                  [
-                   Query_error.Note "usage: limit(n; generator)";
+                   Query_error.Usage "limit(n; generator)";
                    Query_error.Example "limit(3; range(10)) → 0, 1, 2";
                  ]
                ()))
@@ -1509,7 +1509,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
                ~message:"`skip` first argument must be a number literal"
                ~contexts:
                  [
-                   Query_error.Note "usage: skip(n; generator)";
+                   Query_error.Usage "skip(n; generator)";
                    Query_error.Example "skip(2; range(5)) → 2, 3, 4";
                  ]
                ()))
@@ -1743,7 +1743,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "input" | "inputs" ->
       Error
         (err ~kind:"not_implemented" ~message:"`input`/`inputs` not implemented"
-           ~contexts:[ Query_error.Note "query-json reads all input upfront" ]
+           ~contexts:
+             [ Query_error.Description "query-json reads all input upfront" ]
            ())
   | "env" ->
       Error
@@ -1767,7 +1768,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
            ~message:(Printf.sprintf "`%s` requires two arguments" name)
            ~contexts:
              [
-               Query_error.Note "usage: condition and update expressions";
+               Query_error.Usage "condition and update expressions";
                Query_error.Example
                  (if name = "while" then "[while(. < 100; . * 2)]"
                   else "[until(. > 100; . * 2)]");
@@ -1909,15 +1910,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
              Some (Literal (Bool false)),
              None ))
   | "builtins" -> Ok (Fn0 Builtins)
-  (* Functions that require arguments - use rich error messages *)
-  | "select" | "map" | "map_values" | "flat_map" | "walk" | "sort_by" | "min_by"
-  | "max_by" | "group_by" | "unique_by" | "find" | "path" | "with_entries"
-  | "has" | "in" | "contains" | "split" | "join" | "starts_with" | "ends_with"
-  | "trim_start" | "trim_end" | "delete" | "pick" | "pluck" | "partition"
-  | "bsearch" | "inside" | "index" | "rindex" | "indices" | "find_indices"
-  | "test" | "match" | "scan" | "capture" | "assert" | "nth" | "limit" | "skip"
-  | "while" | "until" | "replace" | "sub" | "replace_all" | "gsub" ->
-      Error (error_for_missing_arg name)
   (* Not implemented *)
   | "strftime" | "strptime" -> Error (not_implemented "time formatting")
   | "modulemeta" -> Error (not_implemented "modulemeta")
@@ -1930,35 +1922,8 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
            ~suggestion:"use `to_string` (input is already JSON)" ())
   | "input_filename" | "input_line_number" ->
       Error (not_implemented "input metadata")
-  | "fma" ->
-      Error
-        (err ~kind:"missing_argument" ~message:"`fma` requires three arguments"
-           ~contexts:[ Query_error.Example "fma(x; y; z)" ]
-           ())
-  | "atan2" | "copysign" | "ldexp" | "fdim" | "remainder" | "drem" | "scalbn"
-  | "scalbln" ->
-      Error
-        (err ~kind:"missing_argument"
-           ~message:(Printf.sprintf "`%s` requires two arguments" name)
-           ())
-  | "frexp" | "modf" ->
-      Error
-        (err ~kind:"not_implemented"
-           ~message:(Printf.sprintf "`%s` not implemented" name)
-           ~contexts:[ Query_error.Note "returns multiple values" ]
-           ())
-  | "significand" | "lgamma" | "tgamma" | "j0" | "j1" | "y0" | "y1" ->
-      Error (not_implemented "special math functions")
-  | "exp10" -> Error (not_implemented "exp10")
-  | "get_path" ->
-      Error
-        (err ~kind:"missing_argument" ~message:"`get_path` requires an argument"
-           ~contexts:[ Query_error.Example "get_path([\"a\", \"b\"])" ]
-           ())
-  | "set_path" | "delete_paths" ->
-      Error
-        (err ~kind:"missing_argument"
-           ~message:(Printf.sprintf "`%s` requires arguments" name)
-           ())
-  (* Default: generic function application with no args *)
-  | _ -> Ok (Apply (name, []))
+  (* Default: check registry for functions that require arguments *)
+  | _ -> (
+      match find_function name with
+      | Some f when f.arity <> No_args -> Error (error_for_missing_arg name)
+      | _ -> Ok (Apply (name, [])))

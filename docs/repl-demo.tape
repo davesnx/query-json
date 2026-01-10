@@ -57,7 +57,7 @@ Sleep 1s
 Backspace 17
 Sleep 1s
 
-Type " select(.price > 10)"
+Type " filter(.price > 10)"
 Sleep 2.5s
 
 # Exit the REPL
