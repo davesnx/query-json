@@ -4,7 +4,7 @@
 (using melange 0.1)
 
 (name query-json)
-(version 0.6.1)
+(version 1.0.0~beta-1)
 
 (generate_opam_files true)
 
@@ -30,13 +30,15 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.3.0))
+  (ocaml (>= 5.4.0))
   (dune (>= 3.17))
   dune-build-info
   (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))
   sedlex
   ppx_deriving
+  mosaic
+  zarith
   (alcotest :with-test)
   (ocamlformat :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)
@@ -54,6 +56,7 @@
   js_of_ocaml
   js_of_ocaml-compiler
   js_of_ocaml-ppx
+  zarith_stubs_js
 ))
 
 (package
@@ -64,7 +67,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.3.0))
+  (ocaml (>= 5.4.0))
   mlx
   (melange (>= 5.0.1))
   melange-json

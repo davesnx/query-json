@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  OCAML_COMPILER: 5.3.0
+  OCAML_COMPILER: 5.4.0
 
 permissions:
   contents: write
@@ -49,14 +49,48 @@ jobs:
           dune-cache: true
           opam-disable-sandboxing: true
 
+      - name: Pin some deps
+        if: matrix.os != 'windows-latest'
+        run: make pin
+
+      - name: Pin some deps (Windows with retry)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          do {
+            $retryCount++
+            Write-Host "Attempt $retryCount of $maxRetries"
+            make pin
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "Attempt failed, waiting 10 seconds before retry..."
+            Start-Sleep -Seconds 10
+          } while ($retryCount -lt $maxRetries)
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
       - name: Install deps
+        if: matrix.os != 'windows-latest'
         run: make install
+
+      - name: Install deps (Windows with retry)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $maxRetries = 3
+          $retryCount = 0
+          do {
+            $retryCount++
+            Write-Host "Attempt $retryCount of $maxRetries"
+            make install
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "Attempt failed, waiting 10 seconds before retry..."
+            Start-Sleep -Seconds 10
+          } while ($retryCount -lt $maxRetries)
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install npm deps
         run: make npm-install
-
-      - name: Pin some deps
-        run: make pin
 
       - name: Build
         run: make build-prod
@@ -80,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-artifact
-          path: _build/default/bin/bin.exe
+          path: _build/default/cli/cli.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -112,14 +146,14 @@ jobs:
           dune-cache: true
           opam-disable-sandboxing: true
 
+      - name: Pin some deps
+        run: make pin
+
       - name: Install opam deps
         run: make install
 
       - name: Install npm deps
         run: make npm-install
-
-      - name: Pin some deps
-        run: make pin
 
       - name: Build
         run: make build-prod
@@ -162,13 +196,13 @@ jobs:
 
       - name: Allow execution of query-json
         if: startsWith(github.ref, 'refs/tags/')
-        run: chmod +x _release/platform-linux-x64/bin.exe
+        run: chmod +x _release/platform-linux-x64/cli.exe
 
       - name: Get version
         if: startsWith(github.ref, 'refs/tags/')
         id: version
         run: |
-          VERSION=$(_release/platform-linux-x64/bin.exe --version)
+          VERSION=$(_release/platform-linux-x64/cli.exe --version)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Generate NPM package
@@ -191,22 +225,22 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           cd _release/platform-darwin-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-darwin-arm64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-darwin-arm64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
           cd _release/platform-windows-x64
-          mv bin.exe query-json
+          mv cli.exe query-json
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 

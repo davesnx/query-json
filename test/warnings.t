@@ -1,69 +1,125 @@
-Deprecation warnings with verbose flag
+Deprecation errors for old function names
 
-tonumber warning appears with -v flag
-  $ echo '"42"' | query-json --no-color -v 'tonumber'
-  Warning: Using deprecated 'tonumber'. Use 'to_number' instead. This may not be supported in future versions.
-  42
-
-tostring warning appears with -v flag
-  $ echo '42' | query-json --no-color -v 'tostring'
-  Warning: Using deprecated 'tostring'. Use 'to_string' instead. This may not be supported in future versions.
-  "42"
-
-startwith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'startwith("Hello")'
-  Warning: Using deprecated 'startwith' or 'startswith'. Use 'starts_with' instead. This may not be supported in future versions.
-  true
-
-startswith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'startswith("Hello")'
-  Warning: Using deprecated 'startwith' or 'startswith'. Use 'starts_with' instead. This may not be supported in future versions.
-  true
-
-endwith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'endwith("world")'
-  Warning: Using deprecated 'endwith' or 'endswith'. Use 'ends_with' instead. This may not be supported in future versions.
-  true
-
-endswith warning appears with -v flag
-  $ echo '"Hello, world"' | query-json --no-color -v 'endswith("world")'
-  Warning: Using deprecated 'endwith' or 'endswith'. Use 'ends_with' instead. This may not be supported in future versions.
-  true
-
-No warnings without -v flag
-
+tonumber is deprecated
   $ echo '"42"' | query-json --no-color 'tonumber'
-  42
+  
+  error[deprecated]: `tonumber` is deprecated
+    --> tonumber
+        ^
+  
+    hint: use `to_number` instead
+  
 
+tostring is deprecated
   $ echo '42' | query-json --no-color 'tostring'
-  "42"
+  
+  error[deprecated]: `tostring` is deprecated
+    --> tostring
+        ^
+  
+    hint: use `to_string` instead
+  
 
+startwith is undefined (typo)
   $ echo '"Hello, world"' | query-json --no-color 'startwith("Hello")'
-  true
+  
+  error[undefined_function]: undefined function: `startwith`
+  
+    hint: check function name or define it with 'fn'
+  
 
+startswith is deprecated
   $ echo '"Hello, world"' | query-json --no-color 'startswith("Hello")'
-  true
+  
+  error[deprecated]: `startswith` is deprecated
+    --> startswith("Hello")
+                  ^
+  
+    hint: use `starts_with` instead
+  
 
+endwith is undefined (typo)
   $ echo '"Hello, world"' | query-json --no-color 'endwith("world")'
-  true
+  
+  error[undefined_function]: undefined function: `endwith`
+  
+    hint: check function name or define it with 'fn'
+  
 
+endswith is deprecated
   $ echo '"Hello, world"' | query-json --no-color 'endswith("world")'
-  true
+  
+  error[deprecated]: `endswith` is deprecated
+    --> endswith("world")
+                ^
+  
+    hint: use `ends_with` instead
+  
 
-New names work without warnings
+isnormal is deprecated
+  $ echo '42' | query-json --no-color 'isnormal'
+  
+  error[deprecated]: `isnormal` is deprecated
+    --> isnormal
+        ^
+  
+    hint: use `is_normal` instead
+  
 
-  $ echo '"42"' | query-json --no-color -v 'to_number'
+trim_left is deprecated
+  $ echo '" hello "' | query-json --no-color 'trim_left'
+  
+  error[deprecated]: `trim_left` is deprecated
+    --> trim_left
+        ^
+  
+    hint: use `trim` instead
+  
+
+trim_right is deprecated
+  $ echo '" hello "' | query-json --no-color 'trim_right'
+  
+  error[deprecated]: `trim_right` is deprecated
+    --> trim_right
+        ^
+  
+    hint: use `trim` instead
+  
+
+New names work correctly
+
+  $ echo '"42"' | query-json --no-color 'to_number'
   42
 
-  $ echo '42' | query-json --no-color -v 'to_string'
+  $ echo '42' | query-json --no-color 'to_string'
   "42"
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'starts_with("Hello")'
+  $ echo '"Hello, world"' | query-json --no-color 'starts_with("Hello")'
   true
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'starts_with("boo")'
+  $ echo '"Hello, world"' | query-json --no-color 'starts_with("boo")'
   false
 
-  $ echo '"Hello, world"' | query-json --no-color -v 'ends_with("world")'
+  $ echo '"Hello, world"' | query-json --no-color 'ends_with("world")'
   true
+
+  $ echo '42' | query-json --no-color 'is_normal'
+  true
+
+  $ echo '" hello "' | query-json --no-color 'trim'
+  "hello"
+
+head and tail are aliases for first and last
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'head'
+  1
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'tail'
+  3
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'first'
+  1
+
+  $ echo '[1, 2, 3]' | query-json --no-color 'last'
+  3
 

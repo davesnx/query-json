@@ -1,6 +1,0 @@
-(executable
- (name bin)
- (modes native)
- (public_name query-json)
- (package query-json)
- (libraries query-json.core cmdliner unix dune-build-info))

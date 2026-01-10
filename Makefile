@@ -28,6 +28,10 @@ dev: ## Build everything in watch mode
 dev-core: ## Build in watch mode
 	$(DUNE) build -w source
 
+.PHONY: repl
+repl: ## Run repl with "package.json"
+	$(DUNE) exec ./cli/cli.exe -- --repl package.json
+
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
 	$(VITE) --host --config website/vite.config.js --force
@@ -82,11 +86,15 @@ subst: ## Run dune substitute
 
 .PHONY: pin
 pin: # pin dependencies
-	echo "No pinning needed"
+	opam pin add toffee.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
+	opam pin add matrix.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
+	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
+	opam pin add reason-react-ppx.dev "https://github.com/reasonml/reason-react.git" -y
+	opam pin add reason-react.dev "https://github.com/reasonml/reason-react.git" -y
 
 .PHONY: create-switch
 create-switch: ## Create opam switch
-	opam switch create . 5.3.0 --deps-only --with-test --no-install -y
+	opam switch create . 5.4.0 --deps-only --with-test --no-install -y
 
 .PHONY: install
 install: ## Install opam deps
@@ -98,6 +106,15 @@ npm-install: ## Install npm dependencies
 
 .PHONY: init
 init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
+
+.PHONY: demo
+demo: ## Generate demo from tape file (usage: make demo FILE=cli-basic)
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE is required. Usage: make demo FILE=cli-basic"; \
+		exit 1; \
+	fi
+	$(DUNE) install
+	vhs "docs/$(FILE).tape"
 
 .PHONY: bench
 bench: ## Run benchmarks

@@ -1,0 +1,708 @@
+open Mosaic_mlx
+module Length_percentage = Toffee.Style.Length_percentage
+
+type completion_item =
+  | Key of { key : string; value_type : Language.applicable_to }
+  | Index of { index : int; value_type : Language.applicable_to }
+  | Function of Language.function_info
+
+type focus = Filter_focus | Result_focus
+
+type model = {
+  query : string;
+  input_key : int;
+  json : Json.t;
+  path : string;
+  result : (string, string) result;
+  last_valid_type : string;
+  completions : completion_item list;
+  completion_index : int;
+  completion_scroll_offset : int;
+  focus : focus;
+  result_scroll : int;
+  width : int; [@warning "-69"]
+  height : int; [@warning "-69"]
+}
+
+type msg =
+  | Input_changed of string
+  | Apply_completion
+  | Next_completion
+  | Prev_completion
+  | Switch_focus
+  | Scroll_result_down
+  | Scroll_result_up
+  | Copy
+  | Clear_filter
+  | Resize of int * int
+  | Quit
+
+let max_visible_completions = 15
+
+type partial_type = Typing_key | Typing_function
+
+type query_state = {
+  base_expression : string;
+  current_partial : string;
+  partial_type : partial_type;
+}
+
+let parse_query_state (query : string) : query_state =
+  let trimmed = String.trim query in
+  if String.length trimmed = 0 then
+    { base_expression = "."; current_partial = ""; partial_type = Typing_key }
+  else
+    let last_dot = String.rindex_opt trimmed '.' in
+    let last_pipe = String.rindex_opt trimmed '|' in
+    let last_delim =
+      match (last_dot, last_pipe) with
+      | Some d, Some p -> Some (max d p, if p > d then `Pipe else `Dot)
+      | Some d, None -> Some (d, `Dot)
+      | None, Some p -> Some (p, `Pipe)
+      | None, None -> None
+    in
+    match last_delim with
+    | None ->
+        {
+          base_expression = ".";
+          current_partial = trimmed;
+          partial_type = Typing_function;
+        }
+    | Some (idx, `Pipe) ->
+        let base = String.trim (String.sub trimmed 0 idx) in
+        let partial =
+          if idx + 1 < String.length trimmed then
+            String.trim
+              (String.sub trimmed (idx + 1) (String.length trimmed - idx - 1))
+          else ""
+        in
+        {
+          base_expression = (if String.length base = 0 then "." else base);
+          current_partial = partial;
+          partial_type = Typing_function;
+        }
+    | Some (idx, `Dot) ->
+        let base = String.sub trimmed 0 (idx + 1) in
+        let partial =
+          if idx + 1 < String.length trimmed then
+            String.sub trimmed (idx + 1) (String.length trimmed - idx - 1)
+          else ""
+        in
+        {
+          base_expression = base;
+          current_partial = partial;
+          partial_type = Typing_key;
+        }
+
+let filter_completions (items : completion_item list) (partial : string) :
+    completion_item list =
+  if String.length partial = 0 then items
+  else
+    let partial_lower = String.lowercase_ascii partial in
+    let starts_with s =
+      String.length s >= String.length partial_lower
+      && String.sub (String.lowercase_ascii s) 0 (String.length partial_lower)
+         = partial_lower
+    in
+    let filtered =
+      List.filter
+        (fun item ->
+          match item with
+          | Key { key; _ } -> starts_with key
+          | Index { index; _ } -> starts_with (Int.to_string index)
+          | Function f -> starts_with f.name)
+        items
+    in
+    if List.length filtered = 0 then items else filtered
+
+let evaluate_query (query : string) (json : Json.t) : (string, string) result =
+  if String.length (String.trim query) = 0 then Ok ""
+  else
+    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false query json
+
+let get_input_type (base_expression : string) (json : Json.t) : string option =
+  let query =
+    if String.length base_expression = 0 then ". | type"
+    else base_expression ^ " | type"
+  in
+  match
+    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false query json
+  with
+  | Ok t ->
+      let t = String.trim t in
+      if String.length t >= 2 && t.[0] = '"' then
+        Some (String.sub t 1 (String.length t - 2))
+      else Some t
+  | Error _ -> None
+
+let get_functions_for_type (type_name : string) : completion_item list =
+  let functions = Language.functions_for_type type_name in
+  if List.length functions = 0 then
+    Language.all_functions () |> List.map (fun f -> Function f)
+  else List.map (fun f -> Function f) functions
+
+let keys_from_json (json : Json.t) : completion_item list =
+  match json with
+  | `Assoc obj ->
+      List.map
+        (fun (k, v) ->
+          Key
+            {
+              key = k;
+              value_type = Language.applicable_of_json_type (Json.type_of v);
+            })
+        obj
+  | `List lst ->
+      List.mapi
+        (fun i v ->
+          Index
+            {
+              index = i;
+              value_type = Language.applicable_of_json_type (Json.type_of v);
+            })
+        lst
+  | _ -> []
+
+let identity_completion = Key { key = ""; value_type = Language.Any }
+
+let get_navigable_keys_for_expression (base_expression : string) (json : Json.t)
+    : completion_item list =
+  match
+    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
+      base_expression json
+  with
+  | Ok result when String.length (String.trim result) > 0 -> (
+      try
+        let result_json = Json.from_string result in
+        identity_completion :: keys_from_json result_json
+      with _ -> identity_completion :: keys_from_json json)
+  | Ok _ -> identity_completion :: keys_from_json json
+  | Error _ -> identity_completion :: keys_from_json json
+
+let update_completions model =
+  let state = parse_query_state model.query in
+  let input_type =
+    match get_input_type state.base_expression model.json with
+    | Some t -> t
+    | None -> model.last_valid_type
+  in
+  let functions = get_functions_for_type input_type in
+  let candidates =
+    match state.partial_type with
+    | Typing_key ->
+        let keys =
+          get_navigable_keys_for_expression state.base_expression model.json
+        in
+        keys @ functions
+    | Typing_function -> functions
+  in
+  let completions = filter_completions candidates state.current_partial in
+  { model with completions; completion_index = 0; completion_scroll_offset = 0 }
+
+let init ~(json : Json.t) ~(path : string) () =
+  let initial_query = "." in
+  let result = evaluate_query initial_query json in
+  let initial_type =
+    match get_input_type "." json with Some t -> t | None -> "any"
+  in
+  let model =
+    {
+      query = initial_query;
+      input_key = 0;
+      json;
+      path;
+      result;
+      last_valid_type = initial_type;
+      completions = [];
+      completion_index = 0;
+      completion_scroll_offset = 0;
+      focus = Filter_focus;
+      result_scroll = 0;
+      width = 80;
+      height = 24;
+    }
+  in
+  (update_completions model, Cmd.none)
+
+let apply_completion (model : model) : model =
+  if List.length model.completions <= 0 then model
+  else
+    let completion = List.nth model.completions model.completion_index in
+    let state = parse_query_state model.query in
+    let new_query =
+      match (state.partial_type, completion) with
+      | Typing_key, Key { key; _ } -> state.base_expression ^ key
+      | Typing_key, Index { index; _ } ->
+          let base =
+            let len = String.length state.base_expression in
+            if len > 0 && state.base_expression.[len - 1] = '.' then
+              String.sub state.base_expression 0 (len - 1)
+            else state.base_expression
+          in
+          base ^ ".[" ^ Int.to_string index ^ "]"
+      | Typing_key, Function f ->
+          let insert = Option.value f.insert_text ~default:f.name in
+          let base =
+            if String.length state.current_partial > 0 then
+              let len = String.length state.base_expression in
+              if len > 0 && state.base_expression.[len - 1] = '.' then
+                String.sub state.base_expression 0 (len - 1)
+              else state.base_expression
+            else state.base_expression
+          in
+          base ^ " | " ^ insert
+      | Typing_function, Function f ->
+          let insert = Option.value f.insert_text ~default:f.name in
+          state.base_expression ^ " | " ^ insert
+      | Typing_function, Key _ -> model.query
+      | Typing_function, Index _ -> model.query
+    in
+    let result = evaluate_query new_query model.json in
+    { model with query = new_query; input_key = model.input_key + 1; result }
+    |> update_completions
+
+let update msg model =
+  match msg with
+  | Input_changed new_query ->
+      let result = evaluate_query new_query model.json in
+      let last_valid_type =
+        match result with
+        | Ok _ -> (
+            match get_input_type new_query model.json with
+            | Some t -> t
+            | None -> model.last_valid_type)
+        | Error _ -> model.last_valid_type
+      in
+      let model =
+        {
+          model with
+          query = new_query;
+          result;
+          last_valid_type;
+          result_scroll = 0;
+        }
+        |> update_completions
+      in
+      (model, Cmd.none)
+  | Apply_completion -> (apply_completion model, Cmd.none)
+  | Next_completion ->
+      let total = List.length model.completions in
+      let new_index =
+        if model.completion_index + 1 >= total then 0
+        else model.completion_index + 1
+      in
+      (* Scroll down if new_index goes below visible window *)
+      let new_offset =
+        if new_index = 0 then 0
+        else if
+          new_index >= model.completion_scroll_offset + max_visible_completions
+        then new_index - max_visible_completions + 1
+        else model.completion_scroll_offset
+      in
+      ( {
+          model with
+          completion_index = new_index;
+          completion_scroll_offset = new_offset;
+        },
+        Cmd.none )
+  | Prev_completion ->
+      let total = List.length model.completions in
+      let new_index =
+        if model.completion_index - 1 < 0 then max 0 (total - 1)
+        else model.completion_index - 1
+      in
+      (* Scroll up if new_index goes above visible window, or jump to end *)
+      let new_offset =
+        if model.completion_index = 0 && new_index = total - 1 then
+          max 0 (total - max_visible_completions)
+        else if new_index < model.completion_scroll_offset then new_index
+        else model.completion_scroll_offset
+      in
+      ( {
+          model with
+          completion_index = new_index;
+          completion_scroll_offset = new_offset;
+        },
+        Cmd.none )
+  | Switch_focus ->
+      let new_focus =
+        match model.focus with
+        | Filter_focus -> Result_focus
+        | Result_focus -> Filter_focus
+      in
+      ( { model with focus = new_focus; input_key = model.input_key + 1 },
+        Cmd.none )
+  | Scroll_result_down ->
+      ({ model with result_scroll = model.result_scroll + 1 }, Cmd.none)
+  | Scroll_result_up ->
+      ({ model with result_scroll = max 0 (model.result_scroll - 1) }, Cmd.none)
+  | Copy -> (
+      match model.focus with
+      | Filter_focus -> (model, Cmd.static_print ("Query: " ^ model.query))
+      | Result_focus ->
+          let text = match model.result with Ok s -> s | Error e -> e in
+          (model, Cmd.static_print ("Result: " ^ text)))
+  | Clear_filter ->
+      let new_query = "." in
+      let result = evaluate_query new_query model.json in
+      let model =
+        {
+          model with
+          query = new_query;
+          result;
+          result_scroll = 0;
+          input_key = model.input_key + 1;
+        }
+        |> update_completions
+      in
+      (model, Cmd.none)
+  | Resize (w, h) -> ({ model with width = w; height = h }, Cmd.none)
+  | Quit -> (model, Cmd.quit)
+
+let bg_primary = Ansi.Color.of_rgb 22 22 30
+let bg_secondary = Ansi.Color.of_rgb 30 30 42
+let bg_accent = Ansi.Color.of_rgb 40 40 55
+let border_color = Ansi.Color.of_rgb 60 60 80
+let border_focused = Ansi.Color.of_rgb 137 180 250
+let text_primary = Ansi.Color.of_rgb 205 214 244
+let text_muted = Ansi.Color.of_rgb 108 112 134
+let text_accent = Ansi.Color.of_rgb 137 180 250
+let _text_success = Ansi.Color.of_rgb 166 227 161
+let text_error = Ansi.Color.of_rgb 243 139 168
+let _text_warning = Ansi.Color.of_rgb 249 226 175
+let text_type = Ansi.Color.of_rgb 203 166 247
+let style_primary = Ansi.Style.make ~fg:text_primary ()
+let style_muted = Ansi.Style.make ~fg:text_muted ()
+let style_accent = Ansi.Style.make ~fg:text_accent ()
+let style_accent_bold = Ansi.Style.make ~fg:text_accent ~bold:true ()
+let style_error = Ansi.Style.make ~fg:text_error ()
+let _style_success = Ansi.Style.make ~fg:text_primary ()
+let style_type = Ansi.Style.make ~fg:text_type ~italic:true ()
+
+let hpad n =
+  {
+    Toffee.Geometry.Rect.top = Length_percentage.zero;
+    right = Length_percentage.px (Float.of_int n);
+    bottom = Length_percentage.zero;
+    left = Length_percentage.px (Float.of_int n);
+  }
+
+let completion_item ~is_selected ~item ~children:_ () =
+  let background = if is_selected then bg_accent else bg_secondary in
+  let fg = if is_selected then text_accent else text_primary in
+  let fg_style = Ansi.Style.make ~fg () in
+  let items =
+    match item with
+    | Key { key; value_type } ->
+        let key_text = "." ^ key in
+        let type_text = Language.type_name_of_applicable value_type in
+        <fragment>
+          <text style=fg_style>key_text</text>
+          <text style=style_type>type_text</text>
+        </fragment>
+    | Index { index; value_type } ->
+        let index_text = ".[" ^ Int.to_string index ^ "]" in
+        let type_text = Language.type_name_of_applicable value_type in
+        <fragment>
+          <text style=fg_style>index_text</text>
+          <text style=style_type>type_text</text>
+        </fragment>
+    | Function f ->
+        let name_text = "| " ^ f.name in
+        <fragment>
+          <text style=fg_style>name_text</text>
+          <text style=style_muted>"function"</text>
+        </fragment>
+  in
+  <box
+    background
+    padding=(hpad 1)
+    flex_direction=Row
+    justify_content=Space_between
+    size={ width = pct 100; height = px 1 }>
+    items
+  </box>
+
+let function_detail ~(info : Language.function_info) () =
+  let example_text =
+    match info.example with
+    | Some ex ->
+        Some
+          <box flex_direction=Column gap=(gap 0)>
+            <fragment>
+              <text style=style_muted>"example:"</text>
+              <box background=bg_accent padding=(hpad 1)>
+                <text style=style_accent>ex</text>
+              </box>
+            </fragment>
+          </box>
+    | None -> None
+  in
+  let info_items =
+    List.filter_map Fun.id
+      [
+        Some
+          <box flex_direction=Row gap=(gap 1)>
+            <fragment>
+              <text style=style_accent>info.name</text>
+              <text style=style_muted>"-"</text>
+              <text style=style_primary>info.description</text>
+            </fragment>
+          </box>;
+        example_text;
+      ]
+  in
+  <box
+    border=true
+    border_color=border_focused
+    background=bg_secondary
+    padding=(padding 1)
+    flex_direction=Column
+    gap=(gap 1)
+    title=" Function Info "
+    title_alignment=`Left>
+    (Vnode.fragment info_items)
+  </box>
+
+let completions ~model ~children:_ () =
+  if List.length model.completions = 0 then null
+  else
+    let single_function =
+      match model.completions with [ Function f ] -> Some f | _ -> None
+    in
+    match single_function with
+    | Some info -> function_detail ~info ()
+    | None ->
+        let start_idx = model.completion_scroll_offset in
+        let visible_completions =
+          model.completions
+          |> List.mapi (fun i item -> (i, item))
+          |> List.filteri (fun i _ ->
+              i >= start_idx && i < start_idx + max_visible_completions)
+        in
+        let items =
+          visible_completions
+          |> List.map (fun (i, item) ->
+              let is_selected = i = model.completion_index in
+              <completion_item is_selected item />)
+          |> Vnode.fragment
+        in
+        <box
+          border=true
+          border_color
+          background=bg_secondary
+          title=" Completions "
+          title_alignment=`Left
+          max_size={ width = auto; height = pct 100 }
+          flex_direction=Column>
+          <scroll_box
+            scroll_y=true flex_grow=1. size={ width = pct 100; height = auto }>
+            items
+          </scroll_box>
+        </box>
+
+let header ~model ~children:_ () =
+  <box
+    padding=(padding 0)
+    background=bg_secondary
+    flex_direction=Row
+    justify_content=Space_between
+    align_items=Center
+    size={ width = pct 100; height = auto }>
+    <fragment>
+      <box
+        padding=(padding 1)
+        background=bg_secondary
+        flex_direction=Row
+        align_items=Center
+        size={ width = auto; height = auto }>
+        <fragment>
+          <text style=style_accent_bold>"query-json "</text>
+          <text style=style_accent_bold>"R"</text>
+          <text style=style_accent>"ead-"</text>
+          <text style=style_accent_bold>"E"</text>
+          <text style=style_accent>"val-"</text>
+          <text style=style_accent_bold>"P"</text>
+          <text style=style_accent>"rint-"</text>
+          <text style=style_accent_bold>"L"</text>
+          <text style=style_accent>"oop"</text>
+        </fragment>
+      </box>
+      <box
+        padding=(padding 1)
+        background=bg_secondary
+        flex_direction=Row
+        align_items=Center
+        size={ width = auto; height = auto }>
+        <text style=style_muted>model.path</text>
+      </box>
+    </fragment>
+  </box>
+
+let main_content ~model ~children:_ () =
+  let filter_border =
+    match model.focus with
+    | Filter_focus -> border_focused
+    | Result_focus -> border_color
+  in
+  let result_border =
+    match model.focus with
+    | Result_focus -> border_focused
+    | Filter_focus -> border_color
+  in
+  let result_content =
+    match model.result with
+    | Ok result when String.length result > 0 ->
+        <code filetype="json" wrap_mode=`Word>result</code>
+    | Ok _ -> <text style=style_muted wrap_mode=`Word>"(empty result)"</text>
+    | Error err -> <text style=style_error wrap_mode=`Word>err</text>
+  in
+  <box flex_direction=Row flex_grow=1. size={ width = pct 100; height = auto }>
+    <fragment>
+      <box
+        flex_direction=Column
+        flex_basis=(pct 50)
+        flex_shrink=0.
+        border=true
+        border_color=filter_border
+        title=" Filter "
+        title_alignment=`Left
+        padding=(padding 1)>
+        <fragment>
+          <box flex_direction=Row gap=(gap 1) align_items=Center>
+            <input
+              key=(Int.to_string model.input_key)
+              autofocus=(model.focus = Filter_focus)
+              value=model.query
+              background=bg_primary
+              text_color=text_primary
+              focused_background=bg_secondary
+              focused_text_color=text_accent
+              placeholder="Enter query (e.g., .user.name)"
+              on_input=(fun s -> Some (Input_changed s))
+              on_submit=(fun _ -> Some Apply_completion)
+              size={ width = pct 100; height = px 1 }
+            />
+          </box>
+          <fragment><completions model /></fragment>
+        </fragment>
+      </box>
+      <box
+        flex_direction=Column
+        flex_basis=(pct 50)
+        flex_grow=0.
+        flex_shrink=1.
+        border=true
+        border_color=result_border
+        title=" Result "
+        title_alignment=`Left
+        padding=(padding 1)>
+        <scroll_box
+          scroll_y=true flex_grow=1. size={ width = pct 100; height = auto }>
+          result_content
+        </scroll_box>
+      </box>
+    </fragment>
+  </box>
+
+let footer ~model ~children:_ () =
+  let copy_label =
+    match model.focus with
+    | Filter_focus -> "copy query"
+    | Result_focus -> "copy result"
+  in
+  let filter_hints =
+    <box flex_direction=Row gap=(gap 2)>
+      <fragment>
+        <text style=style_muted>"Enter"</text>
+        <text style=style_primary>"complete"</text>
+        <text style=style_muted>"↑↓"</text>
+        <text style=style_primary>"navigate"</text>
+        <text style=style_muted>"Ctrl+L"</text>
+        <text style=style_primary>"clear"</text>
+        <text style=style_muted>"Tab"</text>
+        <text style=style_primary>"→ result"</text>
+      </fragment>
+    </box>
+  in
+  let result_hints =
+    <box flex_direction=Row gap=(gap 2)>
+      <fragment>
+        <text style=style_muted>"j/k ↑↓"</text>
+        <text style=style_primary>"scroll"</text>
+        <text style=style_muted>"Tab"</text>
+        <text style=style_primary>"→ filter"</text>
+      </fragment>
+    </box>
+  in
+  let hints =
+    match model.focus with
+    | Filter_focus -> filter_hints
+    | Result_focus -> result_hints
+  in
+  <box
+    padding=(padding 1)
+    background=bg_secondary
+    size={ width = pct 100; height = auto }
+    flex_direction=Row
+    gap=(gap 2)
+    justify_content=Space_between>
+    <fragment>
+      hints
+      <box flex_direction=Row gap=(gap 2)>
+        <fragment>
+          <text style=style_muted>"y"</text>
+          <text style=style_primary>copy_label</text>
+          <text style=style_muted>"Ctrl+C"</text>
+          <text style=style_primary>"quit"</text>
+        </fragment>
+      </box>
+    </fragment>
+  </box>
+
+let view (model : model) =
+  <box
+    background=bg_primary
+    flex_direction=Column
+    size={ width = pct 100; height = pct 100 }>
+    <fragment>
+      <header model /> <main_content model /> <footer model />
+    </fragment>
+  </box>
+
+let subscriptions model =
+  Sub.batch
+    [
+      Sub.on_resize (fun ~width ~height -> Resize (width, height));
+      Sub.on_key (fun key ->
+          let open Mosaic_ui.Event.Key in
+          let event = data key in
+          match event.key with
+          | Escape -> Some Quit
+          | Tab -> Some Switch_focus
+          | Char c when Uchar.equal c (Uchar.of_char 'y') -> Some Copy
+          | Char c when Uchar.equal c (Uchar.of_char 'L') && event.modifier.ctrl
+            ->
+              Some Clear_filter
+          | _ -> (
+              match model.focus with
+              | Filter_focus -> (
+                  match event.key with
+                  | Enter -> Some Apply_completion
+                  | Up -> Some Prev_completion
+                  | Down -> Some Next_completion
+                  | _ -> None)
+              | Result_focus -> (
+                  match event.key with
+                  | Up -> Some Scroll_result_up
+                  | Down -> Some Scroll_result_down
+                  | Char c when Uchar.equal c (Uchar.of_char 'k') ->
+                      Some Scroll_result_up
+                  | Char c when Uchar.equal c (Uchar.of_char 'j') ->
+                      Some Scroll_result_down
+                  | _ -> None)));
+    ]
+
+let make ~(json : Json.t) ~(path : string) =
+  let init = init ~json ~path in
+  run { init; update; view; subscriptions }

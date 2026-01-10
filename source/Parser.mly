@@ -1,13 +1,12 @@
-/* https://jqlang.org/manual */
-/* https://github.com/jqlang/jq/wiki/jq-Language-Description */
-/* https://arxiv.org/pdf/2302.10576 */
-
 %{
   open Ast
 %}
 
 %token <string> STRING
-%token <float> NUMBER
+%token <int> INT
+%token <int64> INT64
+%token <Z.t> BIG_INT
+%token <float> FLOAT
 %token <bool> BOOL
 %token NULL
 %token <string> IDENTIFIER
@@ -18,7 +17,6 @@
 %token FOREACH
 %token IF THEN ELSE ELIF END
 %token DOT
-%token RECURSE
 %token PIPE
 %token UPDATE_ASSIGN
 %token PLUS_ASSIGN
@@ -38,12 +36,19 @@
 %token CLOSE_PARENT
 %token TRY
 %token CATCH
+%token FINALLY
 
 (* String interpolation tokens *)
 %token INTERP_START
 %token <string> INTERP_TEXT
 %token INTERP_EXPR_START
 %token INTERP_END
+
+(* Template literal tokens (backtick strings) *)
+%token TEMPLATE_START
+%token <string> TEMPLATE_TEXT
+%token TEMPLATE_EXPR_START
+%token TEMPLATE_END
 
 %token QUESTION_MARK
 
@@ -54,12 +59,12 @@
 %token OPEN_BRACE
 %token CLOSE_BRACE
 %token AS
-%token DEF
+%token FN
 %token EOF
 
-/* DEF_PREC is a dummy precedence for function definitions - must be lower than PIPE and others so that operators are shifted into the 'rest' expression: def f: body; rest | x
-   should parse as: def f: body; (rest | x) */
-%nonassoc DEF_PREC
+/* FN_PREC is a dummy precedence for function definitions - must be lower than PIPE and others so that operators are shifted into the 'rest' expression: fn f: body; rest | x
+   should parse as: fn f: body; (rest | x) */
+%nonassoc FN_PREC
 /* according to https://github.com/stedolan/jq/issues/1326 */
 %right PIPE UPDATE_ASSIGN PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN ALT_ASSIGN ASSIGN ALTERNATIVE /* lowest precedence */
 %left COMMA
@@ -73,14 +78,14 @@
 
 %%
 
-def_param:
+fn_param:
   | p = IDENTIFIER { p }
   | p = VARIABLE { "$" ^ p }
 
-def_params:
+fn_params:
   | { [] }
-  | p = def_param { [p] }
-  | p = def_param; SEMICOLON; rest = def_params { p :: rest }
+  | p = fn_param { [p] }
+  | p = fn_param; SEMICOLON; rest = fn_params { p :: rest }
 
 program:
   | e = sequence_expr; EOF;
@@ -137,16 +142,19 @@ sequence_expr:
   | left = sequence_expr; ALTERNATIVE; right = item_expr;
     { Alternative (left, right) }
 
+  | TRY; e = sequence_expr; CATCH; handler = item_expr; FINALLY; cleanup = item_expr
+    { Try (e, Some handler, Some cleanup) }
+
   | TRY; e = sequence_expr; CATCH; handler = item_expr
-    { Try (e, Some handler) }
+    { Try (e, Some handler, None) }
 
   (* Nested function definitions within expressions *)
-  | DEF; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
-    { Pipe (Def (name, [], body), rest) }
-  | DEF; name = IDENTIFIER; OPEN_PARENT; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
-    { Pipe (Def (name, params, body), rest) }
-  | DEF; name = FUNCTION; params = def_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec DEF_PREC
-    { Pipe (Def (name, params, body), rest) }
+  | FN; name = IDENTIFIER; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec FN_PREC
+    { Pipe (Fn (name, [], body), rest) }
+  | FN; name = IDENTIFIER; OPEN_PARENT; params = fn_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec FN_PREC
+    { Pipe (Fn (name, params, body), rest) }
+  | FN; name = FUNCTION; params = fn_params; CLOSE_PARENT; COLON; body = sequence_expr; SEMICOLON; rest = sequence_expr %prec FN_PREC
+    { Pipe (Fn (name, params, body), rest) }
 
   | e = item_expr
     { e }
@@ -173,11 +181,43 @@ item_expr:
   | e = term
     { e }
 
-number:
-  | n = NUMBER;
+(* number_literal returns an Ast.literal for use in expressions *)
+number_literal:
+  | n = INT;
+    { Int n }
+  | SUB; n = INT;
+    { Int (-n) }
+  | n = INT64;
+    { Int64 n }
+  | SUB; n = INT64;
+    { Int64 (Int64.neg n) }
+  | n = BIG_INT;
+    { Big_int n }
+  | SUB; n = BIG_INT;
+    { Big_int (Z.neg n) }
+  | n = FLOAT;
+    { Float n }
+  | SUB; n = FLOAT;
+    { Float (-.n) }
+
+(* index_number returns an int for array indexing *)
+index_number:
+  | n = INT;
     { n }
-  | SUB; n = NUMBER;
-    { -.n }
+  | SUB; n = INT;
+    { -n }
+  | n = INT64;
+    { Int64.to_int n }
+  | SUB; n = INT64;
+    { Int64.to_int (Int64.neg n) }
+  | n = BIG_INT;
+    { Z.to_int n }
+  | SUB; n = BIG_INT;
+    { Z.to_int (Z.neg n) }
+  | n = FLOAT;
+    { int_of_float n }
+  | SUB; n = FLOAT;
+    { int_of_float (-.n) }
 
 interp_after_expr:
   | INTERP_END
@@ -185,9 +225,9 @@ interp_after_expr:
   | s = INTERP_TEXT; INTERP_END
     { [Literal (String s)] }
   | s = INTERP_TEXT; INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 interp_body:
   | INTERP_END
@@ -195,9 +235,9 @@ interp_body:
   | s = INTERP_TEXT; INTERP_END
     { [Literal (String s)] }
   | s = INTERP_TEXT; INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Literal (String s) :: Pipe (e, To_string) :: rest }
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
   | INTERP_EXPR_START; e = sequence_expr; rest = interp_after_expr
-    { Pipe (e, To_string) :: rest }
+    { Pipe (e, Fn0 To_string) :: rest }
 
 interpolated_string:
   | INTERP_START; parts = interp_body
@@ -209,17 +249,47 @@ interpolated_string:
           List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
     }
 
+template_after_expr:
+  | TEMPLATE_END
+    { [] }
+  | s = TEMPLATE_TEXT; TEMPLATE_END
+    { [Literal (String s)] }
+  | s = TEMPLATE_TEXT; TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
+  | TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
+    { Pipe (e, Fn0 To_string) :: rest }
+
+template_body:
+  | TEMPLATE_END
+    { [] }
+  | s = TEMPLATE_TEXT; TEMPLATE_END
+    { [Literal (String s)] }
+  | s = TEMPLATE_TEXT; TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
+    { Literal (String s) :: Pipe (e, Fn0 To_string) :: rest }
+  | TEMPLATE_EXPR_START; e = sequence_expr; rest = template_after_expr
+    { Pipe (e, Fn0 To_string) :: rest }
+
+template_literal:
+  | TEMPLATE_START; parts = template_body
+    {
+      match parts with
+      | [] -> Literal (String "")
+      | [single] -> single
+      | first :: rest ->
+          List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
+    }
+
 term:
   | DOT;
     { Identity }
-  | RECURSE;
-    { Recurse }
   | s = STRING;
     { Literal (String s) }
   | interp = interpolated_string
     { interp }
-  | n = number;
-    { Literal (Number n) }
+  | template = template_literal
+    { template }
+  | n = number_literal;
+    { Literal n }
   | b = BOOL;
     { Literal (Bool b) }
   | NULL
@@ -232,159 +302,52 @@ term:
     { Range (from, Some upto, None) }
   | RANGE; OPEN_PARENT; from = sequence_expr; SEMICOLON; upto = sequence_expr; SEMICOLON; step = sequence_expr; CLOSE_PARENT;
     { Range (from, Some upto, Some step) }
-  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT;
-    { match f with
-      | "fma" -> Fma (arg1, arg2, arg3)
-      | _ -> Apply (f, [arg1; arg2; arg3])
+  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match f with
+        | "fma" -> Fma (arg1, arg2, arg3)
+        | _ -> Apply (f, [arg1; arg2; arg3])
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
     }
   | FLATTEN;
-    { Flatten None }
+    { Fn0 Flatten }
   | FLATTEN; OPEN_PARENT; CLOSE_PARENT;
-    { Flatten None }
+    { Fn0 Flatten }
   | FLATTEN; OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
-    { Flatten (Some e) }
-  | f = FUNCTION; cond = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
-    { match f with
-      | "while" -> While (cond, update)
-      | "until" -> Until (cond, update)
-      | "recurse" -> Recurse_with (cond, update)
-      | "try" -> Try (cond, Some update)
-      | "limit" -> (
-          match cond with
-          | Literal (Number n) -> Limit (int_of_float n, update)
-          | _ -> failwith "limit first argument must be a number literal")
-      | "skip" -> (
-          match cond with
-          | Literal (Number n) -> Skip (int_of_float n, update)
-          | _ -> failwith "skip first argument must be a number literal")
-      | "sub" -> (
-          match cond with
-          | Literal (String pattern) -> (
-              match update with
-              | Literal (String replacement) -> Sub (pattern, replacement)
-              | _ -> failwith "sub() second argument must be string literal")
-          | _ -> failwith "sub() first argument must be string literal")
-      | "gsub" -> (
-          match cond with
-          | Literal (String pattern) -> (
-              match update with
-              | Literal (String replacement) -> Gsub (pattern, replacement)
-              | _ -> failwith "gsub() second argument must be string literal")
-          | _ -> failwith "gsub() first argument must be string literal")
-      | "any" -> Any_with_generator (cond, update)
-      | "all" -> All_with_generator (cond, update)
-      | "setpath" -> Setpath (cond, update)
-      | "nth" -> Nth (cond, update)
-      | "atan2" -> Atan2 (cond, update)
-      | "atan" -> Atan2 (cond, update)
-      | "copysign" -> Copysign (cond, update)
-      | "ldexp" -> Ldexp (cond, update)
-      | "fdim" -> Fdim (cond, update)
-      | "remainder" -> Remainder (cond, update)
-      | "drem" -> Remainder (cond, update)
-      | "scalbn" -> Scalbn (cond, update)
-      | "scalbln" -> Scalbn (cond, update)
-      | "pow" -> Pow2 (cond, update)
-      | "strftime" -> failwith "strftime not implemented"
-      | "strptime" -> failwith "strptime not implemented"
-      | "splits" -> failwith "splits not implemented (use split)"
-      | "sql" -> failwith "sql not implemented"
-      | "dateadd" | "datesub" -> failwith "date arithmetic not implemented"
-      | "modulemeta" -> failwith "modulemeta not implemented"
-      | _ -> Apply (f, [cond; update])
+    { Fn1 (With_expr (Flatten_n, e)) }
+  | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_binary_fn f arg1 arg2 with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
     }
-  | f = FUNCTION; CLOSE_PARENT;
-    { failwith (f ^ "(), should contain a body") }
-  | f = FUNCTION; seq = sequence_expr; CLOSE_PARENT;
-    { match f with
-      | "filter" -> Map (Select seq)
-      | "map" -> Map seq
-      | "map_values" -> Map_values seq
-      | "flat_map" -> Flat_map seq
-      | "select" -> Select seq
-      | "sort_by" -> Sort_by seq
-      | "min_by" -> Min_by seq
-      | "max_by" -> Max_by seq
-      | "group_by" -> Group_by seq
-      | "unique_by" -> Unique_by seq
-      | "find" -> Find seq
-      | "some" -> Some_ seq
-      | "path" -> Path seq
-      | "any" -> Any_with_condition seq
-      | "all" -> All_with_condition seq
-      | "walk" -> Walk seq
-      | "has" -> Has seq
-      | "in" -> In seq
-      | "with_entries" -> With_entries seq
-      | "startwith" -> Startwith seq
-      | "startswith" -> Startwith seq
-      | "starts_with" -> Starts_with seq
-      | "endwith" -> Endwith seq
-      | "endswith" -> Endwith seq
-      | "ends_with" -> Ends_with seq
-      | "index" -> Index_of seq
-      | "rindex" -> Rindex_of seq
-      | "indices" -> Indices seq
-      | "inside" -> Inside seq
-      | "ltrimstr" -> Ltrimstr seq
-      | "rtrimstr" -> Rtrimstr seq
-      | "split" -> Split seq
-      | "join" -> Join seq
-      | "contains" -> Contains seq
-      | "bsearch" -> Bsearch seq
-      | "first" -> First (Some seq)
-      | "last" -> Last (Some seq)
-      | "recurse" -> Recurse_expr seq
-      | "delpaths" -> Delpaths seq
-      | "combinations" -> Combinations_n seq
-      | "repeat" -> Repeat seq
-      | "add" -> Add_expr seq
-      | "test" -> (
-          match seq with
-          | Literal (String pattern) -> Test pattern
-          | _ -> failwith "test() requires a string literal pattern")
-      | "match" -> (
-          match seq with
-          | Literal (String pattern) -> Match pattern
-          | _ -> failwith "match() requires a string literal pattern")
-      | "scan" -> (
-          match seq with
-          | Literal (String pattern) -> Scan pattern
-          | _ -> failwith "scan() requires a string literal pattern")
-      | "capture" -> (
-          match seq with
-          | Literal (String pattern) -> Capture pattern
-          | _ -> failwith "capture() requires a string literal pattern")
-      | "isempty" -> Isempty seq
-      | "del" -> Del seq
-      | "pick" -> Pick seq
-      | "getpath" -> Getpath seq
-      | "paths" -> Paths_filter seq
-      | "try" -> Try (seq, None)
-      | "error" -> Error_msg (Some seq)
-      | "halt_error" -> (
-          match seq with
-          | Literal (Number n) -> Halt_error (Some (int_of_float n))
-          | _ -> failwith "halt_error requires number literal")
-      | "debug" -> failwith "debug not implemented"
-      | "format" -> failwith "format not implemented (use @base64, @uri, etc. if available)"
-      | "strftime" -> failwith "strftime not implemented"
-      | "strptime" -> failwith "strptime not implemented"
-      | "todateiso8601" | "fromdateiso8601" -> failwith "ISO date functions not implemented"
-      | "localtime" | "gmtime" -> failwith "time zone functions not implemented"
-      | "mktime" -> failwith "mktime not implemented"
-      | "tojsonstream" | "fromjsonstream" | "truncate_stream" -> failwith "JSON stream functions not implemented"
-      | "splits" -> failwith "splits not implemented (use split)"
-      | "isvalid" -> Try (Pipe (seq, Literal (Bool true)), Some (Literal (Bool false)))
-      | "tojson" | "fromjson" -> failwith "tojson/fromjson not implemented (use tostring/input is already JSON)"
-      | "ascii" -> failwith "ascii not implemented"
-      | "modulemeta" -> failwith "modulemeta not implemented"
-      | "input" | "inputs" -> failwith "input/inputs not implemented (query-json reads all input upfront)"
-      | "env" -> failwith "env() with arg not implemented (use $ENV.name or env object)"
-      | "builtins" -> failwith "builtins not implemented"
-      | "limit" -> failwith "limit first argument must be a number literal"
-      | "until" | "while" -> failwith (f ^ " requires two arguments: condition and update")
-      | _ -> Apply (f, [seq])
+  | f = FUNCTION; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { (* Check if this 1-arity function can default to identity *)
+      let ast =
+        if Language.can_default_to_identity f then
+          match Language.map_unary_fn f Identity with
+          | Ok ast -> ast
+          | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+        else
+          Parse_errors.raise_rich_error (Language.error_for_missing_arg f) $startpos(f) $endpos(f)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
+    }
+  | f = FUNCTION; arg = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_unary_fn f arg with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
     }
   | REDUCE; expr = sequence_expr; AS; var = VARIABLE; OPEN_PARENT; init = sequence_expr; SEMICOLON; update = sequence_expr; CLOSE_PARENT;
     { Reduce (expr, var, init, update) }
@@ -394,128 +357,38 @@ term:
     { Foreach (expr, var, init, update, Identity) }
   | OPEN_PARENT; expr = sequence_expr; AS; var = VARIABLE; PIPE; body = sequence_expr; CLOSE_PARENT
     { As (expr, var, body) }
-  | f = IDENTIFIER;
-    { match f with
-      | "empty" -> Empty
-      | "keys" -> Keys
-      | "head" -> Head
-      | "tail" -> Tail
-      | "length" -> Length
-      | "utf8bytelength" -> Utf8bytelength
-      | "tostring" -> Tostring
-      | "to_string" -> To_string
-      | "tonumber" -> Tonumber
-      | "to_number" -> To_number
-      | "type" -> Type
-      | "sort" -> Sort
-      | "uniq"
-      | "unique" -> Unique
-      | "reverse" -> Reverse
-      | "floor" -> Floor
-      | "sqrt" -> Sqrt
-      | "min" -> Min
-      | "max" -> Max
-      | "explode" -> Explode
-      | "implode" -> Implode
-      | "any" -> Any
-      | "all" -> All
-      | "recurse" -> Recurse
-      | "recurse_down" -> Recurse_down
-      | "to_entries" -> To_entries
-      | "from_entries" -> From_entries
-      | "env" -> Env
-      | "combinations" -> Combinations
-      | "transpose" -> Transpose Identity
-      | "nan" -> Nan
-      | "isnan"
-      | "is_nan" -> Is_nan
-      | "not" -> Not
-      | "ascii_upcase" -> Ascii_upcase
-      | "ascii_downcase" -> Ascii_downcase
-      | "trim" -> Trim
-      | "ltrim" -> Ltrim
-      | "rtrim" -> Rtrim
-      | "first" -> First None
-      | "last" -> Last None
-      | "abs" -> Fun (Absolute)
-      | "add" -> Fun (Add)
-      | "break" -> Break
-      | "paths" -> Paths
-      | "error" -> Error_msg None
-      | "halt" -> Halt
-      | "halt_error" -> Halt_error None
-      | "sin" -> Fun Sin
-      | "cos" -> Fun Cos
-      | "tan" -> Fun Tan
-      | "asin" -> Fun Asin
-      | "acos" -> Fun Acos
-      | "atan" -> Fun Atan
-      | "log" -> Fun Log
-      | "log10" -> Fun Log10
-      | "exp" -> Fun Exp
-      | "pow" -> Fun Pow
-      | "ceil" -> Fun Ceil
-      | "round" -> Fun Round
-      | "infinite" -> Fun Infinite
-      | "now" -> Fun Now
-      | "sinh" -> Fun Sinh
-      | "cosh" -> Fun Cosh
-      | "tanh" -> Fun Tanh
-      | "asinh" -> Fun Asinh
-      | "acosh" -> Fun Acosh
-      | "atanh" -> Fun Atanh
-      | "isinfinite" -> Fun Isinfinite
-      | "isnormal" -> Fun Isnormal
-      | "trunc" -> Fun Trunc
-      | "fabs" -> Fun Fabs
-      | "cbrt" -> Fun Cbrt
-      | "expm1" -> Fun Expm1
-      | "exp2" -> Fun Exp2
-      | "log1p" -> Fun Log1p
-      | "log2" -> Fun Log2
-      | "nearbyint" -> Fun Nearbyint
-      | "rint" -> Fun Nearbyint
-      | "logb" -> Fun Logb
-      (* Type selectors - equivalent to select(type == "...") *)
-      | "numbers" -> Select (Operation (Type, Equal, Literal (String "number")))
-      | "strings" -> Select (Operation (Type, Equal, Literal (String "string")))
-      | "objects" -> Select (Operation (Type, Equal, Literal (String "object")))
-      | "arrays" -> Select (Operation (Type, Equal, Literal (String "array")))
-      | "booleans" -> Select (Operation (Type, Equal, Literal (String "boolean")))
-      | "nulls" -> Select (Operation (Type, Equal, Literal (String "null")))
-      | "iterables" -> Select (Operation (
-          Operation (Type, Equal, Literal (String "array")),
-          Or,
-          Operation (Type, Equal, Literal (String "object"))))
-      | "values" -> Select (Operation (Identity, Not_equal, Literal Null))
-      | "scalars" -> Select (Operation (
-          Operation (Type, Not_equal, Literal (String "array")),
-          And,
-          Operation (Type, Not_equal, Literal (String "object"))))
-      | "input" | "inputs" -> failwith "input/inputs not implemented (query-json reads all input upfront)"
-      | "debug" -> Debug
-      | "stderr" -> Stderr
-      | "localtime" -> Localtime
-      | "gmtime" -> Gmtime
-      | "mktime" -> Mktime
-      | "strftime" | "strptime" -> failwith "time formatting not implemented"
-      | "isvalid" -> Try (Pipe (Identity, Literal (Bool true)), Some (Literal (Bool false)))
-      | "leaf_paths" -> Leaf_paths
-      | "builtins" -> Builtins
-      | "modulemeta" -> failwith "modulemeta not implemented"
-      | "keys_unsorted" -> Keys_unsorted
-      | "formats" -> Formats
-      | "tojsonstream" | "fromjsonstream" | "truncate_stream" -> failwith "JSON stream functions not implemented"
-      | "tojson" | "fromjson" -> failwith "tojson/fromjson not implemented (use tostring/input is already JSON)"
-      | "input_filename" | "input_line_number" -> failwith "input metadata not implemented"
-      | "fma" -> failwith "fma requires three arguments: fma(x; y; z)"
-      | "atan2" | "copysign" | "ldexp" | "fdim" | "remainder" | "drem" | "scalbn" | "scalbln" -> failwith (f ^ " requires two arguments")
-      | "frexp" | "modf" -> failwith (f ^ " not implemented (returns multiple values)")
-      | "significand" | "lgamma" | "tgamma" | "j0" | "j1" | "y0" | "y1" -> failwith "special math functions not implemented"
-      | "exp10" -> failwith "exp10 not implemented"
-      | "getpath" -> failwith "getpath requires an argument"
-      | "setpath" | "delpaths" -> failwith (f ^ " requires arguments")
-      | _ -> Apply (f, [])
+  | f = IDENTIFIER; opt = boption(QUESTION_MARK)
+    { let ast = match Language.map_nullary_fn f with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+      in
+      match opt with
+      | true -> Optional ast
+      | false -> ast
+    }
+  (* Optional function call: first?(expr) is equivalent to first(expr)? *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg = sequence_expr; CLOSE_PARENT
+    { let ast = match Language.map_unary_fn f arg with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+      in
+      Optional ast
+    }
+  (* Optional function call with two args: nth?(n; expr) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT
+    { let ast = match Language.map_binary_fn f arg1 arg2 with
+        | Ok ast -> ast
+        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+      in
+      Optional ast
+    }
+  (* Optional function call with three args: fn?(a; b; c) *)
+  | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; SEMICOLON; arg3 = sequence_expr; CLOSE_PARENT
+    { let ast = match f with
+        | "fma" -> Fma (arg1, arg2, arg3)
+        | _ -> Apply (f, [arg1; arg2; arg3])
+      in
+      Optional ast
     }
   | OPEN_BRACKET; e = option(sequence_expr); CLOSE_BRACKET;
     { List e }
@@ -526,13 +399,18 @@ term:
   | e = delimited(OPEN_BRACE, separated_nonempty_list(COMMA, key_value (term)), CLOSE_BRACE);
     { Object e }
 
-  // Parentheses allow a full sequence_expr inside, reducing to an item_expr
-  | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT;
-    { e }
+  | OPEN_PARENT; e = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
+    { match opt with
+      | true -> Optional e
+      | false -> e
+    }
 
-  /* Index: .[0] or .[0,1,2] */
-  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, number); CLOSE_BRACKET
-    { Pipe (e, Index (List.map int_of_float indices)) }
+  /* Index: .[0] or .[0,1,2], optionally with ? for optional access */
+  | e = term; OPEN_BRACKET; indices = separated_nonempty_list(COMMA, index_number); CLOSE_BRACKET; opt = boption(QUESTION_MARK)
+    { let idx_expr = Index indices in
+      match opt with
+      | true -> Pipe (e, Optional idx_expr)
+      | false -> Pipe (e, idx_expr) }
 
   /* String key access: .["foo"] */
   | e = term; OPEN_BRACKET; key = STRING; CLOSE_BRACKET
@@ -555,16 +433,16 @@ term:
     { Pipe (e, Optional (Index [])) }
 
   /* Full slice with both indices: .[1:5] */
-  | e = term; OPEN_BRACKET; start = number; COLON; end_ = number; CLOSE_BRACKET
-    { Pipe (e, Slice (Some (int_of_float start), Some (int_of_float end_))) }
+  | e = term; OPEN_BRACKET; start = index_number; COLON; end_ = index_number; CLOSE_BRACKET
+    { Pipe (e, Slice (Some start, Some end_)) }
 
   /* Start-only slice: .[3:] */
-  | e = term; OPEN_BRACKET; start = number; COLON; CLOSE_BRACKET
-    { Pipe (e, Slice (Some (int_of_float start), None)) }
+  | e = term; OPEN_BRACKET; start = index_number; COLON; CLOSE_BRACKET
+    { Pipe (e, Slice (Some start, None)) }
 
   /* End-only slice: .[:3] */
-  | e = term; OPEN_BRACKET; COLON; end_ = number; CLOSE_BRACKET
-    { Pipe (e, Slice (None, Some (int_of_float end_))) }
+  | e = term; OPEN_BRACKET; COLON; end_ = index_number; CLOSE_BRACKET
+    { Pipe (e, Slice (None, Some end_)) }
 
   | DOT; k = STRING; opt = boption(QUESTION_MARK)
   | DOT; k = IDENTIFIER; opt = boption(QUESTION_MARK)

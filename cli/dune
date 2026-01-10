@@ -1,0 +1,12 @@
+(executable
+ (name cli)
+ (modes native)
+ (public_name query-json)
+ (package query-json)
+ (libraries
+  query-json.core
+  query-json.console-style
+  mosaic.mlx
+  cmdliner
+  unix
+  dune-build-info))

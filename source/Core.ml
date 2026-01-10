@@ -10,10 +10,10 @@ exception Lexer_error of string
 
 let provider ~debug buf =
   let start, stop = Sedlexing.lexing_positions buf in
+  last_position := { loc_start = start; loc_end = stop };
   let token =
     match Lexer.tokenize buf with Ok t -> t | Error e -> raise (Lexer_error e)
   in
-  last_position := { loc_start = start; loc_end = stop };
   if debug then print_endline (Lexer.show_token token);
   (token, start, stop)
 
@@ -26,19 +26,12 @@ let position_to_string start end_ =
 
 let pretty_print_error ~colorize ~input ~(start : Lexing.position)
     ~(end_ : Lexing.position) =
-  let open Formatting in
-  let open Ansi.To_string (struct
-    let colorize = colorize
-  end) in
-  let pointer_range = String.make (end_.pos_cnum - start.pos_cnum) '^' in
-  red (bold "Parse error: ")
-  ^ "Problem parsing at position "
-  ^ position_to_string start end_
-  ^ enter 2 ^ "Input:" ^ indent 1
-  ^ green (bold input)
-  ^ enter 1 ^ indent 4
-  ^ String.make start.pos_cnum ' '
-  ^ gray pointer_range
+  let err =
+    Query_error.parse_error
+      ~message:("problem parsing at " ^ position_to_string start end_)
+      ~input ~start_pos:start.pos_cnum ~end_pos:end_.pos_cnum
+  in
+  Query_error.format ~colorize err
 
 let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in
@@ -52,13 +45,30 @@ let parse ~debug ~colorize input =
         print_endline "Lexer error";
         print_endline msg);
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
+      let err =
+        Query_error.lexer_error ~message:msg ~input
+          ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
+      in
+      Error (Query_error.format ~colorize err)
   | exception Failure msg ->
-      (* all failwith from Parser.mly most likely are semantic errors (e.g., "not implemented") *)
-      let open Ansi.To_string (struct
-        let colorize = colorize
-      end) in
-      Error (red (bold "Error: ") ^ msg)
+      let err =
+        Query_error.semantic_error ~message:msg ~input
+          ~start_pos:!last_position.loc_start.pos_cnum
+          ~end_pos:!last_position.loc_end.pos_cnum
+      in
+      Error (Query_error.format ~colorize err)
+  | exception Parse_errors.Parse_error (msg, start, end_) ->
+      let err =
+        Query_error.parse_error ~message:msg ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
+      in
+      Error (Query_error.format ~colorize err)
+  | exception Parse_errors.Rich_parse_error (err, start, end_) ->
+      let err =
+        Query_error.with_location ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum err
+      in
+      Error (Query_error.format ~colorize err)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)

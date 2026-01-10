@@ -4,7 +4,7 @@ let json_value : Json.t =
       ("null", `Null);
       ("bool", `Bool true);
       ("int", `Int 0);
-      ("intlit", `Intlit "10000000000000000000");
+      ("big_int", `Big_int (Z.of_string "10000000000000000000"));
       ("float", `Float 0.);
       ("string", `String "string");
       ("list", `List [ `Int 0; `Int 1; `Int 2 ]);
@@ -19,7 +19,7 @@ let snippets =
     {|"null":null,|};
     {|"bool":true,|};
     {|"int":0,|};
-    {|"intlit":10000000000000000000,|};
+    {|"big_int":10000000000000000000,|};
     {|"float":0.0,|};
     {|"string":"string",|};
     {|"list":[0,1,2],|};
@@ -47,7 +47,10 @@ let negative_int_value : Json.t = `Int (-123)
 let max_int_json = "9007199254740991"
 let max_int_value : Json.t = `Int 9007199254740991
 let big_int_json = "99999999999999999999999999999"
-let big_int_value : Json.t = `Intlit "99999999999999999999999999999"
+
+let big_int_value : Json.t =
+  `Big_int (Z.of_string "99999999999999999999999999999")
+
 let float_json = "3.14159"
 let float_value : Json.t = `Float 3.14159
 let negative_float_json = "-2.718"
