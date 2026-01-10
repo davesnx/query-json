@@ -10,7 +10,9 @@ type context =
   | Found of string
   | Available_keys of string list
   | Example of string
-  | Note of string
+  | Usage of string
+  | Description of string
+  | Applicable_to of string
 
 type t = {
   kind : string;
@@ -52,7 +54,9 @@ let format_context ~colorize ctx =
       Printf.sprintf "  %s %s" (t.gray "available keys:")
         (String.concat ", " keys)
   | Example s -> Printf.sprintf "  %s %s" (t.gray "example:") s
-  | Note s -> Printf.sprintf "  %s %s" (t.gray "note:") s
+  | Usage s -> Printf.sprintf "  %s %s" (t.gray "usage:") s
+  | Description s -> Printf.sprintf "  %s" s
+  | Applicable_to s -> Printf.sprintf "  %s %s" (t.gray "applicable to:") s
 
 let format ~colorize err =
   let t = Console_style.make ~colorize in
@@ -120,9 +124,7 @@ let not_implemented feature =
     ()
 
 let missing_argument ~fn_name ~usage ~description ?example () =
-  let contexts =
-    [ Note (Printf.sprintf "usage: `%s`" usage); Note description ]
-  in
+  let contexts = [ Usage usage; Description description ] in
   let contexts =
     match example with Some ex -> contexts @ [ Example ex ] | None -> contexts
   in

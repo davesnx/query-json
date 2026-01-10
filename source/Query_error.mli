@@ -6,7 +6,9 @@ type context =
   | Found of string
   | Available_keys of string list
   | Example of string
-  | Note of string
+  | Usage of string
+  | Description of string
+  | Applicable_to of string
 
 type t = {
   kind : string;
