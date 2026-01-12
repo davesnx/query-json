@@ -58,9 +58,9 @@ let tests =
     test ".[0]" "{\"a\": 1}" "object";
     test ". + null" "\"foo\"" "Cannot add string to null";
     (* get_path/set_path/delete_paths without arguments *)
-    test "get_path" "null" "requires an argument";
-    test "set_path" "null" "requires arguments";
-    test "delete_paths" "null" "requires arguments";
+    test "get_path" "null" "requires path";
+    test "set_path" "null" "requires path and value";
+    test "delete_paths" "null" "requires paths";
     (* Unimplemented jq functions that should provide helpful errors *)
     test "format(\"csv\")" "null" "not implemented";
     (* Type errors for snake_case functions *)
