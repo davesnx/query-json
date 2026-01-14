@@ -132,12 +132,23 @@ let parse_query_state (query : string) : query_state =
   else
     let last_dot = String.rindex_opt trimmed '.' in
     let last_pipe = String.rindex_opt trimmed '|' in
+    let last_bracket = String.rindex_opt trimmed ']' in
     let last_delim =
-      match (last_dot, last_pipe) with
-      | Some d, Some p -> Some (max d p, if p > d then `Pipe else `Dot)
-      | Some d, None -> Some (d, `Dot)
-      | None, Some p -> Some (p, `Pipe)
-      | None, None -> None
+      match (last_dot, last_pipe, last_bracket) with
+      | Some d, Some p, Some b ->
+          let max_idx = max d (max p b) in
+          if max_idx = b then Some (b, `Bracket)
+          else if max_idx = p then Some (p, `Pipe)
+          else Some (d, `Dot)
+      | Some d, Some p, None -> if p > d then Some (p, `Pipe) else Some (d, `Dot)
+      | Some d, None, Some b ->
+          if b > d then Some (b, `Bracket) else Some (d, `Dot)
+      | None, Some p, Some b ->
+          if b > p then Some (b, `Bracket) else Some (p, `Pipe)
+      | Some d, None, None -> Some (d, `Dot)
+      | None, Some p, None -> Some (p, `Pipe)
+      | None, None, Some b -> Some (b, `Bracket)
+      | None, None, None -> None
     in
     match last_delim with
     | None ->
@@ -158,6 +169,12 @@ let parse_query_state (query : string) : query_state =
           base_expression = (if String.length base = 0 then "." else base);
           current_partial = partial;
           partial_type = Typing_function;
+        }
+    | Some (idx, `Bracket) ->
+        {
+          base_expression = String.sub trimmed 0 (idx + 1);
+          current_partial = "";
+          partial_type = Typing_key;
         }
     | Some (idx, `Dot) ->
         let base = String.sub trimmed 0 (idx + 1) in
@@ -244,6 +261,10 @@ let update_completions model =
   let completions = filter_completions candidates state.current_partial in
   { model with completions; completion_index = 0; completion_scroll_offset = 0 }
 
+let ends_with_bracket s =
+  let len = String.length s in
+  len > 0 && s.[len - 1] = ']'
+
 let apply_completion (model : model) : model =
   if List.length model.completions <= 0 then model
   else
@@ -251,7 +272,10 @@ let apply_completion (model : model) : model =
     let state = parse_query_state model.query in
     let new_query =
       match (state.partial_type, completion) with
-      | Typing_key, Key { key; _ } -> state.base_expression ^ key
+      | Typing_key, Key { key; _ } ->
+          if ends_with_bracket state.base_expression then
+            state.base_expression ^ "." ^ key
+          else state.base_expression ^ key
       | Typing_key, Index { index; _ } ->
           let base =
             let len = String.length state.base_expression in
@@ -259,7 +283,7 @@ let apply_completion (model : model) : model =
               String.sub state.base_expression 0 (len - 1)
             else state.base_expression
           in
-          base ^ ".[" ^ Int.to_string index ^ "]"
+          base ^ "[" ^ Int.to_string index ^ "]"
       | Typing_key, Function f ->
           let insert = Option.value f.insert_text ~default:f.name in
           let base =
