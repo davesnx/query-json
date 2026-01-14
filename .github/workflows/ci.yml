@@ -51,6 +51,8 @@ jobs:
             ~/.opam
             _opam
             .opam-path
+            C:\cygwin
+            C:\.opam
           key: opam-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
@@ -72,7 +74,8 @@ jobs:
             await Fs.writeFile('.opam-path', opam_path, 'utf-8');
             console.log('stored path to .opam-path');
 
-      - name: Use cached OPAM environment
+      - name: Use cached OPAM environment (non-Windows)
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           echo "OPAMVERBOSE=$RUNNER_DEBUG"   >> "$GITHUB_ENV"
@@ -86,6 +89,22 @@ jobs:
           OPAM_PATH="$(cat .opam-path)"
           chmod +x "$OPAM_PATH"
           dirname "$OPAM_PATH" >> "$GITHUB_PATH"
+
+      - name: Use cached OPAM environment (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMVERBOSE=$env:RUNNER_DEBUG"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMCOLOR=always"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMCONFIRMLEVEL=unsafe-yes"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMERRLOGLEN=0"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMPRECISETRACKING=1"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMYES=1"
+          Add-Content -Path $env:GITHUB_ENV -Value "OPAMROOT=C:\\.opam"
+
+          $opamPath = Get-Content .opam-path
+          $opamDir = Split-Path $opamPath
+          Add-Content -Path $env:GITHUB_PATH -Value $opamDir
 
       - name: Pin some deps
         if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
@@ -170,6 +189,8 @@ jobs:
             ~/.opam
             _opam
             .opam-path
+            C:\cygwin
+            C:\.opam
           key: opam-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
 
   publish:
