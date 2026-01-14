@@ -54,6 +54,7 @@ let repl_usage ?(colorize = true) () =
     Console_style.indent 3 ^ "query-json --repl package.json";
     Console_style.indent 3 ^ "query-json --repl '[1, 2, 3]'";
     Console_style.indent 3 ^ "query-json --repl '{\"name\": \"test\"}'";
+    Console_style.indent 3 ^ "cat data.json | query-json --repl";
     Console_style.enter 1;
   ]
   |> String.concat (Console_style.enter 1)
@@ -61,42 +62,85 @@ let repl_usage ?(colorize = true) () =
 
 let ( let* ) = Result.bind
 
-let repl_mode payload =
-  match payload with
-  | None ->
-      repl_usage ();
-      Stdlib.exit 1
-  | Some payload_str -> (
-      let json_result, path =
-        if Sys.file_exists payload_str then
-          (Json.parse_file payload_str, payload_str)
-        else (Json.parse_string payload_str, "inline")
-      in
-      match json_result with
-      | Ok json -> Repl.make ~json ~path
-      | Error err ->
-          print_error_message ~colorize:true err;
-          Stdlib.exit 1)
+(* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
 
-let execution query payload verbose debug no_color raw_output null_input repl =
+   This function reconnects stdin to /dev/tty (the controlling terminal),
+   allowing the REPL to receive keyboard input after reading piped JSON.
+   This is the standard Unix pattern used by programs like fzf, less, and vim. *)
+let reconnect_stdin_to_tty () =
+  try
+    let tty_fd = Unix.openfile "/dev/tty" [ Unix.O_RDONLY ] 0 in
+    Unix.dup2 tty_fd Unix.stdin;
+    Unix.close tty_fd;
+    true
+  with Unix.Unix_error _ -> false
+
+let execution position_0 position_1 verbose debug no_color raw_output null_input
+    repl =
   let colorize = not no_color in
   if repl then
-    (* In repl mode, use query as JSON payload if payload is None *)
-    let json_payload = match payload with Some p -> Some p | None -> query in
-    match json_payload with
-    | None ->
-        repl_usage ~colorize ();
-        Stdlib.exit 1
-    | Some _ -> repl_mode json_payload
+    match (position_1, position_0) with
+    | Some file_or_json, query -> (
+        let initial_query = Option.value ~default:"." query in
+        let json =
+          if Sys.file_exists file_or_json then Json.parse_file file_or_json
+          else Json.parse_string file_or_json
+        in
+        let path =
+          if Sys.file_exists file_or_json then file_or_json else "<inline>"
+        in
+        match json with
+        | Ok json -> Repl.make ~json ~path ~query:initial_query
+        | Error err ->
+            print_error_message ~colorize err;
+            Stdlib.exit 1)
+    | None, Some file_or_json when Sys.file_exists file_or_json -> (
+        match Json.parse_file file_or_json with
+        | Ok json -> Repl.make ~json ~path:file_or_json ~query:"."
+        | Error err ->
+            print_error_message ~colorize err;
+            Stdlib.exit 1)
+    | None, Some query -> (
+        if Unix.isatty Unix.stdin then (
+          repl_usage ~colorize ();
+          Stdlib.exit 1)
+        else
+          let json_result =
+            Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
+          in
+          if not (reconnect_stdin_to_tty ()) then (
+            print_error_message ~colorize
+              "REPL requires an interactive terminal. No TTY available.";
+            Stdlib.exit 1);
+          match json_result with
+          | Ok json -> Repl.make ~json ~path:"<stdin>" ~query
+          | Error err ->
+              print_error_message ~colorize err;
+              Stdlib.exit 1)
+    | None, None -> (
+        if Unix.isatty Unix.stdin then (
+          repl_usage ~colorize ();
+          Stdlib.exit 1)
+        else
+          let json = Json.parse_channel (Unix.in_channel_of_descr Unix.stdin) in
+          if not (reconnect_stdin_to_tty ()) then (
+            print_error_message ~colorize
+              "REPL requires an interactive terminal. No TTY available.";
+            Stdlib.exit 1);
+          match json with
+          | Ok json -> Repl.make ~json ~path:"<stdin>" ~query:"."
+          | Error err ->
+              print_error_message ~colorize err;
+              Stdlib.exit 1)
   else
-    match query with
+    match position_0 with
     | None -> usage ()
     | Some query -> (
         let output =
           let* json =
             if null_input then Ok `Null
             else
-              match payload with
+              match position_1 with
               | Some f when Sys.file_exists f -> Json.parse_file f
               | Some s -> Json.parse_string s
               | None -> Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
@@ -150,6 +194,7 @@ let () =
           `P "query-json -n '{a: 1, b: 2}'";
           `P "query-json --repl package.json";
           `P "query-json --repl '[1, 2, 3]'";
+          `P "cat data.json | query-json --repl";
         ]
   in
   Stdlib.exit (Cmdliner.Cmd.eval (Cmdliner.Cmd.v info term))

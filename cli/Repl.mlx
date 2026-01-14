@@ -199,31 +199,6 @@ let update_completions model =
   let completions = filter_completions candidates state.current_partial in
   { model with completions; completion_index = 0; completion_scroll_offset = 0 }
 
-let init ~(json : Json.t) ~(path : string) () =
-  let initial_query = "." in
-  let result = evaluate_query initial_query json in
-  let initial_type =
-    match get_input_type "." json with Some t -> t | None -> "any"
-  in
-  let model =
-    {
-      query = initial_query;
-      input_key = 0;
-      json;
-      path;
-      result;
-      last_valid_type = initial_type;
-      completions = [];
-      completion_index = 0;
-      completion_scroll_offset = 0;
-      focus = Filter_focus;
-      result_scroll = 0;
-      width = 80;
-      height = 24;
-    }
-  in
-  (update_completions model, Cmd.none)
-
 let apply_completion (model : model) : model =
   if List.length model.completions <= 0 then model
   else
@@ -703,6 +678,29 @@ let subscriptions model =
                   | _ -> None)));
     ]
 
-let make ~(json : Json.t) ~(path : string) =
-  let init = init ~json ~path in
+let make ~(json : Json.t) ~(path : string) ~(query : string) =
+  let init () =
+    let result = evaluate_query query json in
+    let initial_type =
+      match get_input_type query json with Some t -> t | None -> "any"
+    in
+    let model =
+      {
+        query;
+        input_key = 0;
+        json;
+        path;
+        result;
+        last_valid_type = initial_type;
+        completions = [];
+        completion_index = 0;
+        completion_scroll_offset = 0;
+        focus = Filter_focus;
+        result_scroll = 0;
+        width = 80;
+        height = 24;
+      }
+    in
+    (update_completions model, Cmd.none)
+  in
   run { init; update; view; subscriptions }
