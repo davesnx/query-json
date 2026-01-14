@@ -108,3 +108,31 @@ New names work correctly
 
   $ echo '" hello "' | query-json --no-color 'trim'
   "hello"
+
+Hyphenated keys should suggest quoted syntax
+
+  $ echo '{"vite-plugin-monaco-editor": "1.0.0"}' | query-json --no-color '.vite-plugin-monaco-editor'
+  
+  error[key_not_found]: Key 'vite' not found in object
+  
+    in: { "vite-plugin-monaco-editor": ... }
+    hint: Did you mean "vite-plugin-monaco-editor"? Use .["..."] or ."..." for keys with hyphens
+  
+
+Non-hyphenated key miss shows original hint
+
+  $ echo '{"foo": 1}' | query-json --no-color '.bar'
+  
+  error[key_not_found]: Key 'bar' not found in object
+  
+    in: { "foo": ... }
+    hint: Use .bar? for optional access
+  
+
+Quoted syntax works for hyphenated keys
+
+  $ echo '{"vite-plugin-monaco-editor": "1.0.0"}' | query-json --no-color '.["vite-plugin-monaco-editor"]'
+  "1.0.0"
+
+  $ echo '{"vite-plugin-monaco-editor": "1.0.0"}' | query-json --no-color '."vite-plugin-monaco-editor"'
+  "1.0.0"

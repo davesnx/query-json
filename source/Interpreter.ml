@@ -80,8 +80,29 @@ end = struct
     assert false
 
   let key_not_found ~key ~value =
-    fail ~kind:Key_not_found ~value
-      ~suggestion:("Use ." ^ key ^ "? for optional access")
+    let suggestion =
+      match value with
+      | `Assoc assoc -> (
+          let keys = List.map fst assoc in
+          let hyphenated_match =
+            List.find_opt
+              (fun k ->
+                let key_len = String.length key in
+                String.length k > key_len
+                && String.sub k 0 key_len = key
+                && String.get k key_len = '-')
+              keys
+          in
+          match hyphenated_match with
+          | Some hk ->
+              Printf.sprintf
+                "Did you mean \"%s\"? Use .[\"...\"] or .\"...\" for keys with \
+                 hyphens"
+                hk
+          | None -> "Use ." ^ key ^ "? for optional access")
+      | _ -> "Use ." ^ key ^ "? for optional access"
+    in
+    fail ~kind:Key_not_found ~value ~suggestion
       ("Key '" ^ key ^ "' not found in object")
 
   let null_access ~key ~value =
