@@ -18,15 +18,6 @@ type t = {
   suggestion : string option;
 }
 
-val make :
-  kind:string ->
-  message:string ->
-  ?location:location ->
-  ?contexts:context list ->
-  ?suggestion:string ->
-  unit ->
-  t
-
 val with_location : input:string -> start_pos:int -> end_pos:int -> t -> t
 val with_context : context -> t -> t
 val with_suggestion : string -> t -> t
@@ -53,12 +44,22 @@ val invalid_argument :
   t
 
 val deprecated : old_name:string -> new_name:string -> t
-val not_implemented : string -> t
+val not_implemented : ?suggestion:string -> ?description:string -> string -> t
+val invalid_regex : pattern:string -> t
+val requires_literal : fn_name:string -> what:string -> example:string -> t
+
+val requires_number_literal :
+  fn_name:string -> what:string -> ?example:string -> unit -> t
+
+val unsupported :
+  fn_name:string -> message:string -> ?suggestion:string -> unit -> t
 
 val missing_argument :
   fn_name:string ->
+  ?message:string ->
   usage:string ->
   description:string ->
+  ?applicable_to:string ->
   ?example:string ->
   unit ->
   t

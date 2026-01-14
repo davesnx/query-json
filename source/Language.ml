@@ -1,13 +1,11 @@
 type applicable_to = String | Array | Object | Number | Bool | Nil | Any
 
-let err = Query_error.make
-
 type arity =
   | No_args
-  | One_arg of string (* description of the argument *)
-  | Two_args of string * string (* descriptions *)
+  | One_arg of string
+  | Two_args of string * string
   | Three_args of string * string * string
-  | Variable_args of string (* description *)
+  | Variable_args of string
 
 type function_info = {
   name : string;
@@ -1424,28 +1422,16 @@ let error_for_missing_arg (name : string) : Query_error.t =
             Printf.sprintf "%s() requires %s, %s, and %s" name a b c
         | Variable_args _ -> Printf.sprintf "%s() requires arguments" name
       in
-      let types =
+      let applicable_to =
         f.applicable_to
         |> List.map type_name_of_applicable
         |> String.concat ", "
       in
-      let contexts =
-        [
-          Query_error.Usage usage;
-          Query_error.Description f.description;
-          Query_error.Applicable_to types;
-        ]
-      in
-      let contexts =
-        match f.example with
-        | Some ex -> contexts @ [ Query_error.Example ex ]
-        | None -> contexts
-      in
-      err ~kind:"missing_argument" ~message ~contexts ()
+      Query_error.missing_argument ~fn_name:name ~message ~usage
+        ~description:f.description ~applicable_to ?example:f.example ()
   | None ->
-      err ~kind:"missing_argument"
-        ~message:(Printf.sprintf "%s() requires an argument" name)
-        ()
+      Query_error.missing_argument ~fn_name:name ~usage:name
+        ~description:"Unknown function" ()
 
 (* Check if a function name is a 1-arity function that can accept Identity as default *)
 let can_default_to_identity (name : string) : bool =
@@ -1467,16 +1453,9 @@ let can_default_to_identity (name : string) : bool =
   | _ -> false
 
 let require_string_literal ~fn_name ~what ~example =
-  err ~kind:"invalid_argument"
-    ~message:(Printf.sprintf "`%s` requires a string literal %s" fn_name what)
-    ~contexts:
-      [ Query_error.Expected "string literal"; Query_error.Example example ]
-    ()
+  Query_error.requires_literal ~fn_name ~what ~example
 
-let not_implemented feature =
-  err ~kind:"not_implemented"
-    ~message:(Printf.sprintf "`%s` is not implemented" feature)
-    ()
+let not_implemented feature = Query_error.not_implemented feature
 
 (* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression)
@@ -1492,27 +1471,17 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Limit, Literal n, arg2))
       | _ ->
           Error
-            (err ~kind:"invalid_argument"
-               ~message:"`limit` first argument must be a number literal"
-               ~contexts:
-                 [
-                   Query_error.Usage "limit(n; generator)";
-                   Query_error.Example "limit(3; range(10)) → 0, 1, 2";
-                 ]
-               ()))
+            (Query_error.requires_number_literal ~fn_name:"limit"
+               ~what:"first argument must be a number literal"
+               ~example:"limit(3; range(10)) → 0, 1, 2" ()))
   | "skip" -> (
       match arg1 with
       | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Skip, Literal n, arg2))
       | _ ->
           Error
-            (err ~kind:"invalid_argument"
-               ~message:"`skip` first argument must be a number literal"
-               ~contexts:
-                 [
-                   Query_error.Usage "skip(n; generator)";
-                   Query_error.Example "skip(2; range(5)) → 2, 3, 4";
-                 ]
-               ()))
+            (Query_error.requires_number_literal ~fn_name:"skip"
+               ~what:"first argument must be a number literal"
+               ~example:"skip(2; range(5)) → 2, 3, 4" ()))
   | "replace" | "sub" -> (
       match (arg1, arg2) with
       | Literal (String _pattern), Literal (String _replacement) ->
@@ -1555,8 +1524,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   | "strptime" -> Error (not_implemented "strptime")
   | "splits" ->
       Error
-        (err ~kind:"not_implemented" ~message:"`splits` is not implemented"
-           ~suggestion:"use `split` instead" ())
+        (Query_error.not_implemented ~suggestion:"use `split` instead" "splits")
   | "sql" -> Error (not_implemented "sql")
   | "dateadd" | "datesub" -> Error (not_implemented "date arithmetic")
   | "modulemeta" -> Error (not_implemented "modulemeta")
@@ -1566,11 +1534,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
 let compile_regex (pattern : string) :
     (Ast.compiled_regex, Query_error.t) result =
   try Ok { Ast.pattern; regex = Str.regexp pattern }
-  with _ ->
-    Error
-      (err ~kind:"invalid_regex"
-         ~message:(Printf.sprintf "invalid regex pattern: `%s`" pattern)
-         ())
+  with _ -> Error (Query_error.invalid_regex ~pattern)
 
 let make_pattern_fn (fn : Ast.fn1_pattern) (pattern : string) :
     (Ast.expression, Query_error.t) result =
@@ -1706,15 +1670,9 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
           Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
-            (err ~kind:"invalid_argument"
-               ~message:"`halt_error` requires a number literal exit code"
-               ~contexts:
-                 [
-                   Query_error.Expected "number literal";
-                   Query_error.Example
-                     "halt_error(1) terminates with exit code 1";
-                 ]
-               ()))
+            (Query_error.requires_number_literal ~fn_name:"halt_error"
+               ~what:"requires a number literal exit code"
+               ~example:"halt_error(1) terminates with exit code 1" ()))
   (* is_valid(expr) -> try (expr | true) catch false *)
   | "is_valid" ->
       Ok
@@ -1731,49 +1689,39 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Error (not_implemented "JSON stream functions")
   | "splits" ->
       Error
-        (err ~kind:"not_implemented" ~message:"`splits` is not implemented"
-           ~suggestion:"use `split` instead" ())
+        (Query_error.not_implemented ~suggestion:"use `split` instead" "splits")
   | "tojson" | "fromjson" ->
       Error
-        (err ~kind:"not_implemented"
-           ~message:"`tojson`/`fromjson` not implemented"
-           ~suggestion:"use `to_string` (input is already JSON)" ())
+        (Query_error.not_implemented
+           ~suggestion:"use `to_string` (input is already JSON)"
+           "tojson/fromjson")
   | "ascii" -> Error (not_implemented "ascii")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   | "input" | "inputs" ->
       Error
-        (err ~kind:"not_implemented" ~message:"`input`/`inputs` not implemented"
-           ~contexts:
-             [ Query_error.Description "query-json reads all input upfront" ]
-           ())
+        (Query_error.not_implemented
+           ~description:"query-json reads all input upfront" "input/inputs")
   | "env" ->
       Error
-        (err ~kind:"invalid_argument"
-           ~message:"`env()` with argument is not supported"
+        (Query_error.unsupported ~fn_name:"env"
+           ~message:"with argument is not supported"
            ~suggestion:"use `$ENV.name` or `env.name` instead" ())
   | "builtins" -> Error (not_implemented "builtins")
   | "limit" ->
       Error
-        (err ~kind:"invalid_argument"
-           ~message:"`limit` first argument must be a number literal"
-           ~contexts:
-             [
-               Query_error.Expected "number literal";
-               Query_error.Example "limit(3; range(10))";
-             ]
-           ())
+        (Query_error.requires_number_literal ~fn_name:"limit"
+           ~what:"first argument must be a number literal"
+           ~example:"limit(3; range(10))" ())
   | "until" | "while" ->
+      let example =
+        if name = "while" then "[while(. < 100; . * 2)]"
+        else "[until(. > 100; . * 2)]"
+      in
       Error
-        (err ~kind:"missing_argument"
+        (Query_error.missing_argument ~fn_name:name
            ~message:(Printf.sprintf "`%s` requires two arguments" name)
-           ~contexts:
-             [
-               Query_error.Usage "condition and update expressions";
-               Query_error.Example
-                 (if name = "while" then "[while(. < 100; . * 2)]"
-                  else "[until(. > 100; . * 2)]");
-             ]
-           ())
+           ~usage:"condition and update expressions"
+           ~description:"Loop construct" ~example ())
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg ]))
 
@@ -1917,9 +1865,9 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
       Error (not_implemented "JSON stream functions")
   | "tojson" | "fromjson" ->
       Error
-        (err ~kind:"not_implemented"
-           ~message:"`tojson`/`fromjson` not implemented"
-           ~suggestion:"use `to_string` (input is already JSON)" ())
+        (Query_error.not_implemented
+           ~suggestion:"use `to_string` (input is already JSON)"
+           "tojson/fromjson")
   | "input_filename" | "input_line_number" ->
       Error (not_implemented "input metadata")
   (* Default: check registry for functions that require arguments *)
