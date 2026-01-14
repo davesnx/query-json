@@ -20,8 +20,9 @@ let format_function_doc ~colorize (f : Language.function_info) =
 let format_group ~colorize (g : Language.category) =
   let t = Console_style.make ~colorize in
   let header =
-    t.bold (t.yellow (String.uppercase_ascii g.name ^ " FUNCTIONS"))
-    ^ Console_style.enter 1 ^ t.gray g.description ^ Console_style.enter 2
+    Console_style.enter 1
+    ^ t.bold (t.yellow g.description)
+    ^ Console_style.enter 2
   in
   let funcs =
     g.functions
@@ -32,7 +33,8 @@ let format_group ~colorize (g : Language.category) =
 
 let format_categories_list ~colorize =
   let t = Console_style.make ~colorize in
-  t.bold "Available help categories:"
+  Console_style.enter 1
+  ^ t.bold "Available help categories:"
   ^ Console_style.enter 2
   ^ (Language.all_categories
     |> List.map (fun (g : Language.category) ->

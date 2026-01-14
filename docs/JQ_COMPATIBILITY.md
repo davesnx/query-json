@@ -156,7 +156,6 @@ query-json --functions
 # Get detailed help for a category
 query-json --functions string
 
-# STRING FUNCTIONS
 # String manipulation functions
 #
 #   split - Split string by separator

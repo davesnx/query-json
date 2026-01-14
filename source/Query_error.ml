@@ -118,19 +118,56 @@ let deprecated ~old_name ~new_name =
     ~suggestion:(Printf.sprintf "use `%s` instead" new_name)
     ()
 
-let not_implemented feature =
+let not_implemented ?suggestion ?description feature =
+  let contexts =
+    match description with Some d -> [ Description d ] | None -> []
+  in
   make ~kind:"not_implemented"
     ~message:(Printf.sprintf "`%s` is not implemented" feature)
+    ~contexts ?suggestion ()
+
+let invalid_regex ~pattern =
+  make ~kind:"invalid_regex"
+    ~message:(Printf.sprintf "invalid regex pattern: `%s`" pattern)
     ()
 
-let missing_argument ~fn_name ~usage ~description ?example () =
-  let contexts = [ Usage usage; Description description ] in
+let requires_literal ~fn_name ~what ~example =
+  make ~kind:"invalid_argument"
+    ~message:(Printf.sprintf "`%s` requires a string literal %s" fn_name what)
+    ~contexts:[ Expected "string literal"; Example example ]
+    ()
+
+let requires_number_literal ~fn_name ~what ?example () =
+  let contexts = [ Expected "number literal" ] in
   let contexts =
     match example with Some ex -> contexts @ [ Example ex ] | None -> contexts
   in
-  make ~kind:"missing_argument"
-    ~message:(Printf.sprintf "`%s` requires an argument" fn_name)
+  make ~kind:"invalid_argument"
+    ~message:(Printf.sprintf "`%s` %s" fn_name what)
     ~contexts ()
+
+let unsupported ~fn_name ~message ?suggestion () =
+  make ~kind:"invalid_argument"
+    ~message:(Printf.sprintf "`%s` %s" fn_name message)
+    ?suggestion ()
+
+let missing_argument ~fn_name ?message ~usage ~description ?applicable_to
+    ?example () =
+  let msg =
+    match message with
+    | Some m -> m
+    | None -> Printf.sprintf "`%s` requires an argument" fn_name
+  in
+  let contexts = [ Usage usage; Description description ] in
+  let contexts =
+    match applicable_to with
+    | Some types -> contexts @ [ Applicable_to types ]
+    | None -> contexts
+  in
+  let contexts =
+    match example with Some ex -> contexts @ [ Example ex ] | None -> contexts
+  in
+  make ~kind:"missing_argument" ~message:msg ~contexts ()
 
 let empty_collection ~operation =
   make ~kind:"empty_collection"

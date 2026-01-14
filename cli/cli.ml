@@ -76,9 +76,24 @@ let reconnect_stdin_to_tty () =
   with Unix.Unix_error _ -> false
 
 let execution position_0 position_1 verbose debug no_color raw_output null_input
-    repl =
+    repl functions =
   let colorize = not no_color in
-  if repl then
+  if Option.is_some functions then
+    match functions with
+    | Some "" | None ->
+        print_endline (Help.format_categories_list ~colorize);
+        Stdlib.exit 1
+    | Some category -> (
+        match Help.find_group category with
+        | Some group ->
+            print_endline (Help.format_group ~colorize group);
+            Stdlib.exit 1
+        | None ->
+            print_error_message ~colorize ("Unknown help category: " ^ category);
+            print_endline "";
+            print_endline (Help.format_categories_list ~colorize);
+            Stdlib.exit 1)
+  else if repl then
     match (position_1, position_0) with
     | Some file_or_json, query -> (
         let initial_query = Option.value ~default:"." query in
@@ -176,10 +191,20 @@ let () =
   let repl =
     value & flag & info [ "repl" ] ~doc:"Start interactive REPL mode"
   in
+  let functions =
+    let some_str = Cmdliner.Arg.some Cmdliner.Arg.string in
+    value
+    & opt ~vopt:(Some "") some_str None
+    & info [ "functions" ] ~docv:"CATEGORY"
+        ~doc:
+          "Show help for built-in functions. Omit CATEGORY to list all \
+           categories. Categories: string, array, object, path, math, type, \
+           control, definition, debug"
+  in
   let term =
     let open Cmdliner.Term in
     const execution $ query $ json $ verbose $ debug $ color $ raw_output
-    $ null_input $ repl
+    $ null_input $ repl $ functions
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

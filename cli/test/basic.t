@@ -13,6 +13,11 @@ stdin works
   $ echo '{ "b": 2 }' | query-json --no-color '.'
   { "b": 2 }
 
+stdin with cat works
+
+  $ cat mock.json | query-json --no-color '.first.name'
+  "John Doe"
+
 raw output for string
 
   $ query-json --no-color -r '.first.name' mock.json
