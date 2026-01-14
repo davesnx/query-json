@@ -1,6 +1,7 @@
 --functions with no argument lists all categories
 
   $ query-json --no-color --functions 2>&1 | head -20
+  
   Available help categories:
   
    string - String manipulation functions
@@ -20,7 +21,7 @@
 --functions string shows string functions
 
   $ query-json --no-color --functions string 2>&1 | head -15
-  STRING FUNCTIONS
+  
   String manipulation functions
   
    split - Split string by separator
@@ -39,12 +40,12 @@
 --functions array shows array functions
 
   $ query-json --no-color --functions array 2>&1 | head -15
-  ARRAY FUNCTIONS
+  
   Array manipulation functions
   
    map - Transform each element
     [1, 2, 3] | map(. * 2) → [2, 4, 6]
-   select (aliases: filter) - Filter elements matching condition
+   select - Select elements matching condition
     [1, 2, 3] | map(select(. > 1)) → [2, 3]
    sort - Sort array
     [3, 1, 2] | sort → [1, 2, 3]
@@ -58,7 +59,7 @@
 --functions object shows object functions
 
   $ query-json --no-color --functions object 2>&1 | head -15
-  OBJECT FUNCTIONS
+  
   Object manipulation functions
   
    keys - Get array of keys in original order
@@ -77,7 +78,7 @@
 --functions math shows math functions
 
   $ query-json --no-color --functions math 2>&1 | head -15
-  MATH FUNCTIONS
+  
   Mathematical functions
   
    abs - Absolute value
@@ -96,7 +97,7 @@
 --functions type shows type functions
 
   $ query-json --no-color --functions type 2>&1 | head -15
-  TYPE FUNCTIONS
+  
   Type checking and conversion functions
   
    type - Get type as string
@@ -115,7 +116,7 @@
 --functions control shows control flow functions
 
   $ query-json --no-color --functions control 2>&1 | head -15
-  CONTROL FUNCTIONS
+  
   Control flow and iteration functions
   
    if-then-else - Conditional expression
@@ -138,6 +139,7 @@
   Unknown help category: invalid
   
   
+  
   Available help categories:
   
    string - String manipulation functions
@@ -158,6 +160,6 @@
 --functions can be used with other flags
 
   $ query-json --no-color --functions string | head -3
-  STRING FUNCTIONS
+  
   String manipulation functions
   

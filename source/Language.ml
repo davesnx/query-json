@@ -238,8 +238,8 @@ let array_functions =
         };
         {
           name = "select";
-          aliases = [ "filter" ];
-          description = "Filter elements matching condition";
+          aliases = [];
+          description = "Select elements matching condition";
           example = Some {|[1, 2, 3] | map(select(. > 1)) → [2, 3]|};
           applicable_to = [ Any ];
           insert_text = None;
