@@ -1,4 +1,4 @@
-let[@react.component] make ~value ~placeholder ~on_change ~on_functions_click =
+let[@react.component] make ~value ~placeholder ~on_change =
   let on_change_handler event =
     let target = React.Event.Form.target event in
     on_change target##value
@@ -39,11 +39,6 @@ let[@react.component] make ~value ~placeholder ~on_change ~on_functions_click =
              </button>
            else React.null)
         </div>
-        <Button kind=Ghost size=Sm on_click=on_functions_click>
-          <span className="flex items-center gap-2">
-            <Icons.PanelLeft size=Small /> (React.string "Functions")
-          </span>
-        </Button>
       </div>
     </div>
   </div>
