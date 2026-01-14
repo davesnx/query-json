@@ -253,6 +253,12 @@ let[@react.component] make () =
     |> Option.map Query_params.fromString
   in
 
+  let initial_page =
+    match Router.get_pathname () with
+    | "/functions" -> FunctionsPage
+    | _ -> Playground
+  in
+
   let initial_state =
     match state_from_hash with
     | Some { query; json } ->
@@ -262,7 +268,7 @@ let[@react.component] make () =
           copied = false;
           isModalOpen = false;
           isSidebarOpen = false;
-          current_page = Playground;
+          current_page = initial_page;
         }
     | None ->
         {
@@ -271,7 +277,7 @@ let[@react.component] make () =
           copied = false;
           isModalOpen = false;
           isSidebarOpen = false;
-          current_page = Playground;
+          current_page = initial_page;
         }
   in
 

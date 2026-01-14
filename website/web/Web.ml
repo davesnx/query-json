@@ -9,6 +9,7 @@ module Location = struct
   external hash : Dom.location -> string = "hash" [@@mel.get]
   external setHash : Dom.location -> string -> unit = "hash" [@@mel.set]
   external origin : Dom.location -> string = "origin" [@@mel.get]
+  external pathname : Dom.location -> string = "pathname" [@@mel.get]
 end
 
 module Document = struct
