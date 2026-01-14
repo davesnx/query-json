@@ -39,6 +39,84 @@ type msg =
 
 let max_visible_completions = 15
 
+module Json_path = struct
+  type segment = Field of string | Idx of int
+
+  let rec segments_of_ast acc = function
+    | Ast.Identity -> acc
+    | Ast.Key k -> Field k :: acc
+    | Ast.Index [ i ] -> Idx i :: acc
+    | Ast.Index _ -> acc
+    | Ast.Pipe (left, right) -> segments_of_ast (segments_of_ast acc right) left
+    | Ast.Optional inner -> segments_of_ast acc inner
+    | _ -> acc
+
+  let parse query =
+    let q =
+      let len = String.length query in
+      if len > 0 && query.[len - 1] = '.' then String.sub query 0 (len - 1)
+      else query
+    in
+    match Core.parse ~debug:false ~colorize:false q with
+    | Ok ast -> segments_of_ast [] ast
+    | Error _ -> []
+
+  let rec traverse json path =
+    match (json, path) with
+    | json, [] -> (json, [])
+    | `Assoc obj, Field k :: rest -> (
+        match List.assoc_opt k obj with
+        | Some v -> traverse v rest
+        | None -> (json, path))
+    | `List lst, Idx i :: rest -> (
+        match List.nth_opt lst i with
+        | Some v -> traverse v rest
+        | None -> (json, path))
+    | `List lst, Field k :: rest -> (
+        match
+          List.find_map
+            (function
+              | `Assoc obj when List.mem_assoc k obj -> List.assoc_opt k obj
+              | _ -> None)
+            lst
+        with
+        | Some v -> traverse v rest
+        | None -> (json, path))
+    | _ -> (json, path)
+
+  let completions_at json =
+    match json with
+    | `Assoc obj ->
+        List.map
+          (fun (k, v) ->
+            Key
+              {
+                key = k;
+                value_type = Language.applicable_of_json_type (Json.type_of v);
+              })
+          obj
+    | `List items ->
+        let indices =
+          List.mapi
+            (fun i v ->
+              Index
+                {
+                  index = i;
+                  value_type = Language.applicable_of_json_type (Json.type_of v);
+                })
+            items
+        in
+        let all_keys =
+          items
+          |> List.filter_map (function `Assoc obj -> Some obj | _ -> None)
+          |> List.concat_map (List.map fst)
+          |> List.sort_uniq String.compare
+          |> List.map (fun k -> Key { key = k; value_type = Language.Any })
+        in
+        indices @ all_keys
+    | _ -> []
+end
+
 type partial_type = Typing_key | Typing_function
 
 type query_state = {
@@ -141,43 +219,12 @@ let get_functions_for_type (type_name : string) : completion_item list =
     Language.all_functions () |> List.map (fun f -> Function f)
   else List.map (fun f -> Function f) functions
 
-let keys_from_json (json : Json.t) : completion_item list =
-  match json with
-  | `Assoc obj ->
-      List.map
-        (fun (k, v) ->
-          Key
-            {
-              key = k;
-              value_type = Language.applicable_of_json_type (Json.type_of v);
-            })
-        obj
-  | `List lst ->
-      List.mapi
-        (fun i v ->
-          Index
-            {
-              index = i;
-              value_type = Language.applicable_of_json_type (Json.type_of v);
-            })
-        lst
-  | _ -> []
-
 let identity_completion = Key { key = ""; value_type = Language.Any }
 
-let get_navigable_keys_for_expression (base_expression : string) (json : Json.t)
-    : completion_item list =
-  match
-    Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
-      base_expression json
-  with
-  | Ok result when String.length (String.trim result) > 0 -> (
-      try
-        let result_json = Json.from_string result in
-        identity_completion :: keys_from_json result_json
-      with _ -> identity_completion :: keys_from_json json)
-  | Ok _ -> identity_completion :: keys_from_json json
-  | Error _ -> identity_completion :: keys_from_json json
+let get_completions_for_query query json =
+  let path = Json_path.parse query in
+  let node, _ = Json_path.traverse json path in
+  identity_completion :: Json_path.completions_at node
 
 let update_completions model =
   let state = parse_query_state model.query in
@@ -190,9 +237,7 @@ let update_completions model =
   let candidates =
     match state.partial_type with
     | Typing_key ->
-        let keys =
-          get_navigable_keys_for_expression state.base_expression model.json
-        in
+        let keys = get_completions_for_query state.base_expression model.json in
         keys @ functions
     | Typing_function -> functions
   in
