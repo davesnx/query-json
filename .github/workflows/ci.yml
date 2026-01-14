@@ -37,10 +37,10 @@ jobs:
           fetch-depth: 0
 
       - name: Use Node.js
-        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
+          cache: 'npm'
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
@@ -48,13 +48,24 @@ jobs:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
           dune-cache: true
           opam-disable-sandboxing: true
+          opam-download-cache: true
+          cache-prefix: v1-${{ runner.arch }}
+
+      - name: Cache opam switch
+        id: opam-cache
+        uses: actions/cache@v4
+        with:
+          path: _opam
+          key: opam-switch-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          restore-keys: |
+            opam-switch-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-
 
       - name: Pin some deps
-        if: matrix.os != 'windows-latest'
+        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
         run: make pin
 
       - name: Pin some deps (Windows with retry)
-        if: matrix.os == 'windows-latest'
+        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           $maxRetries = 3
@@ -70,11 +81,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Install deps
-        if: matrix.os != 'windows-latest'
+        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
         run: make install
 
       - name: Install deps (Windows with retry)
-        if: matrix.os == 'windows-latest'
+        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           $maxRetries = 3
@@ -138,6 +149,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22.x
+          cache: 'npm'
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
@@ -145,11 +157,24 @@ jobs:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
           dune-cache: true
           opam-disable-sandboxing: true
+          opam-download-cache: true
+          cache-prefix: v1-x64
+
+      - name: Cache opam switch
+        id: opam-cache
+        uses: actions/cache@v4
+        with:
+          path: _opam
+          key: opam-switch-Linux-x64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          restore-keys: |
+            opam-switch-Linux-x64-${{ env.OCAML_COMPILER }}-
 
       - name: Pin some deps
+        if: steps.opam-cache.outputs.cache-hit != 'true'
         run: make pin
 
       - name: Install opam deps
+        if: steps.opam-cache.outputs.cache-hit != 'true'
         run: make install
 
       - name: Install npm deps
