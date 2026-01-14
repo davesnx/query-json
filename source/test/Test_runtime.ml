@@ -1050,6 +1050,11 @@ let first_last_nth =
     test {|nth(-1)|} {|[1,2,3]|} {|3|};
     test {|nth(-2)|} {|[1,2,3]|} {|2|};
     test {|.items | nth(1)|} {|{"items": ["a","b","c"]}|} {|"b"|};
+    (* head and tail are aliases for first and last *)
+    test {|head|} {|[1,2,3]|} {|1|};
+    test {|tail|} {|[1,2,3]|} {|3|};
+    test {|first|} {|[1,2,3]|} {|1|};
+    test {|last|} {|[1,2,3]|} {|3|};
   ]
 
 let optional_functions =

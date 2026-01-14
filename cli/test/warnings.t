@@ -108,18 +108,3 @@ New names work correctly
 
   $ echo '" hello "' | query-json --no-color 'trim'
   "hello"
-
-head and tail are aliases for first and last
-
-  $ echo '[1, 2, 3]' | query-json --no-color 'head'
-  1
-
-  $ echo '[1, 2, 3]' | query-json --no-color 'tail'
-  3
-
-  $ echo '[1, 2, 3]' | query-json --no-color 'first'
-  1
-
-  $ echo '[1, 2, 3]' | query-json --no-color 'last'
-  3
-

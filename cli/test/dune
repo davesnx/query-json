@@ -1,0 +1,3 @@
+(cram
+ (alias runtest)
+ (deps %{bin:query-json} ./mock.json))
