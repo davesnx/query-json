@@ -42,7 +42,6 @@ type t = {
   json : string option;
   copied : bool;
   isModalOpen : bool;
-  isSidebarOpen : bool;
   current_page : page;
 }
 
@@ -51,7 +50,6 @@ type actions =
   | Update_json of string
   | Set_copied of bool
   | Set_modal_open of bool
-  | Set_sidebar_open of bool
   | Navigate_to of page
 
 let reduce state = function
@@ -59,7 +57,6 @@ let reduce state = function
   | Update_json json -> { state with json = Some json }
   | Set_copied copied -> { state with copied }
   | Set_modal_open isModalOpen -> { state with isModalOpen }
-  | Set_sidebar_open isSidebarOpen -> { state with isSidebarOpen }
   | Navigate_to page -> { state with current_page = page }
 
 module Query_params = struct
@@ -164,17 +161,6 @@ module PlaygroundPage = struct
       dispatch (Update_query query);
       dispatch (Update_json json)
     in
-    let on_sidebar_toggle =
-     fun _ -> dispatch (Set_sidebar_open (not state.isSidebarOpen))
-    in
-    let on_close_sidebar = fun () -> dispatch (Set_sidebar_open false) in
-    let on_select_function =
-     fun fn_name ->
-      let new_query =
-        if state.query = "" then fn_name else state.query ^ " | " ^ fn_name
-      in
-      dispatch (Update_query new_query)
-    in
 
     <div className="flex flex-col min-h-screen bg-background">
       <Header>
@@ -209,7 +195,6 @@ module PlaygroundPage = struct
       <TextInput
         value=state.query
         on_change=on_query_change
-        on_functions_click=on_sidebar_toggle
         placeholder="Type your filter (e.g., '.store.books[0]')"
       />
       <Editors
@@ -218,9 +203,6 @@ module PlaygroundPage = struct
       <Footer />
       <Modal_examples
         is_open=state.isModalOpen on_close=on_close_modal on_select_example
-      />
-      <Sidebar
-        is_open=state.isSidebarOpen on_close=on_close_sidebar on_select_function
       />
     </div>
 end
@@ -261,7 +243,6 @@ let[@react.component] make () =
           json;
           copied = false;
           isModalOpen = false;
-          isSidebarOpen = false;
           current_page = Playground;
         }
     | None ->
@@ -270,7 +251,6 @@ let[@react.component] make () =
           json = Some initial_json;
           copied = false;
           isModalOpen = false;
-          isSidebarOpen = false;
           current_page = Playground;
         }
   in
