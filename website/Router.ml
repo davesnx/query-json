@@ -11,3 +11,7 @@ let get_hash () =
 let set_hash hash =
   let location = Web.Window.location Web.window in
   Web.Location.setHash location hash
+
+let get_pathname () =
+  let location = Web.Window.location Web.window in
+  Web.Location.pathname location
