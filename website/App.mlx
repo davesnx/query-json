@@ -93,10 +93,6 @@ module Query_json = struct
     | 1 -> Error res.second
     | _ -> Error "Invalid result from QueryJsonJs"
 
-  let is_loaded : unit -> bool =
-    [%mel.raw
-      {| function () { return typeof window['query-json'] !== 'undefined' && typeof window['query-json'].run === 'function'; }|}]
-
   let query_json_run : string -> string -> jsoo_result =
     [%mel.raw
       {| function (query, json) { return window['query-json'].run(query, json); }|}]
@@ -110,17 +106,15 @@ module Clipboard = struct
 end
 
 module Playground_page = struct
-  let[@react.component] make ~state ~is_ready ~update_query ~update_json
-      ~set_copied ~set_modal_open ~on_navigate_functions =
+  let[@react.component] make ~state ~update_query ~update_json ~set_copied
+      ~set_modal_open ~on_navigate_functions =
     let output =
-      React.useMemo3
+      React.useMemo2
         (fun () ->
-          if not is_ready then None
-          else
-            match (state.json, state.query) with
-            | Some _, "" | None, _ -> None
-            | Some json, _ -> Some (Query_json.run state.query json))
-        (state.json, state.query, is_ready)
+          match (state.json, state.query) with
+          | Some _, "" | None, _ -> None
+          | Some json, _ -> Some (Query_json.run state.query json))
+        (state.json, state.query)
     in
 
     let on_share_click =
@@ -206,28 +200,6 @@ module Playground_page = struct
 end
 
 let[@react.component] make () =
-  let is_ready, set_is_ready = React.useState (fun () -> false) in
-
-  React.useEffect0 (fun () ->
-      if Query_json.is_loaded () then (
-        set_is_ready (fun _ -> true);
-        None)
-      else
-        let interval_id = ref None in
-        let check () =
-          if Query_json.is_loaded () then (
-            set_is_ready (fun _ -> true);
-            match !interval_id with
-            | Some id -> Js.Global.clearInterval id
-            | None -> ())
-        in
-        interval_id := Some (Js.Global.setInterval ~f:check 50);
-        Some
-          (fun () ->
-            match !interval_id with
-            | Some id -> Js.Global.clearInterval id
-            | None -> ()));
-
   let state_from_hash =
     Router.get_hash () |> Option.bind Base64.decode
     |> Option.map Query_params.from_string
@@ -288,7 +260,6 @@ let[@react.component] make () =
   | Playground ->
       <Playground_page
         state
-        is_ready
         update_query
         update_json
         set_copied

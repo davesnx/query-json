@@ -5,6 +5,19 @@ let[@react.component] make ~is_open ~on_close ~title ~description ~children =
     if target == current_target then on_close ()
   in
 
+  React.useEffect1
+    (fun () ->
+      if is_open then (
+        let handle_keydown event =
+          if Web.KeyboardEvent.key event = "Escape" then on_close ()
+        in
+        Web.Window.add_event_listener Web.window "keydown" handle_keydown;
+        Some
+          (fun () ->
+            Web.Window.remove_event_listener Web.window "keydown" handle_keydown))
+      else None)
+    [| is_open |];
+
   if not is_open then React.null
   else
     <div

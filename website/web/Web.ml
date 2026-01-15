@@ -3,6 +3,20 @@ external window : Dom.window = "window"
 module Window = struct
   external document : Dom.window -> Dom.document = "document" [@@mel.get]
   external location : Dom.window -> Dom.location = "location" [@@mel.get]
+
+  external add_event_listener :
+    Dom.window -> string -> (Dom.keyboardEvent -> unit) -> unit
+    = "addEventListener"
+  [@@mel.send]
+
+  external remove_event_listener :
+    Dom.window -> string -> (Dom.keyboardEvent -> unit) -> unit
+    = "removeEventListener"
+  [@@mel.send]
+end
+
+module KeyboardEvent = struct
+  external key : Dom.keyboardEvent -> string = "key" [@@mel.get]
 end
 
 module Location = struct
