@@ -54,7 +54,7 @@ jobs:
             .opam-path
             C:\cygwin
             C:\.opam
-          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('dune-project', 'Makefile') }}
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
@@ -193,7 +193,7 @@ jobs:
             .opam-path
             C:\cygwin
             C:\.opam
-          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('dune-project', 'Makefile') }}
 
       # ========================================
       # Website deploy (ubuntu-latest, main/PR)
