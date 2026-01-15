@@ -20,7 +20,6 @@ type t = {
 
 val with_location : input:string -> start_pos:int -> end_pos:int -> t -> t
 val with_context : context -> t -> t
-val with_suggestion : string -> t -> t
 
 val format : colorize:bool -> t -> string
 (** Format error with colors and Rust-style layout *)
@@ -63,10 +62,6 @@ val missing_argument :
   ?example:string ->
   unit ->
   t
-
-val empty_collection : operation:string -> t
-val null_access : key:string -> t
-val index_out_of_bounds : index:int -> length:int -> t
 
 val parse_error :
   message:string -> input:string -> start_pos:int -> end_pos:int -> t

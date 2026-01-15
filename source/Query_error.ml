@@ -29,7 +29,6 @@ let with_location ~input ~start_pos ~end_pos err =
   { err with location = Some { input; start_pos; end_pos } }
 
 let with_context ctx err = { err with contexts = ctx :: err.contexts }
-let with_suggestion s err = { err with suggestion = Some s }
 
 let format_location ~colorize loc =
   let t = Console_style.make ~colorize in
@@ -168,22 +167,6 @@ let missing_argument ~fn_name ?message ~usage ~description ?applicable_to
     match example with Some ex -> contexts @ [ Example ex ] | None -> contexts
   in
   make ~kind:"missing_argument" ~message:msg ~contexts ()
-
-let empty_collection ~operation =
-  make ~kind:"empty_collection"
-    ~message:(Printf.sprintf "cannot apply `%s` to empty collection" operation)
-    ()
-
-let null_access ~key =
-  make ~kind:"null_access"
-    ~message:(Printf.sprintf "cannot access key `%s` on null" key)
-    ~suggestion:"check if value exists before accessing" ()
-
-let index_out_of_bounds ~index ~length =
-  make ~kind:"index_out_of_bounds"
-    ~message:
-      (Printf.sprintf "index `%d` out of bounds (length: %d)" index length)
-    ~suggestion:"use `.[index]?` for optional access" ()
 
 let parse_error ~message ~input ~start_pos ~end_pos =
   make ~kind:"parse_error" ~message ~location:{ input; start_pos; end_pos } ()
