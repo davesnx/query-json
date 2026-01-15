@@ -221,9 +221,7 @@ jobs:
             ~/.opam
             _opam
             .opam-path
-          key: opam-Linux-x64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
-          restore-keys: |
-            opam-Linux-x64-${{ env.OCAML_COMPILER }}-
+          key: opam-Linux-X64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
@@ -282,7 +280,7 @@ jobs:
             ~/.opam
             _opam
             .opam-path
-          key: opam-Linux-x64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          key: opam-Linux-X64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
 
       # Release to NPM and GitHub (only on tags)
       - name: Download JavaScript artifact
