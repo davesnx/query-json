@@ -29,11 +29,6 @@ let init_lexer ?buf ?fname ?(lnum = 1) () =
   let buf = match buf with None -> Buffer.create 256 | Some buf -> buf in
   { buf; lnum; bol = 0; fname }
 
-(** Check if a JSON value is truthy (jq semantics: false and null are falsy,
-    everything else is truthy) *)
-let is_truthy (json : t) : bool =
-  match json with `Bool false | `Null -> false | _ -> true
-
 (** Get numeric value as float for comparison, None for non-numeric types *)
 let to_float (json : t) : float option =
   match json with
