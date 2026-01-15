@@ -8,7 +8,6 @@ let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
 let identifier =
   [%sedlex.regexp? (alphabetic | '_'), Star (alphabetic | digit | '_')]
 
-let not_double_quotes = [%sedlex.regexp? Compl '"']
 let comment = [%sedlex.regexp? '#', Star (Compl '\n')]
 
 (* Custom pp for Z.t since ppx_deriving can't derive it *)
