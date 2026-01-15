@@ -54,6 +54,8 @@ jobs:
             C:\cygwin
             C:\.opam
           key: opam-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          restore-keys: |
+            opam-${{ runner.os }}-${{ runner.arch }}-${{ env.OCAML_COMPILER }}-
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
@@ -220,6 +222,8 @@ jobs:
             _opam
             .opam-path
           key: opam-Linux-x64-${{ env.OCAML_COMPILER }}-${{ hashFiles('*.opam', 'Makefile') }}
+          restore-keys: |
+            opam-Linux-x64-${{ env.OCAML_COMPILER }}-
 
       - name: Use OCaml ${{ env.OCAML_COMPILER }}
         uses: ocaml/setup-ocaml@v3
