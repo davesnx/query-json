@@ -17,3 +17,13 @@ module Document = struct
     string -> (Dom.document[@mel.this]) -> Dom.element option = "querySelector"
   [@@mel.send] [@@mel.return nullable]
 end
+
+module History = struct
+  type t
+
+  external history : Dom.window -> t = "history" [@@mel.get]
+
+  external pushState : t -> 'a Js.nullable -> string -> string -> unit
+    = "pushState"
+  [@@mel.send]
+end
