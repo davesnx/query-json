@@ -61,7 +61,7 @@ jobs:
         if: steps.opam-cache.outputs.cache-hit != 'true'
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
-          dune-cache: false
+          dune-cache: true
           opam-disable-sandboxing: true
 
       - name: Get OPAM executable path
