@@ -169,6 +169,7 @@ jobs:
         run: BENCH_JQ=1 MIN_RUNS=5 ./benchmarks/bench.sh
 
       - name: Upload artifacts for ${{ matrix.os }}-${{ matrix.arch }}
+        if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-artifact
