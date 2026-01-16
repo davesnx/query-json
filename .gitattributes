@@ -5,6 +5,8 @@
 *.res text eol=lf
 *.resi text eol=lf
 *.opam text eol=lf
+*.t text eol=lf
+*.sh text eol=lf
 Makefile text eol=lf
 dune text eol=lf
 dune-project text eol=lf

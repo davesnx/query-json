@@ -168,6 +168,9 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         | Error err -> print_error_message ~colorize err)
 
 let () =
+  (* On Windows, stdout defaults to text mode which converts \n to \r\n.
+     Set binary mode to ensure consistent LF output across platforms. *)
+  set_binary_mode_out stdout true;
   let open Cmdliner.Arg in
   let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in
   let json = value & pos 1 (some string) None & info [] ~doc:"JSON" in
