@@ -1,3 +1,5 @@
 (cram
  (alias runtest)
+ (enabled_if
+  (<> %{system} win))
  (deps %{bin:query-json} ./mock.json))
