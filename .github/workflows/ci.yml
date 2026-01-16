@@ -52,7 +52,7 @@ jobs:
 
       - name: Load opam cache
         id: opam-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             ${{ runner.tool_cache }}/opam
@@ -199,7 +199,7 @@ jobs:
           path: _build/default/js/js.bc.js
 
       - name: Save opam cache
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         if: steps.opam-cache.outputs.cache-hit != 'true'
         with:
           path: |
