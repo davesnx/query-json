@@ -9,11 +9,17 @@ let last_position = ref Location.none
 exception Lexer_error of string
 
 let provider ~debug buf =
-  let start, stop = Sedlexing.lexing_positions buf in
-  last_position := { loc_start = start; loc_end = stop };
+  let start, _ = Sedlexing.lexing_positions buf in
   let token =
-    match Lexer.tokenize buf with Ok t -> t | Error e -> raise (Lexer_error e)
+    match Lexer.tokenize buf with
+    | Ok t -> t
+    | Error e ->
+        let _, stop = Sedlexing.lexing_positions buf in
+        last_position := { loc_start = start; loc_end = stop };
+        raise (Lexer_error e)
   in
+  let _, stop = Sedlexing.lexing_positions buf in
+  last_position := { loc_start = start; loc_end = stop };
   if debug then print_endline (Lexer.show_token token);
   (token, start, stop)
 
@@ -57,13 +63,7 @@ let parse ~debug ~colorize input =
           ~end_pos:!last_position.loc_end.pos_cnum
       in
       Error (Query_error.format ~colorize err)
-  | exception Query_error.Parse_exception (msg, start, end_) ->
-      let err =
-        Query_error.parse_error ~message:msg ~input ~start_pos:start.pos_cnum
-          ~end_pos:end_.pos_cnum
-      in
-      Error (Query_error.format ~colorize err)
-  | exception Query_error.Rich_parse_exception (err, start, end_) ->
+  | exception Query_error.Parse_error (err, start, end_) ->
       let err =
         Query_error.with_location ~input ~start_pos:start.pos_cnum
           ~end_pos:end_.pos_cnum err
