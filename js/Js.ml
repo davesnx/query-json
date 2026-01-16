@@ -97,7 +97,7 @@ let get_categories () =
 
 let () =
   Js_of_ocaml.Js.export "query-json"
-    (object%js
-       val run = Js_of_ocaml.Js.wrap_callback run
-       val categories = Js_of_ocaml.Js.wrap_callback get_categories
-    end)
+    object%js
+      val run = Js_of_ocaml.Js.wrap_callback run
+      val categories = Js_of_ocaml.Js.wrap_callback get_categories
+    end
