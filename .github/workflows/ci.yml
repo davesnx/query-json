@@ -116,6 +116,10 @@ jobs:
             echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
             echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
             echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
+
+            # Add Cygwin bin to PATH - required for OCaml binaries to find DLLs
+            echo "C:\\cygwin\\bin" >> "$GITHUB_PATH"
+            echo "C:\\cygwin\\wrapperbin" >> "$GITHUB_PATH"
           fi
         shell: bash
 
