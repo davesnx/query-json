@@ -30,15 +30,6 @@ let position_to_string start end_ =
     (start.Lexing.pos_cnum - start.Lexing.pos_bol)
     (end_.Lexing.pos_cnum - end_.Lexing.pos_bol)
 
-let pretty_print_error ~colorize ~input ~(start : Lexing.position)
-    ~(end_ : Lexing.position) =
-  let err =
-    Query_error.parse_error
-      ~message:("problem parsing at " ^ position_to_string start end_)
-      ~input ~start_pos:start.pos_cnum ~end_pos:end_.pos_cnum
-  in
-  Query_error.format ~colorize err
-
 let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in
   let next_token () = provider ~debug buf in
@@ -71,7 +62,12 @@ let parse ~debug ~colorize input =
       Error (Query_error.format ~colorize err)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
-      Error (pretty_print_error ~colorize ~input ~start:loc_start ~end_:loc_end)
+      let err =
+        Query_error.parse_error
+          ~message:("problem parsing at " ^ position_to_string loc_start loc_end)
+          ~input ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
+      in
+      Error (Query_error.format ~colorize err)
 
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =
