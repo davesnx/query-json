@@ -320,7 +320,7 @@ term:
   | f = FUNCTION; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
     { let ast = match Language.map_binary_fn f arg1 arg2 with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+        | Error err -> Query_error.raise_parse_exception err $startpos(arg1) $endpos(arg2)
       in
       match opt with
       | true -> Optional ast
@@ -332,9 +332,9 @@ term:
         if Language.can_default_to_identity f then
           match Language.map_unary_fn f Identity with
           | Ok ast -> ast
-          | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+          | Error err -> Query_error.raise_parse_exception err $startpos(f) $endpos(f)
         else
-          Parse_errors.raise_rich_error (Language.error_for_missing_arg f) $startpos(f) $endpos(f)
+          Query_error.raise_parse_exception (Language.error_for_missing_arg f) $startpos(f) $endpos(f)
       in
       match opt with
       | true -> Optional ast
@@ -343,7 +343,7 @@ term:
   | f = FUNCTION; arg = sequence_expr; CLOSE_PARENT; opt = boption(QUESTION_MARK)
     { let ast = match Language.map_unary_fn f arg with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+        | Error err -> Query_error.raise_parse_exception err $startpos(arg) $endpos(arg)
       in
       match opt with
       | true -> Optional ast
@@ -360,7 +360,7 @@ term:
   | f = IDENTIFIER; opt = boption(QUESTION_MARK)
     { let ast = match Language.map_nullary_fn f with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(f) $endpos(f)
+        | Error err -> Query_error.raise_parse_exception err $startpos(f) $endpos(f)
       in
       match opt with
       | true -> Optional ast
@@ -370,7 +370,7 @@ term:
   | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg = sequence_expr; CLOSE_PARENT
     { let ast = match Language.map_unary_fn f arg with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(arg) $endpos(arg)
+        | Error err -> Query_error.raise_parse_exception err $startpos(arg) $endpos(arg)
       in
       Optional ast
     }
@@ -378,7 +378,7 @@ term:
   | f = IDENTIFIER; QUESTION_MARK; OPEN_PARENT; arg1 = sequence_expr; SEMICOLON; arg2 = sequence_expr; CLOSE_PARENT
     { let ast = match Language.map_binary_fn f arg1 arg2 with
         | Ok ast -> ast
-        | Error err -> Parse_errors.raise_rich_error err $startpos(arg1) $endpos(arg2)
+        | Error err -> Query_error.raise_parse_exception err $startpos(arg1) $endpos(arg2)
       in
       Optional ast
     }

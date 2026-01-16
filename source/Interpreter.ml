@@ -1,155 +1,12 @@
 open Ast
+module Runtime_error = Query_error.Runtime
 
-module Runtime_error : sig
-  type t
-  type _ Effect.t += Fail : t -> unit Effect.t
+type _ Effect.t +=
+  | Yield : Json.t -> unit Effect.t
+  | Break : unit Effect.t
+  | Halt : int -> unit Effect.t
+  | User_error : Json.t -> unit Effect.t
 
-  val to_json : t -> Json.t
-  val kind_string : t -> string
-  val message : t -> string
-  val value : t -> Json.t option
-  val suggestion : t -> string option
-  val key_not_found : key:string -> value:Json.t -> 'a
-  val null_access : key:string -> value:Json.t -> 'a
-  val type_mismatch : value:Json.t -> ?suggestion:string -> string -> 'a
-  val index_out_of_bounds : index:int -> length:int -> value:Json.t -> 'a
-  val empty_array : string -> 'a
-  val invalid_argument : fn:string -> expected:string -> found:string -> 'a
-  val undefined_function : name:string -> 'a
-  val empty_result : op:string -> ?suggestion:string -> unit -> 'a
-  val assertion_error : value:Json.t -> string -> 'a
-  val custom : kind:string -> value:Json.t -> string -> 'a
-end = struct
-  type error_kind =
-    | Key_not_found
-    | Null_access
-    | Type_mismatch
-    | Index_out_of_bounds
-    | Empty_array
-    | Undefined_function
-    | Empty_result
-    | Assertion_error
-    | Invalid_argument
-    | Custom of string
-
-  let error_kind_to_string = function
-    | Key_not_found -> "key_not_found"
-    | Null_access -> "null_access"
-    | Type_mismatch -> "type_mismatch"
-    | Index_out_of_bounds -> "index_out_of_bounds"
-    | Empty_array -> "empty_array"
-    | Undefined_function -> "undefined_function"
-    | Empty_result -> "empty_result"
-    | Assertion_error -> "assertion_error"
-    | Invalid_argument -> "invalid_argument"
-    | Custom s -> s
-
-  type t = {
-    kind : error_kind;
-    message : string;
-    value : Json.t option;
-    suggestion : string option;
-  }
-
-  type _ Effect.t += Fail : t -> unit Effect.t
-
-  let to_json { kind; message; value; suggestion } : Json.t =
-    let fields =
-      [
-        ("kind", `String (error_kind_to_string kind));
-        ("message", `String message);
-      ]
-    in
-    let fields =
-      match value with Some v -> fields @ [ ("value", v) ] | None -> fields
-    in
-    let fields =
-      match suggestion with
-      | Some s -> fields @ [ ("suggestion", `String s) ]
-      | None -> fields
-    in
-    `Assoc fields
-
-  let kind_string err = error_kind_to_string err.kind
-  let message err = err.message
-  let value err = err.value
-  let suggestion err = err.suggestion
-
-  let fail ~kind ?value ?suggestion message =
-    Effect.perform (Fail { kind; message; value; suggestion });
-    assert false
-
-  let key_not_found ~key ~value =
-    let suggestion =
-      match value with
-      | `Assoc assoc -> (
-          let keys = List.map fst assoc in
-          let hyphenated_match =
-            List.find_opt
-              (fun k ->
-                let key_len = String.length key in
-                String.length k > key_len
-                && String.sub k 0 key_len = key
-                && String.get k key_len = '-')
-              keys
-          in
-          match hyphenated_match with
-          | Some hk ->
-              Printf.sprintf
-                "Did you mean \"%s\"? Use .[\"...\"] or .\"...\" for keys with \
-                 hyphens"
-                hk
-          | None -> "Use ." ^ key ^ "? for optional access")
-      | _ -> "Use ." ^ key ^ "? for optional access"
-    in
-    fail ~kind:Key_not_found ~value ~suggestion
-      ("Key '" ^ key ^ "' not found in object")
-
-  let null_access ~key ~value =
-    fail ~kind:Null_access ~value ("Cannot access key '" ^ key ^ "' on null")
-
-  let type_mismatch ~value ?suggestion message =
-    fail ~kind:Type_mismatch ~value ?suggestion message
-
-  let index_out_of_bounds ~index ~length ~value =
-    fail ~kind:Index_out_of_bounds ~value
-      ~suggestion:("Use .[" ^ Int.to_string index ^ "]? for optional access")
-      ("Index " ^ Int.to_string index ^ " out of bounds (array has "
-     ^ Int.to_string length ^ " elements)")
-
-  let empty_array op =
-    fail ~kind:Empty_array
-      ~suggestion:("Use " ^ op ^ "? for optional access")
-      (op ^ ": empty array")
-
-  let invalid_argument ~fn ~expected ~found =
-    fail ~kind:Invalid_argument
-      (Printf.sprintf "`%s`: expected %s, found %s" fn expected found)
-
-  let undefined_function ~name =
-    fail ~kind:Undefined_function
-      ~suggestion:"check function name or define it with 'fn'"
-      ("undefined function: `" ^ name ^ "`")
-
-  let empty_result ~op ?suggestion () =
-    let suggestion =
-      match suggestion with
-      | Some s -> Some s
-      | None -> Some ("Use " ^ op ^ "? for optional access")
-    in
-    fail ~kind:Empty_result ?suggestion (op ^ ": empty expression result")
-
-  let assertion_error ~value message =
-    fail ~kind:Assertion_error ~value
-      ~suggestion:"Check the condition in your assert() call" message
-
-  let custom ~kind ~value message = fail ~kind:(Custom kind) ~value message
-end
-
-type _ Effect.t += Yield : Json.t -> unit Effect.t
-type _ Effect.t += Break : unit Effect.t
-type _ Effect.t += Halt : int -> unit Effect.t
-type _ Effect.t += User_error : Json.t -> unit Effect.t
 type fn_definition = { params : string list; body : expression }
 
 type ctx = {
@@ -170,60 +27,31 @@ let user_error value =
 let yield_many items = List.iter yield items
 
 let run fn ?and_then ?on_fail () =
-  let handler : 'a Effect.Deep.effect_handler =
-    {
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield json -> (
-              match and_then with
-              | Some f ->
-                  Some
-                    (fun (k : (a, _) Effect.Deep.continuation) ->
-                      f json;
-                      Effect.Deep.continue k ())
-              | None -> None)
-          | Runtime_error.Fail err -> (
-              match on_fail with
-              | Some f ->
-                  Some (fun (_ : (a, _) Effect.Deep.continuation) -> f err)
-              | None -> None)
-          | _ -> None);
-    }
+  let fn =
+    match and_then with
+    | None -> fn
+    | Some f -> (
+        fun () ->
+          match fn () with
+          | () -> ()
+          | effect Yield json, k ->
+              f json;
+              Effect.Deep.continue k ())
   in
-  Effect.Deep.try_with fn () handler
+  match on_fail with
+  | None -> fn ()
+  | Some f -> (
+      match fn () with () -> () | effect Runtime_error.Fail err, _ -> f err)
 
 let run_while fn ~when_ =
-  let handler : 'a Effect.Deep.effect_handler =
-    {
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield v ->
-              Some
-                (fun (k : (a, _) Effect.Deep.continuation) ->
-                  if when_ v then Effect.Deep.continue k () else ())
-          | _ -> None);
-    }
-  in
-  Effect.Deep.try_with fn () handler
+  match fn () with
+  | () -> ()
+  | effect Yield v, k -> if when_ v then Effect.Deep.continue k () else ()
 
 let run_and_collect_results fn =
-  let handler : (unit, Json.t list) Effect.Deep.handler =
-    {
-      retc = (fun () -> []);
-      exnc = (fun e -> raise e);
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield v ->
-              Some
-                (fun (k : (a, _) Effect.Deep.continuation) ->
-                  v :: Effect.Deep.continue k ())
-          | _ -> None);
-    }
-  in
-  Effect.Deep.match_with fn () handler
+  match fn () with
+  | () -> []
+  | effect Yield v, k -> v :: Effect.Deep.continue k ()
 
 let rec substitute_params (params : string list) (args : expression list)
     (expr : expression) : expression =
@@ -3478,24 +3306,13 @@ let execute ~colorize ~verbose ?(env = []) expr json =
     in
     Query_error.format ~colorize qerr
   in
-  let handler : ('a, ('a, string) result) Effect.Deep.handler =
-    {
-      retc = (fun results -> Ok results);
-      exnc = (fun e -> Error (Printexc.to_string e));
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Runtime_error.Fail err -> Some (fun _ -> Error (format_error err))
-          | Break ->
-              Some
-                (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  let err =
-                    Query_error.context_error
-                      ~message:"break used outside of loop context"
-                  in
-                  Error (Query_error.format ~colorize err))
-          | Halt exit_code -> Some (fun _ -> exit exit_code)
-          | _ -> None);
-    }
-  in
-  Effect.Deep.match_with (fun () -> collect ~ctx expr json) () handler
+  match collect ~ctx expr json with
+  | results -> Ok results
+  | effect Runtime_error.Fail err, _ -> Error (format_error err)
+  | effect Break, _ ->
+      let err =
+        Query_error.context_error ~message:"break used outside of loop context"
+      in
+      Error (Query_error.format ~colorize err)
+  | effect Halt exit_code, _ -> exit exit_code
+  | exception e -> Error (Printexc.to_string e)

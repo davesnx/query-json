@@ -83,3 +83,29 @@ val runtime_error :
   t
 
 val context_error : message:string -> t
+
+exception Parse_exception of string * Lexing.position * Lexing.position
+exception Rich_parse_exception of t * Lexing.position * Lexing.position
+
+val raise_parse_exception : t -> Lexing.position -> Lexing.position -> 'a
+
+module Runtime : sig
+  type t
+  type _ Effect.t += Fail : t -> unit Effect.t
+
+  val to_json : t -> Json.t
+  val kind_string : t -> string
+  val message : t -> string
+  val value : t -> Json.t option
+  val suggestion : t -> string option
+  val key_not_found : key:string -> value:Json.t -> 'a
+  val null_access : key:string -> value:Json.t -> 'a
+  val type_mismatch : value:Json.t -> ?suggestion:string -> string -> 'a
+  val index_out_of_bounds : index:int -> length:int -> value:Json.t -> 'a
+  val empty_array : string -> 'a
+  val invalid_argument : fn:string -> expected:string -> found:string -> 'a
+  val undefined_function : name:string -> 'a
+  val empty_result : op:string -> ?suggestion:string -> unit -> 'a
+  val assertion_error : value:Json.t -> string -> 'a
+  val custom : kind:string -> value:Json.t -> string -> 'a
+end

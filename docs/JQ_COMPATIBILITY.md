@@ -26,6 +26,9 @@ While query-json implements most of jq's functionality, v1 introduces intentiona
   - [Core Functions](#core-functions)
   - [Not Implemented](#not-implemented)
 - [Additional Features](#additional-features-in-query-json)
+- [Video Demos](#video-demos)
+  - [Available Demos](#available-demos)
+  - [Generating Videos](#generating-videos)
 
 ---
 
@@ -453,3 +456,42 @@ query-json includes some functions not found in jq:
 | `dive` | Depth-first traversal | `[dive \| strings]` |
 | `find_all(expr)` | Find all matching at any depth | `find_all(type=="number")` |
 | `paths_to(expr)` | Get paths to all matching values | `paths_to(type=="string")` |
+
+---
+
+## Video Demos
+
+All the examples in this guide have corresponding VHS tape demos. You can find them in [`docs/jq-compat-demos/`](./jq-compat-demos/) and generate the videos using [VHS](https://github.com/charmbracelet/vhs).
+
+### Available Demos
+
+| Demo | Description | Tape File |
+|------|-------------|-----------|
+| **Error Messages** | Helpful error messages with context and hints | [`00-error-messages.tape`](./jq-compat-demos/00-error-messages.tape) |
+| **Null Handling** | Stricter null handling catches bugs early | [`01-stricter-null-handling.tape`](./jq-compat-demos/01-stricter-null-handling.tape) |
+| **fn vs def** | `fn` keyword for user-defined functions | [`02-fn-vs-def.tape`](./jq-compat-demos/02-fn-vs-def.tape) |
+| **Snake_case** | Readable `snake_case` function names | [`03-snake-case-naming.tape`](./jq-compat-demos/03-snake-case-naming.tape) |
+| **Clearer Naming** | Self-explanatory function names | [`04-clearer-naming.tape`](./jq-compat-demos/04-clearer-naming.tape) |
+| **group_by** | Returns object instead of array of arrays | [`05-group-by-behavior.tape`](./jq-compat-demos/05-group-by-behavior.tape) |
+| **keys** | Preserves insertion order | [`06-keys-insertion-order.tape`](./jq-compat-demos/06-keys-insertion-order.tape) |
+| **unique** | Preserves insertion order | [`07-unique-insertion-order.tape`](./jq-compat-demos/07-unique-insertion-order.tape) |
+| **infinite** | Generator producing 0, 1, 2, ... | [`08-infinite-generator.tape`](./jq-compat-demos/08-infinite-generator.tape) |
+| **Optional Functions** | `?` works on function calls | [`09-optional-access-functions.tape`](./jq-compat-demos/09-optional-access-functions.tape) |
+| **Additional Features** | Features unique to query-json | [`10-additional-features.tape`](./jq-compat-demos/10-additional-features.tape) |
+| **All Demos** | Complete overview of all differences | [`all-demos.tape`](./jq-compat-demos/all-demos.tape) |
+
+### Generating Videos
+
+To generate all demo videos:
+
+```bash
+# Generate all demos
+for tape in docs/jq-compat-demos/*.tape; do
+  vhs "$tape"
+done
+
+# Or generate a specific demo
+vhs docs/jq-compat-demos/all-demos.tape
+```
+
+The generated `.mp4` files will be placed in `docs/jq-compat-demos/`.
