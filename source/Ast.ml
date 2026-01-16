@@ -181,7 +181,6 @@ type fn1_expr =
 
 type compiled_regex = { pattern : string; regex : Str.regexp }
 
-let show_compiled_regex r = Printf.sprintf "/%s/" r.pattern
 let pp_compiled_regex fmt r = Format.fprintf fmt "/%s/" r.pattern
 
 type fn2 =

@@ -1305,56 +1305,6 @@ let all_function_names () =
   let aliases = List.concat_map (fun (f : function_info) -> f.aliases) funcs in
   List.sort_uniq Stdlib.String.compare (names @ aliases)
 
-(* Levenshtein distance for fuzzy matching *)
-let levenshtein s1 s2 =
-  let len1 = String.length s1 in
-  let len2 = String.length s2 in
-  if len1 = 0 then len2
-  else if len2 = 0 then len1
-  else
-    let matrix = Array.make_matrix (len1 + 1) (len2 + 1) 0 in
-    for i = 0 to len1 do
-      matrix.(i).(0) <- i
-    done;
-    for j = 0 to len2 do
-      matrix.(0).(j) <- j
-    done;
-    for i = 1 to len1 do
-      for j = 1 to len2 do
-        let cost = if s1.[i - 1] = s2.[j - 1] then 0 else 1 in
-        matrix.(i).(j) <-
-          min
-            (min (matrix.(i - 1).(j) + 1) (matrix.(i).(j - 1) + 1))
-            (matrix.(i - 1).(j - 1) + cost)
-      done
-    done;
-    matrix.(len1).(len2)
-
-(* Find similar function names for suggestions *)
-let suggest_function_name (typo : string) : string list =
-  let all_names = all_function_names () in
-  let typo_lower = String.lowercase_ascii typo in
-  let typo_len = String.length typo in
-  (* Calculate distance and filter candidates *)
-  let candidates =
-    all_names
-    |> List.map (fun name ->
-        let name_lower = String.lowercase_ascii name in
-        let dist = levenshtein typo_lower name_lower in
-        (name, dist))
-    |> List.filter (fun (name, dist) ->
-        (* Accept if distance is reasonable relative to length *)
-        let name_len = String.length name in
-        let max_dist = max 2 (min typo_len name_len / 3) in
-        dist <= max_dist)
-    |> List.sort (fun (_, d1) (_, d2) -> compare d1 d2)
-    |> List.map fst
-  in
-  (* Return top 3 suggestions *)
-  match candidates with
-  | [] -> []
-  | _ -> List.filteri (fun i _ -> i < 3) candidates
-
 let type_name_of_applicable = function
   | String -> "string"
   | Array -> "array"
@@ -1364,15 +1314,6 @@ let type_name_of_applicable = function
   | Nil -> "null"
   | Any -> "any"
 
-let applicable_of_type_name = function
-  | "string" -> Some String
-  | "array" -> Some Array
-  | "object" -> Some Object
-  | "number" -> Some Number
-  | "boolean" -> Some Bool
-  | "null" -> Some Nil
-  | _ -> None
-
 let functions_for_type type_name =
   let all = all_functions () in
   List.filter
@@ -1381,9 +1322,6 @@ let functions_for_type type_name =
         (fun a -> a = Any || type_name_of_applicable a = type_name)
         f.applicable_to)
     all
-
-let function_names_for_type type_name =
-  functions_for_type type_name |> List.map (fun (f : function_info) -> f.name)
 
 let applicable_of_json_type = function
   | "string" -> String

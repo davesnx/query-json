@@ -11,9 +11,7 @@ A fast, friendly and portable JSON query language for the command line.
 
 **query-json** lets you slice, filter, and transform JSON data with a concise, expressive syntax. It started as a jq-compatible implementation, but evolved into something better: faster execution, better error messages, and a modernized language design.
 
-![query-json CLI demo](docs/cli-basic.gif)
-
-## Why query-json?
+## Why?
 
 ### Fast
 

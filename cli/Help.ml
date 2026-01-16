@@ -1,5 +1,4 @@
 let find_group = Language.find_category
-let available_categories = Language.category_names
 
 let format_function_doc ~colorize (f : Language.function_info) =
   let t = Console_style.make ~colorize in

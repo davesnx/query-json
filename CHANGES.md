@@ -1,5 +1,7 @@
 # Unreleased
 
+## 1.0.0~beta-1
+
 - Rename functions for clarity
 - Deprecate `..` syntax, use `descend`
 - Improve REPL completions
@@ -10,7 +12,6 @@
   - Huge integers use arbitrary precision (`zarith`) for values beyond Int64
   - `1152921504606846976 + 1` now correctly returns `1152921504606846977` (jq returns `1152921504606847000`)
   - Removed `Intlit`/`Floatlit`/`Stringlit` variants (string representations no longer needed)
-
 - [BREAKING CHANGE] **Stricter null handling**: Operations on null now error instead of silently propagating
   - `null + 1` errors instead of returning `1`
   - `.missing.key` errors instead of returning `null`
@@ -41,22 +42,19 @@
 - [FEATURE] **Interactive REPL with autocomplete**: `query-json --repl data.json`
   - Context-aware suggestions based on data type
   - Tab completion for functions and keys
+  - Supports stdin input: `cat data.json | query-json --repl`
 - [FEATURE] **Built-in function reference**: `query-json --functions [category]`
 - [FEATURE] **`--null-input` / `-n` flag**: Run filter with `null` as input, useful for constructing JSON or as a calculator
 - [FEATURE] **Helpful error messages** with context, hints, and suggestions
   - Key not found shows available keys and suggests `?`
   - Type mismatch shows expected vs found types
   - Missing argument shows usage and examples
-
 - [FEATURE] Functions added
   - **Traversal**: `descend`, `dive`, `find_all(expr)`, `find_first(expr)`, `paths_to(expr)`
   - **Collection**: `filter(expr)` (alias for `map(select(expr))`), `flat_map(expr)`, `find(expr)`, `some(expr)`, `pluck(expr)`, `partition(expr)`
   - **Predicates**: `is_empty`, `is_blank`
   - **Control flow**: `assert(cond)`, `assert(cond; msg)`, `raise(kind; msg)`
-
-### Improvements
-
-- [] Remove easy-format dependency
+- Remove easy-format dependency
 - Add `=` assignment operator (`.a = .b`, `(.a, .b) = expr`)
 - Fix `|=` to create paths that don't exist (`.a |= 42` on `null` creates `{"a": 42}`)
 - Fix `|=` to take first value when transform produces multiple results

@@ -146,10 +146,12 @@ end = struct
   let custom ~kind ~value message = fail ~kind:(Custom kind) ~value message
 end
 
-type _ Effect.t += Yield : Json.t -> unit Effect.t
-type _ Effect.t += Break : unit Effect.t
-type _ Effect.t += Halt : int -> unit Effect.t
-type _ Effect.t += User_error : Json.t -> unit Effect.t
+type _ Effect.t +=
+  | Yield : Json.t -> unit Effect.t
+  | Break : unit Effect.t
+  | Halt : int -> unit Effect.t
+  | User_error : Json.t -> unit Effect.t
+
 type fn_definition = { params : string list; body : expression }
 
 type ctx = {
@@ -170,60 +172,31 @@ let user_error value =
 let yield_many items = List.iter yield items
 
 let run fn ?and_then ?on_fail () =
-  let handler : 'a Effect.Deep.effect_handler =
-    {
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield json -> (
-              match and_then with
-              | Some f ->
-                  Some
-                    (fun (k : (a, _) Effect.Deep.continuation) ->
-                      f json;
-                      Effect.Deep.continue k ())
-              | None -> None)
-          | Runtime_error.Fail err -> (
-              match on_fail with
-              | Some f ->
-                  Some (fun (_ : (a, _) Effect.Deep.continuation) -> f err)
-              | None -> None)
-          | _ -> None);
-    }
+  let fn =
+    match and_then with
+    | None -> fn
+    | Some f -> (
+        fun () ->
+          match fn () with
+          | () -> ()
+          | effect Yield json, k ->
+              f json;
+              Effect.Deep.continue k ())
   in
-  Effect.Deep.try_with fn () handler
+  match on_fail with
+  | None -> fn ()
+  | Some f -> (
+      match fn () with () -> () | effect Runtime_error.Fail err, _ -> f err)
 
 let run_while fn ~when_ =
-  let handler : 'a Effect.Deep.effect_handler =
-    {
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield v ->
-              Some
-                (fun (k : (a, _) Effect.Deep.continuation) ->
-                  if when_ v then Effect.Deep.continue k () else ())
-          | _ -> None);
-    }
-  in
-  Effect.Deep.try_with fn () handler
+  match fn () with
+  | () -> ()
+  | effect Yield v, k -> if when_ v then Effect.Deep.continue k () else ()
 
 let run_and_collect_results fn =
-  let handler : (unit, Json.t list) Effect.Deep.handler =
-    {
-      retc = (fun () -> []);
-      exnc = (fun e -> raise e);
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Yield v ->
-              Some
-                (fun (k : (a, _) Effect.Deep.continuation) ->
-                  v :: Effect.Deep.continue k ())
-          | _ -> None);
-    }
-  in
-  Effect.Deep.match_with fn () handler
+  match fn () with
+  | () -> []
+  | effect Yield v, k -> v :: Effect.Deep.continue k ()
 
 let rec substitute_params (params : string list) (args : expression list)
     (expr : expression) : expression =
@@ -3478,24 +3451,13 @@ let execute ~colorize ~verbose ?(env = []) expr json =
     in
     Query_error.format ~colorize qerr
   in
-  let handler : ('a, ('a, string) result) Effect.Deep.handler =
-    {
-      retc = (fun results -> Ok results);
-      exnc = (fun e -> Error (Printexc.to_string e));
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | Runtime_error.Fail err -> Some (fun _ -> Error (format_error err))
-          | Break ->
-              Some
-                (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  let err =
-                    Query_error.context_error
-                      ~message:"break used outside of loop context"
-                  in
-                  Error (Query_error.format ~colorize err))
-          | Halt exit_code -> Some (fun _ -> exit exit_code)
-          | _ -> None);
-    }
-  in
-  Effect.Deep.match_with (fun () -> collect ~ctx expr json) () handler
+  match collect ~ctx expr json with
+  | results -> Ok results
+  | effect Runtime_error.Fail err, _ -> Error (format_error err)
+  | effect Break, _ ->
+      let err =
+        Query_error.context_error ~message:"break used outside of loop context"
+      in
+      Error (Query_error.format ~colorize err)
+  | effect Halt exit_code, _ -> exit exit_code
+  | exception e -> Error (Printexc.to_string e)
