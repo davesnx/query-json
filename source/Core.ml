@@ -63,9 +63,11 @@ let parse ~debug ~colorize input =
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       let err =
-        Query_error.parse_error
-          ~message:("problem parsing at " ^ position_to_string loc_start loc_end)
-          ~input ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
+        Query_error.parse_error ~input ~start_pos:loc_start.pos_cnum
+          ~end_pos:loc_end.pos_cnum
+          ~message:
+            (Printf.sprintf "problem parsing at %s"
+               (position_to_string loc_start loc_end))
       in
       Error (Query_error.format ~colorize err)
 
