@@ -120,6 +120,10 @@ demo: ## Generate demo from tape file (usage: make demo FILE=cli-basic)
 bench: ## Run benchmarks
 	./benchmarks/bench.sh
 
+.PHONY: bench-parser
+bench-parser: ## Run parser-only benchmark
+	$(DUNE) exec benchmarks/bench_parser.exe
+
 .PHONY: release
 release: ## Create a new release (usage: make release VERSION=1.2.3)
 	@if [ -z "$(VERSION)" ]; then \

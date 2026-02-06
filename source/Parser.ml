@@ -595,14 +595,14 @@ and parse_function_call s name =
   | Lexer.CLOSE_PARENT ->
       advance s;
       let opt = optional_question s in
+      let raise_err err = raise (Query_error.Parse_error (err, fn_start, s.end_pos)) in
       let ast =
-        if Language.can_default_to_identity name then begin
+        if Language.can_default_to_identity name then
           match Language.map_unary_fn name Identity with
           | Ok a -> a
-          | Error err -> raise (Query_error.Parse_error (err, fn_start, s.end_pos))
-        end else
-          let err = Language.error_for_missing_arg name in
-          raise (Query_error.Parse_error (err, fn_start, s.end_pos))
+          | Error err -> raise_err err
+        else
+          raise_err (Language.error_for_missing_arg name)
       in
       wrap_optional opt ast
   | _ ->
