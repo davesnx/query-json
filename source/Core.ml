@@ -28,8 +28,7 @@ let parse ~debug ~colorize input =
       let Location.{ loc_start; loc_end; _ } = !last_position in
       let err =
         Query_error.semantic_error ~message:msg ~input
-          ~start_pos:loc_start.pos_cnum
-          ~end_pos:loc_end.pos_cnum
+          ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
       in
       Error (Query_error.format ~colorize err)
   | exception _exn ->

@@ -2,14 +2,7 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
- (libraries
-  json
-  sedlex
-  str
-  unix
-  zarith
-  matrix.ansi
-  query-json.console-style)
+ (libraries json sedlex str unix zarith matrix.ansi query-json.console-style)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
  (instrumentation
