@@ -2,6 +2,8 @@
 
 ## 1.0.0~beta-1
 
+- [REFACTOR] Replace menhir-based parser with hand-written recursive descent parser
+- [FIX] **Big_int arithmetic support**: All arithmetic, comparison, and math operations now handle arbitrary-precision integers
 - Rename functions for clarity
 - Deprecate `..` syntax, use `descend`
 - Improve REPL completions
