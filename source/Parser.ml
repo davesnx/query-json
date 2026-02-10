@@ -15,10 +15,10 @@ let advance stream =
     | Error message ->
         let _, stop = Sedlexing.lexing_positions stream.buf in
         let error =
-          Query_error.lexer_error ~message ~input:"" ~start_pos:start.pos_cnum
+          Error.lexer_error ~message ~input:"" ~start_pos:start.pos_cnum
             ~end_pos:stop.pos_cnum
         in
-        Query_error.raise error start stop
+        Error.raise error start stop
   in
   let _, stop = Sedlexing.lexing_positions stream.buf in
   stream.token <- token;
@@ -36,20 +36,20 @@ let expect stream expected =
         (Lexer.humanize token)
     in
     let error =
-      Query_error.parse_error ~message ~input:""
-        ~start_pos:stream.start_pos.pos_cnum ~end_pos:stream.end_pos.pos_cnum
+      Error.parse_error ~message ~input:"" ~start_pos:stream.start_pos.pos_cnum
+        ~end_pos:stream.end_pos.pos_cnum
     in
-    Query_error.raise error stream.start_pos stream.end_pos
+    Error.raise error stream.start_pos stream.end_pos
 
 let error stream message =
   let message =
     Printf.sprintf "%s, got %s" message (Lexer.humanize stream.token)
   in
   let error =
-    Query_error.parse_error ~message ~input:""
-      ~start_pos:stream.start_pos.pos_cnum ~end_pos:stream.end_pos.pos_cnum
+    Error.parse_error ~message ~input:"" ~start_pos:stream.start_pos.pos_cnum
+      ~end_pos:stream.end_pos.pos_cnum
   in
-  Query_error.raise error stream.start_pos stream.end_pos
+  Error.raise error stream.start_pos stream.end_pos
 
 let optional_question stream expr =
   match (peek stream : Lexer.token) with
@@ -60,7 +60,7 @@ let optional_question stream expr =
 
 let unwrap_or_raise stream = function
   | Ok ast -> ast
-  | Error error -> Query_error.raise error stream.start_pos stream.end_pos
+  | Error error -> Error.raise error stream.start_pos stream.end_pos
 
 let expect_variable stream =
   match (peek stream : Lexer.token) with
@@ -589,9 +589,7 @@ and parse_function_call stream name =
     match (peek stream : Lexer.token) with
     | CLOSE_PARENT ->
         advance stream;
-        let raise_error error =
-          Query_error.raise error fn_start stream.end_pos
-        in
+        let raise_error error = Error.raise error fn_start stream.end_pos in
         if Language.can_default_to_identity name then
           match Language.map_unary_fn name Identity with
           | Ok ast -> ast

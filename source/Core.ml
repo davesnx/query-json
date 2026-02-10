@@ -17,30 +17,30 @@ let parse ~debug ~colorize input =
   | ast ->
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
-  | exception Query_error.Parse_error (err, start, end_) ->
+  | exception Error.Parse_error (err, start, end_) ->
       last_position := { loc_start = start; loc_end = end_ };
       let err =
-        Query_error.with_location ~input ~start_pos:start.pos_cnum
+        Error.with_location ~input ~start_pos:start.pos_cnum
           ~end_pos:end_.pos_cnum err
       in
-      Error (Query_error.format ~colorize err)
+      Error (Error.format ~colorize err)
   | exception Failure msg ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       let err =
-        Query_error.semantic_error ~message:msg ~input
-          ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
+        Error.semantic_error ~message:msg ~input ~start_pos:loc_start.pos_cnum
+          ~end_pos:loc_end.pos_cnum
       in
-      Error (Query_error.format ~colorize err)
+      Error (Error.format ~colorize err)
   | exception _exn ->
       let Location.{ loc_start; loc_end; _ } = !last_position in
       let err =
-        Query_error.parse_error ~input ~start_pos:loc_start.pos_cnum
+        Error.parse_error ~input ~start_pos:loc_start.pos_cnum
           ~end_pos:loc_end.pos_cnum
           ~message:
             (Printf.sprintf "problem parsing at %s"
                (position_to_string loc_start loc_end))
       in
-      Error (Query_error.format ~colorize err)
+      Error (Error.format ~colorize err)
 
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =

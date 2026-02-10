@@ -3442,22 +3442,22 @@ let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
   let format_error (err : Runtime_error.t) =
     let qerr =
-      Query_error.runtime_error
+      Error.runtime_error
         ~kind:(Runtime_error.kind_string err)
         ~message:(Runtime_error.message err)
         ?value:(Runtime_error.value err)
         ?suggestion:(Runtime_error.suggestion err)
         ()
     in
-    Query_error.format ~colorize qerr
+    Error.format ~colorize qerr
   in
   match collect ~ctx expr json with
   | results -> Ok results
   | effect Runtime_error.Fail err, _ -> Error (format_error err)
   | effect Break, _ ->
       let err =
-        Query_error.context_error ~message:"break used outside of loop context"
+        Error.context_error ~message:"break used outside of loop context"
       in
-      Error (Query_error.format ~colorize err)
+      Error (Error.format ~colorize err)
   | effect Halt exit_code, _ -> exit exit_code
   | exception e -> Error (Printexc.to_string e)
