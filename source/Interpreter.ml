@@ -275,10 +275,19 @@ module Operators = struct
     | `Float f -> Some f
     | `Int n -> Some (Float.of_int n)
     | `Int64 n -> Some (Int64.to_float n)
+    | `Big_int z -> Some (Z.to_float z)
     | _ -> None
 
   let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    (* Big_int arithmetic - preserves arbitrary precision *)
+    | `Big_int l, `Big_int r -> `Big_int (Z.add l r)
+    | `Big_int l, `Int r -> `Big_int (Z.add l (Z.of_int r))
+    | `Int l, `Big_int r -> `Big_int (Z.add (Z.of_int l) r)
+    | `Big_int l, `Int64 r -> `Big_int (Z.add l (Z.of_int64 r))
+    | `Int64 l, `Big_int r -> `Big_int (Z.add (Z.of_int64 l) r)
+    | `Big_int l, `Float r -> `Float (Z.to_float l +. r)
+    | `Float l, `Big_int r -> `Float (l +. Z.to_float r)
     (* Int64 arithmetic - preserves precision *)
     | `Int64 l, `Int64 r -> `Int64 (Int64.add l r)
     | `Int64 l, `Int r -> `Int64 (Int64.add l (Int64.of_int r))
@@ -326,9 +335,11 @@ module Operators = struct
     | Some l, Some r -> `Float (fn l r)
     | _ -> fail_invalid_type ~ctx str left
 
-  let compare ~ctx:_ str _fn (left : Json.t) (right : Json.t) =
-    match (to_float left, to_float right) with
-    | Some l, Some r -> `Bool (_fn l r)
+  let compare ~ctx:_ str int_fn (left : Json.t) (right : Json.t) =
+    match (left, right) with
+    | ( (`Int _ | `Int64 _ | `Big_int _ | `Float _),
+        (`Int _ | `Int64 _ | `Big_int _ | `Float _) ) ->
+        `Bool (int_fn (Json.compare left right) 0)
     | _ ->
         Runtime_error.invalid_argument ~fn:str ~expected:"numbers"
           ~found:(Json.type_of left ^ " and " ^ Json.type_of right)
@@ -356,6 +367,14 @@ module Operators = struct
 
   let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    (* Big_int arithmetic - preserves arbitrary precision *)
+    | `Big_int l, `Big_int r -> `Big_int (Z.sub l r)
+    | `Big_int l, `Int r -> `Big_int (Z.sub l (Z.of_int r))
+    | `Int l, `Big_int r -> `Big_int (Z.sub (Z.of_int l) r)
+    | `Big_int l, `Int64 r -> `Big_int (Z.sub l (Z.of_int64 r))
+    | `Int64 l, `Big_int r -> `Big_int (Z.sub (Z.of_int64 l) r)
+    | `Big_int l, `Float r -> `Float (Z.to_float l -. r)
+    | `Float l, `Big_int r -> `Float (l -. Z.to_float r)
     (* Int64 arithmetic - preserves precision *)
     | `Int64 l, `Int64 r -> `Int64 (Int64.sub l r)
     | `Int64 l, `Int r -> `Int64 (Int64.sub l (Int64.of_int r))
@@ -396,6 +415,14 @@ module Operators = struct
 
   let multiply ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    (* Big_int arithmetic - preserves arbitrary precision *)
+    | `Big_int l, `Big_int r -> `Big_int (Z.mul l r)
+    | `Big_int l, `Int r -> `Big_int (Z.mul l (Z.of_int r))
+    | `Int l, `Big_int r -> `Big_int (Z.mul (Z.of_int l) r)
+    | `Big_int l, `Int64 r -> `Big_int (Z.mul l (Z.of_int64 r))
+    | `Int64 l, `Big_int r -> `Big_int (Z.mul (Z.of_int64 l) r)
+    | `Big_int l, `Float r -> `Float (Z.to_float l *. r)
+    | `Float l, `Big_int r -> `Float (l *. Z.to_float r)
     (* Int64 arithmetic - preserves precision *)
     | `Int64 l, `Int64 r -> `Int64 (Int64.mul l r)
     | `Int64 l, `Int r -> `Int64 (Int64.mul l (Int64.of_int r))
@@ -425,6 +452,14 @@ module Operators = struct
 
   let divide ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    (* Big_int division - produces Float like other integer division *)
+    | `Big_int l, `Big_int r -> `Float (Z.to_float l /. Z.to_float r)
+    | `Big_int l, `Int r -> `Float (Z.to_float l /. Int.to_float r)
+    | `Int l, `Big_int r -> `Float (Int.to_float l /. Z.to_float r)
+    | `Big_int l, `Int64 r -> `Float (Z.to_float l /. Int64.to_float r)
+    | `Int64 l, `Big_int r -> `Float (Int64.to_float l /. Z.to_float r)
+    | `Big_int l, `Float r -> `Float (Z.to_float l /. r)
+    | `Float l, `Big_int r -> `Float (l /. Z.to_float r)
     | `Float l, `Float r -> `Float (l /. r)
     | `Int l, `Float r -> `Float (Int.to_float l /. r)
     | `Float l, `Int r -> `Float (l /. Int.to_float r)
@@ -442,6 +477,14 @@ module Operators = struct
 
   let modulo ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    (* Big_int modulo - preserves arbitrary precision *)
+    | `Big_int l, `Big_int r -> `Big_int (Z.rem l r)
+    | `Big_int l, `Int r -> `Big_int (Z.rem l (Z.of_int r))
+    | `Int l, `Big_int r -> `Big_int (Z.rem (Z.of_int l) r)
+    | `Big_int l, `Int64 r -> `Big_int (Z.rem l (Z.of_int64 r))
+    | `Int64 l, `Big_int r -> `Big_int (Z.rem (Z.of_int64 l) r)
+    | `Big_int l, `Float r -> `Float (mod_float (Z.to_float l) r)
+    | `Float l, `Big_int r -> `Float (mod_float l (Z.to_float r))
     (* Int64 modulo - preserves precision *)
     | `Int64 l, `Int64 r -> `Int64 (Int64.rem l r)
     | `Int64 l, `Int r -> `Int64 (Int64.rem l (Int64.of_int r))
@@ -572,6 +615,14 @@ let rec get_path value components =
             get_path (List.nth items idx) rest
           else `Null
       | _ -> `Null)
+  | `Big_int idx :: rest -> (
+      let idx = Z.to_int idx in
+      match value with
+      | `List items ->
+          if idx >= 0 && idx < List.length items then
+            get_path (List.nth items idx) rest
+          else `Null
+      | _ -> `Null)
   | _ :: rest -> get_path value rest
 
 let rec set_path value path_components new_value =
@@ -591,11 +642,12 @@ let rec set_path value path_components new_value =
           else `Assoc (fields @ [ (key, set_path `Null rest new_value) ])
       | `Null -> `Assoc [ (key, set_path `Null rest new_value) ]
       | _ -> value)
-  | ((`Int _ | `Int64 _ | `Float _) as num) :: rest -> (
+  | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
       let idx =
         match num with
         | `Int i -> i
         | `Int64 i -> Int64.to_int i
+        | `Big_int z -> Z.to_int z
         | `Float f -> Float.to_int f
         | _ -> 0
       in
@@ -645,6 +697,7 @@ let tm_to_array (tm : Unix.tm) (is_dst : bool) : Json.t =
 let json_to_int = function
   | `Int n -> Some n
   | `Int64 n -> Some (Int64.to_int n)
+  | `Big_int z -> Some (Z.to_int z)
   | _ -> None
 
 let localtime ~ctx json =
@@ -798,6 +851,7 @@ let length ~ctx (json : Json.t) =
   | `Null -> `Int64 0L
   | `Int n -> `Int64 (Int64.of_int (abs n))
   | `Int64 n -> `Int64 (Int64.abs n)
+  | `Big_int z -> `Big_int (Z.abs z)
   | `Float f -> `Float (Float.abs f)
   | _ -> fail_invalid_type ~ctx "length" json
 
@@ -827,6 +881,7 @@ let math_fn ~ctx fn name json =
   | `Float f -> `Float (fn f)
   | `Int n -> `Float (fn (Float.of_int n))
   | `Int64 n -> `Float (fn (Int64.to_float n))
+  | `Big_int z -> `Float (fn (Z.to_float z))
   | _ -> fail_invalid_type ~ctx name json
 
 let abs_op ~ctx json =
@@ -834,6 +889,7 @@ let abs_op ~ctx json =
   | `Float f -> `Float (Float.abs f)
   | `Int n -> `Int64 (Int64.of_int (abs n))
   | `Int64 n -> `Int64 (Int64.abs n)
+  | `Big_int z -> `Big_int (Z.abs z)
   | _ -> fail_invalid_type ~ctx "abs" json
 
 let ceil_op ~ctx json =
@@ -841,6 +897,7 @@ let ceil_op ~ctx json =
   | `Float f -> `Int64 (Int64.of_float (Float.ceil f))
   | `Int n -> `Int64 (Int64.of_int n)
   | `Int64 n -> `Int64 n
+  | `Big_int z -> `Big_int z
   | _ -> fail_invalid_type ~ctx "ceil" json
 
 let round_op ~ctx json =
@@ -848,12 +905,13 @@ let round_op ~ctx json =
   | `Float f -> `Int64 (Int64.of_float (Float.round f))
   | `Int n -> `Int64 (Int64.of_int n)
   | `Int64 n -> `Int64 n
+  | `Big_int z -> `Big_int z
   | _ -> fail_invalid_type ~ctx "round" json
 
 let is_normal_op ~ctx json =
   match json with
   | `Float f -> `Bool (Float.is_finite f && not (Float.is_nan f))
-  | `Int _ | `Int64 _ -> `Bool true
+  | `Int _ | `Int64 _ | `Big_int _ -> `Bool true
   | _ -> fail_invalid_type ~ctx "is_normal" json
 
 let logb_op ~ctx json =
@@ -861,6 +919,7 @@ let logb_op ~ctx json =
   | `Float f -> `Float (Float.log2 (Float.abs f) |> Float.floor)
   | `Int n -> `Float (Float.log2 (Float.abs (Float.of_int n)) |> Float.floor)
   | `Int64 n -> `Float (Float.log2 (Float.abs (Int64.to_float n)) |> Float.floor)
+  | `Big_int z -> `Float (Float.log2 (Float.abs (Z.to_float z)) |> Float.floor)
   | _ -> fail_invalid_type ~ctx "logb" json
 
 let floor ~ctx (json : Json.t) =
@@ -868,6 +927,7 @@ let floor ~ctx (json : Json.t) =
   | `Float f -> `Int64 (Int64.of_float (floor f))
   | `Int n -> `Int64 (Int64.of_int n)
   | `Int64 n -> `Int64 n
+  | `Big_int z -> `Big_int z
   | _ -> fail_invalid_type ~ctx "floor" json
 
 let sqrt ~ctx (json : Json.t) =
@@ -875,6 +935,7 @@ let sqrt ~ctx (json : Json.t) =
   | `Float f -> `Float (sqrt f)
   | `Int n -> `Float (sqrt (Float.of_int n))
   | `Int64 n -> `Float (sqrt (Int64.to_float n))
+  | `Big_int z -> `Float (sqrt (Z.to_float z))
   | _ -> fail_invalid_type ~ctx "sqrt" json
 
 let to_number ~ctx (json : Json.t) =
@@ -887,7 +948,7 @@ let to_number ~ctx (json : Json.t) =
           match Float.of_string_opt s with
           | Some f -> `Float f
           | None -> fail_invalid_type ~ctx "to_number" json))
-  | `Int _ | `Int64 _ | `Float _ -> json
+  | `Int _ | `Int64 _ | `Big_int _ | `Float _ -> json
   | _ -> fail_invalid_type ~ctx "to_number" json
 
 let to_string ~ctx:_ (json : Json.t) =
@@ -1038,7 +1099,7 @@ let from_codepoints ~ctx:_ (json : Json.t) =
 let is_nan ~ctx (json : Json.t) =
   match json with
   | `Float f -> `Bool (Float.is_nan f)
-  | `Int _ | `Int64 _ -> `Bool false
+  | `Int _ | `Int64 _ | `Big_int _ -> `Bool false
   | _ -> fail_invalid_type ~ctx "is_nan" json
 
 let get_envs () =
@@ -1227,6 +1288,7 @@ let join_sep ~ctx sep json =
             | `Bool false -> Some "false"
             | `Int i -> Some (Int.to_string i)
             | `Int64 i -> Some (Int64.to_string i)
+            | `Big_int z -> Some (Z.to_string z)
             | `Float f ->
                 if Float.is_integer f then Some (Int.to_string (Float.to_int f))
                 else Some (Float.to_string f)
@@ -2976,11 +3038,12 @@ and delete_path value path_components =
         match value with
         | `Assoc fields -> `Assoc (List.filter (fun (k, _) -> k <> key) fields)
         | _ -> value)
-    | [ ((`Int _ | `Int64 _ | `Float _) as num) ] -> (
+    | [ ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) ] -> (
         let idx =
           match num with
           | `Int i -> i
           | `Int64 i -> Int64.to_int i
+          | `Big_int z -> Z.to_int z
           | `Float f -> Float.to_int f
           | _ -> 0
         in
@@ -2995,11 +3058,12 @@ and delete_path value path_components =
                  (fun (k, v) -> if k = key then (k, del_at v rest) else (k, v))
                  fields)
         | _ -> value)
-    | ((`Int _ | `Int64 _ | `Float _) as num) :: rest -> (
+    | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
         let idx =
           match num with
           | `Int i -> i
           | `Int64 i -> Int64.to_int i
+          | `Big_int z -> Z.to_int z
           | `Float f -> Float.to_int f
           | _ -> 0
         in
@@ -3077,11 +3141,12 @@ and setpath ~ctx path value_expr json =
                 else `Assoc (fields @ [ (key, set_at `Null rest) ])
             | `Null -> `Assoc [ (key, set_at `Null rest) ]
             | _ -> value)
-        | ((`Int _ | `Int64 _ | `Float _) as num) :: rest -> (
+        | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
             let idx =
               match num with
               | `Int i -> i
               | `Int64 i -> Int64.to_int i
+              | `Big_int z -> Z.to_int z
               | `Float f -> Float.to_int f
               | _ -> 0
             in
