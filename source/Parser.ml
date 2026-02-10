@@ -7,17 +7,6 @@ type stream = {
   mutable end_pos : Lexing.position;
 }
 
-let make_stream buf =
-  let s =
-    {
-      buf;
-      token = Lexer.EOF;
-      start_pos = Lexing.dummy_pos;
-      end_pos = Lexing.dummy_pos;
-    }
-  in
-  s
-
 let advance s =
   let start, _ = Sedlexing.lexing_positions s.buf in
   let tok =
@@ -43,9 +32,8 @@ let expect s expected =
   if tok = expected then advance s
   else
     let msg =
-      Printf.sprintf "expected %s, got %s"
-        (Lexer.show_token expected)
-        (Lexer.show_token tok)
+      Printf.sprintf "expected %s, got %s" (Lexer.humanize expected)
+        (Lexer.humanize tok)
     in
     let err =
       Query_error.parse_error ~message:msg ~input:""
@@ -54,6 +42,7 @@ let expect s expected =
     raise (Query_error.Parse_error (err, s.start_pos, s.end_pos))
 
 let error s msg =
+  let msg = Printf.sprintf "%s, got %s" msg (Lexer.humanize s.token) in
   let err =
     Query_error.parse_error ~message:msg ~input:""
       ~start_pos:s.start_pos.pos_cnum ~end_pos:s.end_pos.pos_cnum
@@ -76,6 +65,19 @@ let apply_fn_result s = function
 
 let wrap_optional opt expr = if opt then Optional expr else expr
 
+let expect_variable s =
+  match peek s with
+  | Lexer.VARIABLE v ->
+      advance s;
+      v
+  | _ -> error s "expected variable after 'as'"
+
+let concat_parts = function
+  | [] -> Literal (String "")
+  | [ single ] -> single
+  | first :: rest ->
+      List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
+
 let rec parse_program s =
   advance s;
   match peek s with
@@ -95,33 +97,32 @@ and parse_fn_or_expr s =
 
 and parse_fn_def s =
   advance s;
-  match peek s with
-  | Lexer.IDENTIFIER name ->
-      advance s;
-      let params =
-        match peek s with
-        | Lexer.OPEN_PARENT ->
-            advance s;
-            let ps = parse_fn_params s in
-            expect s Lexer.CLOSE_PARENT;
-            ps
-        | _ -> []
-      in
-      expect s Lexer.COLON;
-      let body = parse_sequence_expr s in
-      expect s Lexer.SEMICOLON;
-      let rest = parse_sequence_expr s in
-      Pipe (Fn (name, params, body), rest)
-  | Lexer.FUNCTION name ->
-      advance s;
-      let params = parse_fn_params s in
-      expect s Lexer.CLOSE_PARENT;
-      expect s Lexer.COLON;
-      let body = parse_sequence_expr s in
-      expect s Lexer.SEMICOLON;
-      let rest = parse_sequence_expr s in
-      Pipe (Fn (name, params, body), rest)
-  | _ -> error s "expected function name after 'fn'"
+  let name, params =
+    match peek s with
+    | Lexer.IDENTIFIER name ->
+        advance s;
+        let params =
+          match peek s with
+          | Lexer.OPEN_PARENT ->
+              advance s;
+              let ps = parse_fn_params s in
+              expect s Lexer.CLOSE_PARENT;
+              ps
+          | _ -> []
+        in
+        (name, params)
+    | Lexer.FUNCTION name ->
+        advance s;
+        let params = parse_fn_params s in
+        expect s Lexer.CLOSE_PARENT;
+        (name, params)
+    | _ -> error s "expected function name after 'fn'"
+  in
+  expect s Lexer.COLON;
+  let body = parse_sequence_expr s in
+  expect s Lexer.SEMICOLON;
+  let rest = parse_sequence_expr s in
+  Pipe (Fn (name, params, body), rest)
 
 and parse_fn_params s =
   match peek s with
@@ -184,22 +185,18 @@ and parse_pipe_right s left =
       advance s;
       let right = parse_item_expr s in
       parse_pipe_right s (Assign (left, right))
-  | Lexer.PLUS_ASSIGN ->
-      advance s;
-      let right = parse_item_expr s in
-      parse_pipe_right s (Update (left, Operation (Identity, Add, right)))
-  | Lexer.MINUS_ASSIGN ->
-      advance s;
-      let right = parse_item_expr s in
-      parse_pipe_right s (Update (left, Operation (Identity, Subtract, right)))
-  | Lexer.MULT_ASSIGN ->
-      advance s;
-      let right = parse_item_expr s in
-      parse_pipe_right s (Update (left, Operation (Identity, Multiply, right)))
+  | Lexer.PLUS_ASSIGN | Lexer.MINUS_ASSIGN | Lexer.MULT_ASSIGN
   | Lexer.DIV_ASSIGN ->
+      let op =
+        match s.token with
+        | PLUS_ASSIGN -> Add
+        | MINUS_ASSIGN -> Subtract
+        | MULT_ASSIGN -> Multiply
+        | _ -> Divide
+      in
       advance s;
       let right = parse_item_expr s in
-      parse_pipe_right s (Update (left, Operation (Identity, Divide, right)))
+      parse_pipe_right s (Update (left, Operation (Identity, op, right)))
   | Lexer.ALT_ASSIGN ->
       advance s;
       let right = parse_item_expr s in
@@ -249,30 +246,20 @@ and parse_and_right s left =
 and parse_comparison_expr s =
   let left = parse_add_expr s in
   match peek s with
-  | Lexer.EQUAL ->
+  | Lexer.EQUAL | Lexer.NOT_EQUAL | Lexer.GREATER | Lexer.LOWER
+  | Lexer.GREATER_EQUAL | Lexer.LOWER_EQUAL ->
+      let op =
+        match s.token with
+        | EQUAL -> Equal
+        | NOT_EQUAL -> Not_equal
+        | GREATER -> Greater_than
+        | LOWER -> Less_than
+        | GREATER_EQUAL -> Greater_than_or_equal
+        | _ -> Less_than_or_equal
+      in
       advance s;
       let right = parse_add_expr s in
-      Operation (left, Equal, right)
-  | Lexer.NOT_EQUAL ->
-      advance s;
-      let right = parse_add_expr s in
-      Operation (left, Not_equal, right)
-  | Lexer.GREATER ->
-      advance s;
-      let right = parse_add_expr s in
-      Operation (left, Greater_than, right)
-  | Lexer.LOWER ->
-      advance s;
-      let right = parse_add_expr s in
-      Operation (left, Less_than, right)
-  | Lexer.GREATER_EQUAL ->
-      advance s;
-      let right = parse_add_expr s in
-      Operation (left, Greater_than_or_equal, right)
-  | Lexer.LOWER_EQUAL ->
-      advance s;
-      let right = parse_add_expr s in
-      Operation (left, Less_than_or_equal, right)
+      Operation (left, op, right)
   | _ -> left
 
 and parse_add_expr s =
@@ -281,14 +268,11 @@ and parse_add_expr s =
 
 and parse_add_right s left =
   match peek s with
-  | Lexer.ADD ->
+  | Lexer.ADD | Lexer.SUB ->
+      let op = match s.token with ADD -> Add | _ -> Subtract in
       advance s;
       let right = parse_mul_expr s in
-      parse_add_right s (Operation (left, Add, right))
-  | Lexer.SUB ->
-      advance s;
-      let right = parse_mul_expr s in
-      parse_add_right s (Operation (left, Subtract, right))
+      parse_add_right s (Operation (left, op, right))
   | _ -> left
 
 and parse_mul_expr s =
@@ -297,18 +281,13 @@ and parse_mul_expr s =
 
 and parse_mul_right s left =
   match peek s with
-  | Lexer.MULT ->
+  | Lexer.MULT | Lexer.DIV | Lexer.MODULO ->
+      let op =
+        match s.token with MULT -> Multiply | DIV -> Divide | _ -> Modulo
+      in
       advance s;
       let right = parse_term s in
-      parse_mul_right s (Operation (left, Multiply, right))
-  | Lexer.DIV ->
-      advance s;
-      let right = parse_term s in
-      parse_mul_right s (Operation (left, Divide, right))
-  | Lexer.MODULO ->
-      advance s;
-      let right = parse_term s in
-      parse_mul_right s (Operation (left, Modulo, right))
+      parse_mul_right s (Operation (left, op, right))
   | _ -> left
 
 and parse_item_expr s = parse_or_expr s
@@ -322,12 +301,7 @@ and parse_postfix s e =
   | Lexer.DOT -> (
       advance s;
       match peek s with
-      | Lexer.STRING k ->
-          advance s;
-          let opt = optional_question s in
-          let access = if opt then Optional (Key k) else Key k in
-          parse_postfix s (Pipe (e, access))
-      | Lexer.IDENTIFIER k ->
+      | Lexer.STRING k | Lexer.IDENTIFIER k ->
           advance s;
           let opt = optional_question s in
           let access = if opt then Optional (Key k) else Key k in
@@ -464,12 +438,8 @@ and parse_primary s =
   | Lexer.STRING str ->
       advance s;
       Literal (String str)
-  | Lexer.INT _ | Lexer.INT64 _ | Lexer.BIG_INT _ | Lexer.FLOAT _ ->
-      let lit = parse_number_literal s in
-      Literal lit
-  | Lexer.SUB ->
-      let lit = parse_number_literal s in
-      Literal lit
+  | Lexer.INT _ | Lexer.INT64 _ | Lexer.BIG_INT _ | Lexer.FLOAT _ | Lexer.SUB ->
+      Literal (parse_number_literal s)
   | Lexer.BOOL b ->
       advance s;
       Literal (Bool b)
@@ -479,8 +449,8 @@ and parse_primary s =
   | Lexer.VARIABLE var ->
       advance s;
       Variable var
-  | Lexer.INTERP_START -> parse_interpolated_string s
-  | Lexer.TEMPLATE_START -> parse_template_literal s
+  | Lexer.INTERP initial_text -> parse_interpolated_string s initial_text
+  | Lexer.TEMPLATE initial_text -> parse_template_literal s initial_text
   | Lexer.RANGE -> parse_range s
   | Lexer.FLATTEN -> parse_flatten s
   | Lexer.REDUCE -> parse_reduce s
@@ -491,18 +461,12 @@ and parse_primary s =
   | Lexer.OPEN_BRACKET -> parse_array_construction s
   | Lexer.OPEN_BRACE -> parse_object_construction s
   | Lexer.OPEN_PARENT -> parse_paren s
-  | _ ->
-      error s
-        (Printf.sprintf "unexpected token: %s" (Lexer.show_token (peek s)))
+  | _ -> error s "unexpected token"
 
 and parse_dot s =
   advance s;
   match peek s with
-  | Lexer.STRING k ->
-      advance s;
-      let opt = optional_question s in
-      if opt then Optional (Key k) else Key k
-  | Lexer.IDENTIFIER k ->
+  | Lexer.STRING k | Lexer.IDENTIFIER k ->
       advance s;
       let opt = optional_question s in
       if opt then Optional (Key k) else Key k
@@ -551,13 +515,7 @@ and parse_reduce s =
   advance s;
   let expr = parse_sequence_expr s in
   expect s Lexer.AS;
-  let var =
-    match peek s with
-    | Lexer.VARIABLE v ->
-        advance s;
-        v
-    | _ -> error s "expected variable after 'as'"
-  in
+  let var = expect_variable s in
   expect s Lexer.OPEN_PARENT;
   let init = parse_sequence_expr s in
   expect s Lexer.SEMICOLON;
@@ -569,13 +527,7 @@ and parse_foreach s =
   advance s;
   let expr = parse_sequence_expr s in
   expect s Lexer.AS;
-  let var =
-    match peek s with
-    | Lexer.VARIABLE v ->
-        advance s;
-        v
-    | _ -> error s "expected variable after 'as'"
-  in
+  let var = expect_variable s in
   expect s Lexer.OPEN_PARENT;
   let init = parse_sequence_expr s in
   expect s Lexer.SEMICOLON;
@@ -617,58 +569,52 @@ and parse_elifs s =
       (cond, branch) :: parse_elifs s
   | _ -> []
 
+and parse_call_rest s fn_start name arg1 =
+  match peek s with
+  | Lexer.SEMICOLON -> (
+      advance s;
+      let arg2 = parse_sequence_expr s in
+      match peek s with
+      | Lexer.SEMICOLON -> (
+          advance s;
+          let arg3 = parse_sequence_expr s in
+          expect s Lexer.CLOSE_PARENT;
+          match name with
+          | "fma" -> Fma (arg1, arg2, arg3)
+          | _ -> Apply (name, [ arg1; arg2; arg3 ]))
+      | Lexer.CLOSE_PARENT ->
+          advance s;
+          apply_fn_result
+            { s with start_pos = fn_start }
+            (Language.map_binary_fn name arg1 arg2)
+      | _ -> error s "expected ';' or ')' in function call")
+  | Lexer.CLOSE_PARENT ->
+      advance s;
+      apply_fn_result
+        { s with start_pos = fn_start }
+        (Language.map_unary_fn name arg1)
+  | _ -> error s "expected ';' or ')' in function call"
+
 and parse_function_call s name =
   let fn_start = s.start_pos in
   advance s;
-  match peek s with
-  | Lexer.CLOSE_PARENT ->
-      advance s;
-      let opt = optional_question s in
-      let raise_err err =
-        raise (Query_error.Parse_error (err, fn_start, s.end_pos))
-      in
-      let ast =
+  let ast =
+    match peek s with
+    | Lexer.CLOSE_PARENT ->
+        advance s;
+        let raise_err err =
+          raise (Query_error.Parse_error (err, fn_start, s.end_pos))
+        in
         if Language.can_default_to_identity name then
           match Language.map_unary_fn name Identity with
           | Ok a -> a
           | Error err -> raise_err err
         else raise_err (Language.error_for_missing_arg name)
-      in
-      wrap_optional opt ast
-  | _ -> (
-      let arg1 = parse_sequence_expr s in
-      match peek s with
-      | Lexer.SEMICOLON -> (
-          advance s;
-          let arg2 = parse_sequence_expr s in
-          match peek s with
-          | Lexer.SEMICOLON ->
-              advance s;
-              let arg3 = parse_sequence_expr s in
-              expect s Lexer.CLOSE_PARENT;
-              let opt = optional_question s in
-              let ast =
-                match name with
-                | "fma" -> Fma (arg1, arg2, arg3)
-                | _ -> Apply (name, [ arg1; arg2; arg3 ])
-              in
-              wrap_optional opt ast
-          | Lexer.CLOSE_PARENT ->
-              advance s;
-              let opt = optional_question s in
-              let s_proxy = { s with start_pos = fn_start } in
-              let ast =
-                apply_fn_result s_proxy (Language.map_binary_fn name arg1 arg2)
-              in
-              wrap_optional opt ast
-          | _ -> error s "expected ';' or ')' in function call")
-      | Lexer.CLOSE_PARENT ->
-          advance s;
-          let opt = optional_question s in
-          let s_proxy = { s with start_pos = fn_start } in
-          let ast = apply_fn_result s_proxy (Language.map_unary_fn name arg1) in
-          wrap_optional opt ast
-      | _ -> error s "expected ';' or ')' in function call")
+    | _ ->
+        let arg1 = parse_sequence_expr s in
+        parse_call_rest s fn_start name arg1
+  in
+  wrap_optional (optional_question s) ast
 
 and parse_identifier s name =
   let fn_start = s.start_pos in
@@ -677,50 +623,17 @@ and parse_identifier s name =
   | Lexer.QUESTION_MARK -> (
       advance s;
       match peek s with
-      | Lexer.OPEN_PARENT -> (
+      | Lexer.OPEN_PARENT ->
           advance s;
           let arg1 = parse_sequence_expr s in
-          match peek s with
-          | Lexer.SEMICOLON -> (
-              advance s;
-              let arg2 = parse_sequence_expr s in
-              match peek s with
-              | Lexer.SEMICOLON ->
-                  advance s;
-                  let arg3 = parse_sequence_expr s in
-                  expect s Lexer.CLOSE_PARENT;
-                  let ast =
-                    match name with
-                    | "fma" -> Fma (arg1, arg2, arg3)
-                    | _ -> Apply (name, [ arg1; arg2; arg3 ])
-                  in
-                  Optional ast
-              | Lexer.CLOSE_PARENT ->
-                  advance s;
-                  let s_proxy = { s with start_pos = fn_start } in
-                  let ast =
-                    apply_fn_result s_proxy
-                      (Language.map_binary_fn name arg1 arg2)
-                  in
-                  Optional ast
-              | _ -> error s "expected ';' or ')' in optional function call")
-          | Lexer.CLOSE_PARENT ->
-              advance s;
-              let s_proxy = { s with start_pos = fn_start } in
-              let ast =
-                apply_fn_result s_proxy (Language.map_unary_fn name arg1)
-              in
-              Optional ast
-          | _ -> error s "expected ';' or ')' in optional function call")
+          Optional (parse_call_rest s fn_start name arg1)
       | _ ->
           let s_proxy = { s with start_pos = fn_start } in
-          let ast = apply_fn_result s_proxy (Language.map_nullary_fn name) in
-          Optional ast)
+          Optional (apply_fn_result s_proxy (Language.map_nullary_fn name)))
   | _ ->
       let s_proxy = { s with start_pos = fn_start } in
       let ast = apply_fn_result s_proxy (Language.map_nullary_fn name) in
-      let opt = optional_question s in
-      wrap_optional opt ast
+      wrap_optional (optional_question s) ast
 
 and parse_array_construction s =
   advance s;
@@ -765,15 +678,7 @@ and parse_key_value s =
       expect s Lexer.COLON;
       let value = parse_term s in
       (key_expr, Some value)
-  | Lexer.IDENTIFIER key -> (
-      advance s;
-      match peek s with
-      | Lexer.COLON ->
-          advance s;
-          let value = parse_term s in
-          (Literal (String key), Some value)
-      | _ -> (Literal (String key), None))
-  | Lexer.STRING key -> (
+  | Lexer.IDENTIFIER key | Lexer.STRING key -> (
       advance s;
       match peek s with
       | Lexer.COLON ->
@@ -789,135 +694,67 @@ and parse_paren s =
   match peek s with
   | Lexer.AS ->
       advance s;
-      let var =
-        match peek s with
-        | Lexer.VARIABLE v ->
-            advance s;
-            v
-        | _ -> error s "expected variable after 'as'"
-      in
+      let var = expect_variable s in
       expect s Lexer.PIPE;
       let body = parse_sequence_expr s in
       expect s Lexer.CLOSE_PARENT;
       As (e, var, body)
   | Lexer.CLOSE_PARENT ->
       advance s;
-      let opt = optional_question s in
-      wrap_optional opt e
+      wrap_optional (optional_question s) e
   | _ -> error s "expected ')' or 'as'"
 
-and parse_interpolated_string s =
+and parse_interpolated_string s initial_text =
   advance s;
-  let parts = parse_interp_body s in
-  match parts with
-  | [] -> Literal (String "")
-  | [ single ] -> single
-  | first :: rest ->
-      List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
+  let rec loop acc =
+    let e = parse_sequence_expr s in
+    if s.token <> Lexer.CLOSE_PARENT then
+      error s "expected ')' to close string interpolation";
+    let acc = Pipe (e, Fn0 To_string) :: acc in
+    match Lexer.tokenize_string s.buf with
+    | Ok (End text) ->
+        advance s;
+        let acc = if text = "" then acc else Literal (String text) :: acc in
+        concat_parts (List.rev acc)
+    | Ok (Interp text) ->
+        advance s;
+        let acc = if text = "" then acc else Literal (String text) :: acc in
+        loop acc
+    | Error msg -> error s msg
+  in
+  let acc =
+    if initial_text = "" then [] else [ Literal (String initial_text) ]
+  in
+  loop acc
 
-and parse_interp_body s =
-  match peek s with
-  | Lexer.INTERP_END ->
-      advance s;
-      []
-  | Lexer.INTERP_TEXT text -> (
-      advance s;
-      match peek s with
-      | Lexer.INTERP_END ->
-          advance s;
-          [ Literal (String text) ]
-      | Lexer.INTERP_EXPR_START ->
-          advance s;
-          let e = parse_sequence_expr s in
-          let rest = parse_interp_after_expr s in
-          Literal (String text) :: Pipe (e, Fn0 To_string) :: rest
-      | _ -> error s "expected interpolation expression or end of string")
-  | Lexer.INTERP_EXPR_START ->
-      advance s;
-      let e = parse_sequence_expr s in
-      let rest = parse_interp_after_expr s in
-      Pipe (e, Fn0 To_string) :: rest
-  | _ -> error s "expected string interpolation content"
-
-and parse_interp_after_expr s =
-  match peek s with
-  | Lexer.INTERP_END ->
-      advance s;
-      []
-  | Lexer.INTERP_TEXT text -> (
-      advance s;
-      match peek s with
-      | Lexer.INTERP_END ->
-          advance s;
-          [ Literal (String text) ]
-      | Lexer.INTERP_EXPR_START ->
-          advance s;
-          let e = parse_sequence_expr s in
-          let rest = parse_interp_after_expr s in
-          Literal (String text) :: Pipe (e, Fn0 To_string) :: rest
-      | _ -> error s "expected interpolation expression or end of string")
-  | Lexer.INTERP_EXPR_START ->
-      advance s;
-      let e = parse_sequence_expr s in
-      let rest = parse_interp_after_expr s in
-      Pipe (e, Fn0 To_string) :: rest
-  | _ -> error s "expected string interpolation content"
-
-and parse_template_literal s =
+and parse_template_literal s initial_text =
   advance s;
-  let parts = parse_template_body s in
-  match parts with
-  | [] -> Literal (String "")
-  | [ single ] -> single
-  | first :: rest ->
-      List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
+  let rec loop acc =
+    let e = parse_sequence_expr s in
+    if s.token <> Lexer.CLOSE_BRACE then
+      error s "expected '}' to close template expression";
+    let acc = Pipe (e, Fn0 To_string) :: acc in
+    match Lexer.tokenize_template s.buf with
+    | Ok (End text) ->
+        advance s;
+        let acc = if text = "" then acc else Literal (String text) :: acc in
+        concat_parts (List.rev acc)
+    | Ok (Interp text) ->
+        advance s;
+        let acc = if text = "" then acc else Literal (String text) :: acc in
+        loop acc
+    | Error msg -> error s msg
+  in
+  let acc =
+    if initial_text = "" then [] else [ Literal (String initial_text) ]
+  in
+  loop acc
 
-and parse_template_body s =
-  match peek s with
-  | Lexer.TEMPLATE_END ->
-      advance s;
-      []
-  | Lexer.TEMPLATE_TEXT text -> (
-      advance s;
-      match peek s with
-      | Lexer.TEMPLATE_END ->
-          advance s;
-          [ Literal (String text) ]
-      | Lexer.TEMPLATE_EXPR_START ->
-          advance s;
-          let e = parse_sequence_expr s in
-          let rest = parse_template_after_expr s in
-          Literal (String text) :: Pipe (e, Fn0 To_string) :: rest
-      | _ -> error s "expected template expression or end of template")
-  | Lexer.TEMPLATE_EXPR_START ->
-      advance s;
-      let e = parse_sequence_expr s in
-      let rest = parse_template_after_expr s in
-      Pipe (e, Fn0 To_string) :: rest
-  | _ -> error s "expected template literal content"
-
-and parse_template_after_expr s =
-  match peek s with
-  | Lexer.TEMPLATE_END ->
-      advance s;
-      []
-  | Lexer.TEMPLATE_TEXT text -> (
-      advance s;
-      match peek s with
-      | Lexer.TEMPLATE_END ->
-          advance s;
-          [ Literal (String text) ]
-      | Lexer.TEMPLATE_EXPR_START ->
-          advance s;
-          let e = parse_sequence_expr s in
-          let rest = parse_template_after_expr s in
-          Literal (String text) :: Pipe (e, Fn0 To_string) :: rest
-      | _ -> error s "expected template expression or end of template")
-  | Lexer.TEMPLATE_EXPR_START ->
-      advance s;
-      let e = parse_sequence_expr s in
-      let rest = parse_template_after_expr s in
-      Pipe (e, Fn0 To_string) :: rest
-  | _ -> error s "expected template literal content"
-
-let program buf = parse_program (make_stream buf)
+let program buf =
+  parse_program
+    {
+      buf;
+      token = Lexer.EOF;
+      start_pos = Lexing.dummy_pos;
+      end_pos = Lexing.dummy_pos;
+    }
