@@ -10,13 +10,10 @@ let identifier =
 
 let comment = [%sedlex.regexp? '#', Star (Compl '\n')]
 
-(* Custom pp for Z.t since ppx_deriving can't derive it *)
-let pp_z fmt z = Format.fprintf fmt "%s" (Z.to_string z)
-
 type token =
   | INT of int (* small integers *)
   | INT64 of int64 (* large integers *)
-  | BIG_INT of Z.t [@printer fun fmt z -> pp_z fmt z] (* huge integers *)
+  | BIG_INT of Z.t [@printer fun fmt z -> Z.pp_print fmt z] (* huge integers *)
   | FLOAT of float
   | STRING of string
   | BOOL of bool
