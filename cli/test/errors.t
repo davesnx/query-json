@@ -33,7 +33,7 @@ startswith is deprecated
   
   error[deprecated]: `startswith` is deprecated
     --> startswith("Hello")
-        ^^^^^^^^^^^
+        ^^^^^^^^^^^^^^^^^^^
   
     hint: use `starts_with` instead
   
@@ -51,7 +51,7 @@ endswith is deprecated
   
   error[deprecated]: `endswith` is deprecated
     --> endswith("world")
-        ^^^^^^^^^
+        ^^^^^^^^^^^^^^^^^
   
     hint: use `ends_with` instead
   

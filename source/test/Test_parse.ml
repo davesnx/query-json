@@ -115,4 +115,15 @@ let tests =
                      ( Literal (String "city"),
                        Some (Pipe (Key "address", Key "city")) );
                    ] ))));
+    test "99999999999999999999999999999"
+      (Literal (Big_int (Z.of_string "99999999999999999999999999999")));
+    test "9223372036854775808"
+      (Literal (Big_int (Z.of_string "9223372036854775808")));
+    test "-99999999999999999999999999999"
+      (Literal (Big_int (Z.of_string "-99999999999999999999999999999")));
+    test "99999999999999999999999999999 + 1"
+      (Operation
+         ( Literal (Big_int (Z.of_string "99999999999999999999999999999")),
+           Add,
+           Literal (Int 1) ));
   ]

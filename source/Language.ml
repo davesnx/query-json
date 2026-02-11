@@ -1347,7 +1347,7 @@ let arity_to_string (name : string) (arity : arity) : string =
       Printf.sprintf "%s(%s; %s; %s)" name arg1 arg2 arg3
   | Variable_args args -> Printf.sprintf "%s(%s)" name args
 
-let error_for_missing_arg (name : string) : Query_error.t =
+let error_for_missing_arg (name : string) : Error.t =
   match find_function name with
   | Some f ->
       let usage = arity_to_string name f.arity in
@@ -1365,10 +1365,10 @@ let error_for_missing_arg (name : string) : Query_error.t =
         |> List.map type_name_of_applicable
         |> String.concat ", "
       in
-      Query_error.missing_argument ~fn_name:name ~message ~usage
+      Error.missing_argument ~fn_name:name ~message ~usage
         ~description:f.description ~applicable_to ?example:f.example ()
   | None ->
-      Query_error.missing_argument ~fn_name:name ~usage:name
+      Error.missing_argument ~fn_name:name ~usage:name
         ~description:"Unknown function" ()
 
 (* Check if a function name is a 1-arity function that can accept Identity as default *)
@@ -1391,13 +1391,13 @@ let can_default_to_identity (name : string) : bool =
   | _ -> false
 
 let require_string_literal ~fn_name ~what ~example =
-  Query_error.requires_literal ~fn_name ~what ~example
+  Error.requires_literal ~fn_name ~what ~example
 
-let not_implemented feature = Query_error.not_implemented feature
+let not_implemented feature = Error.not_implemented feature
 
 (* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression)
-    (arg2 : Ast.expression) : (Ast.expression, Query_error.t) result =
+    (arg2 : Ast.expression) : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
   | "while" -> Ok (Fn2 (While, arg1, arg2))
@@ -1409,7 +1409,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Limit, Literal n, arg2))
       | _ ->
           Error
-            (Query_error.requires_number_literal ~fn_name:"limit"
+            (Error.requires_number_literal ~fn_name:"limit"
                ~what:"first argument must be a number literal"
                ~example:"limit(3; range(10)) → 0, 1, 2" ()))
   | "skip" -> (
@@ -1417,7 +1417,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Skip, Literal n, arg2))
       | _ ->
           Error
-            (Query_error.requires_number_literal ~fn_name:"skip"
+            (Error.requires_number_literal ~fn_name:"skip"
                ~what:"first argument must be a number literal"
                ~example:"skip(2; range(5)) → 2, 3, 4" ()))
   | "replace" | "sub" -> (
@@ -1461,21 +1461,19 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   | "strftime" -> Error (not_implemented "strftime")
   | "strptime" -> Error (not_implemented "strptime")
   | "splits" ->
-      Error
-        (Query_error.not_implemented ~suggestion:"use `split` instead" "splits")
+      Error (Error.not_implemented ~suggestion:"use `split` instead" "splits")
   | "sql" -> Error (not_implemented "sql")
   | "dateadd" | "datesub" -> Error (not_implemented "date arithmetic")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg1; arg2 ]))
 
-let compile_regex (pattern : string) :
-    (Ast.compiled_regex, Query_error.t) result =
+let compile_regex (pattern : string) : (Ast.compiled_regex, Error.t) result =
   try Ok { Ast.pattern; regex = Str.regexp pattern }
-  with _ -> Error (Query_error.invalid_regex ~pattern)
+  with _ -> Error (Error.invalid_regex ~pattern)
 
 let make_pattern_fn (fn : Ast.fn1_pattern) (pattern : string) :
-    (Ast.expression, Query_error.t) result =
+    (Ast.expression, Error.t) result =
   match compile_regex pattern with
   | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
   | Error e -> Error e
@@ -1487,7 +1485,7 @@ let make_expr_fn (fn : Ast.fn1_expr) (expr : Ast.expression) : Ast.expression =
   Ast.Fn1 (With_expr (fn, expr))
 
 let map_unary_fn (name : string) (arg : Ast.expression) :
-    (Ast.expression, Query_error.t) result =
+    (Ast.expression, Error.t) result =
   let open Ast in
   match name with
   (* Array/iteration functions *)
@@ -1529,11 +1527,10 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   (* String functions - expression-based *)
   | "starts_with" -> Ok (make_expr_fn Starts_with arg)
   | "startswith" ->
-      Error
-        (Query_error.deprecated ~old_name:"startswith" ~new_name:"starts_with")
+      Error (Error.deprecated ~old_name:"startswith" ~new_name:"starts_with")
   | "ends_with" -> Ok (make_expr_fn Ends_with arg)
   | "endswith" ->
-      Error (Query_error.deprecated ~old_name:"endswith" ~new_name:"ends_with")
+      Error (Error.deprecated ~old_name:"endswith" ~new_name:"ends_with")
   | "index" -> Ok (make_expr_fn Index_of arg)
   | "last_index" | "rindex" -> Ok (make_expr_fn Last_index_of arg)
   | "indices" | "find_indices" -> Ok (make_expr_fn Indices arg)
@@ -1608,7 +1605,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
           Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
-            (Query_error.requires_number_literal ~fn_name:"halt_error"
+            (Error.requires_number_literal ~fn_name:"halt_error"
                ~what:"requires a number literal exit code"
                ~example:"halt_error(1) terminates with exit code 1" ()))
   (* is_valid(expr) -> try (expr | true) catch false *)
@@ -1626,28 +1623,27 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")
   | "splits" ->
-      Error
-        (Query_error.not_implemented ~suggestion:"use `split` instead" "splits")
+      Error (Error.not_implemented ~suggestion:"use `split` instead" "splits")
   | "tojson" | "fromjson" ->
       Error
-        (Query_error.not_implemented
+        (Error.not_implemented
            ~suggestion:"use `to_string` (input is already JSON)"
            "tojson/fromjson")
   | "ascii" -> Error (not_implemented "ascii")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   | "input" | "inputs" ->
       Error
-        (Query_error.not_implemented
-           ~description:"query-json reads all input upfront" "input/inputs")
+        (Error.not_implemented ~description:"query-json reads all input upfront"
+           "input/inputs")
   | "env" ->
       Error
-        (Query_error.unsupported ~fn_name:"env"
+        (Error.unsupported ~fn_name:"env"
            ~message:"with argument is not supported"
            ~suggestion:"use `$ENV.name` or `env.name` instead" ())
   | "builtins" -> Error (not_implemented "builtins")
   | "limit" ->
       Error
-        (Query_error.requires_number_literal ~fn_name:"limit"
+        (Error.requires_number_literal ~fn_name:"limit"
            ~what:"first argument must be a number literal"
            ~example:"limit(3; range(10))" ())
   | "until" | "while" ->
@@ -1656,7 +1652,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
         else "[until(. > 100; . * 2)]"
       in
       Error
-        (Query_error.missing_argument ~fn_name:name
+        (Error.missing_argument ~fn_name:name
            ~message:(Printf.sprintf "`%s` requires two arguments" name)
            ~usage:"condition and update expressions"
            ~description:"Loop construct" ~example ())
@@ -1664,7 +1660,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   | _ -> Ok (Apply (name, [ arg ]))
 
 (* Map 0-argument function/identifier names to AST nodes *)
-let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
+let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
   (* Basic values *)
@@ -1701,10 +1697,10 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "add" -> Ok (Fn0 Add)
   (* String functions *)
   | "tostring" ->
-      Error (Query_error.deprecated ~old_name:"tostring" ~new_name:"to_string")
+      Error (Error.deprecated ~old_name:"tostring" ~new_name:"to_string")
   | "to_string" -> Ok (Fn0 To_string)
   | "tonumber" ->
-      Error (Query_error.deprecated ~old_name:"tonumber" ~new_name:"to_number")
+      Error (Error.deprecated ~old_name:"tonumber" ~new_name:"to_number")
   | "to_number" -> Ok (Fn0 To_number)
   | "to_codepoints" | "explode" -> Ok (Fn0 To_codepoints)
   | "from_codepoints" | "implode" -> Ok (Fn0 From_codepoints)
@@ -1712,13 +1708,13 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "to_lowercase" -> Ok (Fn0 To_lowercase)
   | "trim" -> Ok (Fn0 Trim)
   | "trim_left" ->
-      Error (Query_error.deprecated ~old_name:"trim_left" ~new_name:"trim")
+      Error (Error.deprecated ~old_name:"trim_left" ~new_name:"trim")
   | "left_trim" ->
-      Error (Query_error.deprecated ~old_name:"left_trim" ~new_name:"trim")
+      Error (Error.deprecated ~old_name:"left_trim" ~new_name:"trim")
   | "trim_right" ->
-      Error (Query_error.deprecated ~old_name:"trim_right" ~new_name:"trim")
+      Error (Error.deprecated ~old_name:"trim_right" ~new_name:"trim")
   | "right_trim" ->
-      Error (Query_error.deprecated ~old_name:"right_trim" ~new_name:"trim")
+      Error (Error.deprecated ~old_name:"right_trim" ~new_name:"trim")
   (* Math functions *)
   | "floor" -> Ok (Fn0 Floor)
   | "sqrt" -> Ok (Fn0 Sqrt)
@@ -1745,9 +1741,9 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
   | "atanh" -> Ok (Fn0 Atanh)
   | "is_normal" -> Ok (Fn0 Is_normal)
   | "isnormal" ->
-      Error (Query_error.deprecated ~old_name:"isnormal" ~new_name:"is_normal")
+      Error (Error.deprecated ~old_name:"isnormal" ~new_name:"is_normal")
   | "truncate" | "trunc" -> Ok (Fn0 Truncate)
-  | "fabs" -> Error (Query_error.deprecated ~old_name:"fabs" ~new_name:"abs")
+  | "fabs" -> Error (Error.deprecated ~old_name:"fabs" ~new_name:"abs")
   | "cube_root" | "cbrt" -> Ok (Fn0 Cube_root)
   | "expm1" -> Ok (Fn0 Expm1)
   | "exp2" -> Ok (Fn0 Exp2)
@@ -1803,7 +1799,7 @@ let map_nullary_fn (name : string) : (Ast.expression, Query_error.t) result =
       Error (not_implemented "JSON stream functions")
   | "tojson" | "fromjson" ->
       Error
-        (Query_error.not_implemented
+        (Error.not_implemented
            ~suggestion:"use `to_string` (input is already JSON)"
            "tojson/fromjson")
   | "input_filename" | "input_line_number" ->

@@ -10,13 +10,10 @@ let identifier =
 
 let comment = [%sedlex.regexp? '#', Star (Compl '\n')]
 
-(* Custom pp for Z.t since ppx_deriving can't derive it *)
-let pp_z fmt z = Format.fprintf fmt "%s" (Z.to_string z)
-
 type token =
   | INT of int (* small integers *)
   | INT64 of int64 (* large integers *)
-  | BIG_INT of Z.t [@printer fun fmt z -> pp_z fmt z] (* huge integers *)
+  | BIG_INT of Z.t [@printer fun fmt z -> Z.pp_print fmt z] (* huge integers *)
   | FLOAT of float
   | STRING of string
   | BOOL of bool
@@ -71,26 +68,76 @@ type token =
   | CATCH
   | FINALLY
   | FN
-  | INTERP_START
-  | INTERP_TEXT of string
-  | INTERP_EXPR_START
-  | INTERP_END
-  (* Template literal tokens (backtick strings) *)
-  | TEMPLATE_START
-  | TEMPLATE_TEXT of string
-  | TEMPLATE_EXPR_START
-  | TEMPLATE_END
+  | INTERP of string
+  | TEMPLATE of string
   | EOF
 [@@deriving show]
 
-(* Token buffer for returning multiple tokens from a single lexer call *)
-let token_buffer : token Queue.t = Queue.create ()
-let interp_paren_depth = ref (-1)
-let inside_interp () = !interp_paren_depth >= 0
-let template_brace_depth = ref (-1)
-let inside_template () = !template_brace_depth >= 0
+let humanize = function
+  | INT n -> Printf.sprintf "%d" n
+  | INT64 n -> Printf.sprintf "%Ld" n
+  | BIG_INT n -> Z.to_string n
+  | FLOAT n -> Printf.sprintf "%g" n
+  | STRING s -> Printf.sprintf "\"%s\"" s
+  | BOOL b -> if b then "true" else "false"
+  | IDENTIFIER s -> Printf.sprintf "'%s'" s
+  | FUNCTION s -> Printf.sprintf "'%s('" s
+  | VARIABLE s -> Printf.sprintf "$%s" s
+  | OPEN_PARENT -> "'('"
+  | CLOSE_PARENT -> "')'"
+  | OPEN_BRACKET -> "'['"
+  | CLOSE_BRACKET -> "']'"
+  | OPEN_BRACE -> "'{'"
+  | CLOSE_BRACE -> "'}'"
+  | SEMICOLON -> "';'"
+  | COLON -> "':'"
+  | DOT -> "'.'"
+  | PIPE -> "'|'"
+  | UPDATE_ASSIGN -> "'|='"
+  | PLUS_ASSIGN -> "'+='"
+  | MINUS_ASSIGN -> "'-='"
+  | MULT_ASSIGN -> "'*='"
+  | DIV_ASSIGN -> "'/='"
+  | ALT_ASSIGN -> "'??='"
+  | ASSIGN -> "'='"
+  | ALTERNATIVE -> "'??'"
+  | QUESTION_MARK -> "'?'"
+  | COMMA -> "','"
+  | NULL -> "null"
+  | ADD -> "'+'"
+  | SUB -> "'-'"
+  | DIV -> "'/'"
+  | MULT -> "'*'"
+  | MODULO -> "'%'"
+  | AND -> "'and'"
+  | OR -> "'or'"
+  | EQUAL -> "'=='"
+  | NOT_EQUAL -> "'!='"
+  | GREATER -> "'>'"
+  | LOWER -> "'<'"
+  | GREATER_EQUAL -> "'>='"
+  | LOWER_EQUAL -> "'<='"
+  | RANGE -> "'range'"
+  | FLATTEN -> "'flatten'"
+  | REDUCE -> "'reduce'"
+  | FOREACH -> "'foreach'"
+  | IF -> "'if'"
+  | THEN -> "'then'"
+  | ELSE -> "'else'"
+  | ELIF -> "'elif'"
+  | END -> "'end'"
+  | AS -> "'as'"
+  | TRY -> "'try'"
+  | CATCH -> "'catch'"
+  | FINALLY -> "'finally'"
+  | FN -> "'fn'"
+  | INTERP _ -> "string interpolation"
+  | TEMPLATE _ -> "template literal"
+  | EOF -> "end of input"
 
-let read_string_part buf =
+type string_part = Interp of string | End of string
+
+let tokenize_string buf =
   let buffer = Buffer.create 10 in
   let rec loop buf =
     match%sedlex buf with
@@ -109,63 +156,16 @@ let read_string_part buf =
     | {|\t|} ->
         Buffer.add_char buffer '\t';
         loop buf
-    | {|\(|} ->
-        (* store what we have and signal interpolation *)
-        `Interp (Buffer.contents buffer)
-    | '"' ->
-        (* end of string *)
-        `End (Buffer.contents buffer)
+    | {|\(|} -> Ok (Interp (Buffer.contents buffer))
+    | '"' -> Ok (End (Buffer.contents buffer))
     | Compl ('"' | '\\') ->
         Buffer.add_string buffer (lexeme buf);
         loop buf
-    | _ -> `Error "unmatched string"
+    | _ -> Error "unmatched string"
   in
   loop buf
 
-let tokenize_string buf =
-  (* peek ahead to see if this string has any interpolation *)
-  match read_string_part buf with
-  | `End s -> Ok (STRING s)
-  | `Interp s ->
-      interp_paren_depth := 0;
-      if String.length s > 0 then Queue.add (INTERP_TEXT s) token_buffer;
-      Queue.add INTERP_EXPR_START token_buffer;
-      Ok INTERP_START
-  | `Error e -> Error e
-
-let tokenize_apply buf =
-  let identifier = lexeme buf in
-  match%sedlex buf with
-  | '(' -> Ok (FUNCTION identifier)
-  | _ -> Ok (IDENTIFIER identifier)
-
-let tokenize_variable buf =
-  match%sedlex buf with
-  | identifier ->
-      let var_name = lexeme buf in
-      Ok (VARIABLE var_name)
-  | _ -> Error "Expected variable name after $"
-
-let continue_interp_string buf =
-  match read_string_part buf with
-  | `End s -> (
-      interp_paren_depth := -1;
-      if String.length s > 0 then Queue.add (INTERP_TEXT s) token_buffer;
-      Queue.add INTERP_END token_buffer;
-      (* Return the first queued token *)
-      match Queue.take_opt token_buffer with
-      | Some tok -> Ok tok
-      | None -> Ok INTERP_END)
-  | `Interp s -> (
-      interp_paren_depth := 0;
-      if String.length s > 0 then Queue.add (INTERP_TEXT s) token_buffer;
-      Queue.add INTERP_EXPR_START token_buffer;
-      match Queue.take_opt token_buffer with
-      | Some tok -> Ok tok
-      | None -> Ok INTERP_EXPR_START)
-  | `Error e -> Error e
-
-let read_template_part buf =
+let tokenize_template buf =
   let buffer = Buffer.create 10 in
   let rec loop buf =
     match%sedlex buf with
@@ -187,53 +187,19 @@ let read_template_part buf =
     | {|\t|} ->
         Buffer.add_char buffer '\t';
         loop buf
-    | "${" -> `Interp (Buffer.contents buffer)
-    | '`' -> `End (Buffer.contents buffer)
+    | "${" -> Ok (Interp (Buffer.contents buffer))
+    | '`' -> Ok (End (Buffer.contents buffer))
     | Compl ('`' | '\\' | '$') ->
         Buffer.add_string buffer (lexeme buf);
         loop buf
     | '$' ->
         Buffer.add_char buffer '$';
         loop buf
-    | _ -> `Error "unmatched template literal"
+    | _ -> Error "unmatched template literal"
   in
   loop buf
 
-let tokenize_template buf =
-  match read_template_part buf with
-  | `End s -> Ok (STRING s)
-  | `Interp s ->
-      template_brace_depth := 0;
-      if String.length s > 0 then Queue.add (TEMPLATE_TEXT s) token_buffer;
-      Queue.add TEMPLATE_EXPR_START token_buffer;
-      Ok TEMPLATE_START
-  | `Error e -> Error e
-
-let continue_template buf =
-  match read_template_part buf with
-  | `End s -> (
-      template_brace_depth := -1;
-      if String.length s > 0 then Queue.add (TEMPLATE_TEXT s) token_buffer;
-      Queue.add TEMPLATE_END token_buffer;
-      match Queue.take_opt token_buffer with
-      | Some tok -> Ok tok
-      | None -> Ok TEMPLATE_END)
-  | `Interp s -> (
-      template_brace_depth := 0;
-      if String.length s > 0 then Queue.add (TEMPLATE_TEXT s) token_buffer;
-      Queue.add TEMPLATE_EXPR_START token_buffer;
-      match Queue.take_opt token_buffer with
-      | Some tok -> Ok tok
-      | None -> Ok TEMPLATE_EXPR_START)
-  | `Error e -> Error e
-
 let rec tokenize buf =
-  (* First, check if we have buffered tokens *)
-  match Queue.take_opt token_buffer with
-  | Some tok -> Ok tok
-  | None -> tokenize_impl buf
-
-and tokenize_impl buf =
   match%sedlex buf with
   | eof -> Ok EOF
   | '<' -> Ok LOWER
@@ -252,19 +218,8 @@ and tokenize_impl buf =
   | "%" -> Ok MODULO
   | "[" -> Ok OPEN_BRACKET
   | "]" -> Ok CLOSE_BRACKET
-  | "{" ->
-      if inside_template () then incr template_brace_depth;
-      Ok OPEN_BRACE
-  | "}" ->
-      if inside_template () then begin
-        let end_of_template_expr = !template_brace_depth = 0 in
-        if end_of_template_expr then continue_template buf
-        else begin
-          decr template_brace_depth;
-          Ok CLOSE_BRACE
-        end
-      end
-      else Ok CLOSE_BRACE
+  | "{" -> Ok OPEN_BRACE
+  | "}" -> Ok CLOSE_BRACE
   | "|=" -> Ok UPDATE_ASSIGN
   | "+=" -> Ok PLUS_ASSIGN
   | "-=" -> Ok MINUS_ASSIGN
@@ -280,19 +235,8 @@ and tokenize_impl buf =
   | "null" -> Ok NULL
   | "true" -> Ok (BOOL true)
   | "false" -> Ok (BOOL false)
-  | "(" ->
-      if inside_interp () then incr interp_paren_depth;
-      Ok OPEN_PARENT
-  | ")" ->
-      if inside_interp () then begin
-        let end_of_interpolation = !interp_paren_depth = 0 in
-        if end_of_interpolation then continue_interp_string buf
-        else begin
-          decr interp_paren_depth;
-          Ok CLOSE_PARENT
-        end
-      end
-      else Ok CLOSE_PARENT
+  | "(" -> Ok OPEN_PARENT
+  | ")" -> Ok CLOSE_PARENT
   | "range" -> Ok RANGE
   | "flatten" -> Ok FLATTEN
   | "reduce" -> Ok REDUCE
@@ -305,23 +249,32 @@ and tokenize_impl buf =
   | "as" -> Ok AS
   | "fn" -> Ok FN
   | "def" -> Error "'def' is deprecated, use 'fn' instead"
-  | "try" -> (
-      (* distinguish try(expr) from try expr.
-         Otherwise, the grammar has reduce/reduce conflicts because
-         TRY OPEN_PARENT could start either form. *)
-      match%sedlex
-        buf
-      with
-      | '(' -> Ok (FUNCTION "try")
-      | _ -> Ok TRY)
+  | "try" -> ( match%sedlex buf with '(' -> Ok (FUNCTION "try") | _ -> Ok TRY)
   | "catch" -> Ok CATCH
   | "finally" -> Ok FINALLY
   | "." -> Ok DOT
   | ".." -> Error "'..' is deprecated, use 'descend' instead"
-  | '$' -> tokenize_variable buf
-  | '"' -> tokenize_string buf
-  | '`' -> tokenize_template buf
-  | identifier -> tokenize_apply buf
+  | '$' -> (
+      match%sedlex buf with
+      | identifier ->
+          let var_name = lexeme buf in
+          Ok (VARIABLE var_name)
+      | _ -> Error "Expected variable name after $")
+  | '"' -> (
+      match tokenize_string buf with
+      | Ok (End s) -> Ok (STRING s)
+      | Ok (Interp s) -> Ok (INTERP s)
+      | Error e -> Error e)
+  | '`' -> (
+      match tokenize_template buf with
+      | Ok (End s) -> Ok (STRING s)
+      | Ok (Interp s) -> Ok (TEMPLATE s)
+      | Error e -> Error e)
+  | identifier -> (
+      let ident = lexeme buf in
+      match%sedlex buf with
+      | '(' -> Ok (FUNCTION ident)
+      | _ -> Ok (IDENTIFIER ident))
   | float_number ->
       let num = lexeme buf in
       Ok (FLOAT (Float.of_string num))

@@ -1,6 +1,5 @@
 (lang dune 3.17)
 
-(using menhir 2.0)
 (using melange 0.1)
 
 (name query-json)
@@ -33,7 +32,6 @@
   (ocaml (>= 5.4.0))
   (dune (>= 3.17))
   dune-build-info
-  (menhir (>= 20250903))
   (cmdliner (>= 1.1.0))
   sedlex
   ppx_deriving

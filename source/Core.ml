@@ -1,30 +1,3 @@
-module Location = struct
-  type t = { loc_start : Lexing.position; loc_end : Lexing.position }
-
-  let none = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos }
-end
-
-let last_position = ref Location.none
-
-exception Lexer_error of string
-
-let provider ~debug buf =
-  let start, _ = Sedlexing.lexing_positions buf in
-  let token =
-    match Lexer.tokenize buf with
-    | Ok t -> t
-    | Error e ->
-        let _, stop = Sedlexing.lexing_positions buf in
-        last_position := { loc_start = start; loc_end = stop };
-        raise (Lexer_error e)
-  in
-  let _, stop = Sedlexing.lexing_positions buf in
-  last_position := { loc_start = start; loc_end = stop };
-  if debug then print_endline (Lexer.show_token token);
-  (token, start, stop)
-
-let menhir = MenhirLib.Convert.Simplified.traditional2revised Parser.program
-
 let position_to_string start end_ =
   Printf.sprintf "[line: %d, char: %d-%d]" start.Lexing.pos_lnum
     (start.Lexing.pos_cnum - start.Lexing.pos_bol)
@@ -32,44 +5,33 @@ let position_to_string start end_ =
 
 let parse ~debug ~colorize input =
   let buf = Sedlexing.Utf8.from_string input in
-  let next_token () = provider ~debug buf in
-  match menhir next_token with
+  match Parser.program buf with
   | ast ->
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
-  | exception Lexer_error msg ->
-      if debug then (
-        print_endline "Lexer error";
-        print_endline msg);
-      let Location.{ loc_start; loc_end; _ } = !last_position in
+  | exception Error.Parse_error (err, start, end_) ->
       let err =
-        Query_error.lexer_error ~message:msg ~input
-          ~start_pos:loc_start.pos_cnum ~end_pos:loc_end.pos_cnum
-      in
-      Error (Query_error.format ~colorize err)
-  | exception Failure msg ->
-      let err =
-        Query_error.semantic_error ~message:msg ~input
-          ~start_pos:!last_position.loc_start.pos_cnum
-          ~end_pos:!last_position.loc_end.pos_cnum
-      in
-      Error (Query_error.format ~colorize err)
-  | exception Query_error.Parse_error (err, start, end_) ->
-      let err =
-        Query_error.with_location ~input ~start_pos:start.pos_cnum
+        Error.with_location ~input ~start_pos:start.pos_cnum
           ~end_pos:end_.pos_cnum err
       in
-      Error (Query_error.format ~colorize err)
-  | exception _exn ->
-      let Location.{ loc_start; loc_end; _ } = !last_position in
+      Error (Error.format ~colorize err)
+  | exception Failure msg ->
+      let start, end_ = Sedlexing.lexing_positions buf in
       let err =
-        Query_error.parse_error ~input ~start_pos:loc_start.pos_cnum
-          ~end_pos:loc_end.pos_cnum
+        Error.semantic_error ~message:msg ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
+      in
+      Error (Error.format ~colorize err)
+  | exception _exn ->
+      let start, end_ = Sedlexing.lexing_positions buf in
+      let err =
+        Error.parse_error ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
           ~message:
             (Printf.sprintf "problem parsing at %s"
-               (position_to_string loc_start loc_end))
+               (position_to_string start end_))
       in
-      Error (Query_error.format ~colorize err)
+      Error (Error.format ~colorize err)
 
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =
