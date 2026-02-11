@@ -1078,7 +1078,6 @@ let is_nan ~ctx (json : Json.t) =
   | _ -> fail_invalid_type ~ctx "is_nan" json
 
 let get_envs () =
-  (* TODO: Do I need to escape stuff here? *)
   try
     Unix.environment () |> Array.to_list
     |> List.filter_map (fun s ->
