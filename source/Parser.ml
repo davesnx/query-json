@@ -162,7 +162,7 @@ and parse_try stream =
           let cleanup = parse_item_expr stream in
           Try (body, Some handler, Some cleanup)
       | _ -> Try (body, Some handler, None))
-  | _ -> body
+  | _ -> error stream "expected 'catch' after 'try'"
 
 and parse_pipe_expr stream =
   let left = parse_comma_expr stream in
@@ -300,7 +300,7 @@ and parse_postfix stream expr =
           advance stream;
           let access = optional_question stream (Key key) in
           parse_postfix stream (Pipe (expr, access))
-      | _ -> parse_postfix stream (Pipe (expr, Identity)))
+      | _ -> error stream "expected property name after '.'")
   | OPEN_BRACKET ->
       let result = parse_bracket_access stream expr in
       parse_postfix stream result
@@ -352,8 +352,8 @@ and parse_remaining_indices stream acc =
   | COMMA ->
       advance stream;
       let number = parse_index_number stream in
-      parse_remaining_indices stream (acc @ [ number ])
-  | _ -> acc
+      parse_remaining_indices stream (number :: acc)
+  | _ -> List.rev acc
 
 and parse_index_number stream =
   match (peek stream : Lexer.token) with

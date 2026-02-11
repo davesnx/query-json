@@ -1,11 +1,3 @@
-module Location = struct
-  type t = { loc_start : Lexing.position; loc_end : Lexing.position }
-
-  let none = { loc_start = Lexing.dummy_pos; loc_end = Lexing.dummy_pos }
-end
-
-let last_position = ref Location.none
-
 let position_to_string start end_ =
   Printf.sprintf "[line: %d, char: %d-%d]" start.Lexing.pos_lnum
     (start.Lexing.pos_cnum - start.Lexing.pos_bol)
@@ -18,27 +10,26 @@ let parse ~debug ~colorize input =
       if debug then print_endline (Ast.show_expression ast);
       Ok ast
   | exception Error.Parse_error (err, start, end_) ->
-      last_position := { loc_start = start; loc_end = end_ };
       let err =
         Error.with_location ~input ~start_pos:start.pos_cnum
           ~end_pos:end_.pos_cnum err
       in
       Error (Error.format ~colorize err)
   | exception Failure msg ->
-      let Location.{ loc_start; loc_end; _ } = !last_position in
+      let start, end_ = Sedlexing.lexing_positions buf in
       let err =
-        Error.semantic_error ~message:msg ~input ~start_pos:loc_start.pos_cnum
-          ~end_pos:loc_end.pos_cnum
+        Error.semantic_error ~message:msg ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
       in
       Error (Error.format ~colorize err)
   | exception _exn ->
-      let Location.{ loc_start; loc_end; _ } = !last_position in
+      let start, end_ = Sedlexing.lexing_positions buf in
       let err =
-        Error.parse_error ~input ~start_pos:loc_start.pos_cnum
-          ~end_pos:loc_end.pos_cnum
+        Error.parse_error ~input ~start_pos:start.pos_cnum
+          ~end_pos:end_.pos_cnum
           ~message:
             (Printf.sprintf "problem parsing at %s"
-               (position_to_string loc_start loc_end))
+               (position_to_string start end_))
       in
       Error (Error.format ~colorize err)
 
