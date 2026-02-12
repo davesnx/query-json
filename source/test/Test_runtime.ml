@@ -1071,10 +1071,10 @@ let bsearch =
 
 let date =
   [
-    test {|fromdate|} {|"2015-03-05T23:51:47Z"|} {|1425599507|};
-    test {|strptime("%Y-%m-%dT%H:%M:%SZ")|} {|"2015-03-05T23:51:47Z"|}
+    test {|from_date|} {|"2015-03-05T23:51:47Z"|} {|1425599507|};
+    test {|parse_date("%Y-%m-%dT%H:%M:%SZ")|} {|"2015-03-05T23:51:47Z"|}
       {|[ 2015, 2, 5, 23, 51, 47, 4, 63 ]|};
-    test {|strptime("%Y-%m-%dT%H:%M:%SZ")|mktime|} {|"2015-03-05T23:51:47Z"|}
+    test {|parse_date("%Y-%m-%dT%H:%M:%SZ")|to_unix|} {|"2015-03-05T23:51:47Z"|}
       {|1425599507|};
   ]
 

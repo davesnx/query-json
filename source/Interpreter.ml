@@ -684,7 +684,7 @@ let json_to_int = function
   | `Big_int z -> Some (Z.to_int z)
   | _ -> None
 
-let localtime ~ctx json =
+let to_local_time ~ctx json =
   match json with
   | `Float f ->
       let tm = Unix.localtime f in
@@ -695,9 +695,9 @@ let localtime ~ctx json =
   | `Int64 n ->
       let tm = Unix.localtime (Int64.to_float n) in
       tm_to_array tm tm.tm_isdst
-  | _ -> fail_invalid_type ~ctx "localtime" json
+  | _ -> fail_invalid_type ~ctx "to_local_time" json
 
-let gmtime ~ctx json =
+let to_utc ~ctx json =
   match json with
   | `Float f ->
       let tm = Unix.gmtime f in
@@ -708,9 +708,9 @@ let gmtime ~ctx json =
   | `Int64 n ->
       let tm = Unix.gmtime (Int64.to_float n) in
       tm_to_array tm false
-  | _ -> fail_invalid_type ~ctx "gmtime" json
+  | _ -> fail_invalid_type ~ctx "to_utc" json
 
-let mktime ~ctx json =
+let to_unix ~ctx json =
   match json with
   | `List [ sec; min; hour; mday; mon; year; _; _; isdst ] -> (
       match
@@ -745,7 +745,7 @@ let mktime ~ctx json =
           let time, _ = Unix.mktime tm in
           `Float time
       | _ ->
-          Runtime_error.invalid_argument ~fn:"mktime"
+          Runtime_error.invalid_argument ~fn:"to_unix"
             ~expected:
               "array of 9 integers [sec, min, hour, mday, mon, year, wday, \
                yday, isdst]"
@@ -776,13 +776,13 @@ let mktime ~ctx json =
           let time, _ = Unix.mktime tm in
           `Int64 (Int64.of_float time)
       | _ ->
-          Runtime_error.invalid_argument ~fn:"mktime"
+          Runtime_error.invalid_argument ~fn:"to_unix"
             ~expected:"array of integers"
             ~found:"array with non-integer elements")
   | `List _ ->
-      Runtime_error.invalid_argument ~fn:"mktime"
+      Runtime_error.invalid_argument ~fn:"to_unix"
         ~expected:"array of 8 or 9 integers" ~found:"array with wrong length"
-  | _ -> fail_invalid_type ~ctx "mktime" json
+  | _ -> fail_invalid_type ~ctx "to_unix" json
 
 let parse_iso8601 s =
   try
@@ -805,17 +805,17 @@ let parse_iso8601 s =
         Some time)
   with _ -> None
 
-let fromdate ~ctx json =
+let from_date ~ctx json =
   match json with
   | `String s -> (
       match parse_iso8601 s with
       | Some time -> `Int64 (Int64.of_float time)
       | None ->
-          Runtime_error.invalid_argument ~fn:"fromdate"
+          Runtime_error.invalid_argument ~fn:"from_date"
             ~expected:"ISO 8601 date string" ~found:(Printf.sprintf "%S" s))
-  | _ -> fail_invalid_type ~ctx "fromdate" json
+  | _ -> fail_invalid_type ~ctx "from_date" json
 
-let strptime_fn ~ctx fmt json =
+let parse_date_fn ~ctx fmt json =
   match json with
   | `String s -> (
       try
@@ -902,10 +902,10 @@ let strptime_fn ~ctx fmt json =
             `Int64 (Int64.of_int yday);
           ]
       with _ ->
-        Runtime_error.invalid_argument ~fn:"strptime"
+        Runtime_error.invalid_argument ~fn:"parse_date"
           ~expected:(Printf.sprintf "string matching format %S" fmt)
           ~found:(Printf.sprintf "%S" s))
-  | _ -> fail_invalid_type ~ctx "strptime" json
+  | _ -> fail_invalid_type ~ctx "parse_date" json
 
 let debug json =
   let str =
@@ -1675,10 +1675,10 @@ and interp_fn0 ~ctx f json =
   | Debug -> debug json
   | Stderr -> stderr json
   | Builtins -> yield (builtins_list ())
-  | Localtime -> yield (localtime ~ctx json)
-  | Gmtime -> yield (gmtime ~ctx json)
-  | Mktime -> yield (mktime ~ctx json)
-  | Fromdate -> yield (fromdate ~ctx json)
+  | To_local_time -> yield (to_local_time ~ctx json)
+  | To_utc -> yield (to_utc ~ctx json)
+  | To_unix -> yield (to_unix ~ctx json)
+  | From_date -> yield (from_date ~ctx json)
   | Is_blank -> is_blank ~ctx json
   | Is_empty -> is_empty ~ctx Identity json
 
@@ -1694,7 +1694,7 @@ and interp_fn1 ~ctx fn1 json =
       match sep_fn with
       | Split -> yield (split_sep ~ctx sep json)
       | Join -> yield (join_sep ~ctx sep json)
-      | Strptime -> yield (strptime_fn ~ctx sep json))
+      | Parse_date -> yield (parse_date_fn ~ctx sep json))
   | With_expr (expr_fn, expr) -> (
       match expr_fn with
       | Map -> map ~ctx expr json

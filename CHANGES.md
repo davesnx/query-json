@@ -4,7 +4,7 @@
 - [FEATURE] **Pattern destructuring in `as` bindings**: `reduce .[] as [$i,$j] (0; . + $i * $j)`, `. as [$a, $b, {c: $c}] | ...`
 - [FEATURE] **Regex flags**: `test("abc"; "i")`, `test("a b c"; "ix")` with case-insensitive and extended mode
 - [FEATURE] **Named capture groups**: `capture("(?<a>[a-z]+)-(?<n>[0-9]+)")` returns `{"a": "xyzzy", "n": "14"}`
-- [FEATURE] **Date functions**: `fromdate`, `strptime("%Y-%m-%dT%H:%M:%SZ")`
+- [FEATURE] **Date functions**: `from_date`, `parse_date(fmt)`, `to_unix`, `to_local_time`, `to_utc`
 - [FEATURE] **`sort_by` with multiple keys**: `sort_by(.foo, .bar)` for multi-level sorting
 - [FEATURE] **`try` without `catch`**: `[.[]|try .a]` suppresses errors without requiring `catch`
 - [FIX] **Postfix `?` catches user errors**: `error?` and `repeat(f, error)?` no longer crash

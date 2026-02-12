@@ -45,7 +45,7 @@ let tests =
     test "fromjson" "null" "not implemented";
     test "modulemeta" "null" "not implemented";
     test "strftime" "null" "not implemented";
-    test "strptime" "null" "not implemented";
+    test "parse_date" "null" "not implemented";
     (* Strict member access errors *)
     test ".foo" "{}" "not found";
     test ".bar" "{\"baz\": 1}" "not found";

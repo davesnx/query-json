@@ -1525,7 +1525,6 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       )
   (* Not implemented *)
   | "strftime" -> Error (not_implemented "strftime")
-  | "strptime" -> Error (not_implemented "strptime")
   | "splits" ->
       Error (Error.not_implemented ~suggestion:"use `split` instead" "splits")
   | "sql" -> Error (not_implemented "sql")
@@ -1677,14 +1676,14 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   (* Not implemented *)
   | "format" -> Error (not_implemented "format")
   | "strftime" -> Error (not_implemented "strftime")
-  | "strptime" -> (
+  | "parse_date" -> (
       match arg with
-      | Literal (String fmt) -> Ok (Fn1 (With_separator (Strptime, fmt)))
-      | _ -> Error (not_implemented "strptime with non-literal format"))
-  | "todateiso8601" | "fromdateiso8601" ->
+      | Literal (String fmt) -> Ok (Fn1 (With_separator (Parse_date, fmt)))
+      | _ -> Error (not_implemented "parse_date with non-literal format"))
+  | "todateiso8601" | "fromdateiso8601" | "fromdate" | "strptime" ->
       Error (not_implemented "ISO date functions")
-  | "localtime" | "gmtime" -> Error (not_implemented "time zone functions")
-  | "mktime" -> Error (not_implemented "mktime")
+  | "to_local_time" | "to_utc" -> Error (not_implemented "time zone functions")
+  | "to_unix" -> Error (not_implemented "to_unix")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")
   | "splits" ->
@@ -1846,10 +1845,10 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   | "descend" -> Ok (Fn0 Descend)
   | "dive" -> Ok (Fn0 Dive)
   (* Time functions *)
-  | "localtime" -> Ok (Fn0 Localtime)
-  | "gmtime" -> Ok (Fn0 Gmtime)
-  | "mktime" -> Ok (Fn0 Mktime)
-  | "fromdate" | "fromdateiso8601" -> Ok (Fn0 Fromdate)
+  | "to_local_time" -> Ok (Fn0 To_local_time)
+  | "to_utc" -> Ok (Fn0 To_utc)
+  | "to_unix" -> Ok (Fn0 To_unix)
+  | "from_date" -> Ok (Fn0 From_date)
   (* is_valid without argument: try (. | true) catch false *)
   | "is_valid" ->
       Ok
@@ -1860,10 +1859,17 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   | "builtins" -> Ok (Fn0 Builtins)
   (* Not implemented *)
   | "strftime" -> Error (not_implemented "strftime")
-  | "strptime" ->
+  | "strptime" | "parse_date" ->
       Error
         (Error.not_implemented
-           ~suggestion:"use strptime(format) with a format string" "strptime")
+           ~suggestion:"use parse_date(format) with a format string"
+           "parse_date")
+  | "fromdate" | "fromdateiso8601" ->
+      Error (Error.deprecated ~old_name:"fromdate" ~new_name:"from_date")
+  | "localtime" ->
+      Error (Error.deprecated ~old_name:"localtime" ~new_name:"to_local_time")
+  | "gmtime" -> Error (Error.deprecated ~old_name:"gmtime" ~new_name:"to_utc")
+  | "mktime" -> Error (Error.deprecated ~old_name:"mktime" ~new_name:"to_unix")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")

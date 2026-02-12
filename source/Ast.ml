@@ -103,10 +103,10 @@ type fn0 =
   | Stderr
   | Builtins
   (* Time *)
-  | Localtime
-  | Gmtime
-  | Mktime
-  | Fromdate
+  | To_local_time
+  | To_utc
+  | To_unix
+  | From_date
   (* Custom helpers *)
   | Is_blank
   | Is_empty
@@ -115,7 +115,7 @@ type fn0 =
 type fn1_pattern = Test | Match | Scan | Capture
 [@@deriving show { with_path = false }]
 
-type fn1_separator = Split | Join | Strptime
+type fn1_separator = Split | Join | Parse_date
 [@@deriving show { with_path = false }]
 
 type fn1_expr =
