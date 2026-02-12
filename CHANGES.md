@@ -1,5 +1,15 @@
 # Unreleased
 
+- [REFACTOR] Replace `Str` regex engine with `Re.Pcre` for native PCRE syntax support
+- [FEATURE] **Pattern destructuring in `as` bindings**: `reduce .[] as [$i,$j] (0; . + $i * $j)`, `. as [$a, $b, {c: $c}] | ...`
+- [FEATURE] **Regex flags**: `test("abc"; "i")`, `test("a b c"; "ix")` with case-insensitive and extended mode
+- [FEATURE] **Named capture groups**: `capture("(?<a>[a-z]+)-(?<n>[0-9]+)")` returns `{"a": "xyzzy", "n": "14"}`
+- [FEATURE] **Date functions**: `fromdate`, `strptime("%Y-%m-%dT%H:%M:%SZ")`
+- [FEATURE] **`sort_by` with multiple keys**: `sort_by(.foo, .bar)` for multi-level sorting
+- [FEATURE] **`try` without `catch`**: `[.[]|try .a]` suppresses errors without requiring `catch`
+- [FIX] **Postfix `?` catches user errors**: `error?` and `repeat(f, error)?` no longer crash
+- [FIX] **Bare `recurse`**: `recurse` and `recurse(.foo[])` work correctly
+
 ## 1.0.0~beta-1
 
 - [REFACTOR] Replace menhir-based parser with hand-written recursive descent parser
