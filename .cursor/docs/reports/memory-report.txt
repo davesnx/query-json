@@ -1,0 +1,299 @@
+==========================================
+Memory Allocation Report for query-json
+==========================================
+
+Binary: /home/me/query-json/_build/default/bin/bin.exe
+Version: 0.6.1
+Date: Thu Dec 18 12:45:54 PM GMT 2025
+
+
+==========================================
+Section 1: Peak Memory Usage (RSS)
+==========================================
+
+### Small file (1.3KB) ###
+-------------------------------------------
+Test: Identity on small
+Query: .
+File: small.json (4.0K)
+Iterations: 5
+
+  Average Maximum RSS: 2468 KB (2.41 MB)
+  Average Minor page faults: 434
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Field access on small
+Query: .first.id
+File: small.json (4.0K)
+Iterations: 5
+
+  Average Maximum RSS: 1654 KB (1.61 MB)
+  Average Minor page faults: 432
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Map operation on small
+Query: .second.store.books | map(.price)
+File: small.json (4.0K)
+Iterations: 5
+
+  Average Maximum RSS: 4120 KB (4.02 MB)
+  Average Minor page faults: 433
+  Average Major page faults: 0
+
+### Medium file (104KB) ###
+-------------------------------------------
+Test: Identity on medium
+Query: .
+File: medium.json (104K)
+Iterations: 5
+
+  Average Maximum RSS: 5740 KB (5.60 MB)
+  Average Minor page faults: 1269
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Map identity on medium
+Query: map(.)
+File: medium.json (104K)
+Iterations: 5
+
+  Average Maximum RSS: 8212 KB (8.01 MB)
+  Average Minor page faults: 1469
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Length on medium
+Query: length
+File: medium.json (104K)
+Iterations: 5
+
+  Average Maximum RSS: 2463 KB (2.40 MB)
+  Average Minor page faults: 668
+  Average Major page faults: 0
+
+### Big file (575KB) ###
+-------------------------------------------
+Test: Identity on big
+Query: .
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 10671 KB (10.42 MB)
+  Average Minor page faults: 2536
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Map identity on big
+Query: map(.)
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 10672 KB (10.42 MB)
+  Average Minor page faults: 2542
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Keys on big
+Query: keys
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 5748 KB (5.61 MB)
+  Average Minor page faults: 1506
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Filter and map on big
+Query: map(select(.base.Attack > 100)) | map(.name.english)
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 8212 KB (8.01 MB)
+  Average Minor page faults: 1714
+  Average Major page faults: 0
+
+### Huge file (97MB) ###
+-------------------------------------------
+Test: Keys on huge
+Query: keys
+File: huge.json (93M)
+Iterations: 3
+
+  Average Maximum RSS: 314030 KB (306.66 MB)
+  Average Minor page faults: 79042
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Identity on huge
+Query: .
+File: huge.json (93M)
+Iterations: 3
+
+  Average Maximum RSS: 771069 KB (752.99 MB)
+  Average Minor page faults: 200816
+  Average Major page faults: 0
+
+
+==========================================
+Section 2: Memory Scaling Analysis
+==========================================
+
+Comparing memory usage across file sizes for identity query:
+
+File Size       Peak RSS (KB)   Peak RSS (MB)  
+-----------------------------------------------
+4.0K            0               0              
+104K            8208            8.01           
+564K            8192            8.00           
+93M             768672          750.65         
+
+==========================================
+Section 3: Lexer Memory Analysis
+==========================================
+
+Testing query complexity impact on memory (Lexer.ml):
+
+-------------------------------------------
+Test: Simple identity (.)
+Query: .
+File: medium.json (104K)
+Iterations: 5
+
+  Average Maximum RSS: 6569 KB (6.41 MB)
+  Average Minor page faults: 1271
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Simple key access
+Query: .name
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 7391 KB (7.21 MB)
+  Average Minor page faults: 1509
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Multi-pipe query
+Query: .[] | .name | length
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 7388 KB (7.21 MB)
+  Average Minor page faults: 1783
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Complex filter
+Query: map(select(.base.Attack > 50 and .base.Defense > 50))
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 12313 KB (12.02 MB)
+  Average Minor page faults: 2164
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Nested operations
+Query: .[] | {name: .name.english, total: (.base.HP + .base.Attack + .base.Defense)}
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 8212 KB (8.01 MB)
+  Average Minor page faults: 1896
+  Average Major page faults: 0
+
+
+==========================================
+Section 4: Interpreter Memory Analysis
+==========================================
+
+Testing different operations (Interpreter.ml):
+
+-------------------------------------------
+Test: Iterator (.[])
+Query: .[]
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 6572 KB (6.41 MB)
+  Average Minor page faults: 1965
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Map
+Query: map(.)
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 11489 KB (11.21 MB)
+  Average Minor page faults: 2540
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Select/Filter
+Query: map(select(.id > 500))
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 8212 KB (8.01 MB)
+  Average Minor page faults: 1957
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Sort
+Query: sort
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 10661 KB (10.41 MB)
+  Average Minor page faults: 2543
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Unique
+Query: unique
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 6581 KB (6.42 MB)
+  Average Minor page faults: 1932
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Group by
+Query: group_by(.type[0])
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 16404 KB (16.01 MB)
+  Average Minor page faults: 3371
+  Average Major page faults: 0
+
+-------------------------------------------
+Test: Flatten
+Query: map(.type) | flatten
+File: big.json (564K)
+Iterations: 5
+
+  Average Maximum RSS: 7386 KB (7.21 MB)
+  Average Minor page faults: 1749
+  Average Major page faults: 0
+
+
+==========================================
+Section 5: Detailed Valgrind Analysis
+==========================================
+
+Running valgrind memcheck for detailed allocation info...
+(This may take a while)
+
+/home/me/query-json/benchmarks/memory_bench.sh: line 172: 995422 Segmentation fault      (core dumped) valgrind --tool=memcheck --leak-check=summary "$QJ" "map(.name.english)" "$BENCH_DIR/big.json" > /dev/null 2>&1
+Valgrind summary for map operation on big.json:
+Valgrind output unavailable
+
+==========================================
+Memory Report Complete
+==========================================

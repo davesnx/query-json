@@ -1248,6 +1248,72 @@ let definition_functions =
       ];
   }
 
+let date_functions =
+  {
+    name = "date";
+    description = "Date and time functions";
+    functions =
+      [
+        {
+          name = "now";
+          aliases = [];
+          description = "Current Unix timestamp";
+          example = Some {|now → 1704067200|};
+          applicable_to = [ Any ];
+          insert_text = None;
+          arity = No_args;
+        };
+        {
+          name = "from_date";
+          aliases = [];
+          description = "Parse ISO 8601 date string to Unix timestamp";
+          example = Some {|"2015-03-05T23:51:47Z" | from_date → 1425599507|};
+          applicable_to = [ String ];
+          insert_text = None;
+          arity = No_args;
+        };
+        {
+          name = "parse_date";
+          aliases = [];
+          description = "Parse date string with format";
+          example =
+            Some
+              {|"2015-03-05T23:51:47Z" | parse_date("%Y-%m-%dT%H:%M:%SZ") → [2015, 2, 5, ...]|};
+          applicable_to = [ String ];
+          insert_text = None;
+          arity = One_arg "format";
+        };
+        {
+          name = "to_unix";
+          aliases = [];
+          description = "Convert time array to Unix timestamp";
+          example =
+            Some {|[2015, 2, 5, 23, 51, 47, 4, 63] | to_unix → 1425599507|};
+          applicable_to = [ Array ];
+          insert_text = None;
+          arity = No_args;
+        };
+        {
+          name = "to_local_time";
+          aliases = [];
+          description = "Convert Unix timestamp to local time array";
+          example = Some {|now | to_local_time → [sec, min, hour, ...]|};
+          applicable_to = [ Number ];
+          insert_text = None;
+          arity = No_args;
+        };
+        {
+          name = "to_utc";
+          aliases = [];
+          description = "Convert Unix timestamp to UTC time array";
+          example = Some {|now | to_utc → [sec, min, hour, ...]|};
+          applicable_to = [ Number ];
+          insert_text = None;
+          arity = No_args;
+        };
+      ];
+  }
+
 let debug_functions =
   {
     name = "debug";
@@ -1285,6 +1351,7 @@ let all_categories =
     type_functions;
     control_functions;
     definition_functions;
+    date_functions;
     debug_functions;
   ]
 

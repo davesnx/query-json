@@ -1,0 +1,20 @@
+(executable
+ (name bench)
+ (libraries Json unix))
+
+(executable
+ (name alloc_analysis)
+ (libraries Json))
+
+(executable
+ (name test_oxcaml)
+ (libraries))
+
+(executable
+ (name optimization_test)
+ (libraries Json))
+
+(executable
+ (name real_world)
+ (libraries Json unix))
+

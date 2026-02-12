@@ -12,6 +12,7 @@
    type - Type checking and conversion functions
    control - Control flow and iteration functions
    definition - Function definition syntax
+   date - Date and time functions
    debug - Debugging and inspection functions
   
   Usage: query-json --functions <category>
@@ -150,6 +151,7 @@
    type - Type checking and conversion functions
    control - Control flow and iteration functions
    definition - Function definition syntax
+   date - Date and time functions
    debug - Debugging and inspection functions
   
   Usage: query-json --functions <category>
