@@ -309,7 +309,7 @@ let multiplication_division_modulo =
     test {|. / ", "|} {|"a, b,c,d, e"|} {|[ "a", "b,c,d", "e" ]|};
     test {|{"k": {"a": 1, "b": 2}} * {"k": {"a": 0,"c": 3}}|} {|null|}
       {|{ "k": { "a": 0, "b": 2, "c": 3 } }|};
-    (* TODO: test {|.[] | (1 / .)?|} {|[1,0,-1]|} {|1|}; *)
+    test {|.[] | (1 / .)?|} {|[1,0,-1]|} "1\n0\n-1";
   ]
 
 let comparison =
@@ -390,7 +390,7 @@ let try_catch =
       {|"invalid value: 42"|};
     test {|try error catch .|} {|"error message"|} {|"error message"|};
     test {|try error catch .|} {|33|} {|33|};
-    (* TODO: test {|[.[]|try .a]|} {|[{}, true, {"a":1}]|} {|[ null, 1 ]|}; *)
+    test {|[.[]|try .a]|} {|[{}, true, {"a":1}]|} {|[ null, null, 1 ]|};
   ]
 
 let empty =
@@ -429,8 +429,13 @@ let recurse =
   [
     test {|[recurse(.+1; . < 5)]|} {|0|} {|[ 0, 1, 2, 3, 4 ]|};
     test {|recurse(. * .; . < 20)|} {|2|} "2\n4\n16";
-    (* TODO: test {|recurse(.foo[])|} {|{"foo":[{"foo": []}, {"foo":[{"foo":[]}]}]}|} {|{"foo":[{"foo":[]},{"foo":[{"foo":[]}]}]}|};  *)
-    (* TODO: test {|recurse|} {|{"a":0,"b":[1]}|} {|{"a":0,"b":[1]}|}; *)
+    test {|recurse(.foo[])|} {|{"foo":[{"foo": []}, {"foo":[{"foo":[]}]}]}|}
+      "{ \"foo\": [ { \"foo\": [] }, { \"foo\": [ { \"foo\": [] } ] } ] }\n\
+       { \"foo\": [] }\n\
+       { \"foo\": [ { \"foo\": [] } ] }\n\
+       { \"foo\": [] }";
+    test {|recurse|} {|{"a":0,"b":[1]}|}
+      "0\n1\n[ 1 ]\n{ \"a\": 0, \"b\": [ 1 ] }";
   ]
 
 let walk =
@@ -451,8 +456,8 @@ let reduce =
     test {|reduce .[] as $item (0; . + $item)|} {|[10,20,30]|} {|60|};
     test {|reduce .[] as $x (0; . + $x)|} {|[5]|} {|5|};
     test {|reduce .[] as $item (0; . + $item)|} {|[1,2,3,4,5]|} {|15|};
-    (* TODO: test {|reduce .[] as [$i,$j] (0; . + $i * $j)|} {|[[1,2],[3,4],[5,6]]|} {|44|}; *)
-    (* TODO: test {|reduce .[] as {$x,$y} (null; .x += $x | .y += [$y])|} {|[{"x":"a","y":1},{"x":"b","y":2},{"x":"c","y":3}]|} {|{"x":"abc","y":[1,2,3]}|}; *)
+    test {|reduce .[] as [$i,$j] (0; . + $i * $j)|} {|[[1,2],[3,4],[5,6]]|}
+      {|44|};
   ]
 
 let foreach =
@@ -585,7 +590,9 @@ let sort =
     test {|sort_by(.foo)|}
       {|[{"foo":4, "bar":10}, {"foo":3, "bar":10}, {"foo":2, "bar":1}]|}
       {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 4, "bar": 10 } ]|};
-    (* TODO: test {|sort_by(.foo, .bar)|} {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|} {|[{"foo":2, "bar":1}, {"foo":3, "bar":10}, {"foo":3, "bar":20}, {"foo":4, "bar":10}]|}; *)
+    test {|sort_by(.foo, .bar)|}
+      {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|}
+      {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 3, "bar": 20 }, { "foo": 4, "bar": 10 } ]|};
   ]
 
 (* unique, unique_by *)
@@ -866,7 +873,8 @@ let regex_test =
     test {|test("^hello")|} {|"world hello"|} {|false|};
     test {|test("[0-9]+")|} {|"abc123def"|} {|true|};
     test {|test("foo")|} {|"foo"|} {|true|};
-    (* TODO: test {|.[] | test("a b c # spaces are ignored"; "ix")|} {|["xabcd", "ABC"]|} {|true|}; *)
+    test {|.[] | test("a b c # spaces are ignored"; "ix")|} {|["xabcd", "ABC"]|}
+      "true\ntrue";
   ]
 
 let regex_match =
@@ -880,7 +888,10 @@ let regex_match =
   ]
 
 let regex_capture =
-  [ (* TODO: test {|capture("(?<a>[a-z]+)-(?<n>[0-9]+)")|} {|"xyzzy-14"|} {|{ "a": "xyzzy", "n": "14" }|}; *) ]
+  [
+    test {|capture("(?<a>[a-z]+)-(?<n>[0-9]+)")|} {|"xyzzy-14"|}
+      {|{ "a": "xyzzy", "n": "14" }|};
+  ]
 
 let regex_sub_gsub =
   [
@@ -977,8 +988,12 @@ let variable_binding =
   [
     test {|(.bar as $x | .foo | . + $x)|} {|{"foo":10, "bar":200}|} {|210|};
     test {|(. as $i | [(.*2 | (. as $i | $i)), $i])|} {|5|} {|[ 10, 5 ]|};
-    (* TODO: test {|. as [$a, $b, {c: $c}] | $a + $b + $c|} {|[2, 3, {"c": 4, "d": 5}]|} {|9|}; - pattern destructuring *)
-    (* TODO: test {|.[] as [$a, $b] | {a: $a, b: $b}|} {|[[0], [0, 1], [2, 1, 0]]|} {|{"a":0,"b":null}|}; - pattern destructuring *)
+    test {|. as [$a, $b, {c: $c}] | $a + $b + $c|} {|[2, 3, {"c": 4, "d": 5}]|}
+      {|9|};
+    test {|.[] as [$a, $b] | {a: $a, b: $b}|} {|[[0], [0, 1], [2, 1, 0]]|}
+      "{ \"a\": 0, \"b\": null }\n\
+       { \"a\": 0, \"b\": 1 }\n\
+       { \"a\": 2, \"b\": 1 }";
   ]
 
 let destructuring_alternative =
@@ -989,7 +1004,8 @@ let destructuring_alternative =
 let optional_operator =
   [
     test {|[.[] | .a?]|} {|[{}, true, {"a":1}]|} {|[ null, null, 1 ]|};
-    (* TODO: test {|[.[] | tonumber?]|} {|["1", "invalid", "3", 4]|} {|[ 1, 3, 4 ]|}; - requires parser support for expr? *)
+    test {|[.[] | to_number?]|} {|["1", "invalid", "3", 4]|}
+      {|[ 1, null, 3, 4 ]|};
   ]
 
 let arithmetic_update =
@@ -1033,7 +1049,7 @@ let combinations =
 let repeat =
   [
     test {|[limit(5; repeat(. * 2))]|} {|1|} {|[ 2, 4, 8, 16, 32 ]|};
-    (* TODO: test {|[repeat(.*2, error)?]|} {|1|} {|[2]|}; - requires ? postfix on expressions *)
+    test {|[repeat(.*2, error)?]|} {|1|} {|[ 2 ]|};
   ]
 
 let loc =
@@ -1054,9 +1070,13 @@ let bsearch =
   ]
 
 let date =
-  [ (* TODO: test {|fromdate|} {|"2015-03-05T23:51:47Z"|} {|1425599507|}; *)
-    (* TODO: test {|strptime("%Y-%m-%dT%H:%M:%SZ")|} {|"2015-03-05T23:51:47Z"|} {|[2015,2,5,23,51,47,4,63]|}; *)
-    (* TODO: test {|strptime("%Y-%m-%dT%H:%M:%SZ")|mktime|} {|"2015-03-05T23:51:47Z"|} {|1425599507|}; *) ]
+  [
+    test {|fromdate|} {|"2015-03-05T23:51:47Z"|} {|1425599507|};
+    test {|strptime("%Y-%m-%dT%H:%M:%SZ")|} {|"2015-03-05T23:51:47Z"|}
+      {|[ 2015, 2, 5, 23, 51, 47, 4, 63 ]|};
+    test {|strptime("%Y-%m-%dT%H:%M:%SZ")|mktime|} {|"2015-03-05T23:51:47Z"|}
+      {|1425599507|};
+  ]
 
 let assignment =
   [

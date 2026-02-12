@@ -3,4 +3,4 @@
 (library
  (name json)
  (public_name query-json.jotason)
- (libraries str zarith))
+ (libraries re zarith))

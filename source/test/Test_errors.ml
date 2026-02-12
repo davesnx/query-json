@@ -5,12 +5,10 @@ let test query json_str expected_error_part =
     | Ok json -> (
         match Core.run ~colorize:false query json with
         | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
-        | Error err -> (
-            let re = Str.regexp_string expected_error_part in
-            try ignore (Str.search_forward re err 0)
-            with Not_found ->
+        | Error err ->
+            if not (Re.execp (Re.compile (Re.str expected_error_part)) err) then
               Alcotest.failf "Expected error containing '%s', but got:\n%s"
-                expected_error_part err))
+                expected_error_part err)
   in
   Alcotest.test_case query `Quick fn
 

@@ -171,7 +171,7 @@ let user_error value =
 
 let yield_many items = List.iter yield items
 
-let run fn ?and_then ?on_fail () =
+let run fn ?and_then ?(on_fail : (unit -> unit) option) () =
   let fn =
     match and_then with
     | None -> fn
@@ -186,7 +186,10 @@ let run fn ?and_then ?on_fail () =
   match on_fail with
   | None -> fn ()
   | Some f -> (
-      match fn () with () -> () | effect Runtime_error.Fail err, _ -> f err)
+      match fn () with
+      | () -> ()
+      | effect Runtime_error.Fail _, _ -> f ()
+      | effect User_error _, _ -> f ())
 
 let run_while fn ~when_ =
   match fn () with
@@ -236,10 +239,10 @@ let rec substitute_params (params : string list) (args : expression list)
   | Slice_expr (a, b) -> Slice_expr (sub_opt a, sub_opt b)
   | If_then_else (c, t, e) -> If_then_else (sub c, sub t, sub e)
   | Range (e1, e2, e3) -> Range (sub e1, sub_opt e2, sub_opt e3)
-  | Reduce (e, var, init, update) -> Reduce (sub e, var, sub init, sub update)
-  | Foreach (e, var, init, update, extract) ->
-      Foreach (sub e, var, sub init, sub update, sub extract)
-  | As (e, var, body) -> As (sub e, var, sub body)
+  | Reduce (e, pat, init, update) -> Reduce (sub e, pat, sub init, sub update)
+  | Foreach (e, pat, init, update, extract) ->
+      Foreach (sub e, pat, sub init, sub update, sub extract)
+  | As (e, pat, body) -> As (sub e, pat, sub body)
   | Try (e, h, f) -> Try (sub e, sub_opt h, sub_opt f)
   | Fma (e1, e2, e3) -> Fma (sub e1, sub e2, sub e3)
   | Fn (name, params', body) -> Fn (name, params', sub body)
@@ -450,7 +453,7 @@ module Operators = struct
     | `Int l, `Int64 r -> `Float (Int.to_float l /. Int64.to_float r)
     | `String s, `String delim ->
         `List
-          (Str.split_delim (Str.regexp_string delim) s
+          (Re.split_delim (Re.compile (Re.str delim)) s
           |> List.map (fun part -> `String part))
     | _ -> fail_invalid_type ~ctx "/" left
 
@@ -472,14 +475,17 @@ end
 
 module Search = struct
   let string_first haystack needle =
-    try Some (Str.search_forward (Str.regexp_string needle) haystack 0)
-    with Not_found -> None
+    match Re.exec_opt (Re.compile (Re.str needle)) haystack with
+    | Some g -> Some (fst (Re.Group.offset g 0))
+    | None -> None
 
   let string_last haystack needle =
     let rec search pos last =
       try
         let found =
-          Str.search_forward (Str.regexp_string needle) haystack pos
+          match Re.exec_opt ~pos (Re.compile (Re.str needle)) haystack with
+          | Some g -> fst (Re.Group.offset g 0)
+          | None -> raise Not_found
         in
         search (found + 1) (Some found)
       with Not_found -> last
@@ -490,7 +496,9 @@ module Search = struct
     let rec search pos acc =
       try
         let found =
-          Str.search_forward (Str.regexp_string needle) haystack pos
+          match Re.exec_opt ~pos (Re.compile (Re.str needle)) haystack with
+          | Some g -> fst (Re.Group.offset g 0)
+          | None -> raise Not_found
         in
         search (found + 1) (found :: acc)
       with Not_found -> List.rev acc
@@ -742,13 +750,162 @@ let mktime ~ctx json =
               "array of 9 integers [sec, min, hour, mday, mon, year, wday, \
                yday, isdst]"
             ~found:"array with non-integer elements")
+  | `List [ year; mon; mday; hour; min; sec; _; _ ] -> (
+      match
+        ( json_to_int year,
+          json_to_int mon,
+          json_to_int mday,
+          json_to_int hour,
+          json_to_int min,
+          json_to_int sec )
+      with
+      | Some year, Some mon, Some mday, Some hour, Some min, Some sec ->
+          let tm =
+            {
+              Unix.tm_sec = sec;
+              tm_min = min;
+              tm_hour = hour;
+              tm_mday = mday;
+              tm_mon = mon;
+              tm_year = year - 1900;
+              tm_wday = 0;
+              tm_yday = 0;
+              tm_isdst = false;
+            }
+          in
+          let time, _ = Unix.mktime tm in
+          `Int64 (Int64.of_float time)
+      | _ ->
+          Runtime_error.invalid_argument ~fn:"mktime"
+            ~expected:"array of integers"
+            ~found:"array with non-integer elements")
   | `List _ ->
       Runtime_error.invalid_argument ~fn:"mktime"
-        ~expected:
-          "array of 9 integers [sec, min, hour, mday, mon, year, wday, yday, \
-           isdst]"
-        ~found:"array with wrong length"
+        ~expected:"array of 8 or 9 integers" ~found:"array with wrong length"
   | _ -> fail_invalid_type ~ctx "mktime" json
+
+let parse_iso8601 s =
+  try
+    Scanf.sscanf s "%4d-%2d-%2dT%2d:%2d:%2dZ"
+      (fun year month day hour min sec ->
+        let tm =
+          {
+            Unix.tm_sec = sec;
+            tm_min = min;
+            tm_hour = hour;
+            tm_mday = day;
+            tm_mon = month - 1;
+            tm_year = year - 1900;
+            tm_wday = 0;
+            tm_yday = 0;
+            tm_isdst = false;
+          }
+        in
+        let time, _ = Unix.mktime tm in
+        Some time)
+  with _ -> None
+
+let fromdate ~ctx json =
+  match json with
+  | `String s -> (
+      match parse_iso8601 s with
+      | Some time -> `Int64 (Int64.of_float time)
+      | None ->
+          Runtime_error.invalid_argument ~fn:"fromdate"
+            ~expected:"ISO 8601 date string" ~found:(Printf.sprintf "%S" s))
+  | _ -> fail_invalid_type ~ctx "fromdate" json
+
+let strptime_fn ~ctx fmt json =
+  match json with
+  | `String s -> (
+      try
+        let r_year = ref 0 and r_month = ref 1 and r_day = ref 1 in
+        let r_hour = ref 0 and r_min = ref 0 and r_sec = ref 0 in
+        let si = ref 0 and fi = ref 0 in
+        while !fi < String.length fmt do
+          if fmt.[!fi] = '%' && !fi + 1 < String.length fmt then begin
+            let spec = fmt.[!fi + 1] in
+            fi := !fi + 2;
+            let sub = String.sub s !si (String.length s - !si) in
+            match spec with
+            | 'Y' ->
+                Scanf.sscanf sub "%4d" (fun v ->
+                    r_year := v;
+                    si := !si + 4)
+            | 'm' ->
+                Scanf.sscanf sub "%2d" (fun v ->
+                    r_month := v;
+                    si := !si + 2)
+            | 'd' ->
+                Scanf.sscanf sub "%2d" (fun v ->
+                    r_day := v;
+                    si := !si + 2)
+            | 'H' ->
+                Scanf.sscanf sub "%2d" (fun v ->
+                    r_hour := v;
+                    si := !si + 2)
+            | 'M' ->
+                Scanf.sscanf sub "%2d" (fun v ->
+                    r_min := v;
+                    si := !si + 2)
+            | 'S' ->
+                Scanf.sscanf sub "%2d" (fun v ->
+                    r_sec := v;
+                    si := !si + 2)
+            | 'Z' ->
+                if !si < String.length s && s.[!si] = 'Z' then si := !si + 1
+            | _ -> si := !si + 1
+          end
+          else begin
+            si := !si + 1;
+            fi := !fi + 1
+          end
+        done;
+        let tm =
+          {
+            Unix.tm_sec = !r_sec;
+            tm_min = !r_min;
+            tm_hour = !r_hour;
+            tm_mday = !r_day;
+            tm_mon = !r_month - 1;
+            tm_year = !r_year - 1900;
+            tm_wday = 0;
+            tm_yday = 0;
+            tm_isdst = false;
+          }
+        in
+        let _, normed = Unix.mktime tm in
+        let yday =
+          let base =
+            {
+              normed with
+              tm_mon = 0;
+              tm_mday = 1;
+              tm_hour = 0;
+              tm_min = 0;
+              tm_sec = 0;
+            }
+          in
+          let bt, _ = Unix.mktime base in
+          let ct, _ = Unix.mktime normed in
+          int_of_float ((ct -. bt) /. 86400.)
+        in
+        `List
+          [
+            `Int64 (Int64.of_int !r_year);
+            `Int64 (Int64.of_int (!r_month - 1));
+            `Int64 (Int64.of_int !r_day);
+            `Int64 (Int64.of_int !r_hour);
+            `Int64 (Int64.of_int !r_min);
+            `Int64 (Int64.of_int !r_sec);
+            `Int64 (Int64.of_int normed.tm_wday);
+            `Int64 (Int64.of_int yday);
+          ]
+      with _ ->
+        Runtime_error.invalid_argument ~fn:"strptime"
+          ~expected:(Printf.sprintf "string matching format %S" fmt)
+          ~found:(Printf.sprintf "%S" s))
+  | _ -> fail_invalid_type ~ctx "strptime" json
 
 let debug json =
   let str =
@@ -1154,8 +1311,8 @@ let replace_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
       try
-        let regex = Str.regexp pattern in
-        `String (Str.replace_first regex replacement s)
+        let regex = Re.compile (Re.Pcre.re pattern) in
+        `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
       with _ -> json)
   | _ -> fail_invalid_type ~ctx "replace" json
 
@@ -1163,89 +1320,107 @@ let replace_all_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
       try
-        let regex = Str.regexp pattern in
-        `String (Str.global_replace regex replacement s)
+        let regex = Re.compile (Re.Pcre.re pattern) in
+        `String (Re.replace regex ~f:(fun _ -> replacement) s)
       with _ -> json)
   | _ -> fail_invalid_type ~ctx "replace_all" json
 
 let test_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
   match json with
-  | `String s -> (
-      try
-        let _ = Str.search_forward compiled.regex s 0 in
-        `Bool true
-      with Not_found -> `Bool false)
+  | `String s -> `Bool (Re.execp compiled.regex s)
   | _ -> fail_invalid_type ~ctx "test" json
 
 let match_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
   match json with
   | `String s -> (
-      try
-        let _ = Str.search_forward compiled.regex s 0 in
-        let matched = Str.matched_string s in
-        let captures = ref [] in
-        (try
-           for i = 1 to 9 do
-             captures := Str.matched_group i s :: !captures
-           done
-         with Not_found | Invalid_argument _ -> ());
-        let result =
-          `Assoc
-            [
-              ("offset", `Int64 (Int64.of_int (Str.match_beginning ())));
-              ("length", `Int64 (Int64.of_int (String.length matched)));
-              ("string", `String matched);
-              ( "captures",
-                `List
-                  (List.rev_map
-                     (fun c ->
-                       `Assoc
-                         [
-                           ("offset", `Int64 (-1L));
-                           ("length", `Int64 (Int64.of_int (String.length c)));
-                           ("string", `String c);
-                           ("name", `Null);
-                         ])
-                     !captures) );
-            ]
-        in
-        yield result
-      with Not_found -> ())
+      match Re.exec_opt compiled.regex s with
+      | Some group ->
+          let matched = Re.Group.get group 0 in
+          let offset, _ = Re.Group.offset group 0 in
+          let named_groups = Re.group_names compiled.regex in
+          let nb = Re.Group.nb_groups group in
+          let captures =
+            List.init (nb - 1) (fun i ->
+                let idx = i + 1 in
+                match Re.Group.get_opt group idx with
+                | Some cap ->
+                    let cap_offset, _ =
+                      try Re.Group.offset group idx with _ -> (-1, -1)
+                    in
+                    let name =
+                      match
+                        List.find_opt (fun (_, gi) -> gi = idx) named_groups
+                      with
+                      | Some (n, _) -> `String n
+                      | None -> `Null
+                    in
+                    `Assoc
+                      [
+                        ("offset", `Int64 (Int64.of_int cap_offset));
+                        ("length", `Int64 (Int64.of_int (String.length cap)));
+                        ("string", `String cap);
+                        ("name", name);
+                      ]
+                | None -> `Null)
+          in
+          let captures = List.filter (fun c -> c <> `Null) captures in
+          yield
+            (`Assoc
+               [
+                 ("offset", `Int64 (Int64.of_int offset));
+                 ("length", `Int64 (Int64.of_int (String.length matched)));
+                 ("string", `String matched);
+                 ("captures", `List captures);
+               ])
+      | None -> ())
   | _ -> fail_invalid_type ~ctx "match" json
 
 let scan_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
   match json with
   | `String s ->
-      let rec scan_all pos =
-        try
-          let _ = Str.search_forward compiled.regex s pos in
-          let matched = Str.matched_string s in
-          yield (`String matched);
-          scan_all (Str.match_end ())
-        with Not_found -> ()
-      in
-      scan_all 0
+      let matches = Re.all compiled.regex s in
+      List.iter (fun group -> yield (`String (Re.Group.get group 0))) matches
   | _ -> fail_invalid_type ~ctx "scan" json
 
 let capture_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
   match json with
   | `String s -> (
-      try
-        let _ = Str.search_forward compiled.regex s 0 in
-        let captures = ref [] in
-        (try
-           for i = 1 to 9 do
-             captures := Str.matched_group i s :: !captures
-           done
-         with Not_found | Invalid_argument _ -> ());
-        yield (`List (List.rev_map (fun c -> `String c) !captures))
-      with Not_found -> yield (`List []))
+      let named_groups = Re.group_names compiled.regex in
+      match Re.exec_opt compiled.regex s with
+      | Some group ->
+          if named_groups <> [] then
+            let pairs =
+              List.map
+                (fun (name, idx) ->
+                  let value =
+                    match Re.Group.get_opt group idx with
+                    | Some v -> `String v
+                    | None -> `Null
+                  in
+                  (name, value))
+                named_groups
+            in
+            yield (`Assoc pairs)
+          else
+            let nb = Re.Group.nb_groups group in
+            let captures =
+              List.init (nb - 1) (fun i ->
+                  match Re.Group.get_opt group (i + 1) with
+                  | Some v -> `String v
+                  | None -> `Null)
+            in
+            yield (`List captures)
+      | None -> yield (if named_groups <> [] then `Assoc [] else `List []))
   | _ -> fail_invalid_type ~ctx "capture" json
 
 let split_sep ~ctx sep json =
   match json with
   | `String s ->
-      let parts = Str.split_delim (Str.regexp_string sep) s in
+      let parts =
+        if sep = "" then
+          List.init (String.length s) (fun i -> String.make 1 (String.get s i))
+        else Re.split_delim (Re.compile (Re.str sep)) s
+      in
       `List (List.map (fun p -> `String p) parts)
   | _ -> fail_invalid_type ~ctx "split" json
 
@@ -1394,11 +1569,11 @@ let rec interp ~ctx expression json : unit =
       if_then_else ~ctx cond if_branch else_branch json
   | Range (from_expr, upto_expr, step_expr) ->
       range_expr ~ctx from_expr upto_expr step_expr json
-  | Reduce (expr, var_name, init_expr, update_expr) ->
-      reduce ~ctx expr var_name init_expr update_expr json
-  | Foreach (expr, var_name, init_expr, update_expr, extract_expr) ->
-      foreach ~ctx expr var_name init_expr update_expr extract_expr json
-  | As (expr, var_name, body) -> as_binding ~ctx expr var_name body json
+  | Reduce (expr, pat, init_expr, update_expr) ->
+      reduce ~ctx expr pat init_expr update_expr json
+  | Foreach (expr, pat, init_expr, update_expr, extract_expr) ->
+      foreach ~ctx expr pat init_expr update_expr extract_expr json
+  | As (expr, pat, body) -> as_binding ~ctx expr pat body json
   | Try (expr, handler, finally_expr) ->
       try_catch ~ctx expr handler finally_expr json
   | Fma (x_expr, y_expr, z_expr) -> fma_op ~ctx x_expr y_expr z_expr json
@@ -1503,6 +1678,7 @@ and interp_fn0 ~ctx f json =
   | Localtime -> yield (localtime ~ctx json)
   | Gmtime -> yield (gmtime ~ctx json)
   | Mktime -> yield (mktime ~ctx json)
+  | Fromdate -> yield (fromdate ~ctx json)
   | Is_blank -> is_blank ~ctx json
   | Is_empty -> is_empty ~ctx Identity json
 
@@ -1517,7 +1693,8 @@ and interp_fn1 ~ctx fn1 json =
   | With_separator (sep_fn, sep) -> (
       match sep_fn with
       | Split -> yield (split_sep ~ctx sep json)
-      | Join -> yield (join_sep ~ctx sep json))
+      | Join -> yield (join_sep ~ctx sep json)
+      | Strptime -> yield (strptime_fn ~ctx sep json))
   | With_expr (expr_fn, expr) -> (
       match expr_fn with
       | Map -> map ~ctx expr json
@@ -1865,9 +2042,16 @@ and sort_by ~ctx expr json =
       let compare_by a b =
         let res_a = collect ~ctx expr a in
         let res_b = collect ~ctx expr b in
-        match (res_a, res_b) with
-        | [ av ], [ bv ] -> Json.compare av bv
-        | _ -> 0
+        let rec compare_lists la lb =
+          match (la, lb) with
+          | [], [] -> 0
+          | [], _ -> -1
+          | _, [] -> 1
+          | ha :: ta, hb :: tb ->
+              let c = Json.compare ha hb in
+              if c <> 0 then c else compare_lists ta tb
+        in
+        compare_lists res_a res_b
       in
       let sorted = List.sort compare_by l in
       yield (`List sorted)
@@ -2154,7 +2338,35 @@ and path_of ~ctx expr json =
   in
   yield_many path_jsons
 
-and reduce ~ctx generator var_name init_expr update_expr json =
+and bind_pattern (pat : Ast.binding_pattern) (value : Json.t)
+    (env : (string * Json.t) list) : (string * Json.t) list =
+  match pat with
+  | Pat_var name -> (name, value) :: env
+  | Pat_array pats -> (
+      match value with
+      | `List items ->
+          List.fold_left
+            (fun env (i, pat) ->
+              let v =
+                if i < List.length items then List.nth items i else `Null
+              in
+              bind_pattern pat v env)
+            env
+            (List.mapi (fun i p -> (i, p)) pats)
+      | _ -> env)
+  | Pat_object fields ->
+      List.fold_left
+        (fun env (key, var_name) ->
+          let v =
+            match value with
+            | `Assoc obj -> (
+                match List.assoc_opt key obj with Some v -> v | None -> `Null)
+            | _ -> `Null
+          in
+          (var_name, v) :: env)
+        env fields
+
+and reduce ~ctx generator pat init_expr update_expr json =
   let init_values = collect ~ctx init_expr json in
   match init_values with
   | [ init_val ] ->
@@ -2162,10 +2374,8 @@ and reduce ~ctx generator var_name init_expr update_expr json =
       run
         (fun () -> interp ~ctx generator json)
         ~and_then:(fun elem ->
-          let env_with_var = (var_name, elem) :: ctx.env in
-          let res =
-            collect ~ctx:{ ctx with env = env_with_var } update_expr !acc
-          in
+          let new_env = bind_pattern pat elem ctx.env in
+          let res = collect ~ctx:{ ctx with env = new_env } update_expr !acc in
           match res with
           | [ new_acc ] -> acc := new_acc
           | _ ->
@@ -2178,7 +2388,7 @@ and reduce ~ctx generator var_name init_expr update_expr json =
       Runtime_error.invalid_argument ~fn:"reduce"
         ~expected:"single value from init expression" ~found:"multiple values"
 
-and foreach ~ctx generator var_name init_expr update_expr extract_expr json =
+and foreach ~ctx generator pat init_expr update_expr extract_expr json =
   let init_values = collect ~ctx init_expr json in
   match init_values with
   | [ init_val ] ->
@@ -2186,7 +2396,8 @@ and foreach ~ctx generator var_name init_expr update_expr extract_expr json =
       run
         (fun () -> interp ~ctx generator json)
         ~and_then:(fun elem ->
-          let new_ctx = { ctx with env = (var_name, elem) :: ctx.env } in
+          let new_env = bind_pattern pat elem ctx.env in
+          let new_ctx = { ctx with env = new_env } in
           let update_res = collect ~ctx:new_ctx update_expr !acc in
           (match update_res with
           | [ new_acc ] -> acc := new_acc
@@ -2223,12 +2434,12 @@ and variable ~ctx var_name =
         Runtime_error.invalid_argument ~fn:"variable"
           ~expected:"defined variable" ~found:("undefined $" ^ var_name)
 
-and as_binding ~ctx expr var_name body json =
-  (* expr as $var | body: for each value from expr, bind to var and run body *)
+and as_binding ~ctx expr pat body json =
   run
     (fun () -> interp ~ctx expr json)
     ~and_then:(fun elem ->
-      let new_ctx = { ctx with env = (var_name, elem) :: ctx.env } in
+      let new_env = bind_pattern pat elem ctx.env in
+      let new_ctx = { ctx with env = new_env } in
       interp ~ctx:new_ctx body json)
     ()
 
@@ -2340,11 +2551,7 @@ and alternative ~ctx left right json =
 and contains ~ctx expr json =
   let rec value_contains haystack needle =
     match (haystack, needle) with
-    | `String s, `String sub -> (
-        try
-          let _ = Str.search_forward (Str.regexp_string sub) s 0 in
-          true
-        with Not_found -> false)
+    | `String s, `String sub -> Re.execp (Re.compile (Re.str sub)) s
     | `List haystack, `List needle ->
         (* every element in needle must be contained by some element in haystack *)
         List.for_all
@@ -2417,11 +2624,8 @@ and inside ~ctx expr json =
   collect ~ctx expr json
   |> List.iter (fun container ->
       match (json, container) with
-      | `String needle, `String haystack -> (
-          try
-            let _ = Str.search_forward (Str.regexp_string needle) haystack 0 in
-            yield (`Bool true)
-          with Not_found -> yield (`Bool false))
+      | `String needle, `String haystack ->
+          yield (`Bool (Re.execp (Re.compile (Re.str needle)) haystack))
       | `List needles, `List haystack ->
           yield
             (`Bool

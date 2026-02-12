@@ -69,6 +69,65 @@ let expect_variable stream =
       name
   | _ -> error stream "expected variable after 'as'"
 
+let rec parse_binding_pattern stream : Ast.binding_pattern =
+  match (peek stream : Lexer.token) with
+  | VARIABLE name ->
+      advance stream;
+      Pat_var name
+  | OPEN_BRACKET ->
+      advance stream;
+      let pats = parse_array_pattern stream in
+      expect stream Lexer.CLOSE_BRACKET;
+      Pat_array pats
+  | OPEN_BRACE ->
+      advance stream;
+      let fields = parse_object_pattern stream in
+      expect stream CLOSE_BRACE;
+      Pat_object fields
+  | _ -> error stream "expected variable, '[', or '{' in binding pattern"
+
+and parse_array_pattern stream =
+  match (peek stream : Lexer.token) with
+  | CLOSE_BRACKET -> []
+  | _ ->
+      let first = parse_binding_pattern stream in
+      let rec loop acc =
+        match (peek stream : Lexer.token) with
+        | COMMA ->
+            advance stream;
+            let pat = parse_binding_pattern stream in
+            loop (pat :: acc)
+        | _ -> List.rev acc
+      in
+      loop [ first ]
+
+and parse_object_pattern stream =
+  let parse_field () =
+    match (peek stream : Lexer.token) with
+    | VARIABLE name ->
+        advance stream;
+        (name, name)
+    | IDENTIFIER key | STRING key -> (
+        advance stream;
+        match (peek stream : Lexer.token) with
+        | COLON ->
+            advance stream;
+            let var = expect_variable stream in
+            (key, var)
+        | _ -> error stream "expected ':' after key in object pattern")
+    | _ -> error stream "expected variable or key in object pattern"
+  in
+  let first = parse_field () in
+  let rec loop acc =
+    match (peek stream : Lexer.token) with
+    | COMMA ->
+        advance stream;
+        let field = parse_field () in
+        loop (field :: acc)
+    | _ -> List.rev acc
+  in
+  loop [ first ]
+
 let concat_parts = function
   | [] -> Literal (String "")
   | [ single ] -> single
@@ -162,7 +221,7 @@ and parse_try stream =
           let cleanup = parse_item_expr stream in
           Try (body, Some handler, Some cleanup)
       | _ -> Try (body, Some handler, None))
-  | _ -> error stream "expected 'catch' after 'try'"
+  | _ -> Try (body, None, None)
 
 and parse_pipe_expr stream =
   let left = parse_comma_expr stream in
@@ -201,6 +260,12 @@ and parse_pipe_right stream left =
       advance stream;
       let right = parse_item_expr stream in
       parse_pipe_right stream (Alternative (left, right))
+  | AS ->
+      advance stream;
+      let pat = parse_binding_pattern stream in
+      expect stream PIPE;
+      let body = parse_fn_or_expr stream in
+      As (left, pat, body)
   | _ -> left
 
 and parse_comma_expr stream =
@@ -499,21 +564,21 @@ and parse_flatten stream =
 
 and parse_reduce stream =
   advance stream;
-  let expr = parse_sequence_expr stream in
+  let expr = parse_comma_expr stream in
   expect stream AS;
-  let var = expect_variable stream in
+  let pat = parse_binding_pattern stream in
   expect stream OPEN_PARENT;
   let init = parse_sequence_expr stream in
   expect stream SEMICOLON;
   let update = parse_sequence_expr stream in
   expect stream CLOSE_PARENT;
-  Reduce (expr, var, init, update)
+  Reduce (expr, pat, init, update)
 
 and parse_foreach stream =
   advance stream;
-  let expr = parse_sequence_expr stream in
+  let expr = parse_comma_expr stream in
   expect stream AS;
-  let var = expect_variable stream in
+  let pat = parse_binding_pattern stream in
   expect stream OPEN_PARENT;
   let init = parse_sequence_expr stream in
   expect stream SEMICOLON;
@@ -523,10 +588,10 @@ and parse_foreach stream =
       advance stream;
       let extract = parse_sequence_expr stream in
       expect stream CLOSE_PARENT;
-      Foreach (expr, var, init, update, extract)
+      Foreach (expr, pat, init, update, extract)
   | CLOSE_PARENT ->
       advance stream;
-      Foreach (expr, var, init, update, Identity)
+      Foreach (expr, pat, init, update, Identity)
   | _ -> error stream "expected ';' or ')' in foreach"
 
 and parse_if stream =
@@ -679,11 +744,11 @@ and parse_paren stream =
   match (peek stream : Lexer.token) with
   | AS ->
       advance stream;
-      let var = expect_variable stream in
+      let pat = parse_binding_pattern stream in
       expect stream PIPE;
       let body = parse_sequence_expr stream in
       expect stream CLOSE_PARENT;
-      As (expr, var, body)
+      As (expr, pat, body)
   | CLOSE_PARENT ->
       advance stream;
       optional_question stream expr

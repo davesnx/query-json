@@ -116,11 +116,7 @@ and compare_assoc xs ys =
 
 let rec contains (needle : t) (haystack : t) : bool =
   match (needle, haystack) with
-  | `String n, `String h -> (
-      try
-        let _ = Str.search_forward (Str.regexp_string n) h 0 in
-        true
-      with Not_found -> false)
+  | `String n, `String h -> Re.execp (Re.compile (Re.str n)) h
   | `List needles, `List hay ->
       List.for_all (fun n -> List.exists (fun h -> contains n h) hay) needles
   | `Assoc needle_obj, `Assoc hay_obj ->

@@ -106,6 +106,7 @@ type fn0 =
   | Localtime
   | Gmtime
   | Mktime
+  | Fromdate
   (* Custom helpers *)
   | Is_blank
   | Is_empty
@@ -114,7 +115,8 @@ type fn0 =
 type fn1_pattern = Test | Match | Scan | Capture
 [@@deriving show { with_path = false }]
 
-type fn1_separator = Split | Join [@@deriving show { with_path = false }]
+type fn1_separator = Split | Join | Strptime
+[@@deriving show { with_path = false }]
 
 type fn1_expr =
   (* Array functions *)
@@ -176,7 +178,7 @@ type fn1_expr =
   | Assert_simple
 [@@deriving show { with_path = false }]
 
-type compiled_regex = { pattern : string; regex : Str.regexp }
+type compiled_regex = { pattern : string; regex : Re.re }
 
 let pp_compiled_regex fmt r = Format.fprintf fmt "/%s/" r.pattern
 
@@ -223,6 +225,12 @@ type op =
   | Or
 [@@deriving show { with_path = false }]
 
+type binding_pattern =
+  | Pat_var of string
+  | Pat_array of binding_pattern list
+  | Pat_object of (string * string) list
+[@@deriving show { with_path = false }]
+
 type fn1 =
   | With_pattern of fn1_pattern * compiled_regex
   | With_separator of fn1_separator * string
@@ -259,11 +267,12 @@ and expression =
       expression
       * expression option
       * expression option (* range(from; upto; step) *)
-  | Reduce of expression * string * expression * expression
-    (* reduce EXPR as $VAR (INIT; UPDATE) *)
-  | Foreach of expression * string * expression * expression * expression
-    (* foreach EXPR as $VAR (INIT; UPDATE; EXTRACT) *)
-  | As of expression * string * expression (* expr as $var | body *)
+  | Reduce of expression * binding_pattern * expression * expression
+    (* reduce EXPR as PATTERN (INIT; UPDATE) *)
+  | Foreach of
+      expression * binding_pattern * expression * expression * expression
+    (* foreach EXPR as PATTERN (INIT; UPDATE; EXTRACT) *)
+  | As of expression * binding_pattern * expression (* expr as PATTERN | body *)
   | Try of expression * expression option * expression option
     (* try expr catch handler finally cleanup *)
   | Fma of

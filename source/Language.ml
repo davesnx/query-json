@@ -1395,6 +1395,52 @@ let require_string_literal ~fn_name ~what ~example =
 
 let not_implemented feature = Error.not_implemented feature
 
+let strip_extended pattern =
+  let buf = Buffer.create (String.length pattern) in
+  let len = String.length pattern in
+  let in_bracket = ref false in
+  let in_comment = ref false in
+  let i = ref 0 in
+  while !i < len do
+    let c = pattern.[!i] in
+    (if !in_comment then (if c = '\n' then in_comment := false)
+     else if !in_bracket then (
+       if c = ']' then in_bracket := false;
+       Buffer.add_char buf c)
+     else
+       match c with
+       | '[' ->
+           in_bracket := true;
+           Buffer.add_char buf c
+       | ' ' | '\t' -> ()
+       | '#' -> in_comment := true
+       | _ -> Buffer.add_char buf c);
+    i := !i + 1
+  done;
+  Buffer.contents buf
+
+let compile_pcre ?(flags = []) ?(extended = false) pattern =
+  try
+    let pattern = if extended then strip_extended pattern else pattern in
+    let re = Re.Pcre.re ~flags pattern in
+    Ok { Ast.pattern; regex = Re.compile re }
+  with _ -> Error (Error.invalid_regex ~pattern)
+
+let pcre_flags_of_string flags =
+  let pcre_flags = ref [] in
+  let extended = ref false in
+  String.iter
+    (fun c ->
+      match c with
+      | 'i' -> pcre_flags := `CASELESS :: !pcre_flags
+      | 's' -> pcre_flags := `DOTALL :: !pcre_flags
+      | 'm' -> pcre_flags := `MULTILINE :: !pcre_flags
+      | 'x' -> extended := true
+      | 'g' | 'n' -> ()
+      | _ -> ())
+    flags;
+  (!pcre_flags, !extended)
+
 (* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression)
     (arg2 : Ast.expression) : (Ast.expression, Error.t) result =
@@ -1457,6 +1503,26 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   | "remainder" | "drem" -> Ok (Fn2 (Remainder, arg1, arg2))
   | "scalbn" | "scalbln" -> Ok (Fn2 (Scalbn, arg1, arg2))
   | "pow" -> Ok (Fn2 (Pow2, arg1, arg2))
+  | "test" | "match" | "scan" | "capture" -> (
+      match (arg1, arg2) with
+      | Literal (String pattern), Literal (String flags) -> (
+          let pcre_flags, extended = pcre_flags_of_string flags in
+          let fn =
+            match name with
+            | "test" -> Ast.Test
+            | "match" -> Ast.Match
+            | "scan" -> Ast.Scan
+            | _ -> Ast.Capture
+          in
+          match compile_pcre ~flags:pcre_flags ~extended pattern with
+          | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
+          | Error e -> Error e)
+      | _ ->
+          Error
+            (require_string_literal ~fn_name:name
+               ~what:"regex pattern and flags"
+               ~example:(name ^ {|("pattern"; "gi") applies regex with flags|}))
+      )
   (* Not implemented *)
   | "strftime" -> Error (not_implemented "strftime")
   | "strptime" -> Error (not_implemented "strptime")
@@ -1468,13 +1534,9 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg1; arg2 ]))
 
-let compile_regex (pattern : string) : (Ast.compiled_regex, Error.t) result =
-  try Ok { Ast.pattern; regex = Str.regexp pattern }
-  with _ -> Error (Error.invalid_regex ~pattern)
-
 let make_pattern_fn (fn : Ast.fn1_pattern) (pattern : string) :
     (Ast.expression, Error.t) result =
-  match compile_regex pattern with
+  match compile_pcre pattern with
   | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
   | Error e -> Error e
 
@@ -1615,7 +1677,10 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   (* Not implemented *)
   | "format" -> Error (not_implemented "format")
   | "strftime" -> Error (not_implemented "strftime")
-  | "strptime" -> Error (not_implemented "strptime")
+  | "strptime" -> (
+      match arg with
+      | Literal (String fmt) -> Ok (Fn1 (With_separator (Strptime, fmt)))
+      | _ -> Error (not_implemented "strptime with non-literal format"))
   | "todateiso8601" | "fromdateiso8601" ->
       Error (not_implemented "ISO date functions")
   | "localtime" | "gmtime" -> Error (not_implemented "time zone functions")
@@ -1784,6 +1849,7 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   | "localtime" -> Ok (Fn0 Localtime)
   | "gmtime" -> Ok (Fn0 Gmtime)
   | "mktime" -> Ok (Fn0 Mktime)
+  | "fromdate" | "fromdateiso8601" -> Ok (Fn0 Fromdate)
   (* is_valid without argument: try (. | true) catch false *)
   | "is_valid" ->
       Ok
@@ -1793,7 +1859,11 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
              None ))
   | "builtins" -> Ok (Fn0 Builtins)
   (* Not implemented *)
-  | "strftime" | "strptime" -> Error (not_implemented "time formatting")
+  | "strftime" -> Error (not_implemented "strftime")
+  | "strptime" ->
+      Error
+        (Error.not_implemented
+           ~suggestion:"use strptime(format) with a format string" "strptime")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")
