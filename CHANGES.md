@@ -7,7 +7,8 @@
 - [FEATURE] **Date functions**: `from_date`, `parse_date(fmt)`, `to_unix`, `to_local_time`, `to_utc`
 - [FEATURE] **`sort_by` with multiple keys**: `sort_by(.foo, .bar)` for multi-level sorting
 - [FEATURE] **`try` without `catch`**: `[.[]|try .a]` suppresses errors without requiring `catch`
-- [FIX] **Postfix `?` catches user errors**: `error?` and `repeat(f, error)?` no longer crash
+- [FIX] **`?` only catches runtime errors, not user errors**: `.foo?` and `keys?` catch missing keys/type mismatches, but `error("msg")?` correctly propagates user errors
+- [FIX] **Bare `error()` produces formatted output**: `error("msg")` without `try`/`?` now shows a proper `[user_error]` message instead of a raw OCaml exception
 - [FIX] **Bare `recurse`**: `recurse` and `recurse(.foo[])` work correctly
 
 ## 1.0.0~beta-1

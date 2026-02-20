@@ -101,4 +101,10 @@ let tests =
       "requires a string literal regex pattern";
     test "capture(.pattern)" "{\"pattern\": \"hello\"}"
       "requires a string literal regex pattern";
+    (* User errors (error/0 and error/1) produce proper errors *)
+    test {|error("something went wrong")|} "null" "something went wrong";
+    test {|error|} {|"boom"|} "boom";
+    (* ? does NOT catch user errors — only runtime errors *)
+    test {|error("user error")?|} "null" "user error";
+    test {|error?|} {|"boom"|} "boom";
   ]

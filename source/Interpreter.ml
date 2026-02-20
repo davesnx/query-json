@@ -1571,10 +1571,10 @@ let rec interp ~ctx expression json : unit =
       yield (`List results)
   | Object [] -> yield (`Assoc [])
   | Object list -> objects ~ctx list json
-  | Optional expr ->
-      swallow_errors
-        (fun () -> interp ~ctx expr json)
-        ~on_fail:(fun () -> yield `Null)
+  | Optional expr -> (
+      match (fun () -> interp ~ctx expr json) () with
+      | () -> ()
+      | effect Runtime_error.Fail _, _ -> yield `Null)
   | Dynamic_access expr -> dynamic_access ~ctx expr json
   | Slice_expr (start_expr, end_expr) ->
       slice_expr ~ctx start_expr end_expr json
@@ -3660,6 +3660,10 @@ let execute ~colorize ~verbose ?(env = []) expr json =
   match collect ~ctx expr json with
   | results -> Ok results
   | effect Runtime_error.Fail err, _ -> Error (format_error err)
+  | effect User_error value, _ ->
+      let message = Json.to_string value in
+      let qerr = Error.runtime_error ~kind:"user_error" ~message ~value () in
+      Error (Error.format ~colorize qerr)
   | effect Break, _ ->
       let err =
         Error.context_error ~message:"break used outside of loop context"

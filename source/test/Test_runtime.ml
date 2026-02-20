@@ -1162,6 +1162,8 @@ let optional_functions =
     (* Optional with alternative *)
     test {|first? ?? "default"|} {|[]|} {|"default"|};
     test {|first? ?? "default"|} {|[1]|} {|1|};
+    (* ? only catches runtime errors, NOT user errors from error() *)
+    (* error("msg")? should still propagate — tested in Test_errors *)
   ]
 
 let generators_iterators =
