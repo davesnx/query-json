@@ -36,10 +36,13 @@ let parse ~debug ~colorize input =
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =
   match parse ~debug ~colorize query with
-  | Ok runtime ->
-      Interpreter.execute ~colorize ~verbose runtime json
-      |> Result.map (fun results ->
-          results
-          |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
-          |> String.concat "\n")
+  | Ok runtime -> (
+      match Interpreter.execute ~colorize ~verbose runtime json with
+      | Ok results ->
+          Ok
+            (results
+            |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
+            |> String.concat "\n")
+      | Error err -> Error err
+      | Halt code -> exit code)
   | Error err -> Error err

@@ -171,35 +171,46 @@ let user_error value =
 
 let yield_many items = List.iter yield items
 
-let run fn ?and_then ?(on_fail : (unit -> unit) option) () =
-  let fn =
-    match and_then with
-    | None -> fn
-    | Some f -> (
-        fun () ->
-          match fn () with
-          | () -> ()
-          | effect Yield json, k ->
-              f json;
-              Effect.Deep.continue k ())
-  in
-  match on_fail with
-  | None -> fn ()
-  | Some f -> (
-      match fn () with
-      | () -> ()
-      | effect Runtime_error.Fail _, _ -> f ()
-      | effect User_error _, _ -> f ())
-
-let run_while fn ~when_ =
+let on_yield fn ~then_ =
   match fn () with
   | () -> ()
-  | effect Yield v, k -> if when_ v then Effect.Deep.continue k () else ()
+  | effect Yield v, k ->
+      then_ v;
+      Effect.Deep.continue k ()
+
+let swallow_errors fn ~on_fail =
+  match fn () with
+  | () -> ()
+  | effect Runtime_error.Fail _, _ -> on_fail ()
+  | effect User_error _, _ -> on_fail ()
+
+let catch_errors fn ~on_user_error ~on_runtime_error =
+  let handler : unit Effect.Deep.effect_handler =
+    {
+      effc =
+        (fun (type a) (eff : a Effect.t) ->
+          match eff with
+          | User_error value ->
+              Some
+                (fun (_ : (a, _) Effect.Deep.continuation) ->
+                  on_user_error value)
+          | Runtime_error.Fail err ->
+              Some
+                (fun (_ : (a, _) Effect.Deep.continuation) ->
+                  on_runtime_error err)
+          | _ -> None);
+    }
+  in
+  Effect.Deep.try_with fn () handler
 
 let run_and_collect_results fn =
-  match fn () with
-  | () -> []
-  | effect Yield v, k -> v :: Effect.Deep.continue k ()
+  let acc = ref [] in
+  (match fn () with
+  | () -> ()
+  | effect Yield v, k ->
+      acc := v :: !acc;
+      Effect.Deep.continue k ());
+  List.rev !acc
 
 let rec substitute_params (params : string list) (args : expression list)
     (expr : expression) : expression =
@@ -1561,7 +1572,9 @@ let rec interp ~ctx expression json : unit =
   | Object [] -> yield (`Assoc [])
   | Object list -> objects ~ctx list json
   | Optional expr ->
-      run (fun () -> interp ~ctx expr json) ~on_fail:(fun _ -> yield `Null) ()
+      swallow_errors
+        (fun () -> interp ~ctx expr json)
+        ~on_fail:(fun () -> yield `Null)
   | Dynamic_access expr -> dynamic_access ~ctx expr json
   | Slice_expr (start_expr, end_expr) ->
       slice_expr ~ctx start_expr end_expr json
@@ -1723,10 +1736,9 @@ and interp_fn1 ~ctx fn1 json =
                   fail_invalid_type ~ctx "flatten: depth must be a number" depth)
       | Combinations_n -> combinations_n ~ctx expr json
       | Transpose_expr ->
-          run
+          on_yield
             (fun () -> interp ~ctx expr json)
-            ~and_then:(fun json -> yield (transpose ~ctx json))
-            ()
+            ~then_:(fun json -> yield (transpose ~ctx json))
       | First_expr -> first_of_expr ~ctx expr json
       | Last_expr -> last_of_expr ~ctx expr json
       | Nth_array -> nth_array ~ctx expr json
@@ -1763,10 +1775,9 @@ and interp_fn1 ~ctx fn1 json =
       | Recurse_expr ->
           let rec loop value =
             yield value;
-            run
+            on_yield
               (fun () -> interp ~ctx expr value)
-              ~and_then:(fun next -> loop next)
-              ()
+              ~then_:(fun next -> loop next)
           in
           loop json
       | Find_all -> find_all ~ctx expr json
@@ -1956,11 +1967,10 @@ and range_expr ~ctx from_expr upto_expr step_expr json =
     froms
 
 and select ~ctx conditional json =
-  run
+  on_yield
     (fun () -> interp ~ctx conditional json)
-    ~and_then:(fun result ->
+    ~then_:(fun result ->
       match result with `Bool false | `Null -> () | _ -> yield json)
-    ()
 
 and pipe ~ctx left right json =
   match left with
@@ -1969,10 +1979,9 @@ and pipe ~ctx left right json =
       let new_ctx = { ctx with fns = (name, func) :: ctx.fns } in
       interp ~ctx:new_ctx right json
   | _ ->
-      run
+      on_yield
         (fun () -> interp ~ctx left json)
-        ~and_then:(fun json -> interp ~ctx right json)
-        ()
+        ~then_:(fun json -> interp ~ctx right json)
 
 and operation ~ctx left_expr right_expr op json =
   let apply_op l_val r_val =
@@ -1991,14 +2000,12 @@ and operation ~ctx left_expr right_expr op json =
     | And -> Operators.and_ ~ctx l_val r_val
     | Or -> Operators.or_ ~ctx l_val r_val
   in
-  run
+  on_yield
     (fun () -> interp ~ctx left_expr json)
-    ~and_then:(fun l_val ->
-      run
+    ~then_:(fun l_val ->
+      on_yield
         (fun () -> interp ~ctx right_expr json)
-        ~and_then:(fun r_val -> yield (apply_op l_val r_val))
-        ())
-    ()
+        ~then_:(fun r_val -> yield (apply_op l_val r_val)))
 
 and map ~ctx (expr : expression) (json : Json.t) =
   match json with
@@ -2371,9 +2378,9 @@ and reduce ~ctx generator pat init_expr update_expr json =
   match init_values with
   | [ init_val ] ->
       let acc = ref init_val in
-      run
+      on_yield
         (fun () -> interp ~ctx generator json)
-        ~and_then:(fun elem ->
+        ~then_:(fun elem ->
           let new_env = bind_pattern pat elem ctx.env in
           let res = collect ~ctx:{ ctx with env = new_env } update_expr !acc in
           match res with
@@ -2381,8 +2388,7 @@ and reduce ~ctx generator pat init_expr update_expr json =
           | _ ->
               Runtime_error.invalid_argument ~fn:"reduce"
                 ~expected:"single value from update expression"
-                ~found:"multiple values")
-        ();
+                ~found:"multiple values");
       yield !acc
   | _ ->
       Runtime_error.invalid_argument ~fn:"reduce"
@@ -2393,9 +2399,9 @@ and foreach ~ctx generator pat init_expr update_expr extract_expr json =
   match init_values with
   | [ init_val ] ->
       let acc = ref init_val in
-      run
+      on_yield
         (fun () -> interp ~ctx generator json)
-        ~and_then:(fun elem ->
+        ~then_:(fun elem ->
           let new_env = bind_pattern pat elem ctx.env in
           let new_ctx = { ctx with env = new_env } in
           let update_res = collect ~ctx:new_ctx update_expr !acc in
@@ -2407,7 +2413,6 @@ and foreach ~ctx generator pat init_expr update_expr extract_expr json =
                 ~found:"multiple values");
           let extract_res = collect ~ctx:new_ctx extract_expr !acc in
           List.iter yield extract_res)
-        ()
   | _ ->
       Runtime_error.invalid_argument ~fn:"foreach"
         ~expected:"single value from init expression" ~found:"multiple values"
@@ -2435,22 +2440,20 @@ and variable ~ctx var_name =
           ~expected:"defined variable" ~found:("undefined $" ^ var_name)
 
 and as_binding ~ctx expr pat body json =
-  run
+  on_yield
     (fun () -> interp ~ctx expr json)
-    ~and_then:(fun elem ->
+    ~then_:(fun elem ->
       let new_env = bind_pattern pat elem ctx.env in
       let new_ctx = { ctx with env = new_env } in
       interp ~ctx:new_ctx body json)
-    ()
 
 and if_then_else ~ctx cond if_branch else_branch json =
-  run
+  on_yield
     (fun () -> interp ~ctx cond json)
-    ~and_then:(function
+    ~then_:(function
       | `Bool true -> interp ~ctx if_branch json
       | `Bool false | `Null -> interp ~ctx else_branch json
       | v -> fail_invalid_type ~ctx "if condition should be a bool" v)
-    ()
 
 and call_function ~ctx fname args json =
   match List.assoc_opt fname ctx.fns with
@@ -2535,7 +2538,7 @@ and with_entries ~ctx expr json =
   | _ -> fail_invalid_type ~ctx "to_entries failed" json
 
 and alternative ~ctx left right json =
-  run
+  swallow_errors
     (fun () ->
       let left_results = collect ~ctx left json in
       let is_valid value =
@@ -2545,8 +2548,7 @@ and alternative ~ctx left right json =
       match valid_results with
       | [] -> interp ~ctx right json
       | _ -> yield_many valid_results)
-    ~on_fail:(fun _ -> interp ~ctx right json)
-    ()
+    ~on_fail:(fun () -> interp ~ctx right json)
 
 and contains ~ctx expr json =
   let rec value_contains haystack needle =
@@ -2716,17 +2718,17 @@ and combinations_n ~ctx expr json =
         ~expected:"array input and number n" ~found:"invalid arguments"
 
 and repeat_expr ~ctx expr json =
-  (* repeat(f): generates infinite stream f, f|f, f|f|f, ... stopping on error *)
   let current = ref json in
   let continue = ref true in
   while !continue do
-    run
-      (fun () -> interp ~ctx expr !current)
-      ~on_fail:(fun _ -> continue := false)
-      ~and_then:(fun result ->
-        yield result;
-        current := result)
-      ()
+    swallow_errors
+      (fun () ->
+        on_yield
+          (fun () -> interp ~ctx expr !current)
+          ~then_:(fun result ->
+            yield result;
+            current := result))
+      ~on_fail:(fun () -> continue := false)
   done
 
 and add_array ~ctx json =
@@ -2782,11 +2784,15 @@ and first_of_array ~ctx json =
   | _ -> fail_invalid_type ~ctx "first" json
 
 and first_of_expr ~ctx expr json =
-  match collect ~ctx expr json with
-  | [] ->
+  let found = ref None in
+  (match (fun () -> interp ~ctx expr json) () with
+  | () -> ()
+  | effect Yield v, _ -> found := Some v);
+  match !found with
+  | None ->
       Runtime_error.empty_result ~op:"first"
         ~suggestion:"Use first? for optional access" ()
-  | hd :: _ -> yield hd
+  | Some v -> yield v
 
 and last_of_array ~ctx json =
   match json with
@@ -3077,7 +3083,7 @@ and try_catch ~ctx expr handler finally_expr json =
   let handle_error error_json input_for_handler =
     error_occurred := true;
     (match handler with
-    | None -> yield `Null (* try without catch returns null on error *)
+    | None -> yield `Null
     | Some handler_expr ->
         let ctx_with_error =
           { ctx with env = ("error", error_json) :: ctx.env }
@@ -3085,54 +3091,39 @@ and try_catch ~ctx expr handler finally_expr json =
         interp ~ctx:ctx_with_error handler_expr input_for_handler);
     run_finally ()
   in
-  let try_handler : unit Effect.Deep.effect_handler =
-    {
-      effc =
-        (fun (type a) (eff : a Effect.t) ->
-          match eff with
-          | User_error value ->
-              Some
-                (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  let error_json =
-                    `Assoc
-                      [
-                        ("kind", `String "user_error");
-                        ("message", `String (Json.to_string value));
-                        ("value", value);
-                      ]
-                  in
-                  handle_error error_json value)
-          | Runtime_error.Fail err ->
-              Some
-                (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  handle_error
-                    (Runtime_error.to_json err)
-                    (Runtime_error.to_json err))
-          | _ -> None);
-    }
-  in
-  Effect.Deep.try_with (fun () -> interp ~ctx expr json) () try_handler;
+  catch_errors
+    (fun () -> interp ~ctx expr json)
+    ~on_user_error:(fun value ->
+      let error_json =
+        `Assoc
+          [
+            ("kind", `String "user_error");
+            ("message", `String (Json.to_string value));
+            ("value", value);
+          ]
+      in
+      handle_error error_json value)
+    ~on_runtime_error:(fun err ->
+      handle_error (Runtime_error.to_json err) (Runtime_error.to_json err));
   if not !error_occurred then run_finally ()
 
 and limit ~ctx n expr json =
   let count = ref 0 in
-  run_while
-    (fun () -> interp ~ctx expr json)
-    ~when_:(fun result ->
+  match (fun () -> interp ~ctx expr json) () with
+  | () -> ()
+  | effect Yield v, k ->
       if !count < n then (
         incr count;
-        yield result;
-        true)
-      else false)
+        yield v;
+        Effect.Deep.continue k ())
 
 and skip ~ctx n expr json =
   let count = ref 0 in
-  run
+  on_yield
     (fun () -> interp ~ctx expr json)
-    ~and_then:(fun result ->
+    ~then_:(fun result ->
       incr count;
       if !count > n then yield result)
-    ()
 
 and error_msg ~ctx msg_expr json =
   match msg_expr with
@@ -3491,11 +3482,9 @@ and pluck ~ctx expr json =
           (fun item ->
             let values =
               run_and_collect_results (fun () ->
-                  run
+                  swallow_errors
                     (fun () -> interp ~ctx expr item)
-                    ~and_then:(fun v -> yield v)
-                    ~on_fail:(fun _ -> yield `Null)
-                    ())
+                    ~on_fail:(fun () -> yield `Null))
             in
             match values with [ v ] -> v | [] -> `Null | vs -> `List vs)
           items
@@ -3595,11 +3584,12 @@ and debug_msg ~ctx msg_expr json =
 and collect_safe ~ctx expr json =
   let results = ref [] in
   let failed = ref false in
-  run
-    (fun () -> interp ~ctx expr json)
-    ~and_then:(fun v -> results := v :: !results)
-    ~on_fail:(fun _ -> failed := true)
-    ();
+  swallow_errors
+    (fun () ->
+      on_yield
+        (fun () -> interp ~ctx expr json)
+        ~then_:(fun v -> results := v :: !results))
+    ~on_fail:(fun () -> failed := true);
   if !failed then [] else List.rev !results
 
 and find_all ~ctx cond_expr json =
@@ -3652,6 +3642,8 @@ and paths_to ~ctx cond_expr json =
   let all_paths = collect_paths [] json in
   yield (`List all_paths)
 
+type execute_result = Ok of Json.t list | Error of string | Halt of int
+
 let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
   let format_error (err : Runtime_error.t) =
@@ -3673,5 +3665,5 @@ let execute ~colorize ~verbose ?(env = []) expr json =
         Error.context_error ~message:"break used outside of loop context"
       in
       Error (Error.format ~colorize err)
-  | effect Halt exit_code, _ -> exit exit_code
+  | effect Halt exit_code, _ -> Halt exit_code
   | exception e -> Error (Printexc.to_string e)
