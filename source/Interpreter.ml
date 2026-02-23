@@ -444,7 +444,20 @@ module Operators = struct
     | `Null, r | r, `Null -> r
     | _ -> fail_invalid_type ~ctx "*" left
 
+  let is_zero_divisor (json : Json.t) =
+    match json with
+    | `Int 0 | `Int64 0L -> true
+    | `Float f -> f = 0.0
+    | `Big_int z -> Z.equal z Z.zero
+    | _ -> false
+
   let divide ~ctx (left : Json.t) (right : Json.t) : Json.t =
+    (match (left, right) with
+    | `String _, `String _ -> ()
+    | _ when is_zero_divisor right ->
+        Runtime_error.invalid_argument ~fn:"divide" ~expected:"non-zero divisor"
+          ~found:"zero"
+    | _ -> ());
     match (left, right) with
     | `Big_int l, `Big_int r -> `Float (Z.to_float l /. Z.to_float r)
     | `Big_int l, `Int r -> `Float (Z.to_float l /. Int.to_float r)

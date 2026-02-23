@@ -371,7 +371,8 @@ module Pretty = struct
       | `Big_int z -> add (String.length (Z.to_string z))
       | `Float f ->
           add
-            (if Float.equal (Float.round f) f then
+            (if not (Float.is_finite f) then 4
+             else if Float.equal (Float.round f) f then
                String.length (Int.to_string (Float.to_int f))
              else String.length (Printf.sprintf "%g" f))
       | `String s -> add (String.length s + 2)
@@ -401,9 +402,12 @@ module Pretty = struct
     done
 
   let write_float buf f =
-    if Float.equal (Float.round f) f then
-      Buffer.add_string buf (Int.to_string (Float.to_int f))
-    else Printf.bprintf buf "%g" f
+    match classify_float f with
+    | FP_nan | FP_infinite -> Buffer.add_string buf "null"
+    | _ ->
+        if Float.equal (Float.round f) f then
+          Buffer.add_string buf (Int.to_string (Float.to_int f))
+        else Printf.bprintf buf "%g" f
 
   let write_quoted_string buf s =
     Buffer.add_char buf '"';

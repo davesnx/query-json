@@ -8,6 +8,8 @@
 - [FEATURE] **`sort_by` with multiple keys**: `sort_by(.foo, .bar)` for multi-level sorting
 - [FEATURE] **`try` without `catch`**: `[.[]|try .a]` suppresses errors without requiring `catch`
 - [FIX] **`?` only catches runtime errors, not user errors**: `.foo?` and `keys?` catch missing keys/type mismatches, but `error("msg")?` correctly propagates user errors
+- [FIX] **Division by zero raises a runtime error**: `1 / 0` now raises an error (caught by `?`) instead of producing platform-dependent undefined behavior via `Float.to_int infinity`
+- [FIX] **Pretty-printer handles `infinity` and `NaN`**: `Pretty.write_float` now serializes non-finite floats as `null` instead of calling `Float.to_int` on them
 - [FIX] **Bare `error()` produces formatted output**: `error("msg")` without `try`/`?` now shows a proper `[user_error]` message instead of a raw OCaml exception
 - [FIX] **Bare `recurse`**: `recurse` and `recurse(.foo[])` work correctly
 

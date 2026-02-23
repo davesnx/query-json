@@ -309,7 +309,7 @@ let multiplication_division_modulo =
     test {|. / ", "|} {|"a, b,c,d, e"|} {|[ "a", "b,c,d", "e" ]|};
     test {|{"k": {"a": 1, "b": 2}} * {"k": {"a": 0,"c": 3}}|} {|null|}
       {|{ "k": { "a": 0, "b": 2, "c": 3 } }|};
-    test {|.[] | (1 / .)?|} {|[1,0,-1]|} "1\n0\n-1";
+    test {|.[] | (1 / .)?|} {|[1,0,-1]|} "1\nnull\n-1";
   ]
 
 let comparison =
