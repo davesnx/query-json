@@ -302,8 +302,7 @@ let apply_completion (model : model) : model =
       | Typing_function, Index _ -> model.query
     in
     let result = evaluate_query new_query model.json in
-    { model with query = new_query; input_key = model.input_key + 1; result }
-    |> update_completions
+    { model with query = new_query; result } |> update_completions
 
 let update msg model =
   match msg with
@@ -390,13 +389,7 @@ let update msg model =
       let new_query = "." in
       let result = evaluate_query new_query model.json in
       let model =
-        {
-          model with
-          query = new_query;
-          result;
-          result_scroll = 0;
-          input_key = model.input_key + 1;
-        }
+        { model with query = new_query; result; result_scroll = 0 }
         |> update_completions
       in
       (model, Cmd.none)
@@ -505,11 +498,11 @@ let function_detail ~(info : Language.function_info) () =
     gap=(gap 1)
     title=" Function Info "
     title_alignment=`Left>
-    (Vnode.fragment info_items)
+    (fragment ~children:info_items ())
   </box>
 
 let completions ~model ~children:_ () =
-  if List.length model.completions = 0 then null
+  if List.length model.completions = 0 then empty
   else
     let single_function =
       match model.completions with [ Function f ] -> Some f | _ -> None
@@ -529,7 +522,7 @@ let completions ~model ~children:_ () =
           |> List.map (fun (i, item) ->
               let is_selected = i = model.completion_index in
               <completion_item is_selected item />)
-          |> Vnode.fragment
+          |> fun children -> fragment ~children ()
         in
         <box
           border=true
@@ -583,6 +576,22 @@ let header ~model ~children:_ () =
     </fragment>
   </box>
 
+let make_textarea_key_handler model ev =
+  let open Mosaic_ui.Event.Key in
+  let data = data ev in
+  let has_completions = List.length model.completions > 1 in
+  match data.key with
+  | Up when has_completions ->
+      prevent_default ev;
+      Some Prev_completion
+  | Down when has_completions ->
+      prevent_default ev;
+      Some Next_completion
+  | Enter when has_completions && not data.modifier.ctrl ->
+      prevent_default ev;
+      Some Apply_completion
+  | _ -> None
+
 let main_content ~model ~children:_ () =
   let filter_border =
     match model.focus with
@@ -596,10 +605,9 @@ let main_content ~model ~children:_ () =
   in
   let result_content =
     match model.result with
-    | Ok result when String.length result > 0 ->
-        <code filetype="json" wrap_mode=`Word>result</code>
-    | Ok _ -> <text style=style_muted wrap_mode=`Word>"(empty result)"</text>
-    | Error err -> <text style=style_error wrap_mode=`Word>err</text>
+    | Ok result when String.length result > 0 -> <code wrap=`Word>result</code>
+    | Ok _ -> <text wrap=`Word style=style_muted>"(empty result)"</text>
+    | Error err -> <text wrap=`Word style=style_error>err</text>
   in
   <box flex_direction=Row flex_grow=1. size={ width = pct 100; height = auto }>
     <fragment>
@@ -613,21 +621,20 @@ let main_content ~model ~children:_ () =
         title_alignment=`Left
         padding=(padding 1)>
         <fragment>
-          <box flex_direction=Row gap=(gap 1) align_items=Center>
-            <input
-              key=(Int.to_string model.input_key)
-              autofocus=(model.focus = Filter_focus)
-              value=model.query
-              background=bg_primary
-              text_color=text_primary
-              focused_background=bg_secondary
-              focused_text_color=text_accent
-              placeholder="Enter query (e.g., .user.name)"
-              on_input=(fun s -> Some (Input_changed s))
-              on_submit=(fun _ -> Some Apply_completion)
-              size={ width = pct 100; height = px 1 }
-            />
-          </box>
+          <textarea
+            key=(Int.to_string model.input_key)
+            autofocus=(model.focus = Filter_focus)
+            value=model.query
+            background_color=bg_primary
+            text_color=text_primary
+            focused_background_color=bg_secondary
+            focused_text_color=text_accent
+            placeholder="Enter query (e.g., .user.name)"
+            wrap=`None
+            on_input=(fun s -> Some (Input_changed s))
+            on_key=(make_textarea_key_handler model)
+            size={ width = pct 100; height = px 3 }
+          />
           <fragment><completions model /></fragment>
         </fragment>
       </box>
@@ -666,6 +673,8 @@ let footer ~model ~children:_ () =
         <text style=style_primary>"clear"</text>
         <text style=style_muted>"Tab"</text>
         <text style=style_primary>"→ result"</text>
+        <text style=style_muted>"Ctrl+↵"</text>
+        <text style=style_primary>"newline"</text>
       </fragment>
     </box>
   in
@@ -695,7 +704,7 @@ let footer ~model ~children:_ () =
       hints
       <box flex_direction=Row gap=(gap 2)>
         <fragment>
-          <text style=style_muted>"y"</text>
+          <text style=style_muted>"Ctrl+Y"</text>
           <text style=style_primary>copy_label</text>
           <text style=style_muted>"Ctrl+C"</text>
           <text style=style_primary>"quit"</text>
@@ -724,18 +733,15 @@ let subscriptions model =
           match event.key with
           | Escape -> Some Quit
           | Tab -> Some Switch_focus
-          | Char c when Uchar.equal c (Uchar.of_char 'y') -> Some Copy
+          | Char c when Uchar.equal c (Uchar.of_char 'y') && event.modifier.ctrl
+            ->
+              Some Copy
           | Char c when Uchar.equal c (Uchar.of_char 'L') && event.modifier.ctrl
             ->
               Some Clear_filter
           | _ -> (
               match model.focus with
-              | Filter_focus -> (
-                  match event.key with
-                  | Enter -> Some Apply_completion
-                  | Up -> Some Prev_completion
-                  | Down -> Some Next_completion
-                  | _ -> None)
+              | Filter_focus -> None
               | Result_focus -> (
                   match event.key with
                   | Up -> Some Scroll_result_up
@@ -744,6 +750,7 @@ let subscriptions model =
                       Some Scroll_result_up
                   | Char c when Uchar.equal c (Uchar.of_char 'j') ->
                       Some Scroll_result_down
+                  | Char c when Uchar.equal c (Uchar.of_char 'y') -> Some Copy
                   | _ -> None)));
     ]
 

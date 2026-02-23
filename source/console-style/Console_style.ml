@@ -17,7 +17,9 @@ type t = {
 
 let make ~colorize =
   let styled ?fg ?bold text =
-    if colorize then Ansi.styled ~reset:true ?fg ?bold text else text
+    if colorize then
+      Ansi.Style.styled ~reset:true (Ansi.Style.make ?fg ?bold ()) text
+    else text
   in
   {
     bold = (fun s -> styled ~bold:true s);
