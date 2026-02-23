@@ -12,6 +12,23 @@ let test query json_str expected_error_part =
   in
   Alcotest.test_case query `Quick fn
 
+let test_location name query json_str expected_parts =
+  let fn () =
+    match Json.parse_string json_str with
+    | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+    | Ok json -> (
+        match Core.run ~colorize:false query json with
+        | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
+        | Error err ->
+            List.iter
+              (fun part ->
+                if not (Re.execp (Re.compile (Re.str part)) err) then
+                  Alcotest.failf "Expected error containing '%s', but got:\n%s"
+                    part err)
+              expected_parts)
+  in
+  Alcotest.test_case name `Quick fn
+
 let tests =
   [
     (* split argument type mismatch - now a parse-time error *)
@@ -107,4 +124,10 @@ let tests =
     (* ? does NOT catch user errors — only runtime errors *)
     test {|error("user error")?|} "null" "user error";
     test {|error?|} {|"boom"|} "boom";
+    test_location "single-line parse error location" "@@@" "null"
+      [ "--> @@@"; "^" ];
+    test_location "multiline: error on later line" "\n\n\n@@@" "null"
+      [ "--> @@@"; "^" ];
+    test_location "multiline: content before error" "fn a: .;\n\n\n@@@" "null"
+      [ "--> @@@"; "^" ];
   ]

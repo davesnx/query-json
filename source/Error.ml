@@ -29,10 +29,23 @@ let with_context ctx err = { err with contexts = ctx :: err.contexts }
 let format_location ~colorize loc =
   let t = Console_style.make ~colorize in
   let { input; start_pos; end_pos } = loc in
+  let line_text, col =
+    let lines = String.split_on_char '\n' input in
+    let rec find lines offset =
+      match lines with
+      | [] -> ("", max 0 (start_pos - offset))
+      | [ line ] -> (line, max 0 (start_pos - offset))
+      | line :: rest ->
+          let next = offset + String.length line + 1 in
+          if start_pos < next then (line, max 0 (start_pos - offset))
+          else find rest next
+    in
+    find lines 0
+  in
   let pointer_len = max 1 (end_pos - start_pos) in
   let pointer = String.make pointer_len '^' in
-  let indent_space = String.make start_pos ' ' in
-  Printf.sprintf "  %s %s\n      %s%s" (t.blue "-->") input indent_space
+  let indent_space = String.make col ' ' in
+  Printf.sprintf "  %s %s\n      %s%s" (t.blue "-->") line_text indent_space
     (t.red pointer)
 
 let format_context ~colorize ctx =

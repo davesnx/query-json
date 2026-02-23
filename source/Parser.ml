@@ -13,12 +13,12 @@ let advance stream =
     match Lexer.tokenize stream.buf with
     | Ok token -> token
     | Error message ->
-        let _, stop = Sedlexing.lexing_positions stream.buf in
+        let err_start, stop = Sedlexing.lexing_positions stream.buf in
         let error =
-          Error.lexer_error ~message ~input:"" ~start_pos:start.pos_cnum
+          Error.lexer_error ~message ~input:"" ~start_pos:err_start.pos_cnum
             ~end_pos:stop.pos_cnum
         in
-        Error.raise error start stop
+        Error.raise error err_start stop
   in
   let _, stop = Sedlexing.lexing_positions stream.buf in
   stream.token <- token;
@@ -177,7 +177,11 @@ and parse_fn_def stream =
   expect stream COLON;
   let body = parse_sequence_expr stream in
   expect stream SEMICOLON;
-  let rest = parse_sequence_expr stream in
+  let rest =
+    match (peek stream : Lexer.token) with
+    | EOF | CLOSE_PARENT | CLOSE_BRACKET | CLOSE_BRACE -> Identity
+    | _ -> parse_sequence_expr stream
+  in
   Pipe (Fn (name, params, body), rest)
 
 and parse_fn_params stream =

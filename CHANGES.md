@@ -1,5 +1,7 @@
 # Unreleased
 
+- [FIX] **`fn` without rest expression**: `fn double: . * 2;` no longer errors at EOF, defaults rest to identity
+- [FIX] **Multiline error locations**: Error pointers now show the correct line and column for multi-line queries
 - [REFACTOR] Replace `Str` regex engine with `Re.Pcre` for native PCRE syntax support
 - [FEATURE] **Pattern destructuring in `as` bindings**: `reduce .[] as [$i,$j] (0; . + $i * $j)`, `. as [$a, $b, {c: $c}] | ...`
 - [FEATURE] **Regex flags**: `test("abc"; "i")`, `test("a b c"; "ix")` with case-insensitive and extended mode

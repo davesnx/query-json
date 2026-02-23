@@ -1088,12 +1088,13 @@ let assignment =
 
 let defining_functions =
   [
-    (* fn is deprecated, use fn instead *)
     test {|fn addvalue(f): . + [f]; map(addvalue(.[0]))|} {|[[1,2],[10,20]]|}
       {|[ [ 1, 2, 1 ], [ 10, 20, 10 ] ]|};
-    (* as-binding requires parentheses in our parser: (f as $x | body) *)
     test {|fn addvalue(f): (f as $x | map(. + $x)); addvalue(.[0])|}
       {|[[1,2],[10,20]]|} {|[ [ 1, 2, 1, 2 ], [ 10, 20, 1, 2 ] ]|};
+    test {|fn double: . * 2; double|} {|5|} {|10|};
+    test {|fn double: . * 2;|} {|5|} {|5|};
+    test {|fn double: . * 2; fn triple: . * 3; double | triple|} {|2|} {|12|};
   ]
 
 let skip =

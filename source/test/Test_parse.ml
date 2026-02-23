@@ -126,4 +126,12 @@ let tests =
          ( Literal (Big_int (Z.of_string "99999999999999999999999999999")),
            Add,
            Literal (Int 1) ));
+    test "fn double: . * 2;"
+      (Pipe
+         ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
+           Identity ));
+    test "fn double: . * 2; double"
+      (Pipe
+         ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
+           Apply ("double", []) ));
   ]
