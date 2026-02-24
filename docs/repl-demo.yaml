@@ -1,0 +1,135 @@
+# query-json REPL Demo (autocast)
+# Generates an asciinema .cast file
+# Usage: autocast docs/repl-demo.yaml docs/repl-demo.cast
+# Then:  agg docs/repl-demo.cast docs/repl-demo.gif
+
+settings:
+  width: 100
+  height: 40
+  title: "query-json REPL Demo"
+  type_speed: 80ms
+  timeout: 60s
+  prompt: "$ "
+  shell:
+    program: bash
+    args:
+      - --norc
+      - --noprofile
+    prompt: "AUTOCAST$ "
+    line_split: ' \'
+    quit_command: exit
+  environment:
+    - name: PS1
+      value: "AUTOCAST$ "
+    - name: PATH
+      value: "/home/me/query-json/_opam/bin:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin:/home/me/.local/bin"
+
+instructions:
+  - !Interactive
+    command: "query-json --repl cli/test/mock.json"
+    type_speed: 80ms
+    keys:
+      - 3s
+      - ^H
+      - k
+      - e
+      - y
+      - s
+      - 2s
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - .
+      - s
+      - e
+      - c
+      - o
+      - n
+      - d
+      - .
+      - s
+      - t
+      - o
+      - r
+      - e
+      - 2s
+      - .
+      - b
+      - o
+      - o
+      - k
+      - s
+      - 2s
+      - "["
+      - "0"
+      - "]"
+      - 2s
+      - ^H
+      - ^H
+      - ^H
+      - 1s
+      - " "
+      - "|"
+      - " "
+      - m
+      - a
+      - 2s
+      - p
+      - 1s
+      - "("
+      - .
+      - p
+      - r
+      - i
+      - c
+      - e
+      - " "
+      - "*"
+      - " "
+      - "7"
+      - "7"
+      - ")"
+      - 1s
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - ^H
+      - 1s
+      - " "
+      - f
+      - i
+      - l
+      - t
+      - e
+      - r
+      - "("
+      - .
+      - p
+      - r
+      - i
+      - c
+      - e
+      - " "
+      - ">"
+      - " "
+      - "1"
+      - "0"
+      - ")"
+      - 2500ms
+      - ^C
+
+  - !Wait 1s
