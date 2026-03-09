@@ -2276,8 +2276,6 @@ and interp_fn0 ~ctx f json =
       yield (math_fn ~ctx Float.expm1 "expm1" json)
   | Log1p ->
       yield (math_fn ~ctx Float.log1p "log1p" json)
-  | Pow ->
-      yield (math_fn ~ctx (fun x -> x ** 2.0) "pow" json)
   | Cube_root ->
       yield (math_fn ~ctx Float.cbrt "cube_root" json)
   | Truncate ->

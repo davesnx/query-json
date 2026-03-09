@@ -131,6 +131,8 @@ let tests =
     (* ? does NOT catch user errors — only runtime errors *)
     test {|error("user error")?|} "null" "user error";
     test {|error?|} {|"boom"|} "boom";
+    (* pow without arguments should be a parse error *)
+    test "pow" "5" "requires x and y";
     test_location "single-line parse error location" "@@@" "null"
       [ "--> @@@"; "^" ];
     test_location "multiline: error on later line" "\n\n\n@@@" "null"

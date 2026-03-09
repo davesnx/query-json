@@ -775,7 +775,7 @@ let math_functions =
           example = Some {|pow(2; 3) → 8|};
           applicable_to = [ Number ];
           insert_text = None;
-          arity = No_args;
+          arity = Two_args ("x", "y");
         };
         {
           name = "sin";
@@ -2133,8 +2133,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Log10)
   | "exp" ->
       Ok (Fn0 Exp)
-  | "pow" ->
-      Ok (Fn0 Pow)
   | "ceil" ->
       Ok (Fn0 Ceil)
   | "round" ->

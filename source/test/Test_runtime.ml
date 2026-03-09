@@ -838,6 +838,13 @@ let math_floor_ceil_round =
 let math_sqrt = [ test {|sqrt|} {|16|} {|4|}; test {|sqrt|} {|9|} {|3|} ]
 let math_log_exp = [ test {|log10|} {|100|} {|2|}; test {|exp|} {|0|} {|1|} ]
 
+let math_pow =
+  [
+    test {|pow(2; 3)|} {|null|} {|8|};
+    test {|pow(3; 2)|} {|null|} {|9|};
+    test {|pow(10; 0)|} {|null|} {|1|};
+  ]
+
 let math_trig =
   [
     test {|sin|} {|0|} {|0|};
@@ -1665,6 +1672,7 @@ let tests =
       math_floor_ceil_round;
       math_sqrt;
       math_log_exp;
+      math_pow;
       math_trig;
       nan_infinite;
       tonumber;

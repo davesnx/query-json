@@ -75,7 +75,6 @@ type fn0 =
   | Exp2
   | Expm1
   | Log1p
-  | Pow
   | Cube_root
   | Truncate
   | Is_normal
