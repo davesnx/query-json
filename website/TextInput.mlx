@@ -28,16 +28,17 @@ let[@react.component] make ~value ~placeholder ~on_change =
                        placeholder:text-muted-foreground focus:outline-none \
                        focus:ring-2 focus:ring-ring transition-shadow"
           />
-          (if value <> "" then
-             <button
-               type_="button"
-               onClick=on_clear
-               className="absolute right-3 top-1/2 -translate-y-1/2 \
-                          text-muted-foreground hover:text-foreground \
-                          transition-colors cursor-pointer">
-               <Icons.Delete size=Small />
-             </button>
-           else React.null)
+          ( if value <> "" then
+              <button
+                type_="button"
+                onClick=on_clear
+                className="absolute right-3 top-1/2 -translate-y-1/2 \
+                           text-muted-foreground hover:text-foreground \
+                           transition-colors cursor-pointer">
+                <Icons.Delete size=Small />
+              </button>
+            else React.null
+          )
         </div>
       </div>
     </div>

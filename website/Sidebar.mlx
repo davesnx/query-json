@@ -39,44 +39,49 @@ module CategorySection = struct
             (React.string category.name)
           </span>
           <span className="text-xs text-muted-foreground">
-            (React.string
-               (Int.to_string (List.length functions) ^ " functions"))
+            (React.string (Int.to_string (List.length functions) ^ " functions"))
           </span>
         </div>
-        (if is_open then <Icons.ChevronDown size=Small />
-         else <Icons.ChevronRight size=Small />)
+        ( if is_open then <Icons.ChevronDown size=Small />
+          else <Icons.ChevronRight size=Small />
+        )
       </button>
-      (if is_open then
-         <div className="pb-2">
-           (functions
-           |> List.map (fun (fn : function_info) ->
-               let example_text = Option.value fn.example ~default:"" in
-               <button
-                 key=fn.name
-                 onClick=(fun _ -> on_select_function fn.name)
-                 className="w-full px-4 py-2 text-left hover:bg-accent/30 \
-                            transition-colors cursor-pointer group">
-                 <div className="flex flex-col gap-1">
-                   <code
-                     className="text-xs font-mono text-foreground \
-                                group-hover:text-accent-foreground">
-                     (React.string fn.name)
-                   </code>
-                   <span className="text-xs text-muted-foreground line-clamp-2">
-                     (React.string fn.description)
-                   </span>
-                   (if example_text <> "" then
-                      <code
-                        className="text-xs font-mono text-muted-foreground/70 \
-                                   truncate block">
-                        (React.string example_text)
-                      </code>
-                    else React.null)
-                 </div>
-               </button>)
-           |> Array.of_list |> React.array)
-         </div>
-       else React.null)
+      ( if is_open then
+          <div className="pb-2">
+            (functions
+            |> List.map (fun (fn : function_info) ->
+                let example_text = Option.value fn.example ~default:"" in
+                <button
+                  key=fn.name
+                  onClick=(fun _ -> on_select_function fn.name)
+                  className="w-full px-4 py-2 text-left hover:bg-accent/30 \
+                             transition-colors cursor-pointer group">
+                  <div className="flex flex-col gap-1">
+                    <code
+                      className="text-xs font-mono text-foreground \
+                                 group-hover:text-accent-foreground">
+                      (React.string fn.name)
+                    </code>
+                    <span
+                      className="text-xs text-muted-foreground line-clamp-2">
+                      (React.string fn.description)
+                    </span>
+                    ( if example_text <> "" then
+                        <code
+                          className="text-xs font-mono \
+                                     text-muted-foreground/70 truncate block">
+                          (React.string example_text)
+                        </code>
+                      else React.null
+                    )
+                  </div>
+                </button>
+            )
+            |> Array.of_list |> React.array
+            )
+          </div>
+        else React.null
+      )
     </div>
 end
 
@@ -121,7 +126,9 @@ let[@react.component] make ~is_open ~on_close ~on_select_function =
       <div className="flex-1 overflow-y-auto">
         (get_categories () |> Array.to_list
         |> List.map (fun category ->
-            <CategorySection key=category.name category on_select_function />)
-        |> Array.of_list |> React.array)
+            <CategorySection key=category.name category on_select_function />
+        )
+        |> Array.of_list |> React.array
+        )
       </div>
     </div>

@@ -25,12 +25,13 @@ module Title = struct
         <h2 className="text-sm font-medium text-muted-foreground">
           (React.string children)
         </h2>
-        (match subtitle with
+        ( match subtitle with
         | Some subtitle ->
             <span className="text-xs text-muted-foreground leading-1">
               (React.string subtitle)
             </span>
-        | None -> React.null)
+        | None -> React.null
+        )
       </div>
       (match action with Some action -> action | None -> React.null)
     </div>
@@ -53,7 +54,7 @@ module CopyButton = struct
                  text-muted-foreground hover:text-foreground hover:bg-accent \
                  rounded transition-colors cursor-pointer"
       ariaLabel="Copy output">
-      (match copied with
+      ( match copied with
       | true ->
           <React.Fragment>
             <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
@@ -61,7 +62,8 @@ module CopyButton = struct
       | false ->
           <React.Fragment>
             <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
-          </React.Fragment>)
+          </React.Fragment>
+      )
     </button>
 end
 
@@ -90,8 +92,10 @@ let[@react.component] make ~json_value ~on_json_change ~output =
       let reader = FileReader.create () in
       FileReader.set_onload reader (fun () ->
           let content = FileReader.result reader in
-          on_json_change content);
-      FileReader.readAsText reader file)
+          on_json_change content
+      );
+      FileReader.readAsText reader file
+    )
   in
   <main className="flex-1 flex flex-col overflow-hidden">
     <div className="w-full h-full border-b border-border bg-muted/20">
@@ -104,8 +108,9 @@ let[@react.component] make ~json_value ~on_json_change ~output =
         <div className="flex-1 flex flex-col">
           <Title
             subtitle="(READ ONLY)"
-            action=(if output_text <> "" then <CopyButton text=output_text />
-                    else React.null)>
+            action=( if output_text <> "" then <CopyButton text=output_text />
+                     else React.null
+                   )>
             "OUTPUT"
           </Title>
         </div>
@@ -123,20 +128,22 @@ let[@react.component] make ~json_value ~on_json_change ~output =
           onDragLeave=on_drag_leave
           onDrop=on_drop>
           <Editor.Json value=json_value on_change=on_json_change />
-          (if is_dragging then
-             <div
-               className="absolute inset-0 bg-accent/50 flex items-center \
-                          justify-center pointer-events-none">
-               <span className="text-foreground font-medium">
-                 (React.string "Drop JSON file here")
-               </span>
-             </div>
-           else React.null)
+          ( if is_dragging then
+              <div
+                className="absolute inset-0 bg-accent/50 flex items-center \
+                           justify-center pointer-events-none">
+                <span className="text-foreground font-medium">
+                  (React.string "Drop JSON file here")
+                </span>
+              </div>
+            else React.null
+          )
         </div>
         <div className="overflow-auto flex-1 flex">
-          (match output with
+          ( match output with
           | Some value -> <Editor.Output value />
-          | None -> <Editor.Empty />)
+          | None -> <Editor.Empty />
+          )
         </div>
       </div>
     </div>

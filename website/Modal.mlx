@@ -14,8 +14,11 @@ let[@react.component] make ~is_open ~on_close ~title ~description ~children =
         Web.Window.add_event_listener Web.window "keydown" handle_keydown;
         Some
           (fun () ->
-            Web.Window.remove_event_listener Web.window "keydown" handle_keydown))
-      else None)
+            Web.Window.remove_event_listener Web.window "keydown" handle_keydown
+          )
+      )
+      else None
+    )
     [| is_open |];
 
   if not is_open then React.null

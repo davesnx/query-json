@@ -113,7 +113,8 @@ module Playground_page = struct
         (fun () ->
           match (state.json, state.query) with
           | Some _, "" | None, _ -> None
-          | Some json, _ -> Some (Query_json.run state.query json))
+          | Some json, _ -> Some (Query_json.run state.query json)
+        )
         (state.json, state.query)
     in
 
@@ -134,13 +135,16 @@ module Playground_page = struct
                     let _timeout =
                       Js.Global.setTimeout ~f:(fun () -> set_copied false) 2000
                     in
-                    Js.Promise.resolve ())
+                    Js.Promise.resolve ()
+                )
                 |> Js.Promise.catch (fun _err ->
                     Printf.eprintf "Failed to copy to clipboard";
-                    Js.Promise.resolve ())
+                    Js.Promise.resolve ()
+                )
               in
               ()
-          | None -> Printf.eprintf "Error encoding state")
+          | None -> Printf.eprintf "Error encoding state"
+        )
         (state.query, state.json)
     in
 
@@ -170,7 +174,7 @@ module Playground_page = struct
             size=Sm
             on_click=on_share_click
             className="min-w-[110px]">
-            (match state.copied with
+            ( match state.copied with
             | true ->
                 <span className="flex items-center gap-2">
                   <Icons.Check size=Small /> (React.string "Copied!")
@@ -178,7 +182,8 @@ module Playground_page = struct
             | false ->
                 <span className="flex items-center gap-2">
                   <Icons.Link2 size=Small /> (React.string "Copy unique URL")
-                </span>)
+                </span>
+            )
           </Button>
         </div>
       </Header>

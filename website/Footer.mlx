@@ -7,7 +7,8 @@ let[@react.component] make () =
           <p className="text-sm text-foreground">
             (React.string
                "A real-time query-json playground for filtering and querying \
-                JSON data")
+                JSON data"
+            )
           </p>
           <p className="text-xs text-muted-foreground font-medium">
             (React.string "Made by ")

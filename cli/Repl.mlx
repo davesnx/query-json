@@ -67,21 +67,25 @@ module Json_path = struct
     | `Assoc obj, Field k :: rest -> (
         match List.assoc_opt k obj with
         | Some v -> traverse v rest
-        | None -> (json, path))
+        | None -> (json, path)
+      )
     | `List lst, Idx i :: rest -> (
         match List.nth_opt lst i with
         | Some v -> traverse v rest
-        | None -> (json, path))
+        | None -> (json, path)
+      )
     | `List lst, Field k :: rest -> (
         match
           List.find_map
             (function
               | `Assoc obj when List.mem_assoc k obj -> List.assoc_opt k obj
-              | _ -> None)
+              | _ -> None
+              )
             lst
         with
         | Some v -> traverse v rest
-        | None -> (json, path))
+        | None -> (json, path)
+      )
     | _ -> (json, path)
 
   let completions_at json =
@@ -93,7 +97,8 @@ module Json_path = struct
               {
                 key = k;
                 value_type = Language.applicable_of_json_type (Json.type_of v);
-              })
+              }
+          )
           obj
     | `List items ->
         let indices =
@@ -103,7 +108,8 @@ module Json_path = struct
                 {
                   index = i;
                   value_type = Language.applicable_of_json_type (Json.type_of v);
-                })
+                }
+            )
             items
         in
         let all_keys =
@@ -205,7 +211,8 @@ let filter_completions (items : completion_item list) (partial : string) :
           match item with
           | Key { key; _ } -> starts_with key
           | Index { index; _ } -> starts_with (Int.to_string index)
-          | Function f -> starts_with f.name)
+          | Function f -> starts_with f.name
+        )
         items
     in
     if List.length filtered = 0 then items else filtered
@@ -313,7 +320,8 @@ let update msg model =
         | Ok _ -> (
             match get_input_type new_query model.json with
             | Some t -> t
-            | None -> model.last_valid_type)
+            | None -> model.last_valid_type
+          )
         | Error _ -> model.last_valid_type
       in
       let model =
@@ -347,7 +355,8 @@ let update msg model =
           completion_index = new_index;
           completion_scroll_offset = new_offset;
         },
-        Cmd.none )
+        Cmd.none
+      )
   | Prev_completion ->
       let total = List.length model.completions in
       let new_index =
@@ -366,7 +375,8 @@ let update msg model =
           completion_index = new_index;
           completion_scroll_offset = new_offset;
         },
-        Cmd.none )
+        Cmd.none
+      )
   | Switch_focus ->
       let new_focus =
         match model.focus with
@@ -374,7 +384,8 @@ let update msg model =
         | Result_focus -> Filter_focus
       in
       ( { model with focus = new_focus; input_key = model.input_key + 1 },
-        Cmd.none )
+        Cmd.none
+      )
   | Scroll_result_down ->
       ({ model with result_scroll = model.result_scroll + 1 }, Cmd.none)
   | Scroll_result_up ->
@@ -384,7 +395,8 @@ let update msg model =
       | Filter_focus -> (model, Cmd.static_print ("Query: " ^ model.query))
       | Result_focus ->
           let text = match model.result with Ok s -> s | Error e -> e in
-          (model, Cmd.static_print ("Result: " ^ text)))
+          (model, Cmd.static_print ("Result: " ^ text))
+    )
   | Clear_filter ->
       let new_query = "." in
       let result = evaluate_query new_query model.json in
@@ -515,13 +527,15 @@ let completions ~model ~children:_ () =
           model.completions
           |> List.mapi (fun i item -> (i, item))
           |> List.filteri (fun i _ ->
-              i >= start_idx && i < start_idx + max_visible_completions)
+              i >= start_idx && i < start_idx + max_visible_completions
+          )
         in
         let items =
           visible_completions
           |> List.map (fun (i, item) ->
               let is_selected = i = model.completion_index in
-              <completion_item is_selected item />)
+              <completion_item is_selected item />
+          )
           |> fun children -> fragment ~children ()
         in
         <box
@@ -751,7 +765,10 @@ let subscriptions model =
                   | Char c when Uchar.equal c (Uchar.of_char 'j') ->
                       Some Scroll_result_down
                   | Char c when Uchar.equal c (Uchar.of_char 'y') -> Some Copy
-                  | _ -> None)));
+                  | _ -> None
+                )
+            )
+      );
     ]
 
 let make ~(json : Json.t) ~(path : string) ~(query : string) =
