@@ -452,12 +452,9 @@ module Operators = struct
     | _ -> false
 
   let divide ~ctx (left : Json.t) (right : Json.t) : Json.t =
-    (match (left, right) with
-    | `String _, `String _ -> ()
-    | _ when is_zero_divisor right ->
-        Runtime_error.invalid_argument ~fn:"divide" ~expected:"non-zero divisor"
-          ~found:"zero"
-    | _ -> ());
+    if is_zero_divisor right then
+      Runtime_error.invalid_argument ~fn:"divide" ~expected:"non-zero divisor"
+        ~found:"zero";
     match (left, right) with
     | `Big_int l, `Big_int r -> `Float (Z.to_float l /. Z.to_float r)
     | `Big_int l, `Int r -> `Float (Z.to_float l /. Int.to_float r)
