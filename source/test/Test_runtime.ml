@@ -87,6 +87,14 @@ let int64_precision =
     (* Negative Int64 *)
     test {|-9007199254740993|} {|null|} {|-9007199254740993|};
     test {|-9007199254740993 - 1|} {|null|} {|-9007199254740994|};
+    (* Small Int + Int stays Int (no unnecessary promotion to Int64) *)
+    test {|1 + 2|} {|null|} {|3|};
+    test {|10 - 3|} {|null|} {|7|};
+    test {|3 * 4|} {|null|} {|12|};
+    test {|10 % 3|} {|null|} {|1|};
+    (* Int overflow promotes to Int64 correctly *)
+    test {|4611686018427387903 + 1|} {|null|} {|4611686018427387904|};
+    test {|2000000000 * 2000000000|} {|null|} {|4000000000000000000|};
   ]
 
 let big_int =

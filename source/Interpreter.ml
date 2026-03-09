@@ -391,7 +391,12 @@ module Operators = struct
     | `Int l, `Int64 r ->
         `Int64 (Int64.add (Int64.of_int l) r)
     | `Int l, `Int r ->
-        `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
+        let result = l + r in
+        (* Check for overflow: if signs of operands are the same but result differs *)
+        if l lxor r >= 0 && l lxor result < 0 then
+          `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
     | `Float l, `Float r ->
         `Float (l +. r)
     | `Int l, `Float r ->
@@ -499,7 +504,13 @@ module Operators = struct
     | `Int l, `Int64 r ->
         `Int64 (Int64.sub (Int64.of_int l) r)
     | `Int l, `Int r ->
-        `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
+        let result = l - r in
+        (* Check for overflow: subtraction overflows when operands have different signs
+           and result sign differs from left operand *)
+        if l lxor r < 0 && l lxor result < 0 then
+          `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
     | `Float l, `Float r ->
         `Float (l -. r)
     | `Int l, `Float r ->
@@ -564,7 +575,15 @@ module Operators = struct
     | `Int l, `Int64 r ->
         `Int64 (Int64.mul (Int64.of_int l) r)
     | `Int l, `Int r ->
-        `Int64 (Int64.mul (Int64.of_int l) (Int64.of_int r))
+        (* Check for multiplication overflow using Int64 *)
+        let result64 = Int64.mul (Int64.of_int l) (Int64.of_int r) in
+        if
+          result64 >= Int64.of_int Int.min_int
+          && result64 <= Int64.of_int Int.max_int
+        then
+          `Int (Int64.to_int result64)
+        else
+          `Int64 result64
     | `Float l, `Float r ->
         `Float (l *. r)
     | `Int l, `Float r ->
@@ -678,7 +697,7 @@ module Operators = struct
     | `Int l, `Int64 r ->
         `Int64 (Int64.rem (Int64.of_int l) r)
     | `Int l, `Int r ->
-        `Int64 (Int64.rem (Int64.of_int l) (Int64.of_int r))
+        `Int (l mod r)
     | _ ->
         apply_float_operation ~ctx "%" mod_float left right
 end
