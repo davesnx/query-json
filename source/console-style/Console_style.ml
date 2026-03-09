@@ -8,24 +8,37 @@ let single_quotes str = "'" ^ str ^ "'"
 type color = Red | Green | Yellow | Blue | Cyan | Bright_black
 
 let sgr_of_color = function
-  | Red -> "31"
-  | Green -> "32"
-  | Yellow -> "33"
-  | Blue -> "34"
-  | Cyan -> "36"
-  | Bright_black -> "90"
+  | Red ->
+      "31"
+  | Green ->
+      "32"
+  | Yellow ->
+      "33"
+  | Blue ->
+      "34"
+  | Cyan ->
+      "36"
+  | Bright_black ->
+      "90"
 
 let wrap_sgr codes text = "\027[" ^ codes ^ "m" ^ text ^ "\027[0m"
 
 let styled_string ?fg ?bold text =
   let codes =
     match (bold, fg) with
-    | Some true, Some c -> "1;" ^ sgr_of_color c
-    | Some true, None -> "1"
-    | _, Some c -> sgr_of_color c
-    | _ -> ""
+    | Some true, Some c ->
+        "1;" ^ sgr_of_color c
+    | Some true, None ->
+        "1"
+    | _, Some c ->
+        sgr_of_color c
+    | _ ->
+        ""
   in
-  if codes = "" then text else wrap_sgr codes text
+  if codes = "" then
+    text
+  else
+    wrap_sgr codes text
 
 type t = {
   bold : string -> string;
@@ -40,7 +53,10 @@ type t = {
 
 let make ~colorize =
   let styled ?fg ?bold text =
-    if colorize then styled_string ?fg ?bold text else text
+    if colorize then
+      styled_string ?fg ?bold text
+    else
+      text
   in
   {
     bold = (fun s -> styled ~bold:true s);

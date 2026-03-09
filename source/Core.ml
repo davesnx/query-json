@@ -45,7 +45,10 @@ let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
             |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
             |> String.concat "\n"
             )
-      | Error err -> Error err
-      | Halt code -> exit code
+      | Error err ->
+          Error err
+      | Halt code ->
+          exit code
     )
-  | Error err -> Error err
+  | Error err ->
+      Error err

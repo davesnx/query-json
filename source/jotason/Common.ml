@@ -32,53 +32,84 @@ let init_lexer ?buf ?fname ?(lnum = 1) () =
 (** Get numeric value as float for comparison, None for non-numeric types *)
 let to_float (json : t) : float option =
   match json with
-  | `Int n -> Some (Float.of_int n)
-  | `Int64 n -> Some (Int64.to_float n)
-  | `Float n -> Some n
-  | `Big_int z -> Some (Z.to_float z)
-  | _ -> None
+  | `Int n ->
+      Some (Float.of_int n)
+  | `Int64 n ->
+      Some (Int64.to_float n)
+  | `Float n ->
+      Some n
+  | `Big_int z ->
+      Some (Z.to_float z)
+  | _ ->
+      None
 
 (** Compare two JSON values for ordering (jq semantics) *)
 let rec compare_values (a : t) (b : t) : int =
   match (a, b) with
   (* null < false < true < numbers < strings < arrays < objects *)
-  | `Null, `Null -> 0
-  | `Null, _ -> -1
-  | _, `Null -> 1
-  | `Bool false, `Bool false -> 0
-  | `Bool false, `Bool true -> -1
-  | `Bool true, `Bool false -> 1
-  | `Bool true, `Bool true -> 0
-  | `Bool _, _ -> -1
-  | _, `Bool _ -> 1
+  | `Null, `Null ->
+      0
+  | `Null, _ ->
+      -1
+  | _, `Null ->
+      1
+  | `Bool false, `Bool false ->
+      0
+  | `Bool false, `Bool true ->
+      -1
+  | `Bool true, `Bool false ->
+      1
+  | `Bool true, `Bool true ->
+      0
+  | `Bool _, _ ->
+      -1
+  | _, `Bool _ ->
+      1
   (* Numbers - compare numerically *)
   | ( (`Int _ | `Int64 _ | `Float _ | `Big_int _),
       (`Int _ | `Int64 _ | `Float _ | `Big_int _) ) -> (
       match (to_float a, to_float b) with
-      | Some na, Some nb -> Float.compare na nb
-      | _ -> 0
+      | Some na, Some nb ->
+          Float.compare na nb
+      | _ ->
+          0
     )
-  | (`Int _ | `Int64 _ | `Float _ | `Big_int _), _ -> -1
-  | _, (`Int _ | `Int64 _ | `Float _ | `Big_int _) -> 1
+  | (`Int _ | `Int64 _ | `Float _ | `Big_int _), _ ->
+      -1
+  | _, (`Int _ | `Int64 _ | `Float _ | `Big_int _) ->
+      1
   (* Strings - lexicographic *)
-  | `String sa, `String sb -> String.compare sa sb
-  | `String _, _ -> -1
-  | _, `String _ -> 1
+  | `String sa, `String sb ->
+      String.compare sa sb
+  | `String _, _ ->
+      -1
+  | _, `String _ ->
+      1
   (* Arrays - lexicographic element-wise *)
-  | `List la, `List lb -> compare_lists la lb
-  | `List _, _ -> -1
-  | _, `List _ -> 1
+  | `List la, `List lb ->
+      compare_lists la lb
+  | `List _, _ ->
+      -1
+  | _, `List _ ->
+      1
   (* Objects - compare by sorted keys then values *)
-  | `Assoc aa, `Assoc ab -> compare_objects aa ab
+  | `Assoc aa, `Assoc ab ->
+      compare_objects aa ab
 
 and compare_lists la lb =
   match (la, lb) with
-  | [], [] -> 0
-  | [], _ -> -1
-  | _, [] -> 1
+  | [], [] ->
+      0
+  | [], _ ->
+      -1
+  | _, [] ->
+      1
   | x :: xs, y :: ys ->
       let c = compare_values x y in
-      if c <> 0 then c else compare_lists xs ys
+      if c <> 0 then
+        c
+      else
+        compare_lists xs ys
 
 and compare_objects aa ab =
   let sort_fields = List.sort (fun (k1, _) (k2, _) -> String.compare k1 k2) in
@@ -86,15 +117,22 @@ and compare_objects aa ab =
   let sb = sort_fields ab in
   let rec cmp a b =
     match (a, b) with
-    | [], [] -> 0
-    | [], _ -> -1
-    | _, [] -> 1
+    | [], [] ->
+        0
+    | [], _ ->
+        -1
+    | _, [] ->
+        1
     | (k1, v1) :: rest1, (k2, v2) :: rest2 ->
         let kc = String.compare k1 k2 in
-        if kc <> 0 then kc
+        if kc <> 0 then
+          kc
         else
           let vc = compare_values v1 v2 in
-          if vc <> 0 then vc else cmp rest1 rest2
+          if vc <> 0 then
+            vc
+          else
+            cmp rest1 rest2
   in
   cmp sa sb
 

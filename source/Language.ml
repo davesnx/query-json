@@ -1374,13 +1374,20 @@ let all_function_names () =
   List.sort_uniq Stdlib.String.compare (names @ aliases)
 
 let type_name_of_applicable = function
-  | String -> "string"
-  | Array -> "array"
-  | Object -> "object"
-  | Number -> "number"
-  | Bool -> "boolean"
-  | Nil -> "null"
-  | Any -> "any"
+  | String ->
+      "string"
+  | Array ->
+      "array"
+  | Object ->
+      "object"
+  | Number ->
+      "number"
+  | Bool ->
+      "boolean"
+  | Nil ->
+      "null"
+  | Any ->
+      "any"
 
 let functions_for_type type_name =
   let all = all_functions () in
@@ -1393,13 +1400,20 @@ let functions_for_type type_name =
     all
 
 let applicable_of_json_type = function
-  | "string" -> String
-  | "array" -> Array
-  | "object" -> Object
-  | "number" -> Number
-  | "boolean" -> Bool
-  | "null" -> Nil
-  | _ -> Any
+  | "string" ->
+      String
+  | "array" ->
+      Array
+  | "object" ->
+      Object
+  | "number" ->
+      Number
+  | "boolean" ->
+      Bool
+  | "null" ->
+      Nil
+  | _ ->
+      Any
 
 let find_function (name : string) : function_info option =
   let all : function_info list = all_functions () in
@@ -1409,12 +1423,16 @@ let find_function (name : string) : function_info option =
 
 let arity_to_string (name : string) (arity : arity) : string =
   match arity with
-  | No_args -> name
-  | One_arg arg -> Printf.sprintf "%s(%s)" name arg
-  | Two_args (arg1, arg2) -> Printf.sprintf "%s(%s; %s)" name arg1 arg2
+  | No_args ->
+      name
+  | One_arg arg ->
+      Printf.sprintf "%s(%s)" name arg
+  | Two_args (arg1, arg2) ->
+      Printf.sprintf "%s(%s; %s)" name arg1 arg2
   | Three_args (arg1, arg2, arg3) ->
       Printf.sprintf "%s(%s; %s; %s)" name arg1 arg2 arg3
-  | Variable_args args -> Printf.sprintf "%s(%s)" name args
+  | Variable_args args ->
+      Printf.sprintf "%s(%s)" name args
 
 let error_for_missing_arg (name : string) : Error.t =
   match find_function name with
@@ -1422,12 +1440,16 @@ let error_for_missing_arg (name : string) : Error.t =
       let usage = arity_to_string name f.arity in
       let message =
         match f.arity with
-        | No_args -> Printf.sprintf "%s takes no arguments" name
-        | One_arg arg -> Printf.sprintf "%s() requires %s" name arg
-        | Two_args (a, b) -> Printf.sprintf "%s() requires %s and %s" name a b
+        | No_args ->
+            Printf.sprintf "%s takes no arguments" name
+        | One_arg arg ->
+            Printf.sprintf "%s() requires %s" name arg
+        | Two_args (a, b) ->
+            Printf.sprintf "%s() requires %s and %s" name a b
         | Three_args (a, b, c) ->
             Printf.sprintf "%s() requires %s, %s, and %s" name a b c
-        | Variable_args _ -> Printf.sprintf "%s() requires arguments" name
+        | Variable_args _ ->
+            Printf.sprintf "%s() requires arguments" name
       in
       let applicable_to =
         f.applicable_to
@@ -1444,20 +1466,71 @@ let error_for_missing_arg (name : string) : Error.t =
 let can_default_to_identity (name : string) : bool =
   match name with
   (* Array/iteration functions that make sense with identity *)
-  | "map" | "select" | "sort_by" | "group_by" | "unique_by" | "min_by"
-  | "max_by" | "find" | "any" | "all" | "pluck" | "partition" | "walk"
-  | "with_entries" | "path" | "paths" | "flat_map" | "map_values" | "repeat"
-  | "recurse" | "find_all" | "find_first" | "paths_to" | "is_empty" | "first"
-  | "last" | "flatten" | "combinations" | "transpose" | "add" | "delete"
-  | "pick" | "assert" | "debug" ->
+  | "map"
+  | "select"
+  | "sort_by"
+  | "group_by"
+  | "unique_by"
+  | "min_by"
+  | "max_by"
+  | "find"
+  | "any"
+  | "all"
+  | "pluck"
+  | "partition"
+  | "walk"
+  | "with_entries"
+  | "path"
+  | "paths"
+  | "flat_map"
+  | "map_values"
+  | "repeat"
+  | "recurse"
+  | "find_all"
+  | "find_first"
+  | "paths_to"
+  | "is_empty"
+  | "first"
+  | "last"
+  | "flatten"
+  | "combinations"
+  | "transpose"
+  | "add"
+  | "delete"
+  | "pick"
+  | "assert"
+  | "debug" ->
       true
   (* Functions that require specific argument types (string literals, etc.) *)
-  | "test" | "match" | "scan" | "capture" | "split" | "join" | "sub" | "gsub"
-  | "starts_with" | "ends_with" | "contains" | "has" | "in" | "inside" | "index"
-  | "rindex" | "indices" | "find_indices" | "trim_start" | "trim_end"
-  | "bsearch" | "get_path" | "delete_paths" | "error" | "halt_error" | "nth" ->
+  | "test"
+  | "match"
+  | "scan"
+  | "capture"
+  | "split"
+  | "join"
+  | "sub"
+  | "gsub"
+  | "starts_with"
+  | "ends_with"
+  | "contains"
+  | "has"
+  | "in"
+  | "inside"
+  | "index"
+  | "rindex"
+  | "indices"
+  | "find_indices"
+  | "trim_start"
+  | "trim_end"
+  | "bsearch"
+  | "get_path"
+  | "delete_paths"
+  | "error"
+  | "halt_error"
+  | "nth" ->
       false
-  | _ -> false
+  | _ ->
+      false
 
 let require_string_literal ~fn_name ~what ~example =
   Error.requires_literal ~fn_name ~what ~example
@@ -1472,19 +1545,22 @@ let strip_extended pattern =
   let i = ref 0 in
   while !i < len do
     let c = pattern.[!i] in
-    ( if !in_comment then (if c = '\n' then in_comment := false)
-      else if !in_bracket then (
+    ( if !in_comment then (
+        if c = '\n' then in_comment := false
+      ) else if !in_bracket then (
         if c = ']' then in_bracket := false;
         Buffer.add_char buf c
-      )
-      else
+      ) else
         match c with
         | '[' ->
             in_bracket := true;
             Buffer.add_char buf c
-        | ' ' | '\t' -> ()
-        | '#' -> in_comment := true
-        | _ -> Buffer.add_char buf c
+        | ' ' | '\t' ->
+            ()
+        | '#' ->
+            in_comment := true
+        | _ ->
+            Buffer.add_char buf c
     );
     i := !i + 1
   done;
@@ -1492,7 +1568,12 @@ let strip_extended pattern =
 
 let compile_pcre ?(flags = []) ?(extended = false) pattern =
   try
-    let pattern = if extended then strip_extended pattern else pattern in
+    let pattern =
+      if extended then
+        strip_extended pattern
+      else
+        pattern
+    in
     let re = Re.Pcre.re ~flags pattern in
     Ok { Ast.pattern; regex = Re.compile re }
   with _ -> Error (Error.invalid_regex ~pattern)
@@ -1503,12 +1584,18 @@ let pcre_flags_of_string flags =
   String.iter
     (fun c ->
       match c with
-      | 'i' -> pcre_flags := `CASELESS :: !pcre_flags
-      | 's' -> pcre_flags := `DOTALL :: !pcre_flags
-      | 'm' -> pcre_flags := `MULTILINE :: !pcre_flags
-      | 'x' -> extended := true
-      | 'g' | 'n' -> ()
-      | _ -> ()
+      | 'i' ->
+          pcre_flags := `CASELESS :: !pcre_flags
+      | 's' ->
+          pcre_flags := `DOTALL :: !pcre_flags
+      | 'm' ->
+          pcre_flags := `MULTILINE :: !pcre_flags
+      | 'x' ->
+          extended := true
+      | 'g' | 'n' ->
+          ()
+      | _ ->
+          ()
     )
     flags;
   (!pcre_flags, !extended)
@@ -1518,13 +1605,18 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
     : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
-  | "while" -> Ok (Fn2 (While, arg1, arg2))
-  | "until" -> Ok (Fn2 (Until, arg1, arg2))
-  | "recurse" -> Ok (Fn2 (Recurse_with, arg1, arg2))
-  | "try" -> Ok (Try (arg1, Some arg2, None))
+  | "while" ->
+      Ok (Fn2 (While, arg1, arg2))
+  | "until" ->
+      Ok (Fn2 (Until, arg1, arg2))
+  | "recurse" ->
+      Ok (Fn2 (Recurse_with, arg1, arg2))
+  | "try" ->
+      Ok (Try (arg1, Some arg2, None))
   | "limit" -> (
       match arg1 with
-      | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Limit, Literal n, arg2))
+      | Literal ((Int _ | Float _) as n) ->
+          Ok (Fn2 (Limit, Literal n, arg2))
       | _ ->
           Error
             (Error.requires_number_literal ~fn_name:"limit"
@@ -1534,7 +1626,8 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
     )
   | "skip" -> (
       match arg1 with
-      | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Skip, Literal n, arg2))
+      | Literal ((Int _ | Float _) as n) ->
+          Ok (Fn2 (Skip, Literal n, arg2))
       | _ ->
           Error
             (Error.requires_number_literal ~fn_name:"skip"
@@ -1572,33 +1665,52 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
                ~example:{|replace_all("l"; "L") replaces all matches|}
             )
     )
-  | "any" -> Ok (Fn2 (Any_gen, arg1, arg2))
-  | "all" -> Ok (Fn2 (All_gen, arg1, arg2))
-  | "set_path" -> Ok (Fn2 (Setpath, arg1, arg2))
-  | "nth" -> Ok (Fn2 (Nth, arg1, arg2))
-  | "raise" -> Ok (Fn2 (Raise, arg1, arg2))
-  | "assert" -> Ok (Fn2 (Assert_msg, arg1, arg2))
-  | "atan2" | "atan" -> Ok (Fn2 (Atan2, arg1, arg2))
-  | "copysign" -> Ok (Fn2 (Copysign, arg1, arg2))
-  | "ldexp" -> Ok (Fn2 (Ldexp, arg1, arg2))
-  | "fdim" -> Ok (Fn2 (Fdim, arg1, arg2))
-  | "remainder" | "drem" -> Ok (Fn2 (Remainder, arg1, arg2))
-  | "scalbn" | "scalbln" -> Ok (Fn2 (Scalbn, arg1, arg2))
-  | "pow" -> Ok (Fn2 (Pow2, arg1, arg2))
+  | "any" ->
+      Ok (Fn2 (Any_gen, arg1, arg2))
+  | "all" ->
+      Ok (Fn2 (All_gen, arg1, arg2))
+  | "set_path" ->
+      Ok (Fn2 (Setpath, arg1, arg2))
+  | "nth" ->
+      Ok (Fn2 (Nth, arg1, arg2))
+  | "raise" ->
+      Ok (Fn2 (Raise, arg1, arg2))
+  | "assert" ->
+      Ok (Fn2 (Assert_msg, arg1, arg2))
+  | "atan2" | "atan" ->
+      Ok (Fn2 (Atan2, arg1, arg2))
+  | "copysign" ->
+      Ok (Fn2 (Copysign, arg1, arg2))
+  | "ldexp" ->
+      Ok (Fn2 (Ldexp, arg1, arg2))
+  | "fdim" ->
+      Ok (Fn2 (Fdim, arg1, arg2))
+  | "remainder" | "drem" ->
+      Ok (Fn2 (Remainder, arg1, arg2))
+  | "scalbn" | "scalbln" ->
+      Ok (Fn2 (Scalbn, arg1, arg2))
+  | "pow" ->
+      Ok (Fn2 (Pow2, arg1, arg2))
   | "test" | "match" | "scan" | "capture" -> (
       match (arg1, arg2) with
       | Literal (String pattern), Literal (String flags) -> (
           let pcre_flags, extended = pcre_flags_of_string flags in
           let fn =
             match name with
-            | "test" -> Ast.Test
-            | "match" -> Ast.Match
-            | "scan" -> Ast.Scan
-            | _ -> Ast.Capture
+            | "test" ->
+                Ast.Test
+            | "match" ->
+                Ast.Match
+            | "scan" ->
+                Ast.Scan
+            | _ ->
+                Ast.Capture
           in
           match compile_pcre ~flags:pcre_flags ~extended pattern with
-          | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
-          | Error e -> Error e
+          | Ok compiled ->
+              Ok (Ast.Fn1 (With_pattern (fn, compiled)))
+          | Error e ->
+              Error e
         )
       | _ ->
           Error
@@ -1608,20 +1720,27 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
             )
     )
   (* Not implemented *)
-  | "strftime" -> Error (not_implemented "strftime")
+  | "strftime" ->
+      Error (not_implemented "strftime")
   | "splits" ->
       Error (Error.not_implemented ~suggestion:"use `split` instead" "splits")
-  | "sql" -> Error (not_implemented "sql")
-  | "dateadd" | "datesub" -> Error (not_implemented "date arithmetic")
-  | "modulemeta" -> Error (not_implemented "modulemeta")
+  | "sql" ->
+      Error (not_implemented "sql")
+  | "dateadd" | "datesub" ->
+      Error (not_implemented "date arithmetic")
+  | "modulemeta" ->
+      Error (not_implemented "modulemeta")
   (* Default: generic function application *)
-  | _ -> Ok (Apply (name, [ arg1; arg2 ]))
+  | _ ->
+      Ok (Apply (name, [ arg1; arg2 ]))
 
 let make_pattern_fn (fn : Ast.fn1_pattern) (pattern : string) :
     (Ast.expression, Error.t) result =
   match compile_pcre pattern with
-  | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
-  | Error e -> Error e
+  | Ok compiled ->
+      Ok (Ast.Fn1 (With_pattern (fn, compiled)))
+  | Error e ->
+      Error e
 
 let make_separator_fn (fn : Ast.fn1_separator) (sep : string) : Ast.expression =
   Ast.Fn1 (With_separator (fn, sep))
@@ -1634,30 +1753,50 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
   let open Ast in
   match name with
   (* Array/iteration functions *)
-  | "filter" -> Ok (make_expr_fn Map (make_expr_fn Select arg))
-  | "map" -> Ok (make_expr_fn Map arg)
-  | "map_values" -> Ok (make_expr_fn Map_values arg)
-  | "flat_map" -> Ok (make_expr_fn Flat_map arg)
-  | "select" -> Ok (make_expr_fn Select arg)
-  | "sort_by" -> Ok (make_expr_fn Sort_by arg)
-  | "min_by" -> Ok (make_expr_fn Min_by arg)
-  | "max_by" -> Ok (make_expr_fn Max_by arg)
-  | "group_by" -> Ok (make_expr_fn Group_by arg)
-  | "unique_by" -> Ok (make_expr_fn Unique_by arg)
-  | "find" -> Ok (make_expr_fn Find arg)
-  | "some" -> Ok (make_expr_fn Some_ arg)
-  | "path" -> Ok (make_expr_fn Path arg)
-  | "any" -> Ok (make_expr_fn Any_cond arg)
-  | "all" -> Ok (make_expr_fn All_cond arg)
-  | "walk" -> Ok (make_expr_fn Walk arg)
+  | "filter" ->
+      Ok (make_expr_fn Map (make_expr_fn Select arg))
+  | "map" ->
+      Ok (make_expr_fn Map arg)
+  | "map_values" ->
+      Ok (make_expr_fn Map_values arg)
+  | "flat_map" ->
+      Ok (make_expr_fn Flat_map arg)
+  | "select" ->
+      Ok (make_expr_fn Select arg)
+  | "sort_by" ->
+      Ok (make_expr_fn Sort_by arg)
+  | "min_by" ->
+      Ok (make_expr_fn Min_by arg)
+  | "max_by" ->
+      Ok (make_expr_fn Max_by arg)
+  | "group_by" ->
+      Ok (make_expr_fn Group_by arg)
+  | "unique_by" ->
+      Ok (make_expr_fn Unique_by arg)
+  | "find" ->
+      Ok (make_expr_fn Find arg)
+  | "some" ->
+      Ok (make_expr_fn Some_ arg)
+  | "path" ->
+      Ok (make_expr_fn Path arg)
+  | "any" ->
+      Ok (make_expr_fn Any_cond arg)
+  | "all" ->
+      Ok (make_expr_fn All_cond arg)
+  | "walk" ->
+      Ok (make_expr_fn Walk arg)
   (* Object functions *)
-  | "has" -> Ok (make_expr_fn Has arg)
-  | "in" -> Ok (make_expr_fn In arg)
-  | "with_entries" -> Ok (make_expr_fn With_entries arg)
+  | "has" ->
+      Ok (make_expr_fn Has arg)
+  | "in" ->
+      Ok (make_expr_fn In arg)
+  | "with_entries" ->
+      Ok (make_expr_fn With_entries arg)
   (* String functions - separator-based *)
   | "split" -> (
       match arg with
-      | Literal (String sep) -> Ok (make_separator_fn Split sep)
+      | Literal (String sep) ->
+          Ok (make_separator_fn Split sep)
       | _ ->
           Error
             (require_string_literal ~fn_name:"split" ~what:"separator"
@@ -1666,7 +1805,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
     )
   | "join" -> (
       match arg with
-      | Literal (String sep) -> Ok (make_separator_fn Join sep)
+      | Literal (String sep) ->
+          Ok (make_separator_fn Join sep)
       | _ ->
           Error
             (require_string_literal ~fn_name:"join" ~what:"separator"
@@ -1674,24 +1814,35 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
             )
     )
   (* String functions - expression-based *)
-  | "starts_with" -> Ok (make_expr_fn Starts_with arg)
+  | "starts_with" ->
+      Ok (make_expr_fn Starts_with arg)
   | "startswith" ->
       Error (Error.deprecated ~old_name:"startswith" ~new_name:"starts_with")
-  | "ends_with" -> Ok (make_expr_fn Ends_with arg)
+  | "ends_with" ->
+      Ok (make_expr_fn Ends_with arg)
   | "endswith" ->
       Error (Error.deprecated ~old_name:"endswith" ~new_name:"ends_with")
-  | "index" -> Ok (make_expr_fn Index_of arg)
-  | "last_index" | "rindex" -> Ok (make_expr_fn Last_index_of arg)
-  | "indices" | "find_indices" -> Ok (make_expr_fn Indices arg)
-  | "inside" -> Ok (make_expr_fn Inside arg)
-  | "trim_start" -> Ok (make_expr_fn Trim_start arg)
-  | "trim_end" -> Ok (make_expr_fn Trim_end arg)
-  | "contains" -> Ok (make_expr_fn Contains arg)
-  | "binary_search" | "bsearch" -> Ok (make_expr_fn Binary_search arg)
+  | "index" ->
+      Ok (make_expr_fn Index_of arg)
+  | "last_index" | "rindex" ->
+      Ok (make_expr_fn Last_index_of arg)
+  | "indices" | "find_indices" ->
+      Ok (make_expr_fn Indices arg)
+  | "inside" ->
+      Ok (make_expr_fn Inside arg)
+  | "trim_start" ->
+      Ok (make_expr_fn Trim_start arg)
+  | "trim_end" ->
+      Ok (make_expr_fn Trim_end arg)
+  | "contains" ->
+      Ok (make_expr_fn Contains arg)
+  | "binary_search" | "bsearch" ->
+      Ok (make_expr_fn Binary_search arg)
   (* Regex functions - pattern-based, compiled at parse time *)
   | "test" -> (
       match arg with
-      | Literal (String pattern) -> make_pattern_fn Test pattern
+      | Literal (String pattern) ->
+          make_pattern_fn Test pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"test" ~what:"regex pattern"
@@ -1700,7 +1851,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
     )
   | "match" -> (
       match arg with
-      | Literal (String pattern) -> make_pattern_fn Match pattern
+      | Literal (String pattern) ->
+          make_pattern_fn Match pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"match" ~what:"regex pattern"
@@ -1710,7 +1862,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
     )
   | "scan" -> (
       match arg with
-      | Literal (String pattern) -> make_pattern_fn Scan pattern
+      | Literal (String pattern) ->
+          make_pattern_fn Scan pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"scan" ~what:"regex pattern"
@@ -1719,7 +1872,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
     )
   | "capture" -> (
       match arg with
-      | Literal (String pattern) -> make_pattern_fn Capture pattern
+      | Literal (String pattern) ->
+          make_pattern_fn Capture pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"capture" ~what:"regex pattern"
@@ -1727,33 +1881,57 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
             )
     )
   (* Iteration/limiting functions *)
-  | "first" -> Ok (make_expr_fn First_expr arg)
-  | "last" -> Ok (make_expr_fn Last_expr arg)
-  | "nth" -> Ok (make_expr_fn Nth_array arg)
-  | "recurse" -> Ok (make_expr_fn Recurse_expr arg)
-  | "combinations" -> Ok (make_expr_fn Combinations_n arg)
-  | "repeat" -> Ok (make_expr_fn Repeat arg)
-  | "add" -> Ok (make_expr_fn Add_expr arg)
-  | "is_empty" -> Ok (make_expr_fn Is_empty_expr arg)
-  | "flatten" -> Ok (make_expr_fn Flatten_n arg)
-  | "transpose" -> Ok (make_expr_fn Transpose_expr arg)
+  | "first" ->
+      Ok (make_expr_fn First_expr arg)
+  | "last" ->
+      Ok (make_expr_fn Last_expr arg)
+  | "nth" ->
+      Ok (make_expr_fn Nth_array arg)
+  | "recurse" ->
+      Ok (make_expr_fn Recurse_expr arg)
+  | "combinations" ->
+      Ok (make_expr_fn Combinations_n arg)
+  | "repeat" ->
+      Ok (make_expr_fn Repeat arg)
+  | "add" ->
+      Ok (make_expr_fn Add_expr arg)
+  | "is_empty" ->
+      Ok (make_expr_fn Is_empty_expr arg)
+  | "flatten" ->
+      Ok (make_expr_fn Flatten_n arg)
+  | "transpose" ->
+      Ok (make_expr_fn Transpose_expr arg)
   (* Path functions *)
-  | "delete_paths" -> Ok (make_expr_fn Delpaths arg)
-  | "delete" -> Ok (make_expr_fn Delete arg)
-  | "pick" -> Ok (make_expr_fn Pick arg)
-  | "get_path" -> Ok (make_expr_fn Getpath arg)
-  | "paths" -> Ok (make_expr_fn Paths_filter arg)
+  | "delete_paths" ->
+      Ok (make_expr_fn Delpaths arg)
+  | "delete" ->
+      Ok (make_expr_fn Delete arg)
+  | "pick" ->
+      Ok (make_expr_fn Pick arg)
+  | "get_path" ->
+      Ok (make_expr_fn Getpath arg)
+  | "paths" ->
+      Ok (make_expr_fn Paths_filter arg)
   (* Custom functions *)
-  | "pluck" -> Ok (make_expr_fn Pluck arg)
-  | "partition" -> Ok (make_expr_fn Partition arg)
-  | "find_all" -> Ok (make_expr_fn Find_all arg)
-  | "find_first" -> Ok (make_expr_fn Find_first arg)
-  | "paths_to" -> Ok (make_expr_fn Paths_to arg)
+  | "pluck" ->
+      Ok (make_expr_fn Pluck arg)
+  | "partition" ->
+      Ok (make_expr_fn Partition arg)
+  | "find_all" ->
+      Ok (make_expr_fn Find_all arg)
+  | "find_first" ->
+      Ok (make_expr_fn Find_first arg)
+  | "paths_to" ->
+      Ok (make_expr_fn Paths_to arg)
   (* Control flow *)
-  | "assert" -> Ok (make_expr_fn Assert_simple arg)
-  | "try" -> Ok (Try (arg, None, None))
-  | "debug" -> Ok (make_expr_fn Debug_msg arg)
-  | "error" -> Ok (make_expr_fn Error_msg arg)
+  | "assert" ->
+      Ok (make_expr_fn Assert_simple arg)
+  | "try" ->
+      Ok (Try (arg, None, None))
+  | "debug" ->
+      Ok (make_expr_fn Debug_msg arg)
+  | "error" ->
+      Ok (make_expr_fn Error_msg arg)
   | "halt_error" -> (
       match arg with
       | Literal (Int _ | Int64 _ | Big_int _ | Float _) ->
@@ -1771,17 +1949,23 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
         (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None)
         )
   (* Not implemented *)
-  | "format" -> Error (not_implemented "format")
-  | "strftime" -> Error (not_implemented "strftime")
+  | "format" ->
+      Error (not_implemented "format")
+  | "strftime" ->
+      Error (not_implemented "strftime")
   | "parse_date" -> (
       match arg with
-      | Literal (String fmt) -> Ok (Fn1 (With_separator (Parse_date, fmt)))
-      | _ -> Error (not_implemented "parse_date with non-literal format")
+      | Literal (String fmt) ->
+          Ok (Fn1 (With_separator (Parse_date, fmt)))
+      | _ ->
+          Error (not_implemented "parse_date with non-literal format")
     )
   | "todateiso8601" | "fromdateiso8601" | "fromdate" | "strptime" ->
       Error (not_implemented "ISO date functions")
-  | "to_local_time" | "to_utc" -> Error (not_implemented "time zone functions")
-  | "to_unix" -> Error (not_implemented "to_unix")
+  | "to_local_time" | "to_utc" ->
+      Error (not_implemented "time zone functions")
+  | "to_unix" ->
+      Error (not_implemented "to_unix")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")
   | "splits" ->
@@ -1792,8 +1976,10 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
            ~suggestion:"use `to_string` (input is already JSON)"
            "tojson/fromjson"
         )
-  | "ascii" -> Error (not_implemented "ascii")
-  | "modulemeta" -> Error (not_implemented "modulemeta")
+  | "ascii" ->
+      Error (not_implemented "ascii")
+  | "modulemeta" ->
+      Error (not_implemented "modulemeta")
   | "input" | "inputs" ->
       Error
         (Error.not_implemented ~description:"query-json reads all input upfront"
@@ -1805,7 +1991,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
            ~message:"with argument is not supported"
            ~suggestion:"use `$ENV.name` or `env.name` instead" ()
         )
-  | "builtins" -> Error (not_implemented "builtins")
+  | "builtins" ->
+      Error (not_implemented "builtins")
   | "limit" ->
       Error
         (Error.requires_number_literal ~fn_name:"limit"
@@ -1814,8 +2001,10 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
         )
   | "until" | "while" ->
       let example =
-        if name = "while" then "[while(. < 100; . * 2)]"
-        else "[until(. > 100; . * 2)]"
+        if name = "while" then
+          "[while(. < 100; . * 2)]"
+        else
+          "[until(. > 100; . * 2)]"
       in
       Error
         (Error.missing_argument ~fn_name:name
@@ -1824,56 +2013,93 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
            ~description:"Loop construct" ~example ()
         )
   (* Default: generic function application *)
-  | _ -> Ok (Apply (name, [ arg ]))
+  | _ ->
+      Ok (Apply (name, [ arg ]))
 
 (* Map 0-argument function/identifier names to AST nodes *)
 let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
   (* Basic values *)
-  | "empty" -> Ok (Fn0 Empty)
-  | "null" -> Ok (Literal Null)
-  | "true" -> Ok (Literal (Bool true))
-  | "false" -> Ok (Literal (Bool false))
-  | "nan" -> Ok (Fn0 Nan)
-  | "not" -> Ok (Fn0 Not)
-  | "break" -> Ok (Fn0 Break)
-  | "env" -> Ok (Fn0 Env)
+  | "empty" ->
+      Ok (Fn0 Empty)
+  | "null" ->
+      Ok (Literal Null)
+  | "true" ->
+      Ok (Literal (Bool true))
+  | "false" ->
+      Ok (Literal (Bool false))
+  | "nan" ->
+      Ok (Fn0 Nan)
+  | "not" ->
+      Ok (Fn0 Not)
+  | "break" ->
+      Ok (Fn0 Break)
+  | "env" ->
+      Ok (Fn0 Env)
   (* Object functions *)
-  | "keys" -> Ok (Fn0 Keys)
-  | "to_entries" -> Ok (Fn0 To_entries)
-  | "from_entries" -> Ok (Fn0 From_entries)
+  | "keys" ->
+      Ok (Fn0 Keys)
+  | "to_entries" ->
+      Ok (Fn0 To_entries)
+  | "from_entries" ->
+      Ok (Fn0 From_entries)
   (* Array functions *)
-  | "head" -> Ok (Fn0 First)
-  | "tail" -> Ok (Fn0 Last)
-  | "length" -> Ok (Fn0 Length)
-  | "byte_length" -> Ok (Fn0 Byte_length)
-  | "type" -> Ok (Fn0 Type)
-  | "sort" -> Ok (Fn0 Sort)
-  | "unique" -> Ok (Fn0 Unique)
-  | "reverse" -> Ok (Fn0 Reverse)
-  | "min" -> Ok (Fn0 Min)
-  | "max" -> Ok (Fn0 Max)
-  | "any" -> Ok (Fn0 Any)
-  | "all" -> Ok (Fn0 All)
-  | "first" -> Ok (Fn0 First)
-  | "last" -> Ok (Fn0 Last)
-  | "combinations" -> Ok (Fn0 Combinations)
-  | "transpose" -> Ok (Fn0 Transpose)
-  | "flatten" -> Ok (Fn0 Flatten)
-  | "add" -> Ok (Fn0 Add)
+  | "head" ->
+      Ok (Fn0 First)
+  | "tail" ->
+      Ok (Fn0 Last)
+  | "length" ->
+      Ok (Fn0 Length)
+  | "byte_length" ->
+      Ok (Fn0 Byte_length)
+  | "type" ->
+      Ok (Fn0 Type)
+  | "sort" ->
+      Ok (Fn0 Sort)
+  | "unique" ->
+      Ok (Fn0 Unique)
+  | "reverse" ->
+      Ok (Fn0 Reverse)
+  | "min" ->
+      Ok (Fn0 Min)
+  | "max" ->
+      Ok (Fn0 Max)
+  | "any" ->
+      Ok (Fn0 Any)
+  | "all" ->
+      Ok (Fn0 All)
+  | "first" ->
+      Ok (Fn0 First)
+  | "last" ->
+      Ok (Fn0 Last)
+  | "combinations" ->
+      Ok (Fn0 Combinations)
+  | "transpose" ->
+      Ok (Fn0 Transpose)
+  | "flatten" ->
+      Ok (Fn0 Flatten)
+  | "add" ->
+      Ok (Fn0 Add)
   (* String functions *)
   | "tostring" ->
       Error (Error.deprecated ~old_name:"tostring" ~new_name:"to_string")
-  | "to_string" -> Ok (Fn0 To_string)
+  | "to_string" ->
+      Ok (Fn0 To_string)
   | "tonumber" ->
       Error (Error.deprecated ~old_name:"tonumber" ~new_name:"to_number")
-  | "to_number" -> Ok (Fn0 To_number)
-  | "to_codepoints" | "explode" -> Ok (Fn0 To_codepoints)
-  | "from_codepoints" | "implode" -> Ok (Fn0 From_codepoints)
-  | "to_uppercase" -> Ok (Fn0 To_uppercase)
-  | "to_lowercase" -> Ok (Fn0 To_lowercase)
-  | "trim" -> Ok (Fn0 Trim)
+  | "to_number" ->
+      Ok (Fn0 To_number)
+  | "to_codepoints" | "explode" ->
+      Ok (Fn0 To_codepoints)
+  | "from_codepoints" | "implode" ->
+      Ok (Fn0 From_codepoints)
+  | "to_uppercase" ->
+      Ok (Fn0 To_uppercase)
+  | "to_lowercase" ->
+      Ok (Fn0 To_lowercase)
+  | "trim" ->
+      Ok (Fn0 Trim)
   | "trim_left" ->
       Error (Error.deprecated ~old_name:"trim_left" ~new_name:"trim")
   | "left_trim" ->
@@ -1883,75 +2109,135 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   | "right_trim" ->
       Error (Error.deprecated ~old_name:"right_trim" ~new_name:"trim")
   (* Math functions *)
-  | "floor" -> Ok (Fn0 Floor)
-  | "sqrt" -> Ok (Fn0 Sqrt)
-  | "abs" -> Ok (Fn0 Abs)
-  | "sin" -> Ok (Fn0 Sin)
-  | "cos" -> Ok (Fn0 Cos)
-  | "tan" -> Ok (Fn0 Tan)
-  | "asin" -> Ok (Fn0 Asin)
-  | "acos" -> Ok (Fn0 Acos)
-  | "atan" -> Ok (Fn0 Atan)
-  | "log" -> Ok (Fn0 Log)
-  | "log10" -> Ok (Fn0 Log10)
-  | "exp" -> Ok (Fn0 Exp)
-  | "pow" -> Ok (Fn0 Pow)
-  | "ceil" -> Ok (Fn0 Ceil)
-  | "round" -> Ok (Fn0 Round)
-  | "infinite" -> Ok (Fn0 Infinite)
-  | "now" -> Ok (Fn0 Now)
-  | "sinh" -> Ok (Fn0 Sinh)
-  | "cosh" -> Ok (Fn0 Cosh)
-  | "tanh" -> Ok (Fn0 Tanh)
-  | "asinh" -> Ok (Fn0 Asinh)
-  | "acosh" -> Ok (Fn0 Acosh)
-  | "atanh" -> Ok (Fn0 Atanh)
-  | "is_normal" -> Ok (Fn0 Is_normal)
+  | "floor" ->
+      Ok (Fn0 Floor)
+  | "sqrt" ->
+      Ok (Fn0 Sqrt)
+  | "abs" ->
+      Ok (Fn0 Abs)
+  | "sin" ->
+      Ok (Fn0 Sin)
+  | "cos" ->
+      Ok (Fn0 Cos)
+  | "tan" ->
+      Ok (Fn0 Tan)
+  | "asin" ->
+      Ok (Fn0 Asin)
+  | "acos" ->
+      Ok (Fn0 Acos)
+  | "atan" ->
+      Ok (Fn0 Atan)
+  | "log" ->
+      Ok (Fn0 Log)
+  | "log10" ->
+      Ok (Fn0 Log10)
+  | "exp" ->
+      Ok (Fn0 Exp)
+  | "pow" ->
+      Ok (Fn0 Pow)
+  | "ceil" ->
+      Ok (Fn0 Ceil)
+  | "round" ->
+      Ok (Fn0 Round)
+  | "infinite" ->
+      Ok (Fn0 Infinite)
+  | "now" ->
+      Ok (Fn0 Now)
+  | "sinh" ->
+      Ok (Fn0 Sinh)
+  | "cosh" ->
+      Ok (Fn0 Cosh)
+  | "tanh" ->
+      Ok (Fn0 Tanh)
+  | "asinh" ->
+      Ok (Fn0 Asinh)
+  | "acosh" ->
+      Ok (Fn0 Acosh)
+  | "atanh" ->
+      Ok (Fn0 Atanh)
+  | "is_normal" ->
+      Ok (Fn0 Is_normal)
   | "isnormal" ->
       Error (Error.deprecated ~old_name:"isnormal" ~new_name:"is_normal")
-  | "truncate" | "trunc" -> Ok (Fn0 Truncate)
-  | "fabs" -> Error (Error.deprecated ~old_name:"fabs" ~new_name:"abs")
-  | "cube_root" | "cbrt" -> Ok (Fn0 Cube_root)
-  | "expm1" -> Ok (Fn0 Expm1)
-  | "exp2" -> Ok (Fn0 Exp2)
-  | "log1p" -> Ok (Fn0 Log1p)
-  | "log2" -> Ok (Fn0 Log2)
-  | "nearbyint" | "rint" -> Ok (Fn0 Nearbyint)
-  | "logb" -> Ok (Fn0 Logb)
-  | "isnan" -> Ok (Fn0 Is_nan)
+  | "truncate" | "trunc" ->
+      Ok (Fn0 Truncate)
+  | "fabs" ->
+      Error (Error.deprecated ~old_name:"fabs" ~new_name:"abs")
+  | "cube_root" | "cbrt" ->
+      Ok (Fn0 Cube_root)
+  | "expm1" ->
+      Ok (Fn0 Expm1)
+  | "exp2" ->
+      Ok (Fn0 Exp2)
+  | "log1p" ->
+      Ok (Fn0 Log1p)
+  | "log2" ->
+      Ok (Fn0 Log2)
+  | "nearbyint" | "rint" ->
+      Ok (Fn0 Nearbyint)
+  | "logb" ->
+      Ok (Fn0 Logb)
+  | "isnan" ->
+      Ok (Fn0 Is_nan)
   (* Recursion *)
-  | "recurse" -> Ok (Fn0 Recurse)
-  | "recurse_down" -> Ok (Fn0 Recurse_down)
+  | "recurse" ->
+      Ok (Fn0 Recurse)
+  | "recurse_down" ->
+      Ok (Fn0 Recurse_down)
   (* Path functions *)
-  | "paths" -> Ok (Fn0 Paths)
-  | "leaf_paths" -> Ok (Fn0 Leaf_paths)
+  | "paths" ->
+      Ok (Fn0 Paths)
+  | "leaf_paths" ->
+      Ok (Fn0 Leaf_paths)
   (* Control flow *)
-  | "error" -> Ok (make_expr_fn Error_msg Identity)
-  | "halt" -> Ok (Fn0 Halt)
-  | "halt_error" -> Ok (make_expr_fn Halt_error_n (Literal (Int 5)))
+  | "error" ->
+      Ok (make_expr_fn Error_msg Identity)
+  | "halt" ->
+      Ok (Fn0 Halt)
+  | "halt_error" ->
+      Ok (make_expr_fn Halt_error_n (Literal (Int 5)))
   (* Type selectors *)
-  | "numbers" -> Ok (Fn0 Numbers)
-  | "strings" -> Ok (Fn0 Strings)
-  | "objects" -> Ok (Fn0 Objects)
-  | "arrays" -> Ok (Fn0 Arrays)
-  | "booleans" -> Ok (Fn0 Booleans)
-  | "nulls" -> Ok (Fn0 Nulls)
-  | "iterables" -> Ok (Fn0 Iterables)
-  | "values" -> Ok (Fn0 Values)
-  | "scalars" -> Ok (Fn0 Scalars)
+  | "numbers" ->
+      Ok (Fn0 Numbers)
+  | "strings" ->
+      Ok (Fn0 Strings)
+  | "objects" ->
+      Ok (Fn0 Objects)
+  | "arrays" ->
+      Ok (Fn0 Arrays)
+  | "booleans" ->
+      Ok (Fn0 Booleans)
+  | "nulls" ->
+      Ok (Fn0 Nulls)
+  | "iterables" ->
+      Ok (Fn0 Iterables)
+  | "values" ->
+      Ok (Fn0 Values)
+  | "scalars" ->
+      Ok (Fn0 Scalars)
   (* Debug/IO *)
-  | "debug" -> Ok (Fn0 Debug)
-  | "stderr" -> Ok (Fn0 Stderr)
+  | "debug" ->
+      Ok (Fn0 Debug)
+  | "stderr" ->
+      Ok (Fn0 Stderr)
   (* Custom functions *)
-  | "is_empty" -> Ok (Fn0 Is_empty)
-  | "is_blank" -> Ok (Fn0 Is_blank)
-  | "descend" -> Ok (Fn0 Descend)
-  | "dive" -> Ok (Fn0 Dive)
+  | "is_empty" ->
+      Ok (Fn0 Is_empty)
+  | "is_blank" ->
+      Ok (Fn0 Is_blank)
+  | "descend" ->
+      Ok (Fn0 Descend)
+  | "dive" ->
+      Ok (Fn0 Dive)
   (* Time functions *)
-  | "to_local_time" -> Ok (Fn0 To_local_time)
-  | "to_utc" -> Ok (Fn0 To_utc)
-  | "to_unix" -> Ok (Fn0 To_unix)
-  | "from_date" -> Ok (Fn0 From_date)
+  | "to_local_time" ->
+      Ok (Fn0 To_local_time)
+  | "to_utc" ->
+      Ok (Fn0 To_utc)
+  | "to_unix" ->
+      Ok (Fn0 To_unix)
+  | "from_date" ->
+      Ok (Fn0 From_date)
   (* is_valid without argument: try (. | true) catch false *)
   | "is_valid" ->
       Ok
@@ -1961,9 +2247,11 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
              None
            )
         )
-  | "builtins" -> Ok (Fn0 Builtins)
+  | "builtins" ->
+      Ok (Fn0 Builtins)
   (* Not implemented *)
-  | "strftime" -> Error (not_implemented "strftime")
+  | "strftime" ->
+      Error (not_implemented "strftime")
   | "strptime" | "parse_date" ->
       Error
         (Error.not_implemented
@@ -1974,9 +2262,12 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Error (Error.deprecated ~old_name:"fromdate" ~new_name:"from_date")
   | "localtime" ->
       Error (Error.deprecated ~old_name:"localtime" ~new_name:"to_local_time")
-  | "gmtime" -> Error (Error.deprecated ~old_name:"gmtime" ~new_name:"to_utc")
-  | "mktime" -> Error (Error.deprecated ~old_name:"mktime" ~new_name:"to_unix")
-  | "modulemeta" -> Error (not_implemented "modulemeta")
+  | "gmtime" ->
+      Error (Error.deprecated ~old_name:"gmtime" ~new_name:"to_utc")
+  | "mktime" ->
+      Error (Error.deprecated ~old_name:"mktime" ~new_name:"to_unix")
+  | "modulemeta" ->
+      Error (not_implemented "modulemeta")
   | "tojsonstream" | "fromjsonstream" | "truncate_stream" ->
       Error (not_implemented "JSON stream functions")
   | "tojson" | "fromjson" ->
@@ -1990,6 +2281,8 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   (* Default: check registry for functions that require arguments *)
   | _ -> (
       match find_function name with
-      | Some f when f.arity <> No_args -> Error (error_for_missing_arg name)
-      | _ -> Ok (Apply (name, []))
+      | Some f when f.arity <> No_args ->
+          Error (error_for_missing_arg name)
+      | _ ->
+          Ok (Apply (name, []))
     )

@@ -1,6 +1,12 @@
 include Common
 
-let hex n = Char.chr (if n < 10 then n + 48 else n + 87)
+let hex n =
+  Char.chr
+    ( if n < 10 then
+        n + 48
+      else
+        n + 87
+    )
 
 let write_special src start stop ob str =
   Buffer.add_substring ob src !start (stop - !start);
@@ -25,15 +31,24 @@ let write_string_body ob s =
   let start = ref 0 in
   for i = 0 to String.length s - 1 do
     match s.[i] with
-    | '"' -> write_special s start i ob "\\\""
-    | '\\' -> write_special s start i ob "\\\\"
-    | '\b' -> write_special s start i ob "\\b"
-    | '\012' -> write_special s start i ob "\\f"
-    | '\n' -> write_special s start i ob "\\n"
-    | '\r' -> write_special s start i ob "\\r"
-    | '\t' -> write_special s start i ob "\\t"
-    | ('\x00' .. '\x1F' | '\x7F') as c -> write_control_char s start i ob c
-    | _ -> ()
+    | '"' ->
+        write_special s start i ob "\\\""
+    | '\\' ->
+        write_special s start i ob "\\\\"
+    | '\b' ->
+        write_special s start i ob "\\b"
+    | '\012' ->
+        write_special s start i ob "\\f"
+    | '\n' ->
+        write_special s start i ob "\\n"
+    | '\r' ->
+        write_special s start i ob "\\r"
+    | '\t' ->
+        write_special s start i ob "\\t"
+    | ('\x00' .. '\x1F' | '\x7F') as c ->
+        write_control_char s start i ob c
+    | _ ->
+        ()
   done;
   finish_string s start ob
 
@@ -43,23 +58,31 @@ let write_string ob s =
   Buffer.add_char ob '"'
 
 let write_null ob () = Buffer.add_string ob "null"
-let write_bool ob x = Buffer.add_string ob (if x then "true" else "false")
+let write_bool ob x =
+  Buffer.add_string ob
+    ( if x then
+        "true"
+      else
+        "false"
+    )
 let dec n = Char.chr (n + 48)
 
 let rec write_digits s x =
-  if x = 0 then ()
+  if x = 0 then
+    ()
   else
     let d = x mod 10 in
     write_digits s (x / 10);
     Buffer.add_char s (dec (abs d))
 
 let write_int ob x =
-  if x > 0 then write_digits ob x
+  if x > 0 then
+    write_digits ob x
   else if x < 0 then (
     Buffer.add_char ob '-';
     write_digits ob x
-  )
-  else Buffer.add_char ob '0'
+  ) else
+    Buffer.add_char ob '0'
 
 let write_int64 ob x = Buffer.add_string ob (Int64.to_string x)
 let write_big_int ob x = Buffer.add_string ob (Z.to_string x)
@@ -74,38 +97,59 @@ let float_needs_period s =
 
 let write_float ob x =
   match classify_float x with
-  | FP_nan -> Buffer.add_string ob "NaN"
+  | FP_nan ->
+      Buffer.add_string ob "NaN"
   | FP_infinite ->
-      Buffer.add_string ob (if x > 0. then "Infinity" else "-Infinity")
+      Buffer.add_string ob
+        ( if x > 0. then
+            "Infinity"
+          else
+            "-Infinity"
+        )
   | _ ->
       let s1 = Printf.sprintf "%.16g" x in
-      let s = if Float.of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
+      let s =
+        if Float.of_string s1 = x then
+          s1
+        else
+          Printf.sprintf "%.17g" x
+      in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
 
 let write_std_float ob x =
   match classify_float x with
-  | FP_nan -> json_error "NaN value not allowed in standard JSON"
+  | FP_nan ->
+      json_error "NaN value not allowed in standard JSON"
   | FP_infinite ->
       json_error
-        ( if x > 0. then "Infinity value not allowed in standard JSON"
-          else "-Infinity value not allowed in standard JSON"
+        ( if x > 0. then
+            "Infinity value not allowed in standard JSON"
+          else
+            "-Infinity value not allowed in standard JSON"
         )
   | _ ->
       let s1 = Printf.sprintf "%.16g" x in
-      let s = if Float.of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
+      let s =
+        if Float.of_string s1 = x then
+          s1
+        else
+          Printf.sprintf "%.17g" x
+      in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
 
 let rec iter2_aux f_elt f_sep x = function
-  | [] -> ()
+  | [] ->
+      ()
   | y :: l ->
       f_sep x;
       f_elt x y;
       iter2_aux f_elt f_sep x l
 
 let iter2 f_elt f_sep x = function
-  | [] -> ()
+  | [] ->
+      ()
   | y :: l ->
       f_elt x y;
       iter2_aux f_elt f_sep x l
@@ -114,15 +158,24 @@ let f_sep ob = Buffer.add_char ob ','
 
 let rec write_json ob (x : t) =
   match x with
-  | `Null -> write_null ob ()
-  | `Bool b -> write_bool ob b
-  | `Int i -> write_int ob i
-  | `Int64 i -> write_int64 ob i
-  | `Big_int z -> write_big_int ob z
-  | `Float f -> write_float ob f
-  | `String s -> write_string ob s
-  | `Assoc l -> write_assoc ob l
-  | `List l -> write_list ob l
+  | `Null ->
+      write_null ob ()
+  | `Bool b ->
+      write_bool ob b
+  | `Int i ->
+      write_int ob i
+  | `Int64 i ->
+      write_int64 ob i
+  | `Big_int z ->
+      write_big_int ob z
+  | `Float f ->
+      write_float ob f
+  | `String s ->
+      write_string ob s
+  | `Assoc l ->
+      write_assoc ob l
+  | `List l ->
+      write_list ob l
 
 and write_assoc ob l =
   let f_elt ob (s, x) =
@@ -141,15 +194,24 @@ and write_list ob l =
 
 let rec write_std_json ob (x : t) =
   match x with
-  | `Null -> write_null ob ()
-  | `Bool b -> write_bool ob b
-  | `Int i -> write_int ob i
-  | `Int64 i -> write_int64 ob i
-  | `Big_int z -> write_big_int ob z
-  | `Float f -> write_std_float ob f
-  | `String s -> write_string ob s
-  | `Assoc l -> write_std_assoc ob l
-  | `List l -> write_std_list ob l
+  | `Null ->
+      write_null ob ()
+  | `Bool b ->
+      write_bool ob b
+  | `Int i ->
+      write_int ob i
+  | `Int64 i ->
+      write_int64 ob i
+  | `Big_int z ->
+      write_big_int ob z
+  | `Float f ->
+      write_std_float ob f
+  | `String s ->
+      write_string ob s
+  | `Assoc l ->
+      write_std_assoc ob l
+  | `List l ->
+      write_std_list ob l
 
 and write_std_assoc ob l =
   let f_elt ob (s, x) =
@@ -167,13 +229,17 @@ and write_std_list ob l =
   Buffer.add_char ob ']'
 
 let to_buffer ?(suf = "") ?(std = false) ob x =
-  if std then write_std_json ob x else write_json ob x;
+  if std then
+    write_std_json ob x
+  else
+    write_json ob x;
   Buffer.add_string ob suf
 
 let to_string ?buf ?(len = 256) ?(suf = "") ?std x =
   let ob =
     match buf with
-    | None -> Buffer.create len
+    | None ->
+        Buffer.create len
     | Some ob ->
         Buffer.clear ob;
         ob
@@ -186,7 +252,8 @@ let to_string ?buf ?(len = 256) ?(suf = "") ?std x =
 let to_channel ?buf ?(len = 4096) ?(suf = "") ?std oc x =
   let ob =
     match buf with
-    | None -> Buffer.create len
+    | None ->
+        Buffer.create len
     | Some ob ->
         Buffer.clear ob;
         ob
@@ -198,7 +265,8 @@ let to_channel ?buf ?(len = 4096) ?(suf = "") ?std oc x =
 let to_output ?buf ?(len = 4096) ?(suf = "") ?std out x =
   let ob =
     match buf with
-    | None -> Buffer.create len
+    | None ->
+        Buffer.create len
     | Some ob ->
         Buffer.clear ob;
         ob
@@ -222,7 +290,8 @@ let seq_to_buffer ?(suf = "\n") ?std ob st =
 let seq_to_string ?buf ?(len = 256) ?(suf = "\n") ?std st =
   let ob =
     match buf with
-    | None -> Buffer.create len
+    | None ->
+        Buffer.create len
     | Some ob ->
         Buffer.clear ob;
         ob
@@ -235,7 +304,8 @@ let seq_to_string ?buf ?(len = 256) ?(suf = "\n") ?std st =
 let seq_to_channel ?buf ?(len = 2096) ?(suf = "\n") ?std oc seq =
   let ob =
     match buf with
-    | None -> Buffer.create len
+    | None ->
+        Buffer.create len
     | Some ob ->
         Buffer.clear ob;
         ob
@@ -261,11 +331,14 @@ let rec sort = function
   | `Assoc l ->
       let l = List.rev (List.rev_map (fun (k, v) -> (k, sort v)) l) in
       `Assoc (List.stable_sort (fun (a, _) (b, _) -> String.compare a b) l)
-  | `List l -> `List (List.rev (List.rev_map sort l))
-  | x -> x
+  | `List l ->
+      `List (List.rev (List.rev_map sort l))
+  | x ->
+      x
 
 let rec pp fmt = function
-  | `Null -> Format.pp_print_string fmt "`Null"
+  | `Null ->
+      Format.pp_print_string fmt "`Null"
   | `Bool x ->
       Format.fprintf fmt "`Bool (@[<hov>";
       Format.fprintf fmt "%B" x;
@@ -327,19 +400,32 @@ let show x = Format.asprintf "%a" pp x
 
 let rec equal a b =
   match (a, b) with
-  | `Null, `Null -> true
-  | `Bool a, `Bool b -> a = b
-  | `Int a, `Int b -> a = b
-  | `Int64 a, `Int64 b -> Int64.equal a b
-  | `Int a, `Int64 b -> Int64.equal (Int64.of_int a) b
-  | `Int64 a, `Int b -> Int64.equal a (Int64.of_int b)
-  | `Big_int a, `Big_int b -> Z.equal a b
-  | `Big_int a, `Int b -> Z.equal a (Z.of_int b)
-  | `Int a, `Big_int b -> Z.equal (Z.of_int a) b
-  | `Big_int a, `Int64 b -> Z.equal a (Z.of_int64 b)
-  | `Int64 a, `Big_int b -> Z.equal (Z.of_int64 a) b
-  | `Float a, `Float b -> a = b
-  | `String a, `String b -> a = b
+  | `Null, `Null ->
+      true
+  | `Bool a, `Bool b ->
+      a = b
+  | `Int a, `Int b ->
+      a = b
+  | `Int64 a, `Int64 b ->
+      Int64.equal a b
+  | `Int a, `Int64 b ->
+      Int64.equal (Int64.of_int a) b
+  | `Int64 a, `Int b ->
+      Int64.equal a (Int64.of_int b)
+  | `Big_int a, `Big_int b ->
+      Z.equal a b
+  | `Big_int a, `Int b ->
+      Z.equal a (Z.of_int b)
+  | `Int a, `Big_int b ->
+      Z.equal (Z.of_int a) b
+  | `Big_int a, `Int64 b ->
+      Z.equal a (Z.of_int64 b)
+  | `Int64 a, `Big_int b ->
+      Z.equal (Z.of_int64 a) b
+  | `Float a, `Float b ->
+      a = b
+  | `String a, `String b ->
+      a = b
   | `Assoc xs, `Assoc ys -> (
       let compare_keys = fun (key, _) (key', _) -> String.compare key key' in
       let xs = List.stable_sort compare_keys xs in
@@ -351,15 +437,20 @@ let rec equal a b =
           )
           xs ys
       with
-      | result -> result
-      | exception Invalid_argument _ -> false
+      | result ->
+          result
+      | exception Invalid_argument _ ->
+          false
     )
   | `List xs, `List ys -> (
       match List.for_all2 equal xs ys with
-      | result -> result
-      | exception Invalid_argument _ -> false
+      | result ->
+          result
+      | exception Invalid_argument _ ->
+          false
     )
-  | _ -> false
+  | _ ->
+      false
 
 module Pretty = struct
   let indent_str = "  "
@@ -374,20 +465,34 @@ module Pretty = struct
     in
     let rec check json =
       match json with
-      | `Null -> add 4
-      | `Bool b -> add (if b then 4 else 5)
-      | `Int i -> add (String.length (Int.to_string i))
-      | `Int64 i -> add (String.length (Int64.to_string i))
-      | `Big_int z -> add (String.length (Z.to_string z))
+      | `Null ->
+          add 4
+      | `Bool b ->
+          add
+            ( if b then
+                4
+              else
+                5
+            )
+      | `Int i ->
+          add (String.length (Int.to_string i))
+      | `Int64 i ->
+          add (String.length (Int64.to_string i))
+      | `Big_int z ->
+          add (String.length (Z.to_string z))
       | `Float f ->
           add
-            ( if not (Float.is_finite f) then 4
+            ( if not (Float.is_finite f) then
+                4
               else if Float.equal (Float.round f) f then
                 String.length (Int.to_string (Float.to_int f))
-              else String.length (Printf.sprintf "%g" f)
+              else
+                String.length (Printf.sprintf "%g" f)
             )
-      | `String s -> add (String.length s + 2)
-      | `List [] -> add 2
+      | `String s ->
+          add (String.length s + 2)
+      | `List [] ->
+          add 2
       | `List items ->
           add 2;
           List.iter
@@ -396,7 +501,8 @@ module Pretty = struct
               add 2
             )
             items
-      | `Assoc [] -> add 2
+      | `Assoc [] ->
+          add 2
       | `Assoc items ->
           add 2;
           List.iter
@@ -416,11 +522,13 @@ module Pretty = struct
 
   let write_float buf f =
     match classify_float f with
-    | FP_nan | FP_infinite -> Buffer.add_string buf "null"
+    | FP_nan | FP_infinite ->
+        Buffer.add_string buf "null"
     | _ ->
         if Float.equal (Float.round f) f then
           Buffer.add_string buf (Int.to_string (Float.to_int f))
-        else Printf.bprintf buf "%g" f
+        else
+          Printf.bprintf buf "%g" f
 
   let write_quoted_string buf s =
     Buffer.add_char buf '"';
@@ -435,7 +543,12 @@ module Pretty = struct
         reset buf
     | `Bool b ->
         value buf;
-        Buffer.add_string buf (if b then "true" else "false");
+        Buffer.add_string buf
+          ( if b then
+              "true"
+            else
+              "false"
+          );
         reset buf
     | `Int i ->
         value buf;
@@ -457,18 +570,32 @@ module Pretty = struct
         value buf;
         write_quoted_string buf s;
         reset buf
-    | _ -> ()
+    | _ ->
+        ()
 
   let write_primitive_plain buf json =
     match (json : t) with
-    | `Null -> Buffer.add_string buf "null"
-    | `Bool b -> Buffer.add_string buf (if b then "true" else "false")
-    | `Int i -> Buffer.add_string buf (Int.to_string i)
-    | `Int64 i -> Buffer.add_string buf (Int64.to_string i)
-    | `Big_int z -> Buffer.add_string buf (Z.to_string z)
-    | `Float f -> write_float buf f
-    | `String s -> write_quoted_string buf s
-    | _ -> ()
+    | `Null ->
+        Buffer.add_string buf "null"
+    | `Bool b ->
+        Buffer.add_string buf
+          ( if b then
+              "true"
+            else
+              "false"
+          )
+    | `Int i ->
+        Buffer.add_string buf (Int.to_string i)
+    | `Int64 i ->
+        Buffer.add_string buf (Int64.to_string i)
+    | `Big_int z ->
+        Buffer.add_string buf (Z.to_string z)
+    | `Float f ->
+        write_float buf f
+    | `String s ->
+        write_quoted_string buf s
+    | _ ->
+        ()
 
   let write_key buf ~key ~reset k =
     key buf;
@@ -486,30 +613,36 @@ module Pretty = struct
   let rec write_sep_list :
       'a. Buffer.t -> string -> ('a -> unit) -> 'a list -> unit =
    fun buf sep write_item -> function
-    | [] -> ()
-    | [ x ] -> write_item x
+    | [] ->
+        ()
+    | [ x ] ->
+        write_item x
     | x :: rest ->
         write_item x;
         Buffer.add_string buf sep;
         write_sep_list buf sep write_item rest
 
   let rec write_compact buf ~value ~key ~reset json =
-    if is_primitive json then write_primitive buf ~value ~reset json
+    if is_primitive json then
+      write_primitive buf ~value ~reset json
     else
       match (json : t) with
-      | `List [] -> Buffer.add_string buf "[]"
+      | `List [] ->
+          Buffer.add_string buf "[]"
       | `List items ->
           Buffer.add_string buf "[ ";
           write_sep_list buf ", " (write_compact buf ~value ~key ~reset) items;
           Buffer.add_string buf " ]"
-      | `Assoc [] -> Buffer.add_string buf "{}"
+      | `Assoc [] ->
+          Buffer.add_string buf "{}"
       | `Assoc items ->
           Buffer.add_string buf "{ ";
           write_sep_list buf ", "
             (write_compact_entry buf ~value ~key ~reset)
             items;
           Buffer.add_string buf " }"
-      | _ -> ()
+      | _ ->
+          ()
 
   and write_compact_entry buf ~value ~key ~reset (k, v) =
     write_key buf ~key ~reset k;
@@ -519,26 +652,32 @@ module Pretty = struct
     match (json : t) with
     | `String s ->
         let truncated =
-          if String.length s > 20 then String.sub s 0 17 ^ "..." else s
+          if String.length s > 20 then
+            String.sub s 0 17 ^ "..."
+          else
+            s
         in
         value buf;
         write_quoted_string buf truncated;
         reset buf
-    | `List [] -> Buffer.add_string buf "[]"
+    | `List [] ->
+        Buffer.add_string buf "[]"
     | `List items ->
         Buffer.add_string buf "[ ";
         meta buf;
         Printf.bprintf buf "<%d items>" (List.length items);
         reset buf;
         Buffer.add_string buf " ]"
-    | `Assoc [] -> Buffer.add_string buf "{}"
+    | `Assoc [] ->
+        Buffer.add_string buf "{}"
     | `Assoc items ->
         Buffer.add_string buf "{ ";
         write_sep_list buf ", "
           (write_summarized_entry buf ~key ~meta ~reset)
           items;
         Buffer.add_string buf " }"
-    | _ -> write_primitive buf ~value ~reset json
+    | _ ->
+        write_primitive buf ~value ~reset json
 
   and write_summarized_entry buf ~key ~meta ~reset (k, _) =
     write_key buf ~key ~reset k;
@@ -547,10 +686,12 @@ module Pretty = struct
     reset buf
 
   let rec write_json buf ~value ~key ~reset ~indent json =
-    if is_primitive json then write_primitive buf ~value ~reset json
+    if is_primitive json then
+      write_primitive buf ~value ~reset json
     else
       match (json : t) with
-      | `List [] -> Buffer.add_string buf "[]"
+      | `List [] ->
+          Buffer.add_string buf "[]"
       | `List _ when indent = 0 && should_compact json ->
           write_compact buf ~value ~key ~reset json
       | `List items ->
@@ -558,7 +699,8 @@ module Pretty = struct
           write_list_items buf ~value ~key ~reset ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf ']'
-      | `Assoc [] -> Buffer.add_string buf "{}"
+      | `Assoc [] ->
+          Buffer.add_string buf "{}"
       | `Assoc _ when indent = 0 && should_compact json ->
           write_compact buf ~value ~key ~reset json
       | `Assoc items ->
@@ -566,17 +708,25 @@ module Pretty = struct
           write_assoc_items buf ~value ~key ~reset ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf '}'
-      | _ -> ()
+      | _ ->
+          ()
 
   and write_list_items buf ~value ~key ~reset ~indent items =
     let write_item ~last x =
       write_indent buf indent;
       write_json buf ~value ~key ~reset ~indent x;
-      Buffer.add_string buf (if last then "\n" else ",\n")
+      Buffer.add_string buf
+        ( if last then
+            "\n"
+          else
+            ",\n"
+        )
     in
     match items with
-    | [] -> ()
-    | [ x ] -> write_item ~last:true x
+    | [] ->
+        ()
+    | [ x ] ->
+        write_item ~last:true x
     | x :: rest ->
         write_item ~last:false x;
         write_list_items buf ~value ~key ~reset ~indent rest
@@ -586,40 +736,53 @@ module Pretty = struct
       write_indent buf indent;
       write_key buf ~key ~reset k;
       write_json buf ~value ~key ~reset ~indent v;
-      Buffer.add_string buf (if last then "\n" else ",\n")
+      Buffer.add_string buf
+        ( if last then
+            "\n"
+          else
+            ",\n"
+        )
     in
     match items with
-    | [] -> ()
-    | [ kv ] -> write_item ~last:true kv
+    | [] ->
+        ()
+    | [ kv ] ->
+        write_item ~last:true kv
     | kv :: rest ->
         write_item ~last:false kv;
         write_assoc_items buf ~value ~key ~reset ~indent rest
 
   let rec write_compact_plain buf json =
-    if is_primitive json then write_primitive_plain buf json
+    if is_primitive json then
+      write_primitive_plain buf json
     else
       match (json : t) with
-      | `List [] -> Buffer.add_string buf "[]"
+      | `List [] ->
+          Buffer.add_string buf "[]"
       | `List items ->
           Buffer.add_string buf "[ ";
           write_sep_list buf ", " (write_compact_plain buf) items;
           Buffer.add_string buf " ]"
-      | `Assoc [] -> Buffer.add_string buf "{}"
+      | `Assoc [] ->
+          Buffer.add_string buf "{}"
       | `Assoc items ->
           Buffer.add_string buf "{ ";
           write_sep_list buf ", " (write_compact_entry_plain buf) items;
           Buffer.add_string buf " }"
-      | _ -> ()
+      | _ ->
+          ()
 
   and write_compact_entry_plain buf (k, v) =
     write_key_plain buf k;
     write_compact_plain buf v
 
   let rec write_json_plain buf ~indent json =
-    if is_primitive json then write_primitive_plain buf json
+    if is_primitive json then
+      write_primitive_plain buf json
     else
       match (json : t) with
-      | `List [] -> Buffer.add_string buf "[]"
+      | `List [] ->
+          Buffer.add_string buf "[]"
       | `List _ when indent = 0 && should_compact json ->
           write_compact_plain buf json
       | `List items ->
@@ -627,7 +790,8 @@ module Pretty = struct
           write_list_items_plain buf ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf ']'
-      | `Assoc [] -> Buffer.add_string buf "{}"
+      | `Assoc [] ->
+          Buffer.add_string buf "{}"
       | `Assoc _ when indent = 0 && should_compact json ->
           write_compact_plain buf json
       | `Assoc items ->
@@ -635,17 +799,25 @@ module Pretty = struct
           write_assoc_items_plain buf ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf '}'
-      | _ -> ()
+      | _ ->
+          ()
 
   and write_list_items_plain buf ~indent items =
     let write_item ~last x =
       write_indent buf indent;
       write_json_plain buf ~indent x;
-      Buffer.add_string buf (if last then "\n" else ",\n")
+      Buffer.add_string buf
+        ( if last then
+            "\n"
+          else
+            ",\n"
+        )
     in
     match items with
-    | [] -> ()
-    | [ x ] -> write_item ~last:true x
+    | [] ->
+        ()
+    | [ x ] ->
+        write_item ~last:true x
     | x :: rest ->
         write_item ~last:false x;
         write_list_items_plain buf ~indent rest
@@ -655,17 +827,25 @@ module Pretty = struct
       write_indent buf indent;
       write_key_plain buf k;
       write_json_plain buf ~indent v;
-      Buffer.add_string buf (if last then "\n" else ",\n")
+      Buffer.add_string buf
+        ( if last then
+            "\n"
+          else
+            ",\n"
+        )
     in
     match items with
-    | [] -> ()
-    | [ kv ] -> write_item ~last:true kv
+    | [] ->
+        ()
+    | [ kv ] ->
+        write_item ~last:true kv
     | kv :: rest ->
         write_item ~last:false kv;
         write_assoc_items_plain buf ~indent rest
 
   let to_buffer_colored buf ~colorize ~summarize json =
-    if (not colorize) && not summarize then write_json_plain buf ~indent:0 json
+    if (not colorize) && not summarize then
+      write_json_plain buf ~indent:0 json
     else begin
       let module Color = struct
         let green buf = if colorize then Buffer.add_string buf "\027[32m"

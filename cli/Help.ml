@@ -5,7 +5,8 @@ let format_function_doc ~colorize (f : Language.function_info) =
   let aliases_str =
     if List.length f.aliases > 0 then
       t.gray (" (aliases: " ^ String.concat ", " f.aliases ^ ")")
-    else ""
+    else
+      ""
   in
   let base =
     Console_style.indent 1 ^ t.bold f.name ^ aliases_str
@@ -14,7 +15,8 @@ let format_function_doc ~colorize (f : Language.function_info) =
   match f.example with
   | Some ex ->
       base ^ Console_style.enter 1 ^ Console_style.indent 2 ^ t.green ex
-  | None -> base
+  | None ->
+      base
 
 let format_group ~colorize (g : Language.category) =
   let t = Console_style.make ~colorize in

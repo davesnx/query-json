@@ -4,9 +4,12 @@ let remove_hash hash =
 let get_hash () =
   let location = Web.Window.location Web.window in
   match Web.Location.hash location with
-  | "" -> None
-  | hash -> Some (remove_hash hash)
-  | exception _ -> None
+  | "" ->
+      None
+  | hash ->
+      Some (remove_hash hash)
+  | exception _ ->
+      None
 
 let set_hash hash =
   let location = Web.Window.location Web.window in

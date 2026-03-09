@@ -1,8 +1,10 @@
 module Info = struct
   let version =
     match Build_info.V1.version () with
-    | None -> "n/a"
-    | Some v -> Build_info.V1.Version.to_string v
+    | None ->
+        "n/a"
+    | Some v ->
+        Build_info.V1.Version.to_string v
 
   let description =
     "A fast, friendly and portable JSON query language for the command line. \
@@ -99,21 +101,28 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
     | Some file_or_json, query -> (
         let initial_query = Option.value ~default:"." query in
         let json =
-          if Sys.file_exists file_or_json then Json.parse_file file_or_json
-          else Json.parse_string file_or_json
+          if Sys.file_exists file_or_json then
+            Json.parse_file file_or_json
+          else
+            Json.parse_string file_or_json
         in
         let path =
-          if Sys.file_exists file_or_json then file_or_json else "<inline>"
+          if Sys.file_exists file_or_json then
+            file_or_json
+          else
+            "<inline>"
         in
         match json with
-        | Ok json -> Repl.make ~json ~path ~query:initial_query
+        | Ok json ->
+            Repl.make ~json ~path ~query:initial_query
         | Error err ->
             print_error_message ~colorize err;
             Stdlib.exit 1
       )
     | None, Some file_or_json when Sys.file_exists file_or_json -> (
         match Json.parse_file file_or_json with
-        | Ok json -> Repl.make ~json ~path:file_or_json ~query:"."
+        | Ok json ->
+            Repl.make ~json ~path:file_or_json ~query:"."
         | Error err ->
             print_error_message ~colorize err;
             Stdlib.exit 1
@@ -122,8 +131,7 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         if Unix.isatty Unix.stdin then (
           repl_usage ~colorize ();
           Stdlib.exit 1
-        )
-        else
+        ) else
           let json_result =
             Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
           in
@@ -133,7 +141,8 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
             Stdlib.exit 1
           );
           match json_result with
-          | Ok json -> Repl.make ~json ~path:"<stdin>" ~query
+          | Ok json ->
+              Repl.make ~json ~path:"<stdin>" ~query
           | Error err ->
               print_error_message ~colorize err;
               Stdlib.exit 1
@@ -142,8 +151,7 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         if Unix.isatty Unix.stdin then (
           repl_usage ~colorize ();
           Stdlib.exit 1
-        )
-        else
+        ) else
           let json = Json.parse_channel (Unix.in_channel_of_descr Unix.stdin) in
           if not (reconnect_stdin_to_tty ()) then (
             print_error_message ~colorize
@@ -151,30 +159,38 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
             Stdlib.exit 1
           );
           match json with
-          | Ok json -> Repl.make ~json ~path:"<stdin>" ~query:"."
+          | Ok json ->
+              Repl.make ~json ~path:"<stdin>" ~query:"."
           | Error err ->
               print_error_message ~colorize err;
               Stdlib.exit 1
       )
   else
     match position_0 with
-    | None -> usage ()
+    | None ->
+        usage ()
     | Some query -> (
         let output =
           let* json =
-            if null_input then Ok `Null
+            if null_input then
+              Ok `Null
             else
               match position_1 with
-              | Some f when Sys.file_exists f -> Json.parse_file f
-              | Some s -> Json.parse_string s
-              | None -> Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
+              | Some f when Sys.file_exists f ->
+                  Json.parse_file f
+              | Some s ->
+                  Json.parse_string s
+              | None ->
+                  Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
           in
           Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
             query json
         in
         match output with
-        | Ok results -> print_endline results
-        | Error err -> print_error_message ~colorize err
+        | Ok results ->
+            print_endline results
+        | Error err ->
+            print_error_message ~colorize err
       )
 
 let () =

@@ -1,10 +1,12 @@
 let test query json_str expected_error_part =
   let fn () =
     match Json.parse_string json_str with
-    | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+    | Error err ->
+        Alcotest.fail ("JSON parse error: " ^ err)
     | Ok json -> (
         match Core.run ~colorize:false query json with
-        | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
+        | Ok r ->
+            Alcotest.failf "Expected an error, but got Ok: %s" r
         | Error err ->
             if not (Re.execp (Re.compile (Re.str expected_error_part)) err) then
               Alcotest.failf "Expected error containing '%s', but got:\n%s"
@@ -16,10 +18,12 @@ let test query json_str expected_error_part =
 let test_location name query json_str expected_parts =
   let fn () =
     match Json.parse_string json_str with
-    | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+    | Error err ->
+        Alcotest.fail ("JSON parse error: " ^ err)
     | Ok json -> (
         match Core.run ~colorize:false query json with
-        | Ok r -> Alcotest.failf "Expected an error, but got Ok: %s" r
+        | Ok r ->
+            Alcotest.failf "Expected an error, but got Ok: %s" r
         | Error err ->
             List.iter
               (fun part ->

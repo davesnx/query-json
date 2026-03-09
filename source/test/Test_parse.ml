@@ -2,8 +2,10 @@ let test input expected =
   let fn () =
     let result =
       match Core.parse ~debug:false ~colorize:false input with
-      | Ok r -> r
-      | Error err -> Alcotest.fail err
+      | Ok r ->
+          r
+      | Error err ->
+          Alcotest.fail err
     in
     Alcotest.check Alcotest.string "should be equal"
       (Ast.show_expression expected)

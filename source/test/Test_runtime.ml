@@ -2,11 +2,14 @@ let test query input expected =
   let fn () =
     let result =
       match Json.parse_string input with
-      | Error err -> Alcotest.fail ("JSON parse error: " ^ err)
+      | Error err ->
+          Alcotest.fail ("JSON parse error: " ^ err)
       | Ok json -> (
           match Core.run ~colorize:false query json with
-          | Ok r -> r
-          | Error err -> Alcotest.fail err
+          | Ok r ->
+              r
+          | Error err ->
+              Alcotest.fail err
         )
     in
     ();
@@ -378,6 +381,13 @@ let conditionals =
     test {|if 5 > 10 then 5 elif 5 < 10 then 3 else 2 end|} {|null|} {|3|};
     test {|if . == 0 then "zero" elif . == 1 then "one" else "many" end|} {|2|}
       {|"many"|};
+    (* truthy non-boolean values: anything except false and null is truthy *)
+    test {|if 42 then "yes" else "no" end|} {|null|} {|"yes"|};
+    test {|if "string" then "yes" else "no" end|} {|null|} {|"yes"|};
+    test {|if [] then "yes" else "no" end|} {|null|} {|"yes"|};
+    test {|if {} then "yes" else "no" end|} {|null|} {|"yes"|};
+    test {|if 0 then "yes" else "no" end|} {|null|} {|"yes"|};
+    test {|if null then "yes" else "no" end|} {|null|} {|"no"|};
   ]
 
 let try_catch =
@@ -534,6 +544,12 @@ let has =
       {|[ true, false ]|};
     test {|map(has("foo"))|} {|[{"foo": 42}, {}]|} {|[ true, false ]|};
     test {|map(has(2))|} {|[[0,1], ["a","b","c"]]|} {|[ false, true ]|};
+    (* negative indices should return false *)
+    test {|has(-1)|} {|[1, 2, 3]|} {|false|};
+    test {|has(-100)|} {|[1, 2, 3]|} {|false|};
+    (* boundary: index equal to length should return false *)
+    test {|has(3)|} {|[1, 2, 3]|} {|false|};
+    test {|has(0)|} {|[1, 2, 3]|} {|true|};
   ]
 
 let in_ =
@@ -779,6 +795,13 @@ let explode_implode =
     test {|implode|} {|[72,101,108,108,111]|} {|"Hello"|};
     test {|explode|} {|"foobar"|} {|[ 102, 111, 111, 98, 97, 114 ]|};
     test {|implode|} {|[65, 66, 67]|} {|"ABC"|};
+    (* Unicode: multi-byte characters should produce codepoints, not bytes *)
+    test {|explode|} {|"é"|} {|[ 233 ]|};
+    test {|implode|} {|[233]|} {|"é"|};
+    test {|explode | implode|} {|"é"|} {|"é"|};
+    (* CJK character U+4E16 *)
+    test {|explode|} "\"世\"" {|[ 19990 ]|};
+    test {|implode|} {|[19990]|} "\"世\"";
   ]
 
 let index =

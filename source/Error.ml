@@ -33,12 +33,16 @@ let format_location ~colorize loc =
     let lines = String.split_on_char '\n' input in
     let rec find lines offset =
       match lines with
-      | [] -> ("", max 0 (start_pos - offset))
-      | [ line ] -> (line, max 0 (start_pos - offset))
+      | [] ->
+          ("", max 0 (start_pos - offset))
+      | [ line ] ->
+          (line, max 0 (start_pos - offset))
       | line :: rest ->
           let next = offset + String.length line + 1 in
-          if start_pos < next then (line, max 0 (start_pos - offset))
-          else find rest next
+          if start_pos < next then
+            (line, max 0 (start_pos - offset))
+          else
+            find rest next
     in
     find lines 0
   in
@@ -56,15 +60,21 @@ let format_context ~colorize ctx =
         Json.to_string_pretty ~colorize ~summarize:true ~raw:false json
       in
       Printf.sprintf "  %s %s" (t.gray "in:") json_str
-  | Expected s -> Printf.sprintf "  %s %s" (t.gray "expected:") s
-  | Found s -> Printf.sprintf "  %s %s" (t.gray "found:") s
+  | Expected s ->
+      Printf.sprintf "  %s %s" (t.gray "expected:") s
+  | Found s ->
+      Printf.sprintf "  %s %s" (t.gray "found:") s
   | Available_keys keys ->
       Printf.sprintf "  %s %s" (t.gray "available keys:")
         (String.concat ", " keys)
-  | Example s -> Printf.sprintf "  %s %s" (t.gray "example:") s
-  | Usage s -> Printf.sprintf "  %s %s" (t.gray "usage:") s
-  | Description s -> Printf.sprintf "  %s" s
-  | Applicable_to s -> Printf.sprintf "  %s %s" (t.gray "applicable to:") s
+  | Example s ->
+      Printf.sprintf "  %s %s" (t.gray "example:") s
+  | Usage s ->
+      Printf.sprintf "  %s %s" (t.gray "usage:") s
+  | Description s ->
+      Printf.sprintf "  %s" s
+  | Applicable_to s ->
+      Printf.sprintf "  %s %s" (t.gray "applicable to:") s
 
 let format ~colorize err =
   let t = Console_style.make ~colorize in
@@ -80,8 +90,10 @@ let format ~colorize err =
 
   let () =
     match err.location with
-    | Some loc -> parts := !parts @ [ format_location ~colorize loc ]
-    | None -> ()
+    | Some loc ->
+        parts := !parts @ [ format_location ~colorize loc ]
+    | None ->
+        ()
   in
 
   let has_context = List.length err.contexts > 0 || err.suggestion <> None in
@@ -95,7 +107,8 @@ let format ~colorize err =
     match err.suggestion with
     | Some s ->
         parts := !parts @ [ Printf.sprintf "  %s %s" (t.cyan "hint:") s ]
-    | None -> ()
+    | None ->
+        ()
   in
 
   String.concat "\n" !parts
@@ -168,14 +181,18 @@ let missing_argument ~fn_name ?message ~usage ~description ?applicable_to
     ?example () =
   let msg =
     match message with
-    | Some m -> m
-    | None -> Printf.sprintf "`%s` requires an argument" fn_name
+    | Some m ->
+        m
+    | None ->
+        Printf.sprintf "`%s` requires an argument" fn_name
   in
   let contexts = [ Usage usage; Description description ] in
   let contexts =
     match applicable_to with
-    | Some types -> contexts @ [ Applicable_to types ]
-    | None -> contexts
+    | Some types ->
+        contexts @ [ Applicable_to types ]
+    | None ->
+        contexts
   in
   let contexts =
     match example with Some ex -> contexts @ [ Example ex ] | None -> contexts

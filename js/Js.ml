@@ -3,7 +3,8 @@ let run query input =
   | Ok json ->
       Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
         ~summarize:false query json
-  | Error err -> Error err
+  | Error err ->
+      Error err
 
 let arity_to_js (arity : Language.arity) =
   match arity with
@@ -53,21 +54,30 @@ let arity_to_js (arity : Language.arity) =
 let applicable_to_js (a : Language.applicable_to) =
   let str =
     match a with
-    | String -> "string"
-    | Array -> "array"
-    | Object -> "object"
-    | Number -> "number"
-    | Bool -> "boolean"
-    | Nil -> "null"
-    | Any -> "any"
+    | String ->
+        "string"
+    | Array ->
+        "array"
+    | Object ->
+        "object"
+    | Number ->
+        "number"
+    | Bool ->
+        "boolean"
+    | Nil ->
+        "null"
+    | Any ->
+        "any"
   in
   Js_of_ocaml.Js.string str
 
 let function_info_to_js (f : Language.function_info) =
   let example =
     match f.example with
-    | Some e -> Js_of_ocaml.Js.Optdef.return (Js_of_ocaml.Js.string e)
-    | None -> Js_of_ocaml.Js.Optdef.empty
+    | Some e ->
+        Js_of_ocaml.Js.Optdef.return (Js_of_ocaml.Js.string e)
+    | None ->
+        Js_of_ocaml.Js.Optdef.empty
   in
   Js_of_ocaml.Js.Unsafe.obj
     [|

@@ -11,7 +11,8 @@ let advance stream =
   let start, _ = Sedlexing.lexing_positions stream.buf in
   let token =
     match Lexer.tokenize stream.buf with
-    | Ok token -> token
+    | Ok token ->
+        token
     | Error message ->
         let err_start, stop = Sedlexing.lexing_positions stream.buf in
         let error =
@@ -29,7 +30,8 @@ let peek stream = stream.token
 
 let expect stream expected =
   let token = stream.token in
-  if token = expected then advance stream
+  if token = expected then
+    advance stream
   else
     let message =
       Printf.sprintf "expected %s, got %s" (Lexer.humanize expected)
@@ -56,18 +58,22 @@ let optional_question stream expr =
   | QUESTION_MARK ->
       advance stream;
       Optional expr
-  | _ -> expr
+  | _ ->
+      expr
 
 let unwrap_or_raise stream = function
-  | Ok ast -> ast
-  | Error error -> Error.raise error stream.start_pos stream.end_pos
+  | Ok ast ->
+      ast
+  | Error error ->
+      Error.raise error stream.start_pos stream.end_pos
 
 let expect_variable stream =
   match (peek stream : Lexer.token) with
   | VARIABLE name ->
       advance stream;
       name
-  | _ -> error stream "expected variable after 'as'"
+  | _ ->
+      error stream "expected variable after 'as'"
 
 let rec parse_binding_pattern stream : Ast.binding_pattern =
   match (peek stream : Lexer.token) with
@@ -84,11 +90,13 @@ let rec parse_binding_pattern stream : Ast.binding_pattern =
       let fields = parse_object_pattern stream in
       expect stream CLOSE_BRACE;
       Pat_object fields
-  | _ -> error stream "expected variable, '[', or '{' in binding pattern"
+  | _ ->
+      error stream "expected variable, '[', or '{' in binding pattern"
 
 and parse_array_pattern stream =
   match (peek stream : Lexer.token) with
-  | CLOSE_BRACKET -> []
+  | CLOSE_BRACKET ->
+      []
   | _ ->
       let first = parse_binding_pattern stream in
       let rec loop acc =
@@ -97,7 +105,8 @@ and parse_array_pattern stream =
             advance stream;
             let pat = parse_binding_pattern stream in
             loop (pat :: acc)
-        | _ -> List.rev acc
+        | _ ->
+            List.rev acc
       in
       loop [ first ]
 
@@ -114,9 +123,11 @@ and parse_object_pattern stream =
             advance stream;
             let var = expect_variable stream in
             (key, var)
-        | _ -> error stream "expected ':' after key in object pattern"
+        | _ ->
+            error stream "expected ':' after key in object pattern"
       )
-    | _ -> error stream "expected variable or key in object pattern"
+    | _ ->
+        error stream "expected variable or key in object pattern"
   in
   let first = parse_field () in
   let rec loop acc =
@@ -125,20 +136,24 @@ and parse_object_pattern stream =
         advance stream;
         let field = parse_field () in
         loop (field :: acc)
-    | _ -> List.rev acc
+    | _ ->
+        List.rev acc
   in
   loop [ first ]
 
 let concat_parts = function
-  | [] -> Literal (String "")
-  | [ single ] -> single
+  | [] ->
+      Literal (String "")
+  | [ single ] ->
+      single
   | first :: rest ->
       List.fold_left (fun acc part -> Operation (acc, Add, part)) first rest
 
 let rec parse_program stream =
   advance stream;
   match (peek stream : Lexer.token) with
-  | EOF -> Identity
+  | EOF ->
+      Identity
   | _ ->
       let expr = parse_sequence_expr stream in
       expect stream EOF;
@@ -148,9 +163,12 @@ and parse_sequence_expr stream = parse_fn_or_expr stream
 
 and parse_fn_or_expr stream =
   match (peek stream : Lexer.token) with
-  | FN -> parse_fn_def stream
-  | TRY -> parse_try stream
-  | _ -> parse_pipe_expr stream
+  | FN ->
+      parse_fn_def stream
+  | TRY ->
+      parse_try stream
+  | _ ->
+      parse_pipe_expr stream
 
 and parse_fn_def stream =
   advance stream;
@@ -165,7 +183,8 @@ and parse_fn_def stream =
               let params = parse_fn_params stream in
               expect stream CLOSE_PARENT;
               params
-          | _ -> []
+          | _ ->
+              []
         in
         (name, params)
     | FUNCTION name ->
@@ -173,21 +192,25 @@ and parse_fn_def stream =
         let params = parse_fn_params stream in
         expect stream CLOSE_PARENT;
         (name, params)
-    | _ -> error stream "expected function name after 'fn'"
+    | _ ->
+        error stream "expected function name after 'fn'"
   in
   expect stream COLON;
   let body = parse_sequence_expr stream in
   expect stream SEMICOLON;
   let rest =
     match (peek stream : Lexer.token) with
-    | EOF | CLOSE_PARENT | CLOSE_BRACKET | CLOSE_BRACE -> Identity
-    | _ -> parse_sequence_expr stream
+    | EOF | CLOSE_PARENT | CLOSE_BRACKET | CLOSE_BRACE ->
+        Identity
+    | _ ->
+        parse_sequence_expr stream
   in
   Pipe (Fn (name, params, body), rest)
 
 and parse_fn_params stream =
   match (peek stream : Lexer.token) with
-  | CLOSE_PARENT -> []
+  | CLOSE_PARENT ->
+      []
   | _ ->
       let param = parse_fn_param stream in
       let rec loop acc =
@@ -195,12 +218,14 @@ and parse_fn_params stream =
         | SEMICOLON -> (
             advance stream;
             match (peek stream : Lexer.token) with
-            | CLOSE_PARENT -> List.rev acc
+            | CLOSE_PARENT ->
+                List.rev acc
             | _ ->
                 let param = parse_fn_param stream in
                 loop (param :: acc)
           )
-        | _ -> List.rev acc
+        | _ ->
+            List.rev acc
       in
       loop [ param ]
 
@@ -212,7 +237,8 @@ and parse_fn_param stream =
   | VARIABLE name ->
       advance stream;
       "$" ^ name
-  | _ -> error stream "expected parameter name"
+  | _ ->
+      error stream "expected parameter name"
 
 and parse_try stream =
   advance stream;
@@ -226,9 +252,11 @@ and parse_try stream =
           advance stream;
           let cleanup = parse_item_expr stream in
           Try (body, Some handler, Some cleanup)
-      | _ -> Try (body, Some handler, None)
+      | _ ->
+          Try (body, Some handler, None)
     )
-  | _ -> Try (body, None, None)
+  | _ ->
+      Try (body, None, None)
 
 and parse_pipe_expr stream =
   let left = parse_comma_expr stream in
@@ -251,10 +279,14 @@ and parse_pipe_right stream left =
   | PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV_ASSIGN ->
       let op =
         match stream.token with
-        | PLUS_ASSIGN -> Add
-        | MINUS_ASSIGN -> Subtract
-        | MULT_ASSIGN -> Multiply
-        | _ -> Divide
+        | PLUS_ASSIGN ->
+            Add
+        | MINUS_ASSIGN ->
+            Subtract
+        | MULT_ASSIGN ->
+            Multiply
+        | _ ->
+            Divide
       in
       advance stream;
       let right = parse_item_expr stream in
@@ -273,7 +305,8 @@ and parse_pipe_right stream left =
       expect stream PIPE;
       let body = parse_fn_or_expr stream in
       As (left, pat, body)
-  | _ -> left
+  | _ ->
+      left
 
 and parse_comma_expr stream =
   let left = parse_or_expr stream in
@@ -285,7 +318,8 @@ and parse_comma_right stream left =
       advance stream;
       let right = parse_or_expr stream in
       parse_comma_right stream (Comma (left, right))
-  | _ -> left
+  | _ ->
+      left
 
 and parse_or_expr stream =
   let left = parse_and_expr stream in
@@ -297,7 +331,8 @@ and parse_or_right stream left =
       advance stream;
       let right = parse_and_expr stream in
       parse_or_right stream (Operation (left, Or, right))
-  | _ -> left
+  | _ ->
+      left
 
 and parse_and_expr stream =
   let left = parse_comparison_expr stream in
@@ -309,7 +344,8 @@ and parse_and_right stream left =
       advance stream;
       let right = parse_comparison_expr stream in
       parse_and_right stream (Operation (left, And, right))
-  | _ -> left
+  | _ ->
+      left
 
 and parse_comparison_expr stream =
   let left = parse_add_expr stream in
@@ -317,17 +353,24 @@ and parse_comparison_expr stream =
   | EQUAL | NOT_EQUAL | GREATER | LOWER | GREATER_EQUAL | LOWER_EQUAL ->
       let op =
         match stream.token with
-        | EQUAL -> Equal
-        | NOT_EQUAL -> Not_equal
-        | GREATER -> Greater_than
-        | LOWER -> Less_than
-        | GREATER_EQUAL -> Greater_than_or_equal
-        | _ -> Less_than_or_equal
+        | EQUAL ->
+            Equal
+        | NOT_EQUAL ->
+            Not_equal
+        | GREATER ->
+            Greater_than
+        | LOWER ->
+            Less_than
+        | GREATER_EQUAL ->
+            Greater_than_or_equal
+        | _ ->
+            Less_than_or_equal
       in
       advance stream;
       let right = parse_add_expr stream in
       Operation (left, op, right)
-  | _ -> left
+  | _ ->
+      left
 
 and parse_add_expr stream =
   let left = parse_mul_expr stream in
@@ -340,7 +383,8 @@ and parse_add_right stream left =
       advance stream;
       let right = parse_mul_expr stream in
       parse_add_right stream (Operation (left, op, right))
-  | _ -> left
+  | _ ->
+      left
 
 and parse_mul_expr stream =
   let left = parse_term stream in
@@ -355,7 +399,8 @@ and parse_mul_right stream left =
       advance stream;
       let right = parse_term stream in
       parse_mul_right stream (Operation (left, op, right))
-  | _ -> left
+  | _ ->
+      left
 
 and parse_item_expr stream = parse_or_expr stream
 
@@ -372,12 +417,14 @@ and parse_postfix stream expr =
           advance stream;
           let access = optional_question stream (Key key) in
           parse_postfix stream (Pipe (expr, access))
-      | _ -> error stream "expected property name after '.'"
+      | _ ->
+          error stream "expected property name after '.'"
     )
   | OPEN_BRACKET ->
       let result = parse_bracket_access stream expr in
       parse_postfix stream result
-  | _ -> expr
+  | _ ->
+      expr
 
 and parse_bracket_access stream expr =
   advance stream;
@@ -419,7 +466,8 @@ and parse_bracket_access stream expr =
       | CLOSE_BRACKET ->
           advance stream;
           Pipe (expr, optional_question stream (Index [ first_num ]))
-      | _ -> error stream "expected ':', ',' or ']' in bracket expression"
+      | _ ->
+          error stream "expected ':', ',' or ']' in bracket expression"
     )
 
 and parse_remaining_indices stream acc =
@@ -428,7 +476,8 @@ and parse_remaining_indices stream acc =
       advance stream;
       let number = parse_index_number stream in
       parse_remaining_indices stream (number :: acc)
-  | _ -> List.rev acc
+  | _ ->
+      List.rev acc
 
 and parse_index_number stream =
   match (peek stream : Lexer.token) with
@@ -447,7 +496,8 @@ and parse_index_number stream =
       | FLOAT number ->
           advance stream;
           int_of_float (-.number)
-      | _ -> error stream "expected number after '-'"
+      | _ ->
+          error stream "expected number after '-'"
     )
   | INT number ->
       advance stream;
@@ -461,7 +511,8 @@ and parse_index_number stream =
   | FLOAT number ->
       advance stream;
       int_of_float number
-  | _ -> error stream "expected index number"
+  | _ ->
+      error stream "expected index number"
 
 and parse_number_literal stream =
   match (peek stream : Lexer.token) with
@@ -480,7 +531,8 @@ and parse_number_literal stream =
       | FLOAT number ->
           advance stream;
           Float (-.number)
-      | _ -> error stream "expected number after '-'"
+      | _ ->
+          error stream "expected number after '-'"
     )
   | INT number ->
       advance stream;
@@ -494,11 +546,13 @@ and parse_number_literal stream =
   | FLOAT number ->
       advance stream;
       Float number
-  | _ -> error stream "expected number"
+  | _ ->
+      error stream "expected number"
 
 and parse_primary stream =
   match (peek stream : Lexer.token) with
-  | DOT -> parse_dot stream
+  | DOT ->
+      parse_dot stream
   | STRING text ->
       advance stream;
       Literal (String text)
@@ -513,19 +567,32 @@ and parse_primary stream =
   | VARIABLE var ->
       advance stream;
       Variable var
-  | INTERP initial_text -> parse_interpolated_string stream initial_text
-  | TEMPLATE initial_text -> parse_template_literal stream initial_text
-  | RANGE -> parse_range stream
-  | FLATTEN -> parse_flatten stream
-  | REDUCE -> parse_reduce stream
-  | FOREACH -> parse_foreach stream
-  | IF -> parse_if stream
-  | FUNCTION name -> parse_function_call stream name
-  | IDENTIFIER name -> parse_identifier stream name
-  | OPEN_BRACKET -> parse_array_construction stream
-  | OPEN_BRACE -> parse_object_construction stream
-  | OPEN_PARENT -> parse_paren stream
-  | _ -> error stream "unexpected token"
+  | INTERP initial_text ->
+      parse_interpolated_string stream initial_text
+  | TEMPLATE initial_text ->
+      parse_template_literal stream initial_text
+  | RANGE ->
+      parse_range stream
+  | FLATTEN ->
+      parse_flatten stream
+  | REDUCE ->
+      parse_reduce stream
+  | FOREACH ->
+      parse_foreach stream
+  | IF ->
+      parse_if stream
+  | FUNCTION name ->
+      parse_function_call stream name
+  | IDENTIFIER name ->
+      parse_identifier stream name
+  | OPEN_BRACKET ->
+      parse_array_construction stream
+  | OPEN_BRACE ->
+      parse_object_construction stream
+  | OPEN_PARENT ->
+      parse_paren stream
+  | _ ->
+      error stream "unexpected token"
 
 and parse_dot stream =
   advance stream;
@@ -533,8 +600,10 @@ and parse_dot stream =
   | STRING key | IDENTIFIER key ->
       advance stream;
       optional_question stream (Key key)
-  | OPEN_BRACKET -> parse_bracket_access stream Identity
-  | _ -> Identity
+  | OPEN_BRACKET ->
+      parse_bracket_access stream Identity
+  | _ ->
+      Identity
 
 and parse_range stream =
   advance stream;
@@ -556,9 +625,11 @@ and parse_range stream =
           let step = parse_sequence_expr stream in
           expect stream CLOSE_PARENT;
           Range (from, Some upto, Some step)
-      | _ -> error stream "expected ')' or ';' in range"
+      | _ ->
+          error stream "expected ')' or ';' in range"
     )
-  | _ -> error stream "expected ')' or ';' in range"
+  | _ ->
+      error stream "expected ')' or ';' in range"
 
 and parse_flatten stream =
   advance stream;
@@ -574,7 +645,8 @@ and parse_flatten stream =
           expect stream CLOSE_PARENT;
           Fn1 (With_expr (Flatten_n, expr))
     )
-  | _ -> Fn0 Flatten
+  | _ ->
+      Fn0 Flatten
 
 and parse_reduce stream =
   advance stream;
@@ -606,7 +678,8 @@ and parse_foreach stream =
   | CLOSE_PARENT ->
       advance stream;
       Foreach (expr, pat, init, update, Identity)
-  | _ -> error stream "expected ';' or ')' in foreach"
+  | _ ->
+      error stream "expected ';' or ')' in foreach"
 
 and parse_if stream =
   advance stream;
@@ -619,7 +692,8 @@ and parse_if stream =
   expect stream END;
   let rec fold_elif elifs else_branch =
     match elifs with
-    | [] -> else_branch
+    | [] ->
+        else_branch
     | (condition, branch) :: rest ->
         If_then_else (condition, branch, fold_elif rest else_branch)
   in
@@ -633,7 +707,8 @@ and parse_elifs stream =
       expect stream THEN;
       let branch = parse_sequence_expr stream in
       (condition, branch) :: parse_elifs stream
-  | _ -> []
+  | _ ->
+      []
 
 and parse_call_rest stream fn_start name arg1 =
   match (peek stream : Lexer.token) with
@@ -646,22 +721,26 @@ and parse_call_rest stream fn_start name arg1 =
           let arg3 = parse_sequence_expr stream in
           expect stream CLOSE_PARENT;
           match name with
-          | "fma" -> Fma (arg1, arg2, arg3)
-          | _ -> Apply (name, [ arg1; arg2; arg3 ])
+          | "fma" ->
+              Fma (arg1, arg2, arg3)
+          | _ ->
+              Apply (name, [ arg1; arg2; arg3 ])
         )
       | CLOSE_PARENT ->
           advance stream;
           unwrap_or_raise
             { stream with start_pos = fn_start }
             (Language.map_binary_fn name arg1 arg2)
-      | _ -> error stream "expected ';' or ')' in function call"
+      | _ ->
+          error stream "expected ';' or ')' in function call"
     )
   | CLOSE_PARENT ->
       advance stream;
       unwrap_or_raise
         { stream with start_pos = fn_start }
         (Language.map_unary_fn name arg1)
-  | _ -> error stream "expected ';' or ')' in function call"
+  | _ ->
+      error stream "expected ';' or ')' in function call"
 
 and parse_function_call stream name =
   let fn_start = stream.start_pos in
@@ -673,9 +752,12 @@ and parse_function_call stream name =
         let raise_error error = Error.raise error fn_start stream.end_pos in
         if Language.can_default_to_identity name then
           match Language.map_unary_fn name Identity with
-          | Ok ast -> ast
-          | Error error -> raise_error error
-        else raise_error (Language.error_for_missing_arg name)
+          | Ok ast ->
+              ast
+          | Error error ->
+              raise_error error
+        else
+          raise_error (Language.error_for_missing_arg name)
     | _ ->
         let arg1 = parse_sequence_expr stream in
         parse_call_rest stream fn_start name arg1
@@ -732,7 +814,8 @@ and parse_key_value_list stream =
         advance stream;
         let pair = parse_key_value stream in
         loop (pair :: acc)
-    | _ -> List.rev acc
+    | _ ->
+        List.rev acc
   in
   loop [ pair ]
 
@@ -752,9 +835,11 @@ and parse_key_value stream =
           advance stream;
           let value = parse_term stream in
           (Literal (String key), Some value)
-      | _ -> (Literal (String key), None)
+      | _ ->
+          (Literal (String key), None)
     )
-  | _ -> error stream "expected key in object construction"
+  | _ ->
+      error stream "expected key in object construction"
 
 and parse_paren stream =
   advance stream;
@@ -770,7 +855,8 @@ and parse_paren stream =
   | CLOSE_PARENT ->
       advance stream;
       optional_question stream expr
-  | _ -> error stream "expected ')' or 'as'"
+  | _ ->
+      error stream "expected ')' or 'as'"
 
 and parse_interpolated_string stream initial_text =
   advance stream;
@@ -782,16 +868,30 @@ and parse_interpolated_string stream initial_text =
     match Lexer.tokenize_string stream.buf with
     | Ok (End text) ->
         advance stream;
-        let acc = if text = "" then acc else Literal (String text) :: acc in
+        let acc =
+          if text = "" then
+            acc
+          else
+            Literal (String text) :: acc
+        in
         concat_parts (List.rev acc)
     | Ok (Interp text) ->
         advance stream;
-        let acc = if text = "" then acc else Literal (String text) :: acc in
+        let acc =
+          if text = "" then
+            acc
+          else
+            Literal (String text) :: acc
+        in
         loop acc
-    | Error message -> error stream message
+    | Error message ->
+        error stream message
   in
   let acc =
-    if initial_text = "" then [] else [ Literal (String initial_text) ]
+    if initial_text = "" then
+      []
+    else
+      [ Literal (String initial_text) ]
   in
   loop acc
 
@@ -805,16 +905,30 @@ and parse_template_literal stream initial_text =
     match Lexer.tokenize_template stream.buf with
     | Ok (End text) ->
         advance stream;
-        let acc = if text = "" then acc else Literal (String text) :: acc in
+        let acc =
+          if text = "" then
+            acc
+          else
+            Literal (String text) :: acc
+        in
         concat_parts (List.rev acc)
     | Ok (Interp text) ->
         advance stream;
-        let acc = if text = "" then acc else Literal (String text) :: acc in
+        let acc =
+          if text = "" then
+            acc
+          else
+            Literal (String text) :: acc
+        in
         loop acc
-    | Error message -> error stream message
+    | Error message ->
+        error stream message
   in
   let acc =
-    if initial_text = "" then [] else [ Literal (String initial_text) ]
+    if initial_text = "" then
+      []
+    else
+      [ Literal (String initial_text) ]
   in
   loop acc
 
