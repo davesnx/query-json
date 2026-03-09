@@ -314,7 +314,20 @@ let rec substitute_params (params : string list) (args : expression list)
   | Fma (e1, e2, e3) ->
       Fma (sub e1, sub e2, sub e3)
   | Fn (name, params', body) ->
-      Fn (name, params', sub body)
+      (* Filter out parameters that are shadowed by the inner Fn's params *)
+      let outer_params, outer_args =
+        List.fold_left2
+          (fun (ps, as_) p a ->
+            if List.mem p params' then
+              (ps, as_)
+            else
+              (p :: ps, a :: as_)
+          )
+          ([], []) params args
+      in
+      let outer_params = List.rev outer_params in
+      let outer_args = List.rev outer_args in
+      Fn (name, params', substitute_params outer_params outer_args body)
   | Apply (name, call_args) ->
       Apply (name, List.map sub call_args)
 

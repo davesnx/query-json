@@ -1126,6 +1126,11 @@ let defining_functions =
     test {|fn double: . * 2; double|} {|5|} {|10|};
     test {|fn double: . * 2;|} {|5|} {|5|};
     test {|fn double: . * 2; fn triple: . * 3; double | triple|} {|2|} {|12|};
+    (* Nested fn with same param name: inner param should shadow outer *)
+    test {|fn outer(f): fn inner(f): f; inner(. * 3); outer(. + 1)|} {|5|}
+      {|15|};
+    test {|fn outer(f): fn inner(f): f * 2; inner(. + 10); outer(. + 1)|} {|5|}
+      {|30|};
   ]
 
 let skip =
