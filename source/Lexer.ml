@@ -249,7 +249,9 @@ let rec tokenize buf =
   | "as" -> Ok AS
   | "fn" -> Ok FN
   | "def" -> Error "'def' is deprecated, use 'fn' instead"
-  | "try" -> ( match%sedlex buf with '(' -> Ok (FUNCTION "try") | _ -> Ok TRY)
+  | "try" ->
+      let token = match%sedlex buf with '(' -> FUNCTION "try" | _ -> TRY in
+      Ok token
   | "catch" -> Ok CATCH
   | "finally" -> Ok FINALLY
   | "." -> Ok DOT
@@ -259,22 +261,26 @@ let rec tokenize buf =
       | identifier ->
           let var_name = lexeme buf in
           Ok (VARIABLE var_name)
-      | _ -> Error "Expected variable name after $")
+      | _ -> Error "Expected variable name after $"
+    )
   | '"' -> (
       match tokenize_string buf with
       | Ok (End s) -> Ok (STRING s)
       | Ok (Interp s) -> Ok (INTERP s)
-      | Error e -> Error e)
+      | Error e -> Error e
+    )
   | '`' -> (
       match tokenize_template buf with
       | Ok (End s) -> Ok (STRING s)
       | Ok (Interp s) -> Ok (TEMPLATE s)
-      | Error e -> Error e)
+      | Error e -> Error e
+    )
   | identifier -> (
       let ident = lexeme buf in
       match%sedlex buf with
       | '(' -> Ok (FUNCTION ident)
-      | _ -> Ok (IDENTIFIER ident))
+      | _ -> Ok (IDENTIFIER ident)
+    )
   | float_number ->
       let num = lexeme buf in
       Ok (FLOAT (Float.of_string num))
@@ -286,7 +292,9 @@ let rec tokenize buf =
       | None -> (
           match Int64.of_string_opt num with
           | Some i -> Ok (INT64 i)
-          | None -> Ok (BIG_INT (Z.of_string num))))
+          | None -> Ok (BIG_INT (Z.of_string num))
+        )
+    )
   | space -> tokenize buf
   | comment -> tokenize buf (* Skip comments *)
   | any -> Error ("Unexpected character '" ^ lexeme buf ^ "'")

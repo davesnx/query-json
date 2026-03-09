@@ -92,7 +92,8 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
             print_error_message ~colorize ("Unknown help category: " ^ category);
             print_endline "";
             print_endline (Help.format_categories_list ~colorize);
-            Stdlib.exit 1)
+            Stdlib.exit 1
+      )
   else if repl then
     match (position_1, position_0) with
     | Some file_or_json, query -> (
@@ -108,17 +109,20 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         | Ok json -> Repl.make ~json ~path ~query:initial_query
         | Error err ->
             print_error_message ~colorize err;
-            Stdlib.exit 1)
+            Stdlib.exit 1
+      )
     | None, Some file_or_json when Sys.file_exists file_or_json -> (
         match Json.parse_file file_or_json with
         | Ok json -> Repl.make ~json ~path:file_or_json ~query:"."
         | Error err ->
             print_error_message ~colorize err;
-            Stdlib.exit 1)
+            Stdlib.exit 1
+      )
     | None, Some query -> (
         if Unix.isatty Unix.stdin then (
           repl_usage ~colorize ();
-          Stdlib.exit 1)
+          Stdlib.exit 1
+        )
         else
           let json_result =
             Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
@@ -126,27 +130,32 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
           if not (reconnect_stdin_to_tty ()) then (
             print_error_message ~colorize
               "REPL requires an interactive terminal. No TTY available.";
-            Stdlib.exit 1);
+            Stdlib.exit 1
+          );
           match json_result with
           | Ok json -> Repl.make ~json ~path:"<stdin>" ~query
           | Error err ->
               print_error_message ~colorize err;
-              Stdlib.exit 1)
+              Stdlib.exit 1
+      )
     | None, None -> (
         if Unix.isatty Unix.stdin then (
           repl_usage ~colorize ();
-          Stdlib.exit 1)
+          Stdlib.exit 1
+        )
         else
           let json = Json.parse_channel (Unix.in_channel_of_descr Unix.stdin) in
           if not (reconnect_stdin_to_tty ()) then (
             print_error_message ~colorize
               "REPL requires an interactive terminal. No TTY available.";
-            Stdlib.exit 1);
+            Stdlib.exit 1
+          );
           match json with
           | Ok json -> Repl.make ~json ~path:"<stdin>" ~query:"."
           | Error err ->
               print_error_message ~colorize err;
-              Stdlib.exit 1)
+              Stdlib.exit 1
+      )
   else
     match position_0 with
     | None -> usage ()
@@ -165,7 +174,8 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         in
         match output with
         | Ok results -> print_endline results
-        | Error err -> print_error_message ~colorize err)
+        | Error err -> print_error_message ~colorize err
+      )
 
 let () =
   (* On Windows, stdout defaults to text mode which converts \n to \r\n.

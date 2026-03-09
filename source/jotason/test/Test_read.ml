@@ -15,8 +15,7 @@ let from_crlf_string () =
 
 let from_string_fail_simple () =
   Alcotest.check_raises "Location of parsing failure is correct"
-    (Json.Json_error "Line 1, bytes 0-5:\nInvalid token 'hello'")
-    (parse "hello")
+    (Json.Json_error "Line 1, bytes 0-5:\nInvalid token 'hello'") (parse "hello")
 
 let from_string_fail_lines () =
   Alcotest.check_raises "Location of parsing failure has right line"
@@ -28,7 +27,8 @@ let from_string_fail_lines () =
 let from_string_fail_bytes () =
   Alcotest.check_raises "Location has right line and bytes"
     (Json.Json_error
-       "Line 2, bytes 6-9:\nExpected string or identifier but found '3\n}'")
+       "Line 2, bytes 6-9:\nExpected string or identifier but found '3\n}'"
+    )
     (parse {|{
       3
 }|})
@@ -270,7 +270,8 @@ let fail_trailing_comma_array () =
 let fail_trailing_comma_object () =
   Alcotest.check_raises "trailing comma in object"
     (Json.Json_error
-       "Line 1, bytes 7-8:\nExpected string or identifier but found '}'")
+       "Line 1, bytes 7-8:\nExpected string or identifier but found '}'"
+    )
     (parse {|{"a":1,}|})
 
 let fail_leading_zeros () =
@@ -289,8 +290,7 @@ let fail_single_quote_string () =
 
 let fail_unquoted_string () =
   Alcotest.check_raises "unquoted string value"
-    (Json.Json_error "Line 1, bytes 0-5:\nInvalid token 'hello'")
-    (parse "hello")
+    (Json.Json_error "Line 1, bytes 0-5:\nInvalid token 'hello'") (parse "hello")
 
 let fail_missing_colon () =
   Alcotest.check_raises "missing colon"
@@ -305,7 +305,8 @@ let fail_missing_comma_array () =
 let fail_missing_comma_object () =
   Alcotest.check_raises "missing comma in object"
     (Json.Json_error
-       "Line 1, bytes 7-13:\nExpected ',' or '}' but found '\"b\":2}'")
+       "Line 1, bytes 7-13:\nExpected ',' or '}' but found '\"b\":2}'"
+    )
     (parse {|{"a":1 "b":2}|})
 
 (* === Test list === *)
@@ -321,16 +322,20 @@ let single_json =
     ("from_string_fail_unterminated", `Quick, from_string_fail_unterminated);
     ( "from_string_fail_nested_unterminated",
       `Quick,
-      from_string_fail_nested_unterminated );
+      from_string_fail_nested_unterminated
+    );
     ( "from_string_fail_unterminated_structure",
       `Quick,
-      from_string_fail_unterminated_structure );
+      from_string_fail_unterminated_structure
+    );
     ( "from_string_fail_unstarted_structure",
       `Quick,
-      from_string_fail_unstarted_structure );
+      from_string_fail_unstarted_structure
+    );
     ( "from_string_fail_unstarted_object",
       `Quick,
-      from_string_fail_unstarted_object );
+      from_string_fail_unstarted_object
+    );
     ("from_string_fail_escaped_char", `Quick, from_string_fail_escaped_char);
     ("from_file", `Quick, from_file);
     ("unquoted_from_string", `Quick, unquoted_from_string);

@@ -56,7 +56,8 @@ let rec compare_values (a : t) (b : t) : int =
       (`Int _ | `Int64 _ | `Float _ | `Big_int _) ) -> (
       match (to_float a, to_float b) with
       | Some na, Some nb -> Float.compare na nb
-      | _ -> 0)
+      | _ -> 0
+    )
   | (`Int _ | `Int64 _ | `Float _ | `Big_int _), _ -> -1
   | _, (`Int _ | `Int64 _ | `Float _ | `Big_int _) -> 1
   (* Strings - lexicographic *)

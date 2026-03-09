@@ -54,7 +54,8 @@ let rec equal (a : t) (b : t) : bool =
           xs ys
       with
       | result -> result
-      | exception Invalid_argument _ -> false)
+      | exception Invalid_argument _ -> false
+    )
   | _ -> false
 
 let rec compare_list_with cmp xs ys =
@@ -124,7 +125,8 @@ let rec contains (needle : t) (haystack : t) : bool =
         (fun (k, v) ->
           match List.assoc_opt k hay_obj with
           | Some hv -> contains v hv
-          | None -> false)
+          | None -> false
+        )
         needle_obj
   | _ -> equal needle haystack
 
@@ -141,9 +143,7 @@ let member name = function
   | js -> typerr ("Can't get member '" ^ name ^ "' of non-object type ") js
 
 let keys (json : t) = to_assoc (json : t) |> List.map (fun (key, _) -> key)
-
-let values (json : t) =
-  to_assoc (json : t) |> List.map (fun (_, value) -> value)
+let values (json : t) = to_assoc (json : t) |> List.map (fun (_, value) -> value)
 
 exception Undefined of string * t
 

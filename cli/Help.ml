@@ -37,8 +37,10 @@ let format_categories_list ~colorize =
   ^ Console_style.enter 2
   ^ (Language.all_categories
     |> List.map (fun (g : Language.category) ->
-        Console_style.indent 1 ^ t.bold g.name ^ t.gray (" - " ^ g.description))
-    |> String.concat (Console_style.enter 1))
+        Console_style.indent 1 ^ t.bold g.name ^ t.gray (" - " ^ g.description)
+    )
+    |> String.concat (Console_style.enter 1)
+    )
   ^ Console_style.enter 2
   ^ t.gray "Usage: query-json --functions <category>"
   ^ Console_style.enter 1

@@ -78,9 +78,11 @@ let format ~colorize err =
   in
   parts := [ header ];
 
-  (match err.location with
-  | Some loc -> parts := !parts @ [ format_location ~colorize loc ]
-  | None -> ());
+  let () =
+    match err.location with
+    | Some loc -> parts := !parts @ [ format_location ~colorize loc ]
+    | None -> ()
+  in
 
   let has_context = List.length err.contexts > 0 || err.suggestion <> None in
   if has_context then parts := !parts @ [ "" ];
@@ -89,9 +91,12 @@ let format ~colorize err =
     (fun ctx -> parts := !parts @ [ format_context ~colorize ctx ])
     err.contexts;
 
-  (match err.suggestion with
-  | Some s -> parts := !parts @ [ Printf.sprintf "  %s %s" (t.cyan "hint:") s ]
-  | None -> ());
+  let () =
+    match err.suggestion with
+    | Some s ->
+        parts := !parts @ [ Printf.sprintf "  %s %s" (t.cyan "hint:") s ]
+    | None -> ()
+  in
 
   String.concat "\n" !parts
 

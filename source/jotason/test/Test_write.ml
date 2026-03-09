@@ -9,13 +9,16 @@ let to_string_tests =
   [
     ( "to_string with default settings",
       `Quick,
-      fun () -> test Fixtures.json_string );
+      fun () -> test Fixtures.json_string
+    );
     ( "to_string with newline",
       `Quick,
-      fun () -> test ~suf:"\n" Fixtures.json_string_newline );
+      fun () -> test ~suf:"\n" Fixtures.json_string_newline
+    );
     ( "to_string without newline",
       `Quick,
-      fun () -> test ~suf:"" Fixtures.json_string );
+      fun () -> test ~suf:"" Fixtures.json_string
+    );
   ]
 
 let to_file_tests =
@@ -35,13 +38,16 @@ let to_file_tests =
   [
     ( "to_file with default settings",
       `Quick,
-      fun () -> test Fixtures.json_string_newline );
+      fun () -> test Fixtures.json_string_newline
+    );
     ( "to_file with newline",
       `Quick,
-      fun () -> test ~suf:"\n" Fixtures.json_string_newline );
+      fun () -> test ~suf:"\n" Fixtures.json_string_newline
+    );
     ( "to_file without newline",
       `Quick,
-      fun () -> test ~suf:"" Fixtures.json_string );
+      fun () -> test ~suf:"" Fixtures.json_string
+    );
   ]
 
 let single_json = List.flatten [ to_file_tests; to_string_tests ]

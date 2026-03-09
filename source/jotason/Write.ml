@@ -57,7 +57,8 @@ let write_int ob x =
   if x > 0 then write_digits ob x
   else if x < 0 then (
     Buffer.add_char ob '-';
-    write_digits ob x)
+    write_digits ob x
+  )
   else Buffer.add_char ob '0'
 
 let write_int64 ob x = Buffer.add_string ob (Int64.to_string x)
@@ -87,8 +88,9 @@ let write_std_float ob x =
   | FP_nan -> json_error "NaN value not allowed in standard JSON"
   | FP_infinite ->
       json_error
-        (if x > 0. then "Infinity value not allowed in standard JSON"
-         else "-Infinity value not allowed in standard JSON")
+        ( if x > 0. then "Infinity value not allowed in standard JSON"
+          else "-Infinity value not allowed in standard JSON"
+        )
   | _ ->
       let s1 = Printf.sprintf "%.16g" x in
       let s = if Float.of_string s1 = x then s1 else Printf.sprintf "%.17g" x in
@@ -242,7 +244,8 @@ let seq_to_channel ?buf ?(len = 2096) ?(suf = "\n") ?std oc seq =
     (fun json ->
       to_buffer ~suf ?std ob json;
       Buffer.output_buffer oc ob;
-      Buffer.clear ob)
+      Buffer.clear ob
+    )
     seq
 
 let seq_to_file ?len ?(suf = "\n") ?std file st =
@@ -299,8 +302,10 @@ let rec pp fmt = function
              Format.fprintf fmt ",@ ";
              pp fmt value;
              Format.fprintf fmt "@])";
-             true)
-           false xs);
+             true
+           )
+           false xs
+        );
       Format.fprintf fmt "@,]@]";
       Format.fprintf fmt "@])"
   | `List xs ->
@@ -311,8 +316,10 @@ let rec pp fmt = function
            (fun sep x ->
              if sep then Format.fprintf fmt ";@ ";
              pp fmt x;
-             true)
-           false xs);
+             true
+           )
+           false xs
+        );
       Format.fprintf fmt "@,]@]";
       Format.fprintf fmt "@])"
 
@@ -340,15 +347,18 @@ let rec equal a b =
       match
         List.for_all2
           (fun (key, value) (key', value') ->
-            match key = key' with false -> false | true -> equal value value')
+            match key = key' with false -> false | true -> equal value value'
+          )
           xs ys
       with
       | result -> result
-      | exception Invalid_argument _ -> false)
+      | exception Invalid_argument _ -> false
+    )
   | `List xs, `List ys -> (
       match List.for_all2 equal xs ys with
       | result -> result
-      | exception Invalid_argument _ -> false)
+      | exception Invalid_argument _ -> false
+    )
   | _ -> false
 
 module Pretty = struct
@@ -371,10 +381,11 @@ module Pretty = struct
       | `Big_int z -> add (String.length (Z.to_string z))
       | `Float f ->
           add
-            (if not (Float.is_finite f) then 4
-             else if Float.equal (Float.round f) f then
-               String.length (Int.to_string (Float.to_int f))
-             else String.length (Printf.sprintf "%g" f))
+            ( if not (Float.is_finite f) then 4
+              else if Float.equal (Float.round f) f then
+                String.length (Int.to_string (Float.to_int f))
+              else String.length (Printf.sprintf "%g" f)
+            )
       | `String s -> add (String.length s + 2)
       | `List [] -> add 2
       | `List items ->
@@ -382,7 +393,8 @@ module Pretty = struct
           List.iter
             (fun x ->
               check x;
-              add 2)
+              add 2
+            )
             items
       | `Assoc [] -> add 2
       | `Assoc items ->
@@ -391,7 +403,8 @@ module Pretty = struct
             (fun (k, v) ->
               add (String.length k + 4);
               check v;
-              add 2)
+              add 2
+            )
             items
     in
     match check json with () -> true | exception Not_compact -> false

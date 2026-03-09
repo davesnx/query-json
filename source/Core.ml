@@ -29,7 +29,8 @@ let parse ~debug ~colorize input =
           ~end_pos:end_.pos_cnum
           ~message:
             (Printf.sprintf "problem parsing at %s"
-               (position_to_string start end_))
+               (position_to_string start end_)
+            )
       in
       Error (Error.format ~colorize err)
 
@@ -42,7 +43,9 @@ let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
           Ok
             (results
             |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
-            |> String.concat "\n")
+            |> String.concat "\n"
+            )
       | Error err -> Error err
-      | Halt code -> exit code)
+      | Halt code -> exit code
+    )
   | Error err -> Error err

@@ -29,19 +29,23 @@ let tests =
       (Pipe
          ( Identity,
            Fn1 (With_expr (Map, Operation (Key "price", Add, Literal (Int 1))))
-         ));
+         )
+      );
     test ".WAT" (Key "WAT");
     test "head" (Fn0 First);
     test ".WAT?" (Optional (Key "WAT"));
     test "1, 2" (Comma (Literal (Int 1), Literal (Int 2)));
     test "empty" (Fn0 Empty);
     test "(1, 2) + 3"
-      (Operation (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3)));
+      (Operation (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3))
+      );
     test "1 + 2 * 3"
       (Operation
          ( Literal (Int 1),
            Add,
-           Operation (Literal (Int 2), Multiply, Literal (Int 3)) ));
+           Operation (Literal (Int 2), Multiply, Literal (Int 3))
+         )
+      );
     test "[1, 2]" (List (Some (Comma (Literal (Int 1), Literal (Int 2)))));
     test "select(true)" (Fn1 (With_expr (Select, Literal (Bool true))));
     test "[1][0]" (Pipe (List (Some (Literal (Int 1))), Index [ 0 ]));
@@ -59,7 +63,8 @@ let tests =
     (* Optional function call syntax: fn?(args) is equivalent to fn(args)? *)
     test "first?(range(3))"
       (Optional
-         (Fn1 (With_expr (First_expr, Range (Literal (Int 3), None, None)))));
+         (Fn1 (With_expr (First_expr, Range (Literal (Int 3), None, None))))
+      );
     test "last?(empty)" (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty))));
     (* Optional access on parenthesized expressions *)
     test "(first)?" (Optional (Fn0 First));
@@ -83,10 +88,13 @@ let tests =
              Some
                (List
                   (Some
-                     (Comma (Literal (String "hello world"), Literal (Int 42)))))
+                     (Comma (Literal (String "hello world"), Literal (Int 42)))
+                  )
+               )
            );
            (Literal (String "user"), None);
-         ]);
+         ]
+      );
     test "range(1;2)" (Range (Literal (Int 1), Some (Literal (Int 2)), None));
     test "range(1;2;3)"
       (Range (Literal (Int 1), Some (Literal (Int 2)), Some (Literal (Int 3))));
@@ -94,7 +102,9 @@ let tests =
       (If_then_else
          ( Literal (Bool true),
            Literal (String "Hello"),
-           Literal (String "Welcome") ));
+           Literal (String "Welcome")
+         )
+      );
     test "if true then \"Hello\" elif false then \"Welcome\" else \"Real\" end"
       (If_then_else
          ( Literal (Bool true),
@@ -102,7 +112,10 @@ let tests =
            If_then_else
              ( Literal (Bool false),
                Literal (String "Welcome"),
-               Literal (String "Real") ) ));
+               Literal (String "Real")
+             )
+         )
+      );
     test "map(add)" (Fn1 (With_expr (Map, Fn0 Add)));
     test "[.[] | { name: .name, city: .address.city}]"
       (List
@@ -113,8 +126,13 @@ let tests =
                    [
                      (Literal (String "name"), Some (Key "name"));
                      ( Literal (String "city"),
-                       Some (Pipe (Key "address", Key "city")) );
-                   ] ))));
+                       Some (Pipe (Key "address", Key "city"))
+                     );
+                   ]
+               )
+            )
+         )
+      );
     test "99999999999999999999999999999"
       (Literal (Big_int (Z.of_string "99999999999999999999999999999")));
     test "9223372036854775808"
@@ -125,13 +143,19 @@ let tests =
       (Operation
          ( Literal (Big_int (Z.of_string "99999999999999999999999999999")),
            Add,
-           Literal (Int 1) ));
+           Literal (Int 1)
+         )
+      );
     test "fn double: . * 2;"
       (Pipe
          ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
-           Identity ));
+           Identity
+         )
+      );
     test "fn double: . * 2; double"
       (Pipe
          ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
-           Apply ("double", []) ));
+           Apply ("double", [])
+         )
+      );
   ]

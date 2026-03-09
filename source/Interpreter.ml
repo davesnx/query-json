@@ -90,7 +90,8 @@ end = struct
                 let key_len = String.length key in
                 String.length k > key_len
                 && String.sub k 0 key_len = key
-                && String.get k key_len = '-')
+                && String.get k key_len = '-'
+              )
               keys
           in
           match hyphenated_match with
@@ -99,7 +100,8 @@ end = struct
                 "Did you mean \"%s\"? Use .[\"...\"] or .\"...\" for keys with \
                  hyphens"
                 hk
-          | None -> "Use ." ^ key ^ "? for optional access")
+          | None -> "Use ." ^ key ^ "? for optional access"
+        )
       | _ -> "Use ." ^ key ^ "? for optional access"
     in
     fail ~kind:Key_not_found ~value ~suggestion
@@ -115,7 +117,8 @@ end = struct
     fail ~kind:Index_out_of_bounds ~value
       ~suggestion:("Use .[" ^ Int.to_string index ^ "]? for optional access")
       ("Index " ^ Int.to_string index ^ " out of bounds (array has "
-     ^ Int.to_string length ^ " elements)")
+     ^ Int.to_string length ^ " elements)"
+      )
 
   let empty_array op =
     fail ~kind:Empty_array
@@ -193,23 +196,28 @@ let catch_errors fn ~on_user_error ~on_runtime_error =
           | User_error value ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  on_user_error value)
+                  on_user_error value
+                )
           | Runtime_error.Fail err ->
               Some
                 (fun (_ : (a, _) Effect.Deep.continuation) ->
-                  on_runtime_error err)
-          | _ -> None);
+                  on_runtime_error err
+                )
+          | _ -> None
+        );
     }
   in
   Effect.Deep.try_with fn () handler
 
 let run_and_collect_results fn =
   let acc = ref [] in
-  (match fn () with
-  | () -> ()
-  | effect Yield v, k ->
-      acc := v :: !acc;
-      Effect.Deep.continue k ());
+  let () =
+    match fn () with
+    | () -> ()
+    | effect Yield v, k ->
+        acc := v :: !acc;
+        Effect.Deep.continue k ()
+  in
   List.rev !acc
 
 let rec substitute_params (params : string list) (args : expression list)
@@ -227,13 +235,15 @@ let rec substitute_params (params : string list) (args : expression list)
   match expr with
   (* nullary calls to a parameter name gets substituted with the argument expression *)
   | Apply (name, []) -> (
-      match find_param name with Some arg_expr -> arg_expr | None -> expr)
+      match find_param name with Some arg_expr -> arg_expr | None -> expr
+    )
   | Fn0 _ -> expr
   | Fn1 fn1 -> (
       match fn1 with
       | With_pattern _ -> expr
       | With_separator _ -> expr
-      | With_expr (f, e) -> Fn1 (With_expr (f, sub e)))
+      | With_expr (f, e) -> Fn1 (With_expr (f, sub e))
+    )
   | Fn2 (f, e1, e2) -> Fn2 (f, sub e1, sub e2)
   | Identity | Literal _ | Variable _ | Key _ | Env_var _ | Index _ | Slice _ ->
       expr
@@ -272,7 +282,8 @@ let fail_invalid_type ~ctx op json =
   Runtime_error.type_mismatch ~value:json
     ("Cannot apply "
     ^ Console_style.single_quotes (t.bold op)
-    ^ " to " ^ type_desc)
+    ^ " to " ^ type_desc
+    )
 
 module Operators = struct
   let not (json : Json.t) =
@@ -311,7 +322,8 @@ module Operators = struct
             (fun (k, v) ->
               match List.assoc_opt k r_entries with
               | Some v' -> (k, v')
-              | None -> (k, v))
+              | None -> (k, v)
+            )
             l_entries
         in
         (* then add new keys from r that weren't in l *)
@@ -399,7 +411,8 @@ module Operators = struct
             (fun (k, v) ->
               match List.assoc_opt k r_entries with
               | Some r_val -> (k, deep_merge v r_val)
-              | None -> (k, v))
+              | None -> (k, v)
+            )
             l_entries
         in
         (* add new keys from r that weren't in l *)
@@ -475,7 +488,8 @@ module Operators = struct
     | `String s, `String delim ->
         `List
           (Re.split_delim (Re.compile (Re.str delim)) s
-          |> List.map (fun part -> `String part))
+          |> List.map (fun part -> `String part)
+          )
     | _ -> fail_invalid_type ~ctx "/" left
 
   let modulo ~ctx (left : Json.t) (right : Json.t) : Json.t =
@@ -603,15 +617,18 @@ let rec get_path value components =
       | `Assoc fields -> (
           match List.assoc_opt key fields with
           | Some v -> get_path v rest
-          | None -> `Null)
-      | _ -> `Null)
+          | None -> `Null
+        )
+      | _ -> `Null
+    )
   | `Int idx :: rest -> (
       match value with
       | `List items ->
           if idx >= 0 && idx < List.length items then
             get_path (List.nth items idx) rest
           else `Null
-      | _ -> `Null)
+      | _ -> `Null
+    )
   | `Int64 idx :: rest -> (
       let idx = Int64.to_int idx in
       match value with
@@ -619,7 +636,8 @@ let rec get_path value components =
           if idx >= 0 && idx < List.length items then
             get_path (List.nth items idx) rest
           else `Null
-      | _ -> `Null)
+      | _ -> `Null
+    )
   | `Big_int idx :: rest -> (
       let idx = Z.to_int idx in
       match value with
@@ -627,7 +645,8 @@ let rec get_path value components =
           if idx >= 0 && idx < List.length items then
             get_path (List.nth items idx) rest
           else `Null
-      | _ -> `Null)
+      | _ -> `Null
+    )
   | _ :: rest -> get_path value rest
 
 let rec set_path value path_components new_value =
@@ -639,14 +658,16 @@ let rec set_path value path_components new_value =
           let updated =
             List.map
               (fun (k, v) ->
-                if k = key then (k, set_path v rest new_value) else (k, v))
+                if k = key then (k, set_path v rest new_value) else (k, v)
+              )
               fields
           in
           let exists = List.mem_assoc key fields in
           if exists then `Assoc updated
           else `Assoc (fields @ [ (key, set_path `Null rest new_value) ])
       | `Null -> `Assoc [ (key, set_path `Null rest new_value) ]
-      | _ -> value)
+      | _ -> value
+    )
   | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
       let idx =
         match num with
@@ -668,10 +689,12 @@ let rec set_path value path_components new_value =
       | `Null ->
           let arr =
             List.init (idx + 1) (fun i ->
-                if i = idx then set_path `Null rest new_value else `Null)
+                if i = idx then set_path `Null rest new_value else `Null
+            )
           in
           `List arr
-      | _ -> value)
+      | _ -> value
+    )
   | _ :: rest -> set_path value rest new_value
 
 let keys ~ctx (json : Json.t) =
@@ -741,7 +764,8 @@ let to_unix ~ctx json =
           json_to_int mday,
           json_to_int mon,
           json_to_int year,
-          json_to_int isdst )
+          json_to_int isdst
+        )
       with
       | ( Some sec,
           Some min,
@@ -770,7 +794,8 @@ let to_unix ~ctx json =
             ~expected:
               "array of 9 integers [sec, min, hour, mday, mon, year, wday, \
                yday, isdst]"
-            ~found:"array with non-integer elements")
+            ~found:"array with non-integer elements"
+    )
   | `List [ year; mon; mday; hour; min; sec; _; _ ] -> (
       match
         ( json_to_int year,
@@ -778,7 +803,8 @@ let to_unix ~ctx json =
           json_to_int mday,
           json_to_int hour,
           json_to_int min,
-          json_to_int sec )
+          json_to_int sec
+        )
       with
       | Some year, Some mon, Some mday, Some hour, Some min, Some sec ->
           let tm =
@@ -799,7 +825,8 @@ let to_unix ~ctx json =
       | _ ->
           Runtime_error.invalid_argument ~fn:"to_unix"
             ~expected:"array of integers"
-            ~found:"array with non-integer elements")
+            ~found:"array with non-integer elements"
+    )
   | `List _ ->
       Runtime_error.invalid_argument ~fn:"to_unix"
         ~expected:"array of 8 or 9 integers" ~found:"array with wrong length"
@@ -823,7 +850,8 @@ let parse_iso8601 s =
           }
         in
         let time, _ = Unix.mktime tm in
-        Some time)
+        Some time
+    )
   with _ -> None
 
 let from_date ~ctx json =
@@ -833,7 +861,8 @@ let from_date ~ctx json =
       | Some time -> `Int64 (Int64.of_float time)
       | None ->
           Runtime_error.invalid_argument ~fn:"from_date"
-            ~expected:"ISO 8601 date string" ~found:(Printf.sprintf "%S" s))
+            ~expected:"ISO 8601 date string" ~found:(Printf.sprintf "%S" s)
+    )
   | _ -> fail_invalid_type ~ctx "from_date" json
 
 let parse_date_fn ~ctx fmt json =
@@ -852,27 +881,33 @@ let parse_date_fn ~ctx fmt json =
             | 'Y' ->
                 Scanf.sscanf sub "%4d" (fun v ->
                     r_year := v;
-                    si := !si + 4)
+                    si := !si + 4
+                )
             | 'm' ->
                 Scanf.sscanf sub "%2d" (fun v ->
                     r_month := v;
-                    si := !si + 2)
+                    si := !si + 2
+                )
             | 'd' ->
                 Scanf.sscanf sub "%2d" (fun v ->
                     r_day := v;
-                    si := !si + 2)
+                    si := !si + 2
+                )
             | 'H' ->
                 Scanf.sscanf sub "%2d" (fun v ->
                     r_hour := v;
-                    si := !si + 2)
+                    si := !si + 2
+                )
             | 'M' ->
                 Scanf.sscanf sub "%2d" (fun v ->
                     r_min := v;
-                    si := !si + 2)
+                    si := !si + 2
+                )
             | 'S' ->
                 Scanf.sscanf sub "%2d" (fun v ->
                     r_sec := v;
-                    si := !si + 2)
+                    si := !si + 2
+                )
             | 'Z' ->
                 if !si < String.length s && s.[!si] = 'Z' then si := !si + 1
             | _ -> si := !si + 1
@@ -925,7 +960,8 @@ let parse_date_fn ~ctx fmt json =
       with _ ->
         Runtime_error.invalid_argument ~fn:"parse_date"
           ~expected:(Printf.sprintf "string matching format %S" fmt)
-          ~found:(Printf.sprintf "%S" s))
+          ~found:(Printf.sprintf "%S" s)
+    )
   | _ -> fail_invalid_type ~ctx "parse_date" json
 
 let debug json =
@@ -952,23 +988,28 @@ let has ~ctx (json : Json.t) key =
   | String key -> (
       match json with
       | `Assoc list -> `Bool (List.mem_assoc key list)
-      | _ -> fail_invalid_type ~ctx "has" json)
+      | _ -> fail_invalid_type ~ctx "has" json
+    )
   | Int n -> (
       match json with
       | `List list -> `Bool (List.length list - 1 >= n)
-      | _ -> fail_invalid_type ~ctx "has" json)
+      | _ -> fail_invalid_type ~ctx "has" json
+    )
   | Int64 n -> (
       match json with
       | `List list -> `Bool (List.length list - 1 >= Int64.to_int n)
-      | _ -> fail_invalid_type ~ctx "has" json)
+      | _ -> fail_invalid_type ~ctx "has" json
+    )
   | Big_int n -> (
       match json with
       | `List list -> `Bool (List.length list - 1 >= Z.to_int n)
-      | _ -> fail_invalid_type ~ctx "has" json)
+      | _ -> fail_invalid_type ~ctx "has" json
+    )
   | Float n -> (
       match json with
       | `List list -> `Bool (List.length list - 1 >= Int.of_float n)
-      | _ -> fail_invalid_type ~ctx "has" json)
+      | _ -> fail_invalid_type ~ctx "has" json
+    )
   | _ -> fail_invalid_type ~ctx "has" json
 
 let range_list ?(step = 1) start stop =
@@ -1100,7 +1141,9 @@ let to_number ~ctx (json : Json.t) =
       | None -> (
           match Float.of_string_opt s with
           | Some f -> `Float f
-          | None -> fail_invalid_type ~ctx "to_number" json))
+          | None -> fail_invalid_type ~ctx "to_number" json
+        )
+    )
   | `Int _ | `Int64 _ | `Big_int _ | `Float _ -> json
   | _ -> fail_invalid_type ~ctx "to_number" json
 
@@ -1140,7 +1183,8 @@ let flatten ~ctx depth (json : Json.t) =
             (fun item ->
               match item with
               | `List inner -> flatten_n (n - 1) inner
-              | other -> [ other ])
+              | other -> [ other ]
+            )
             lst
       in
       `List (flatten_n depth l)
@@ -1181,8 +1225,7 @@ let to_entries ~ctx:_ (json : Json.t) =
   | `Assoc obj ->
       let entries =
         List.map
-          (fun (key, value) ->
-            `Assoc [ ("key", `String key); ("value", value) ])
+          (fun (key, value) -> `Assoc [ ("key", `String key); ("value", value) ])
           obj
       in
       `List entries
@@ -1212,10 +1255,12 @@ let from_entries ~ctx (json : Json.t) =
                 | _ ->
                     Runtime_error.type_mismatch ~value:json
                       "from_entries requires objects with 'key' (string) and \
-                       'value' fields")
+                       'value' fields"
+              )
             | _ ->
                 Runtime_error.type_mismatch ~value:json
-                  "from_entries requires an array of objects")
+                  "from_entries requires an array of objects"
+          )
       in
       `Assoc (convert [] entries)
   | _ -> fail_invalid_type ~ctx "from_entries" json
@@ -1225,7 +1270,8 @@ let to_codepoints ~ctx:_ (json : Json.t) =
   | `String s ->
       let codepoints =
         List.init (String.length s) (fun i ->
-            `Int64 (Int64.of_int (Char.code (String.get s i))))
+            `Int64 (Int64.of_int (Char.code (String.get s i)))
+        )
       in
       `List codepoints
   | _ ->
@@ -1240,7 +1286,8 @@ let from_codepoints ~ctx:_ (json : Json.t) =
           (function
             | `Int n -> Char.chr n
             | `Int64 n -> Char.chr (Int64.to_int n)
-            | _ -> Char.chr 0)
+            | _ -> Char.chr 0
+            )
           l
       in
       `String (String.of_seq (List.to_seq chars))
@@ -1261,7 +1308,8 @@ let get_envs () =
     |> List.filter_map (fun s ->
         match String.split_on_char '=' s with
         | k :: rest -> Some (k, `String (String.concat "=" rest))
-        | [] -> None)
+        | [] -> None
+    )
     (* Unix.environment is not available in js_of_ocaml, so we catch the failure *)
   with Failure _ -> []
 
@@ -1283,7 +1331,8 @@ let transpose ~ctx (json : Json.t) =
             (fun row ->
               match row with
               | `List l when i < List.length l -> List.nth l i
-              | _ -> `Null)
+              | _ -> `Null
+            )
             rows
         in
         let transposed = List.init max_len (fun i -> `List (get_column i)) in
@@ -1310,10 +1359,12 @@ let descend_breadth_first json =
     if Queue.is_empty queue then List.rev acc
     else
       let current = Queue.pop queue in
-      (match current with
-      | `List items -> List.iter (fun item -> Queue.push item queue) items
-      | `Assoc fields -> List.iter (fun (_, v) -> Queue.push v queue) fields
-      | _ -> ());
+      let () =
+        match current with
+        | `List items -> List.iter (fun item -> Queue.push item queue) items
+        | `Assoc fields -> List.iter (fun (_, v) -> Queue.push v queue) fields
+        | _ -> ()
+      in
       loop (current :: acc)
   in
   loop []
@@ -1334,7 +1385,8 @@ let replace_regex ~ctx pattern replacement json =
       try
         let regex = Re.compile (Re.Pcre.re pattern) in
         `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
-      with _ -> json)
+      with _ -> json
+    )
   | _ -> fail_invalid_type ~ctx "replace" json
 
 let replace_all_regex ~ctx pattern replacement json =
@@ -1343,7 +1395,8 @@ let replace_all_regex ~ctx pattern replacement json =
       try
         let regex = Re.compile (Re.Pcre.re pattern) in
         `String (Re.replace regex ~f:(fun _ -> replacement) s)
-      with _ -> json)
+      with _ -> json
+    )
   | _ -> fail_invalid_type ~ctx "replace_all" json
 
 let test_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
@@ -1382,7 +1435,8 @@ let match_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
                         ("string", `String cap);
                         ("name", name);
                       ]
-                | None -> `Null)
+                | None -> `Null
+            )
           in
           let captures = List.filter (fun c -> c <> `Null) captures in
           yield
@@ -1392,8 +1446,10 @@ let match_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
                  ("length", `Int64 (Int64.of_int (String.length matched)));
                  ("string", `String matched);
                  ("captures", `List captures);
-               ])
-      | None -> ())
+               ]
+            )
+      | None -> ()
+    )
   | _ -> fail_invalid_type ~ctx "match" json
 
 let scan_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
@@ -1418,7 +1474,8 @@ let capture_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
                     | Some v -> `String v
                     | None -> `Null
                   in
-                  (name, value))
+                  (name, value)
+                )
                 named_groups
             in
             yield (`Assoc pairs)
@@ -1428,10 +1485,12 @@ let capture_compiled_regex ~ctx (compiled : Ast.compiled_regex) json =
               List.init (nb - 1) (fun i ->
                   match Re.Group.get_opt group (i + 1) with
                   | Some v -> `String v
-                  | None -> `Null)
+                  | None -> `Null
+              )
             in
             yield (`List captures)
-      | None -> yield (if named_groups <> [] then `Assoc [] else `List []))
+      | None -> yield (if named_groups <> [] then `Assoc [] else `List [])
+    )
   | _ -> fail_invalid_type ~ctx "capture" json
 
 let split_sep ~ctx sep json =
@@ -1465,7 +1524,9 @@ let join_sep ~ctx sep json =
             | other ->
                 Some
                   (Json.to_string_pretty other ~colorize:false ~summarize:false
-                     ~raw:true))
+                     ~raw:true
+                  )
+          )
           items
       in
       `String (String.concat sep strings)
@@ -1476,7 +1537,8 @@ let member ~ctx:_ (key : string) (json : Json.t) =
   | `Assoc assoc -> (
       match List.assoc_opt key assoc with
       | Some value -> value
-      | None -> Runtime_error.key_not_found ~key ~value:json)
+      | None -> Runtime_error.key_not_found ~key ~value:json
+    )
   | `Null -> Runtime_error.null_access ~key ~value:json
   | _ ->
       Runtime_error.type_mismatch ~value:json
@@ -1502,7 +1564,8 @@ let rec index ~ctx (indices : int list) (json : Json.t) =
           else
             Runtime_error.index_out_of_bounds ~index:value ~length:len
               ~value:json
-      | _ -> fail_invalid_type ~ctx ("[" ^ Int.to_string value ^ "]") json)
+      | _ -> fail_invalid_type ~ctx ("[" ^ Int.to_string value ^ "]") json
+    )
   | multiple -> List.iter (fun idx -> index ~ctx [ idx ] json) multiple
 
 let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
@@ -1558,12 +1621,14 @@ let rec interp ~ctx expression json : unit =
       | Big_int z -> yield (`Big_int z)
       | Float f -> yield (`Float f)
       | String s -> yield (`String s)
-      | Null -> yield `Null)
+      | Null -> yield `Null
+    )
   | Variable name -> variable ~ctx name
   | Env_var name -> (
       match Sys.getenv_opt name with
       | Some v -> yield (`String v)
-      | None -> yield `Null)
+      | None -> yield `Null
+    )
   | Key key -> yield (member ~ctx key json)
   | Index idx -> index ~ctx idx json
   | Slice (start, finish) -> slice ~ctx start finish json
@@ -1584,7 +1649,8 @@ let rec interp ~ctx expression json : unit =
   | Optional expr -> (
       match (fun () -> interp ~ctx expr json) () with
       | () -> ()
-      | effect Runtime_error.Fail _, _ -> yield `Null)
+      | effect Runtime_error.Fail _, _ -> yield `Null
+    )
   | Dynamic_access expr -> dynamic_access ~ctx expr json
   | Slice_expr (start_expr, end_expr) ->
       slice_expr ~ctx start_expr end_expr json
@@ -1617,7 +1683,8 @@ and interp_fn0 ~ctx f json =
   | Reverse -> (
       match json with
       | `List l -> yield (`List (List.rev l))
-      | _ -> fail_invalid_type ~ctx "reverse" json)
+      | _ -> fail_invalid_type ~ctx "reverse" json
+    )
   | Min -> yield (min ~ctx json)
   | Max -> yield (max ~ctx json)
   | First -> first_of_array ~ctx json
@@ -1712,12 +1779,14 @@ and interp_fn1 ~ctx fn1 json =
       | Test -> yield (test_compiled_regex ~ctx compiled json)
       | Match -> match_compiled_regex ~ctx compiled json
       | Scan -> scan_compiled_regex ~ctx compiled json
-      | Capture -> capture_compiled_regex ~ctx compiled json)
+      | Capture -> capture_compiled_regex ~ctx compiled json
+    )
   | With_separator (sep_fn, sep) -> (
       match sep_fn with
       | Split -> yield (split_sep ~ctx sep json)
       | Join -> yield (join_sep ~ctx sep json)
-      | Parse_date -> yield (parse_date_fn ~ctx sep json))
+      | Parse_date -> yield (parse_date_fn ~ctx sep json)
+    )
   | With_expr (expr_fn, expr) -> (
       match expr_fn with
       | Map -> map ~ctx expr json
@@ -1743,7 +1812,8 @@ and interp_fn1 ~ctx fn1 json =
               | `Int64 d -> yield (flatten ~ctx (Int64.to_int d) json)
               | `Float f -> yield (flatten ~ctx (Int.of_float f) json)
               | _ ->
-                  fail_invalid_type ~ctx "flatten: depth must be a number" depth)
+                  fail_invalid_type ~ctx "flatten: depth must be a number" depth
+          )
       | Combinations_n -> combinations_n ~ctx expr json
       | Transpose_expr ->
           on_yield
@@ -1763,7 +1833,8 @@ and interp_fn1 ~ctx fn1 json =
           | _ ->
               Runtime_error.invalid_argument ~fn:"has"
                 ~expected:"string or number literal"
-                ~found:(show_expression expr))
+                ~found:(show_expression expr)
+        )
       | In -> in_ ~ctx json expr
       | With_entries -> with_entries ~ctx expr json
       | Delete -> del ~ctx expr json
@@ -1805,9 +1876,11 @@ and interp_fn1 ~ctx fn1 json =
                 ~found:(Json.type_of v)
           | _ ->
               Runtime_error.invalid_argument ~fn:"halt_error" ~expected:"number"
-                ~found:"multiple values")
+                ~found:"multiple values"
+        )
       | Debug_msg -> debug_msg ~ctx (Some expr) json
-      | Assert_simple -> assert_ ~ctx expr None json)
+      | Assert_simple -> assert_ ~ctx expr None json
+    )
 
 and interp_fn2 ~ctx f e1 e2 json =
   match f with
@@ -1818,7 +1891,8 @@ and interp_fn2 ~ctx f e1 e2 json =
       | _ ->
           Runtime_error.invalid_argument ~fn:"replace"
             ~expected:"string pattern and string replacement"
-            ~found:"non-string arguments")
+            ~found:"non-string arguments"
+    )
   | Replace_all -> (
       match (e1, e2) with
       | Literal (String pattern), Literal (String replacement) ->
@@ -1826,7 +1900,8 @@ and interp_fn2 ~ctx f e1 e2 json =
       | _ ->
           Runtime_error.invalid_argument ~fn:"replace_all"
             ~expected:"string pattern and string replacement"
-            ~found:"non-string arguments")
+            ~found:"non-string arguments"
+    )
   | While -> while_loop ~ctx e1 e2 json
   | Until -> until_loop ~ctx e1 e2 json
   | Limit -> (
@@ -1839,7 +1914,8 @@ and interp_fn2 ~ctx f e1 e2 json =
             ~found:(Json.type_of v)
       | _ ->
           Runtime_error.invalid_argument ~fn:"limit" ~expected:"number"
-            ~found:"multiple values")
+            ~found:"multiple values"
+    )
   | Skip -> (
       match collect ~ctx e1 json with
       | [ `Int n ] -> skip ~ctx n e2 json
@@ -1850,7 +1926,8 @@ and interp_fn2 ~ctx f e1 e2 json =
             ~found:(Json.type_of v)
       | _ ->
           Runtime_error.invalid_argument ~fn:"skip" ~expected:"number"
-            ~found:"multiple values")
+            ~found:"multiple values"
+    )
   | Recurse_with ->
       let results = recurse_with_cond ~ctx e1 e2 json in
       yield_many results
@@ -1878,7 +1955,8 @@ and dynamic_access ~ctx expr json =
       | `Assoc fields, `String key -> (
           match List.assoc_opt key fields with
           | Some v -> yield v
-          | None -> yield `Null)
+          | None -> yield `Null
+        )
       | `List items, `Int idx ->
           let len = List.length items in
           let actual_idx = if idx < 0 then len + idx else idx in
@@ -1903,7 +1981,8 @@ and dynamic_access ~ctx expr json =
       | _ ->
           Runtime_error.invalid_argument ~fn:"index"
             ~expected:"array with number index or object with string key"
-            ~found:(Json.type_of json ^ " with " ^ Json.type_of key_or_idx))
+            ~found:(Json.type_of json ^ " with " ^ Json.type_of key_or_idx)
+  )
 
 and update ~ctx path_expr transform json =
   (* path |= f means: for each path selected by path_expr, apply f to the value and update *)
@@ -1936,8 +2015,10 @@ and update ~ctx path_expr transform json =
           match new_values with
           | new_value :: _ ->
               result := set_path !result path_components new_value
-          | [] -> ())
-      | _ -> ())
+          | [] -> ()
+        )
+      | _ -> ()
+    )
     paths;
   yield !result
 
@@ -1948,7 +2029,8 @@ and range_expr ~ctx from_expr upto_expr step_expr json =
         | `Int n -> Some n
         | `Int64 n -> Some (Int64.to_int n)
         | `Float f -> Some (Float.to_int f)
-        | _ -> None)
+        | _ -> None
+        )
       results
   in
   let froms = to_int_list (collect ~ctx from_expr json) in
@@ -1971,16 +2053,20 @@ and range_expr ~ctx from_expr upto_expr step_expr json =
           List.iter
             (fun step ->
               let vals = range ?step from upto in
-              List.iter (fun i -> yield (`Int64 (Int64.of_int i))) vals)
-            steps)
-        uptos)
+              List.iter (fun i -> yield (`Int64 (Int64.of_int i))) vals
+            )
+            steps
+        )
+        uptos
+    )
     froms
 
 and select ~ctx conditional json =
   on_yield
     (fun () -> interp ~ctx conditional json)
     ~then_:(fun result ->
-      match result with `Bool false | `Null -> () | _ -> yield json)
+      match result with `Bool false | `Null -> () | _ -> yield json
+    )
 
 and pipe ~ctx left right json =
   match left with
@@ -2015,7 +2101,8 @@ and operation ~ctx left_expr right_expr op json =
     ~then_:(fun l_val ->
       on_yield
         (fun () -> interp ~ctx right_expr json)
-        ~then_:(fun r_val -> yield (apply_op l_val r_val)))
+        ~then_:(fun r_val -> yield (apply_op l_val r_val))
+    )
 
 and map ~ctx (expr : expression) (json : Json.t) =
   match json with
@@ -2036,7 +2123,8 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
             match collect ~ctx expr item with
             | [ v ] -> Some v
             | [] -> None (* filter out when expression produces empty *)
-            | vs -> Some (`List vs))
+            | vs -> Some (`List vs)
+          )
           list
       in
       yield (`List mapped)
@@ -2047,7 +2135,8 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
             match collect ~ctx expr value with
             | [ v ] -> Some (key, v)
             | [] -> None (* filter out when expression produces empty *)
-            | vs -> Some (key, `List vs))
+            | vs -> Some (key, `List vs)
+          )
           entries
       in
       yield (`Assoc mapped)
@@ -2123,7 +2212,8 @@ and unique_by ~ctx expr json =
             | [ key ] ->
                 if List.mem key seen then unique acc seen xs
                 else unique (x :: acc) (key :: seen) xs
-            | _ -> unique (x :: acc) seen xs)
+            | _ -> unique (x :: acc) seen xs
+          )
       in
       yield (`List (unique [] [] l))
   | _ -> fail_invalid_type ~ctx "unique_by" json
@@ -2140,11 +2230,13 @@ and objects ~ctx list json =
       | None -> (
           match left_expr with
           | Literal (String s) -> (
-              match json with `Null -> [ `Null ] | _ -> [ member ~ctx s json ])
+              match json with `Null -> [ `Null ] | _ -> [ member ~ctx s json ]
+            )
           | _ ->
               Runtime_error.invalid_argument ~fn:"object"
                 ~expected:"string key for shorthand syntax"
-                ~found:"non-string expression")
+                ~found:"non-string expression"
+        )
       | Some expr -> collect ~ctx expr json
     in
     List.concat_map
@@ -2153,7 +2245,8 @@ and objects ~ctx list json =
         | `String k_str -> List.map (fun v -> (k_str, v)) values_res
         | _ ->
             Runtime_error.invalid_argument ~fn:"object" ~expected:"string key"
-              ~found:(Json.type_of k))
+              ~found:(Json.type_of k)
+      )
       keys_res
   in
   let field_options_list = List.map interp_field list in
@@ -2194,7 +2287,8 @@ and find ~ctx expr json =
             | [ other ] ->
                 if other = `Null || other = `Bool false then find_first xs
                 else yield x
-            | _ -> find_first xs)
+            | _ -> find_first xs
+          )
       in
       find_first list
   | _ -> fail_invalid_type ~ctx "find" json
@@ -2211,7 +2305,8 @@ and some ~ctx expr json =
             | [ other ] ->
                 if other = `Null || other = `Bool false then check_some xs
                 else yield (`Bool true)
-            | _ -> check_some xs)
+            | _ -> check_some xs
+          )
       in
       check_some list
   | _ -> fail_invalid_type ~ctx "some" json
@@ -2227,7 +2322,8 @@ and any_with_condition ~ctx expr json =
               let results = collect ~ctx expr x in
               if List.exists is_truthy results then yield (`Bool true)
               else check_any xs
-            with _ -> check_any xs)
+            with _ -> check_any xs
+          )
       in
       check_any list
   | _ -> fail_invalid_type ~ctx "any" json
@@ -2243,7 +2339,8 @@ and all_with_condition ~ctx expr json =
               let results = collect ~ctx expr x in
               if List.for_all is_truthy results then check_all xs
               else yield (`Bool false)
-            with _ -> yield (`Bool false))
+            with _ -> yield (`Bool false)
+          )
       in
       check_all list
   | _ -> fail_invalid_type ~ctx "all" json
@@ -2258,7 +2355,8 @@ and any_with_generator ~ctx gen cond json =
           let cond_results = collect ~ctx cond x in
           if List.exists is_truthy cond_results then yield (`Bool true)
           else check xs
-        with _ -> check xs)
+        with _ -> check xs
+      )
   in
   check gen_results
 
@@ -2272,7 +2370,8 @@ and all_with_generator ~ctx gen cond json =
           let cond_results = collect ~ctx cond x in
           if List.for_all is_truthy cond_results then check xs
           else yield (`Bool false)
-        with _ -> yield (`Bool false))
+        with _ -> yield (`Bool false)
+      )
   in
   check gen_results
 
@@ -2285,19 +2384,22 @@ and path_of ~ctx expr json =
         | `Assoc fields ->
             if List.mem_assoc key fields then [ current_path @ [ `String key ] ]
             else []
-        | _ -> [])
+        | _ -> []
+      )
     | Index indices when indices = [] -> (
         match value with
         | `List l -> List.mapi (fun i _ -> current_path @ [ `Int i ]) l
         | `Assoc fields ->
             List.map (fun (k, _) -> current_path @ [ `String k ]) fields
-        | _ -> [])
+        | _ -> []
+      )
     | Index indices ->
         List.concat_map
           (fun idx ->
             match value with
             | `List _ -> [ current_path @ [ `Int idx ] ]
-            | _ -> [])
+            | _ -> []
+          )
           indices
     | Dynamic_access expr ->
         let keys_or_indices = collect ~ctx expr value in
@@ -2310,7 +2412,8 @@ and path_of ~ctx expr json =
                 else []
             | `List _, `Int idx -> [ current_path @ [ `Int idx ] ]
             | `List _, `Float f -> [ current_path @ [ `Int (Float.to_int f) ] ]
-            | _ -> [])
+            | _ -> []
+          )
           keys_or_indices
     | Pipe (left, right) ->
         let selected_values = collect ~ctx left value in
@@ -2319,7 +2422,8 @@ and path_of ~ctx expr json =
             match extract_path_for_value value selected with
             | Some left_path ->
                 extract_paths (current_path @ left_path) right selected
-            | None -> [])
+            | None -> []
+          )
           selected_values
     | Comma (left, right) ->
         extract_paths current_path left value
@@ -2349,8 +2453,11 @@ and path_of ~ctx expr json =
                | `String s -> `String s
                | `Int i -> `Int i
                | `Int64 i -> `Int64 i
-               | _ -> `Null)
-             path))
+               | _ -> `Null
+               )
+             path
+          )
+      )
       paths
   in
   yield_many path_jsons
@@ -2367,20 +2474,24 @@ and bind_pattern (pat : Ast.binding_pattern) (value : Json.t)
               let v =
                 if i < List.length items then List.nth items i else `Null
               in
-              bind_pattern pat v env)
+              bind_pattern pat v env
+            )
             env
             (List.mapi (fun i p -> (i, p)) pats)
-      | _ -> env)
+      | _ -> env
+    )
   | Pat_object fields ->
       List.fold_left
         (fun env (key, var_name) ->
           let v =
             match value with
             | `Assoc obj -> (
-                match List.assoc_opt key obj with Some v -> v | None -> `Null)
+                match List.assoc_opt key obj with Some v -> v | None -> `Null
+              )
             | _ -> `Null
           in
-          (var_name, v) :: env)
+          (var_name, v) :: env
+        )
         env fields
 
 and reduce ~ctx generator pat init_expr update_expr json =
@@ -2398,7 +2509,8 @@ and reduce ~ctx generator pat init_expr update_expr json =
           | _ ->
               Runtime_error.invalid_argument ~fn:"reduce"
                 ~expected:"single value from update expression"
-                ~found:"multiple values");
+                ~found:"multiple values"
+        );
       yield !acc
   | _ ->
       Runtime_error.invalid_argument ~fn:"reduce"
@@ -2415,14 +2527,17 @@ and foreach ~ctx generator pat init_expr update_expr extract_expr json =
           let new_env = bind_pattern pat elem ctx.env in
           let new_ctx = { ctx with env = new_env } in
           let update_res = collect ~ctx:new_ctx update_expr !acc in
-          (match update_res with
-          | [ new_acc ] -> acc := new_acc
-          | _ ->
-              Runtime_error.invalid_argument ~fn:"foreach"
-                ~expected:"single value from update expression"
-                ~found:"multiple values");
+          let () =
+            match update_res with
+            | [ new_acc ] -> acc := new_acc
+            | _ ->
+                Runtime_error.invalid_argument ~fn:"foreach"
+                  ~expected:"single value from update expression"
+                  ~found:"multiple values"
+          in
           let extract_res = collect ~ctx:new_ctx extract_expr !acc in
-          List.iter yield extract_res)
+          List.iter yield extract_res
+        )
   | _ ->
       Runtime_error.invalid_argument ~fn:"foreach"
         ~expected:"single value from init expression" ~found:"multiple values"
@@ -2433,7 +2548,8 @@ and in_ ~ctx json expr =
       match (json, container) with
       | `Int n, `List l -> yield (`Bool (n >= 0 && n < List.length l))
       | `String key, `Assoc list -> yield (`Bool (List.mem_assoc key list))
-      | _ -> fail_invalid_type ~ctx "in" json)
+      | _ -> fail_invalid_type ~ctx "in" json
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"in" ~expected:"single container"
         ~found:"multiple values"
@@ -2455,7 +2571,8 @@ and as_binding ~ctx expr pat body json =
     ~then_:(fun elem ->
       let new_env = bind_pattern pat elem ctx.env in
       let new_ctx = { ctx with env = new_env } in
-      interp ~ctx:new_ctx body json)
+      interp ~ctx:new_ctx body json
+    )
 
 and if_then_else ~ctx cond if_branch else_branch json =
   on_yield
@@ -2463,7 +2580,8 @@ and if_then_else ~ctx cond if_branch else_branch json =
     ~then_:(function
       | `Bool true -> interp ~ctx if_branch json
       | `Bool false | `Null -> interp ~ctx else_branch json
-      | v -> fail_invalid_type ~ctx "if condition should be a bool" v)
+      | v -> fail_invalid_type ~ctx "if condition should be a bool" v
+      )
 
 and call_function ~ctx fname args json =
   match List.assoc_opt fname ctx.fns with
@@ -2480,7 +2598,8 @@ and call_function ~ctx fname args json =
           List.fold_left2
             (fun (fp, fa, vp, va) param arg ->
               if is_value_param param then (fp, fa, param :: vp, arg :: va)
-              else (param :: fp, arg :: fa, vp, va))
+              else (param :: fp, arg :: fa, vp, va)
+            )
             ([], [], [], []) params args
         in
         let filter_params = List.rev filter_params in
@@ -2501,7 +2620,8 @@ and call_function ~ctx fname args json =
               | _ ->
                   Runtime_error.invalid_argument ~fn:fname
                     ~expected:("single value for parameter " ^ param)
-                    ~found:"multiple values")
+                    ~found:"multiple values"
+            )
             value_params value_args
         in
         let new_ctx = { ctx with env = value_bindings @ ctx.env } in
@@ -2511,14 +2631,14 @@ and starts_with ~ctx expr json =
   collect ~ctx expr json
   |> List.iter (fun pattern ->
       match (json, pattern) with
-      | `String s, `String prefix ->
-          yield (`Bool (String.starts_with ~prefix s))
+      | `String s, `String prefix -> yield (`Bool (String.starts_with ~prefix s))
       | `String _, other ->
           Runtime_error.invalid_argument ~fn:"starts_with"
             ~expected:"string prefix" ~found:(Json.type_of other)
       | _ ->
           Runtime_error.invalid_argument ~fn:"starts_with" ~expected:"string"
-            ~found:(Json.type_of json))
+            ~found:(Json.type_of json)
+  )
 
 and ends_with ~ctx expr json =
   collect ~ctx expr json
@@ -2530,7 +2650,8 @@ and ends_with ~ctx expr json =
             ~expected:"string suffix" ~found:(Json.type_of other)
       | _ ->
           Runtime_error.invalid_argument ~fn:"ends_with" ~expected:"string"
-            ~found:(Json.type_of json))
+            ~found:(Json.type_of json)
+  )
 
 and with_entries ~ctx expr json =
   match to_entries ~ctx json with
@@ -2541,7 +2662,8 @@ and with_entries ~ctx expr json =
             match collect ~ctx expr entry with
             | [ res ] -> Some res
             | [] -> None
-            | _ -> Some entry)
+            | _ -> Some entry
+          )
           entries
       in
       yield (from_entries ~ctx (`List transformed))
@@ -2557,7 +2679,8 @@ and alternative ~ctx left right json =
       let valid_results = List.filter is_valid left_results in
       match valid_results with
       | [] -> interp ~ctx right json
-      | _ -> yield_many valid_results)
+      | _ -> yield_many valid_results
+    )
     ~on_fail:(fun () -> interp ~ctx right json)
 
 and contains ~ctx expr json =
@@ -2575,7 +2698,8 @@ and contains ~ctx expr json =
           (fun (k, v) ->
             match List.assoc_opt k haystack with
             | Some h_val -> value_contains h_val v
-            | None -> false)
+            | None -> false
+          )
           needle
     | h, n -> Json.equal h n
   in
@@ -2599,7 +2723,8 @@ and index_of ~ctx expr json =
           yield_opt (Search.sublist_first haystack sublist)
       | `List haystack, needle ->
           yield_opt (Search.element_first haystack needle)
-      | _ -> fail_invalid_type ~ctx "index" json)
+      | _ -> fail_invalid_type ~ctx "index" json
+  )
 
 and last_index_of ~ctx expr json =
   let yield_opt = function
@@ -2613,9 +2738,9 @@ and last_index_of ~ctx expr json =
           yield_opt (Search.string_last haystack needle)
       | `List haystack, `List sublist ->
           yield_opt (Search.sublist_last haystack sublist)
-      | `List haystack, needle ->
-          yield_opt (Search.element_last haystack needle)
-      | _ -> fail_invalid_type ~ctx "last_index" json)
+      | `List haystack, needle -> yield_opt (Search.element_last haystack needle)
+      | _ -> fail_invalid_type ~ctx "last_index" json
+  )
 
 and indices ~ctx expr json =
   let yield_positions positions =
@@ -2630,7 +2755,8 @@ and indices ~ctx expr json =
           yield_positions (Search.sublist_all haystack sublist)
       | `List haystack, needle ->
           yield_positions (Search.element_all haystack needle)
-      | _ -> fail_invalid_type ~ctx "indices" json)
+      | _ -> fail_invalid_type ~ctx "indices" json
+  )
 
 and inside ~ctx expr json =
   collect ~ctx expr json
@@ -2643,9 +2769,12 @@ and inside ~ctx expr json =
             (`Bool
                (List.for_all
                   (fun n -> List.exists (fun h -> Json.contains n h) haystack)
-                  needles))
+                  needles
+               )
+            )
       | `Assoc _, `Assoc _ -> yield (`Bool (Json.contains json container))
-      | _ -> fail_invalid_type ~ctx "inside" json)
+      | _ -> fail_invalid_type ~ctx "inside" json
+  )
 
 and trim_start_impl ~ctx expr json =
   collect ~ctx expr json
@@ -2662,7 +2791,8 @@ and trim_start_impl ~ctx expr json =
             ~expected:"string prefix" ~found:(Json.type_of other)
       | _ ->
           Runtime_error.invalid_argument ~fn:"trim_start" ~expected:"string"
-            ~found:(Json.type_of json))
+            ~found:(Json.type_of json)
+  )
 
 and trim_end_impl ~ctx expr json =
   collect ~ctx expr json
@@ -2678,7 +2808,8 @@ and trim_end_impl ~ctx expr json =
             ~expected:"string suffix" ~found:(Json.type_of other)
       | _ ->
           Runtime_error.invalid_argument ~fn:"trim_end" ~expected:"string"
-            ~found:(Json.type_of json))
+            ~found:(Json.type_of json)
+  )
 
 and trim ~ctx json =
   match json with
@@ -2737,7 +2868,9 @@ and repeat_expr ~ctx expr json =
           (fun () -> interp ~ctx expr !current)
           ~then_:(fun result ->
             yield result;
-            current := result))
+            current := result
+          )
+      )
       ~on_fail:(fun () -> continue := false)
   done
 
@@ -2784,7 +2917,8 @@ and binary_search ~ctx expr json =
               else if cmp > 0 then search lo mid
               else mid
           in
-          yield (`Int64 (Int64.of_int (search 0 len))))
+          yield (`Int64 (Int64.of_int (search 0 len)))
+      )
   | _ -> fail_invalid_type ~ctx "binary_search" json
 
 and first_of_array ~ctx json =
@@ -2795,9 +2929,11 @@ and first_of_array ~ctx json =
 
 and first_of_expr ~ctx expr json =
   let found = ref None in
-  (match (fun () -> interp ~ctx expr json) () with
-  | () -> ()
-  | effect Yield v, _ -> found := Some v);
+  let () =
+    match (fun () -> interp ~ctx expr json) () with
+    | () -> ()
+    | effect Yield v, _ -> found := Some v
+  in
   match !found with
   | None ->
       Runtime_error.empty_result ~op:"first"
@@ -2885,7 +3021,8 @@ and group_by ~ctx expr json =
                     []
               in
               Hashtbl.replace groups key_str (item :: existing)
-          | _ -> ())
+          | _ -> ()
+        )
         l;
       let sorted_keys =
         List.sort (fun (_, k1) (_, k2) -> Json.compare k1 k2) !group_keys
@@ -2895,7 +3032,8 @@ and group_by ~ctx expr json =
           (fun (key_str, _) ->
             match Hashtbl.find_opt groups key_str with
             | Some items -> (key_str, `List (List.rev items))
-            | None -> (key_str, `List []))
+            | None -> (key_str, `List [])
+          )
           sorted_keys
       in
       yield (`Assoc result)
@@ -2909,7 +3047,8 @@ and while_loop ~ctx cond update json =
         let next_res = collect ~ctx update current in
         match next_res with
         | [ next ] -> loop (current :: acc) next
-        | _ -> List.rev acc)
+        | _ -> List.rev acc
+      )
     | [ `Bool false ] -> List.rev acc
     | _ -> List.rev acc
   in
@@ -2923,7 +3062,8 @@ and until_loop ~ctx cond update json =
     | [ `Bool true ] -> yield current
     | [ `Bool false ] -> (
         let next_res = collect ~ctx update current in
-        match next_res with [ next ] -> loop next | _ -> yield current)
+        match next_res with [ next ] -> loop next | _ -> yield current
+      )
     | _ -> yield current
   in
   loop json
@@ -2949,7 +3089,8 @@ and atan2_op ~ctx y_expr x_expr json =
       | Some yf, Some xf -> yield (`Float (Float.atan2 yf xf))
       | _ ->
           Runtime_error.invalid_argument ~fn:"atan2" ~expected:"two numbers"
-            ~found:(Json.type_of y ^ " and " ^ Json.type_of x))
+            ~found:(Json.type_of y ^ " and " ^ Json.type_of x)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"atan2" ~expected:"two single values"
         ~found:"multiple values"
@@ -2963,7 +3104,8 @@ and copysign_op ~ctx x_expr y_expr json =
       | Some xf, Some yf -> yield (`Float (Float.copy_sign xf yf))
       | _ ->
           Runtime_error.invalid_argument ~fn:"copysign" ~expected:"two numbers"
-            ~found:(Json.type_of x ^ " and " ^ Json.type_of y))
+            ~found:(Json.type_of x ^ " and " ^ Json.type_of y)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"copysign"
         ~expected:"two single values" ~found:"multiple values"
@@ -2977,7 +3119,8 @@ and ldexp_op ~ctx m_expr e_expr json =
       | Some mf, Some ei -> yield (`Float (Float.ldexp mf ei))
       | _ ->
           Runtime_error.invalid_argument ~fn:"ldexp" ~expected:"two numbers"
-            ~found:(Json.type_of m ^ " and " ^ Json.type_of e))
+            ~found:(Json.type_of m ^ " and " ^ Json.type_of e)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"ldexp" ~expected:"two single values"
         ~found:"multiple values"
@@ -2991,7 +3134,8 @@ and fdim_op ~ctx x_expr y_expr json =
       | Some xf, Some yf -> yield (`Float (Float.max 0.0 (xf -. yf)))
       | _ ->
           Runtime_error.invalid_argument ~fn:"fdim" ~expected:"two numbers"
-            ~found:(Json.type_of x ^ " and " ^ Json.type_of y))
+            ~found:(Json.type_of x ^ " and " ^ Json.type_of y)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"fdim" ~expected:"two single values"
         ~found:"multiple values"
@@ -3005,7 +3149,8 @@ and remainder_op ~ctx x_expr y_expr json =
       | Some xf, Some yf -> yield (`Float (mod_float xf yf))
       | _ ->
           Runtime_error.invalid_argument ~fn:"remainder" ~expected:"two numbers"
-            ~found:(Json.type_of x ^ " and " ^ Json.type_of y))
+            ~found:(Json.type_of x ^ " and " ^ Json.type_of y)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"remainder"
         ~expected:"two single values" ~found:"multiple values"
@@ -3019,7 +3164,8 @@ and scalbn_op ~ctx x_expr n_expr json =
       | Some xf, Some ni -> yield (`Float (Float.ldexp xf ni))
       | _ ->
           Runtime_error.invalid_argument ~fn:"scalbn" ~expected:"two numbers"
-            ~found:(Json.type_of x ^ " and " ^ Json.type_of n))
+            ~found:(Json.type_of x ^ " and " ^ Json.type_of n)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"scalbn" ~expected:"two single values"
         ~found:"multiple values"
@@ -3033,7 +3179,8 @@ and pow2_op ~ctx x_expr y_expr json =
       | Some xf, Some yf -> yield (`Float (xf ** yf))
       | _ ->
           Runtime_error.invalid_argument ~fn:"pow" ~expected:"two numbers"
-            ~found:(Json.type_of x ^ " and " ^ Json.type_of y))
+            ~found:(Json.type_of x ^ " and " ^ Json.type_of y)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"pow" ~expected:"two single values"
         ~found:"multiple values"
@@ -3049,7 +3196,8 @@ and fma_op ~ctx x_expr y_expr z_expr json =
       | _ ->
           Runtime_error.invalid_argument ~fn:"fma" ~expected:"three numbers"
             ~found:
-              (Json.type_of x ^ ", " ^ Json.type_of y ^ ", " ^ Json.type_of z))
+              (Json.type_of x ^ ", " ^ Json.type_of y ^ ", " ^ Json.type_of z)
+    )
   | _ ->
       Runtime_error.invalid_argument ~fn:"fma" ~expected:"three single values"
         ~found:"multiple values"
@@ -3063,7 +3211,8 @@ and recurse_with_cond ~ctx f cond json =
         let next_res = collect ~ctx f current in
         match next_res with
         | [ next ] -> loop acc_with_current next
-        | _ -> List.rev acc_with_current)
+        | _ -> List.rev acc_with_current
+      )
     | [ `Bool false ] -> List.rev acc
     | _ -> List.rev acc
   in
@@ -3092,13 +3241,15 @@ and try_catch ~ctx expr handler finally_expr json =
   let error_occurred = ref false in
   let handle_error error_json input_for_handler =
     error_occurred := true;
-    (match handler with
-    | None -> yield `Null
-    | Some handler_expr ->
-        let ctx_with_error =
-          { ctx with env = ("error", error_json) :: ctx.env }
-        in
-        interp ~ctx:ctx_with_error handler_expr input_for_handler);
+    let () =
+      match handler with
+      | None -> yield `Null
+      | Some handler_expr ->
+          let ctx_with_error =
+            { ctx with env = ("error", error_json) :: ctx.env }
+          in
+          interp ~ctx:ctx_with_error handler_expr input_for_handler
+    in
     run_finally ()
   in
   catch_errors
@@ -3112,9 +3263,11 @@ and try_catch ~ctx expr handler finally_expr json =
             ("value", value);
           ]
       in
-      handle_error error_json value)
+      handle_error error_json value
+    )
     ~on_runtime_error:(fun err ->
-      handle_error (Runtime_error.to_json err) (Runtime_error.to_json err));
+      handle_error (Runtime_error.to_json err) (Runtime_error.to_json err)
+    );
   if not !error_occurred then run_finally ()
 
 and limit ~ctx n expr json =
@@ -3125,7 +3278,8 @@ and limit ~ctx n expr json =
       if !count < n then (
         incr count;
         yield v;
-        Effect.Deep.continue k ())
+        Effect.Deep.continue k ()
+      )
 
 and skip ~ctx n expr json =
   let count = ref 0 in
@@ -3133,7 +3287,8 @@ and skip ~ctx n expr json =
     (fun () -> interp ~ctx expr json)
     ~then_:(fun result ->
       incr count;
-      if !count > n then yield result)
+      if !count > n then yield result
+    )
 
 and error_msg ~ctx msg_expr json =
   match msg_expr with
@@ -3143,7 +3298,8 @@ and error_msg ~ctx msg_expr json =
       | [ value ] -> user_error value
       | _ ->
           Runtime_error.invalid_argument ~fn:"error" ~expected:"single value"
-            ~found:"multiple values")
+            ~found:"multiple values"
+    )
 
 and raise_error ~ctx kind_expr msg_expr json =
   let kind =
@@ -3187,7 +3343,8 @@ and delete_path value path_components =
     | [ `String key ] -> (
         match value with
         | `Assoc fields -> `Assoc (List.filter (fun (k, _) -> k <> key) fields)
-        | _ -> value)
+        | _ -> value
+      )
     | [ ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) ] -> (
         let idx =
           match num with
@@ -3199,15 +3356,18 @@ and delete_path value path_components =
         in
         match value with
         | `List items -> `List (List.filteri (fun i _ -> i <> idx) items)
-        | _ -> value)
+        | _ -> value
+      )
     | `String key :: rest -> (
         match value with
         | `Assoc fields ->
             `Assoc
               (List.map
                  (fun (k, v) -> if k = key then (k, del_at v rest) else (k, v))
-                 fields)
-        | _ -> value)
+                 fields
+              )
+        | _ -> value
+      )
     | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
         let idx =
           match num with
@@ -3220,10 +3380,9 @@ and delete_path value path_components =
         match value with
         | `List items ->
             `List
-              (List.mapi
-                 (fun i v -> if i = idx then del_at v rest else v)
-                 items)
-        | _ -> value)
+              (List.mapi (fun i v -> if i = idx then del_at v rest else v) items)
+        | _ -> value
+      )
     | _ -> value
   in
   match path_components with `List comps -> del_at value comps | _ -> value
@@ -3251,15 +3410,18 @@ and getpath ~ctx path json =
             | `Assoc fields -> (
                 match List.assoc_opt key fields with
                 | Some v -> navigate v rest
-                | None -> `Null)
-            | _ -> `Null)
+                | None -> `Null
+              )
+            | _ -> `Null
+          )
         | `Int idx :: rest -> (
             match value with
             | `List items ->
                 if idx >= 0 && idx < List.length items then
                   navigate (List.nth items idx) rest
                 else `Null
-            | _ -> `Null)
+            | _ -> `Null
+          )
         | _ :: rest -> navigate value rest
       in
       yield (navigate json path_components)
@@ -3283,14 +3445,16 @@ and setpath ~ctx path value_expr json =
                 let updated =
                   List.map
                     (fun (k, v) ->
-                      if k = key then (k, set_at v rest) else (k, v))
+                      if k = key then (k, set_at v rest) else (k, v)
+                    )
                     fields
                 in
                 let exists = List.mem_assoc key fields in
                 if exists then `Assoc updated
                 else `Assoc (fields @ [ (key, set_at `Null rest) ])
             | `Null -> `Assoc [ (key, set_at `Null rest) ]
-            | _ -> value)
+            | _ -> value
+          )
         | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
             let idx =
               match num with
@@ -3313,10 +3477,12 @@ and setpath ~ctx path value_expr json =
                 (* create array with nulls up to idx, then set value at idx *)
                 let arr =
                   List.init (idx + 1) (fun i ->
-                      if i = idx then set_at `Null rest else `Null)
+                      if i = idx then set_at `Null rest else `Null
+                  )
                 in
                 `List arr
-            | _ -> value)
+            | _ -> value
+          )
         | _ :: rest -> set_at value rest
       in
       yield (set_at json path_components)
@@ -3349,7 +3515,8 @@ and pick ~ctx expr json =
             | `Int i -> Some [ `Int i ]
             | `Int64 i -> Some [ `Int64 i ]
             | `Float f -> Some [ `Int (Float.to_int f) ]
-            | _ -> None)
+            | _ -> None
+            )
           keys
     | _ -> []
   in
@@ -3358,7 +3525,8 @@ and pick ~ctx expr json =
     List.fold_left
       (fun acc path_components ->
         let value = get_path json path_components in
-        set_path acc path_components value)
+        set_path acc path_components value
+      )
       `Null paths
   in
   yield result
@@ -3374,15 +3542,18 @@ and paths_filter ~ctx filter_expr json =
         | `Assoc fields -> (
             match List.assoc_opt key fields with
             | Some v -> navigate v rest
-            | None -> `Null)
-        | _ -> `Null)
+            | None -> `Null
+          )
+        | _ -> `Null
+      )
     | `Int idx :: rest -> (
         match value with
         | `List items ->
             if idx >= 0 && idx < List.length items then
               navigate (List.nth items idx) rest
             else `Null
-        | _ -> `Null)
+        | _ -> `Null
+      )
     | `Int64 idx :: rest -> (
         match value with
         | `List items ->
@@ -3390,7 +3561,8 @@ and paths_filter ~ctx filter_expr json =
             if idx >= 0 && idx < List.length items then
               navigate (List.nth items idx) rest
             else `Null
-        | _ -> `Null)
+        | _ -> `Null
+      )
     | _ :: rest -> navigate value rest
   in
   List.iter
@@ -3406,8 +3578,12 @@ and paths_filter ~ctx filter_expr json =
                   | `String s -> `String s
                   | `Int i -> `Int i
                   | `Int64 i -> `Int64 i
-                  | _ -> `Null)
-                path_components)))
+                  | _ -> `Null
+                  )
+                path_components
+             )
+          )
+    )
     all
 
 and all_paths_list json =
@@ -3417,13 +3593,15 @@ and all_paths_list json =
         List.concat_map
           (fun (k, v) ->
             let new_path = current_path @ [ `String k ] in
-            new_path :: all_paths new_path v)
+            new_path :: all_paths new_path v
+          )
           fields
     | `List items ->
         List.concat_map
           (fun (i, v) ->
             let new_path = current_path @ [ `Int i ] in
-            new_path :: all_paths new_path v)
+            new_path :: all_paths new_path v
+          )
           (List.mapi (fun i v -> (i, v)) items)
     | _ -> []
   in
@@ -3475,7 +3653,8 @@ and assign ~ctx path value_expr json =
             if exists then `Assoc updated
             else `Assoc (fields @ [ (key, new_value) ])
         | `Null -> `Assoc [ (key, new_value) ]
-        | _ -> result)
+        | _ -> result
+      )
     | Pipe (Identity, right) -> assign_path result right
     | Comma (left, right) ->
         let result' = assign_path result left in
@@ -3494,9 +3673,11 @@ and pluck ~ctx expr json =
               run_and_collect_results (fun () ->
                   swallow_errors
                     (fun () -> interp ~ctx expr item)
-                    ~on_fail:(fun () -> yield `Null))
+                    ~on_fail:(fun () -> yield `Null)
+              )
             in
-            match values with [ v ] -> v | [] -> `Null | vs -> `List vs)
+            match values with [ v ] -> v | [] -> `Null | vs -> `List vs
+          )
           items
       in
       yield (`List results)
@@ -3512,7 +3693,8 @@ and partition ~ctx expr json =
           let results = collect ~ctx expr item in
           let is_truthy = function `Bool false | `Null -> false | _ -> true in
           if List.exists is_truthy results then matching := item :: !matching
-          else non_matching := item :: !non_matching)
+          else non_matching := item :: !non_matching
+        )
         items;
       yield
         (`List [ `List (List.rev !matching); `List (List.rev !non_matching) ])
@@ -3532,12 +3714,14 @@ and is_empty ~ctx expr json =
       | `Assoc _ -> yield (`Bool false)
       | `String "" -> yield (`Bool true)
       | `String _ -> yield (`Bool false)
-      | _ -> fail_invalid_type ~ctx "is_empty" json)
+      | _ -> fail_invalid_type ~ctx "is_empty" json
+    )
   | _ -> (
       (* with argument: check if expression produces no output (jq semantics) *)
       match collect ~ctx expr json with
       | [] -> yield (`Bool true)
-      | _ -> yield (`Bool false))
+      | _ -> yield (`Bool false)
+    )
 
 and is_blank ~ctx json =
   match json with
@@ -3564,7 +3748,8 @@ and assert_ ~ctx cond_expr msg_expr json =
           match collect ~ctx expr json with
           | [ `String s ] -> s
           | [ v ] -> Json.to_string v
-          | _ -> "assertion failed")
+          | _ -> "assertion failed"
+        )
       | None -> "assertion failed"
     in
     Runtime_error.assertion_error ~value:json message
@@ -3583,7 +3768,8 @@ and debug_msg ~ctx msg_expr json =
             ()
         | _ ->
             Printf.eprintf "[debug] %s\n%!" (Json.to_string json);
-            ())
+            ()
+      )
     | None ->
         Printf.eprintf "[debug] %s\n%!" (Json.to_string json);
         ()
@@ -3598,7 +3784,8 @@ and collect_safe ~ctx expr json =
     (fun () ->
       on_yield
         (fun () -> interp ~ctx expr json)
-        ~then_:(fun v -> results := v :: !results))
+        ~then_:(fun v -> results := v :: !results)
+    )
     ~on_fail:(fun () -> failed := true);
   if !failed then [] else List.rev !results
 
@@ -3611,7 +3798,8 @@ and find_all ~ctx cond_expr json =
         match results with
         | [ `Bool true ] -> [ value ]
         | [ `Bool false ] | [ `Null ] | [] -> []
-        | results -> List.filter (fun r -> r <> `Null) results)
+        | results -> List.filter (fun r -> r <> `Null) results
+      )
       all_values
   in
   yield (`List matches)
@@ -3622,7 +3810,8 @@ and find_first ~ctx cond_expr json =
     | [] -> yield `Null
     | value :: rest -> (
         let results = collect_safe ~ctx cond_expr value in
-        match results with [ `Bool true ] -> yield value | _ -> loop rest)
+        match results with [ `Bool true ] -> yield value | _ -> loop rest
+      )
   in
   loop all_values
 
@@ -3640,7 +3829,8 @@ and paths_to ~ctx cond_expr json =
           List.concat
             (List.mapi
                (fun i item -> collect_paths (`Int i :: current_path) item)
-               items)
+               items
+            )
       | `Assoc fields ->
           List.concat_map
             (fun (k, v) -> collect_paths (`String k :: current_path) v)

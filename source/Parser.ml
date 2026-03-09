@@ -114,7 +114,8 @@ and parse_object_pattern stream =
             advance stream;
             let var = expect_variable stream in
             (key, var)
-        | _ -> error stream "expected ':' after key in object pattern")
+        | _ -> error stream "expected ':' after key in object pattern"
+      )
     | _ -> error stream "expected variable or key in object pattern"
   in
   let first = parse_field () in
@@ -197,7 +198,8 @@ and parse_fn_params stream =
             | CLOSE_PARENT -> List.rev acc
             | _ ->
                 let param = parse_fn_param stream in
-                loop (param :: acc))
+                loop (param :: acc)
+          )
         | _ -> List.rev acc
       in
       loop [ param ]
@@ -224,7 +226,8 @@ and parse_try stream =
           advance stream;
           let cleanup = parse_item_expr stream in
           Try (body, Some handler, Some cleanup)
-      | _ -> Try (body, Some handler, None))
+      | _ -> Try (body, Some handler, None)
+    )
   | _ -> Try (body, None, None)
 
 and parse_pipe_expr stream =
@@ -369,7 +372,8 @@ and parse_postfix stream expr =
           advance stream;
           let access = optional_question stream (Key key) in
           parse_postfix stream (Pipe (expr, access))
-      | _ -> error stream "expected property name after '.'")
+      | _ -> error stream "expected property name after '.'"
+    )
   | OPEN_BRACKET ->
       let result = parse_bracket_access stream expr in
       parse_postfix stream result
@@ -406,7 +410,8 @@ and parse_bracket_access stream expr =
           | _ ->
               let end_ = parse_index_number stream in
               expect stream CLOSE_BRACKET;
-              Pipe (expr, Slice (Some first_num, Some end_)))
+              Pipe (expr, Slice (Some first_num, Some end_))
+        )
       | COMMA ->
           let indices = parse_remaining_indices stream [ first_num ] in
           expect stream CLOSE_BRACKET;
@@ -414,7 +419,8 @@ and parse_bracket_access stream expr =
       | CLOSE_BRACKET ->
           advance stream;
           Pipe (expr, optional_question stream (Index [ first_num ]))
-      | _ -> error stream "expected ':', ',' or ']' in bracket expression")
+      | _ -> error stream "expected ':', ',' or ']' in bracket expression"
+    )
 
 and parse_remaining_indices stream acc =
   match (peek stream : Lexer.token) with
@@ -441,7 +447,8 @@ and parse_index_number stream =
       | FLOAT number ->
           advance stream;
           int_of_float (-.number)
-      | _ -> error stream "expected number after '-'")
+      | _ -> error stream "expected number after '-'"
+    )
   | INT number ->
       advance stream;
       number
@@ -473,7 +480,8 @@ and parse_number_literal stream =
       | FLOAT number ->
           advance stream;
           Float (-.number)
-      | _ -> error stream "expected number after '-'")
+      | _ -> error stream "expected number after '-'"
+    )
   | INT number ->
       advance stream;
       Int number
@@ -548,7 +556,8 @@ and parse_range stream =
           let step = parse_sequence_expr stream in
           expect stream CLOSE_PARENT;
           Range (from, Some upto, Some step)
-      | _ -> error stream "expected ')' or ';' in range")
+      | _ -> error stream "expected ')' or ';' in range"
+    )
   | _ -> error stream "expected ')' or ';' in range"
 
 and parse_flatten stream =
@@ -563,7 +572,8 @@ and parse_flatten stream =
       | _ ->
           let expr = parse_sequence_expr stream in
           expect stream CLOSE_PARENT;
-          Fn1 (With_expr (Flatten_n, expr)))
+          Fn1 (With_expr (Flatten_n, expr))
+    )
   | _ -> Fn0 Flatten
 
 and parse_reduce stream =
@@ -637,13 +647,15 @@ and parse_call_rest stream fn_start name arg1 =
           expect stream CLOSE_PARENT;
           match name with
           | "fma" -> Fma (arg1, arg2, arg3)
-          | _ -> Apply (name, [ arg1; arg2; arg3 ]))
+          | _ -> Apply (name, [ arg1; arg2; arg3 ])
+        )
       | CLOSE_PARENT ->
           advance stream;
           unwrap_or_raise
             { stream with start_pos = fn_start }
             (Language.map_binary_fn name arg1 arg2)
-      | _ -> error stream "expected ';' or ')' in function call")
+      | _ -> error stream "expected ';' or ')' in function call"
+    )
   | CLOSE_PARENT ->
       advance stream;
       unwrap_or_raise
@@ -683,7 +695,8 @@ and parse_identifier stream name =
           Optional (parse_call_rest stream fn_start name arg1)
       | _ ->
           let new_stream = { stream with start_pos = fn_start } in
-          Optional (unwrap_or_raise new_stream (Language.map_nullary_fn name)))
+          Optional (unwrap_or_raise new_stream (Language.map_nullary_fn name))
+    )
   | _ ->
       let new_stream = { stream with start_pos = fn_start } in
       let ast = unwrap_or_raise new_stream (Language.map_nullary_fn name) in
@@ -739,7 +752,8 @@ and parse_key_value stream =
           advance stream;
           let value = parse_term stream in
           (Literal (String key), Some value)
-      | _ -> (Literal (String key), None))
+      | _ -> (Literal (String key), None)
+    )
   | _ -> error stream "expected key in object construction"
 
 and parse_paren stream =

@@ -8,7 +8,8 @@ let test query json_str expected_error_part =
         | Error err ->
             if not (Re.execp (Re.compile (Re.str expected_error_part)) err) then
               Alcotest.failf "Expected error containing '%s', but got:\n%s"
-                expected_error_part err)
+                expected_error_part err
+      )
   in
   Alcotest.test_case query `Quick fn
 
@@ -24,8 +25,10 @@ let test_location name query json_str expected_parts =
               (fun part ->
                 if not (Re.execp (Re.compile (Re.str part)) err) then
                   Alcotest.failf "Expected error containing '%s', but got:\n%s"
-                    part err)
-              expected_parts)
+                    part err
+              )
+              expected_parts
+      )
   in
   Alcotest.test_case name `Quick fn
 

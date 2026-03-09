@@ -6,7 +6,8 @@ let test query input expected =
       | Ok json -> (
           match Core.run ~colorize:false query json with
           | Ok r -> r
-          | Error err -> Alcotest.fail err)
+          | Error err -> Alcotest.fail err
+        )
     in
     ();
     Alcotest.check Alcotest.string "should be equal" expected result

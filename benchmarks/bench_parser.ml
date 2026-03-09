@@ -11,7 +11,8 @@ let queries =
     ("object_construct", "{a: .x, b: .y, c: (.z | to_string)}");
     ( "if_then_else",
       "if . > 0 then \"positive\" elif . < 0 then \"negative\" else \"zero\" \
-       end" );
+       end"
+    );
     ("reduce", "reduce .[] as $x (0; . + $x)");
     ("foreach", "[foreach .[] as $x (0; . + $x; .)]");
     ("fn_def", "fn double: . * 2; fn add1: . + 1; map(double | add1)");
@@ -19,18 +20,22 @@ let queries =
     ("string_interp", "\"Hello, \\(.name)! Age: \\(.age)\"");
     ( "complex_real_world",
       "group_by(.category) | [.[]] | map({category: .[0].category, count: \
-       length, total: (map(.val) | add)})" );
+       length, total: (map(.val) | add)})"
+    );
     ( "nested_functions",
-      "fn fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 10 | fact" );
+      "fn fact: if . <= 1 then 1 else . * ((. - 1) | fact) end; 10 | fact"
+    );
     ( "filter_chain",
       ".[] | select(.active == true and .age >= 18) | {name: .name, email: \
-       .email}" );
+       .email}"
+    );
     ("update_assign", ".foo |= . + 1 | .bar += 2 | .baz -= 3");
     ("optional_access", ".foo?.bar?[]? | select(. > 0)");
     ("range_expressions", "[range(0; 10; 2)] | map(. * .)");
     ( "walk_transform",
       "walk(if type == \"object\" then with_entries(.key |= to_uppercase) else \
-       . end)" );
+       . end)"
+    );
   ]
 
 let warmup_iterations = 1_000
@@ -87,7 +92,8 @@ let () =
       total_time := !total_time +. r.elapsed;
       total_minor_w := !total_minor_w +. r.minor_words;
       total_promoted := !total_promoted +. r.promoted_words;
-      total_gcs := !total_gcs + r.minor_collections)
+      total_gcs := !total_gcs + r.minor_collections
+    )
     queries;
   let total_parses = Float.of_int total_queries *. n in
   Printf.printf "%s\n" (String.make 56 '-');

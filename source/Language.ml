@@ -1358,7 +1358,8 @@ let all_categories =
 let find_category name =
   List.find_opt
     (fun c ->
-      Stdlib.String.lowercase_ascii c.name = Stdlib.String.lowercase_ascii name)
+      Stdlib.String.lowercase_ascii c.name = Stdlib.String.lowercase_ascii name
+    )
     all_categories
 
 let category_names () = List.map (fun c -> c.name) all_categories
@@ -1387,7 +1388,8 @@ let functions_for_type type_name =
     (fun f ->
       List.exists
         (fun a -> a = Any || type_name_of_applicable a = type_name)
-        f.applicable_to)
+        f.applicable_to
+    )
     all
 
 let applicable_of_json_type = function
@@ -1470,18 +1472,20 @@ let strip_extended pattern =
   let i = ref 0 in
   while !i < len do
     let c = pattern.[!i] in
-    (if !in_comment then (if c = '\n' then in_comment := false)
-     else if !in_bracket then (
-       if c = ']' then in_bracket := false;
-       Buffer.add_char buf c)
-     else
-       match c with
-       | '[' ->
-           in_bracket := true;
-           Buffer.add_char buf c
-       | ' ' | '\t' -> ()
-       | '#' -> in_comment := true
-       | _ -> Buffer.add_char buf c);
+    ( if !in_comment then (if c = '\n' then in_comment := false)
+      else if !in_bracket then (
+        if c = ']' then in_bracket := false;
+        Buffer.add_char buf c
+      )
+      else
+        match c with
+        | '[' ->
+            in_bracket := true;
+            Buffer.add_char buf c
+        | ' ' | '\t' -> ()
+        | '#' -> in_comment := true
+        | _ -> Buffer.add_char buf c
+    );
     i := !i + 1
   done;
   Buffer.contents buf
@@ -1504,13 +1508,14 @@ let pcre_flags_of_string flags =
       | 'm' -> pcre_flags := `MULTILINE :: !pcre_flags
       | 'x' -> extended := true
       | 'g' | 'n' -> ()
-      | _ -> ())
+      | _ -> ()
+    )
     flags;
   (!pcre_flags, !extended)
 
 (* Map 2-argument function names to AST nodes *)
-let map_binary_fn (name : string) (arg1 : Ast.expression)
-    (arg2 : Ast.expression) : (Ast.expression, Error.t) result =
+let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression)
+    : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
   | "while" -> Ok (Fn2 (While, arg1, arg2))
@@ -1524,7 +1529,9 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
           Error
             (Error.requires_number_literal ~fn_name:"limit"
                ~what:"first argument must be a number literal"
-               ~example:"limit(3; range(10)) → 0, 1, 2" ()))
+               ~example:"limit(3; range(10)) → 0, 1, 2" ()
+            )
+    )
   | "skip" -> (
       match arg1 with
       | Literal ((Int _ | Float _) as n) -> Ok (Fn2 (Skip, Literal n, arg2))
@@ -1532,7 +1539,9 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
           Error
             (Error.requires_number_literal ~fn_name:"skip"
                ~what:"first argument must be a number literal"
-               ~example:"skip(2; range(5)) → 2, 3, 4" ()))
+               ~example:"skip(2; range(5)) → 2, 3, 4" ()
+            )
+    )
   | "replace" | "sub" -> (
       match (arg1, arg2) with
       | Literal (String _pattern), Literal (String _replacement) ->
@@ -1540,11 +1549,14 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       | Literal (String _), _ ->
           Error
             (require_string_literal ~fn_name:"replace" ~what:"replacement"
-               ~example:{|replace("l"; "L") replaces first match|})
+               ~example:{|replace("l"; "L") replaces first match|}
+            )
       | _, _ ->
           Error
             (require_string_literal ~fn_name:"replace" ~what:"pattern"
-               ~example:{|replace("l"; "L") replaces first match|}))
+               ~example:{|replace("l"; "L") replaces first match|}
+            )
+    )
   | "replace_all" | "gsub" -> (
       match (arg1, arg2) with
       | Literal (String _pattern), Literal (String _replacement) ->
@@ -1552,11 +1564,14 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
       | Literal (String _), _ ->
           Error
             (require_string_literal ~fn_name:"replace_all" ~what:"replacement"
-               ~example:{|replace_all("l"; "L") replaces all matches|})
+               ~example:{|replace_all("l"; "L") replaces all matches|}
+            )
       | _, _ ->
           Error
             (require_string_literal ~fn_name:"replace_all" ~what:"pattern"
-               ~example:{|replace_all("l"; "L") replaces all matches|}))
+               ~example:{|replace_all("l"; "L") replaces all matches|}
+            )
+    )
   | "any" -> Ok (Fn2 (Any_gen, arg1, arg2))
   | "all" -> Ok (Fn2 (All_gen, arg1, arg2))
   | "set_path" -> Ok (Fn2 (Setpath, arg1, arg2))
@@ -1583,13 +1598,15 @@ let map_binary_fn (name : string) (arg1 : Ast.expression)
           in
           match compile_pcre ~flags:pcre_flags ~extended pattern with
           | Ok compiled -> Ok (Ast.Fn1 (With_pattern (fn, compiled)))
-          | Error e -> Error e)
+          | Error e -> Error e
+        )
       | _ ->
           Error
             (require_string_literal ~fn_name:name
                ~what:"regex pattern and flags"
-               ~example:(name ^ {|("pattern"; "gi") applies regex with flags|}))
-      )
+               ~example:(name ^ {|("pattern"; "gi") applies regex with flags|})
+            )
+    )
   (* Not implemented *)
   | "strftime" -> Error (not_implemented "strftime")
   | "splits" ->
@@ -1644,14 +1661,18 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       | _ ->
           Error
             (require_string_literal ~fn_name:"split" ~what:"separator"
-               ~example:{|split(",") splits "a,b,c" into ["a", "b", "c"]|}))
+               ~example:{|split(",") splits "a,b,c" into ["a", "b", "c"]|}
+            )
+    )
   | "join" -> (
       match arg with
       | Literal (String sep) -> Ok (make_separator_fn Join sep)
       | _ ->
           Error
             (require_string_literal ~fn_name:"join" ~what:"separator"
-               ~example:{|join(",") joins ["a", "b"] into "a,b"|}))
+               ~example:{|join(",") joins ["a", "b"] into "a,b"|}
+            )
+    )
   (* String functions - expression-based *)
   | "starts_with" -> Ok (make_expr_fn Starts_with arg)
   | "startswith" ->
@@ -1674,8 +1695,9 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       | _ ->
           Error
             (require_string_literal ~fn_name:"test" ~what:"regex pattern"
-               ~example:{|test("^hello") checks if string starts with "hello"|})
-      )
+               ~example:{|test("^hello") checks if string starts with "hello"|}
+            )
+    )
   | "match" -> (
       match arg with
       | Literal (String pattern) -> make_pattern_fn Match pattern
@@ -1683,22 +1705,27 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
           Error
             (require_string_literal ~fn_name:"match" ~what:"regex pattern"
                ~example:
-                 {|match("[0-9]+") returns match object with offset, captures|})
-      )
+                 {|match("[0-9]+") returns match object with offset, captures|}
+            )
+    )
   | "scan" -> (
       match arg with
       | Literal (String pattern) -> make_pattern_fn Scan pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"scan" ~what:"regex pattern"
-               ~example:{|scan("[0-9]+") yields all numeric matches|}))
+               ~example:{|scan("[0-9]+") yields all numeric matches|}
+            )
+    )
   | "capture" -> (
       match arg with
       | Literal (String pattern) -> make_pattern_fn Capture pattern
       | _ ->
           Error
             (require_string_literal ~fn_name:"capture" ~what:"regex pattern"
-               ~example:{|capture("(?<name>\\w+)") returns {name: ...}|}))
+               ~example:{|capture("(?<name>\\w+)") returns {name: ...}|}
+            )
+    )
   (* Iteration/limiting functions *)
   | "first" -> Ok (make_expr_fn First_expr arg)
   | "last" -> Ok (make_expr_fn Last_expr arg)
@@ -1735,18 +1762,22 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
           Error
             (Error.requires_number_literal ~fn_name:"halt_error"
                ~what:"requires a number literal exit code"
-               ~example:"halt_error(1) terminates with exit code 1" ()))
+               ~example:"halt_error(1) terminates with exit code 1" ()
+            )
+    )
   (* is_valid(expr) -> try (expr | true) catch false *)
   | "is_valid" ->
       Ok
-        (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None))
+        (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None)
+        )
   (* Not implemented *)
   | "format" -> Error (not_implemented "format")
   | "strftime" -> Error (not_implemented "strftime")
   | "parse_date" -> (
       match arg with
       | Literal (String fmt) -> Ok (Fn1 (With_separator (Parse_date, fmt)))
-      | _ -> Error (not_implemented "parse_date with non-literal format"))
+      | _ -> Error (not_implemented "parse_date with non-literal format")
+    )
   | "todateiso8601" | "fromdateiso8601" | "fromdate" | "strptime" ->
       Error (not_implemented "ISO date functions")
   | "to_local_time" | "to_utc" -> Error (not_implemented "time zone functions")
@@ -1759,24 +1790,28 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Error
         (Error.not_implemented
            ~suggestion:"use `to_string` (input is already JSON)"
-           "tojson/fromjson")
+           "tojson/fromjson"
+        )
   | "ascii" -> Error (not_implemented "ascii")
   | "modulemeta" -> Error (not_implemented "modulemeta")
   | "input" | "inputs" ->
       Error
         (Error.not_implemented ~description:"query-json reads all input upfront"
-           "input/inputs")
+           "input/inputs"
+        )
   | "env" ->
       Error
         (Error.unsupported ~fn_name:"env"
            ~message:"with argument is not supported"
-           ~suggestion:"use `$ENV.name` or `env.name` instead" ())
+           ~suggestion:"use `$ENV.name` or `env.name` instead" ()
+        )
   | "builtins" -> Error (not_implemented "builtins")
   | "limit" ->
       Error
         (Error.requires_number_literal ~fn_name:"limit"
            ~what:"first argument must be a number literal"
-           ~example:"limit(3; range(10))" ())
+           ~example:"limit(3; range(10))" ()
+        )
   | "until" | "while" ->
       let example =
         if name = "while" then "[while(. < 100; . * 2)]"
@@ -1786,7 +1821,8 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
         (Error.missing_argument ~fn_name:name
            ~message:(Printf.sprintf "`%s` requires two arguments" name)
            ~usage:"condition and update expressions"
-           ~description:"Loop construct" ~example ())
+           ~description:"Loop construct" ~example ()
+        )
   (* Default: generic function application *)
   | _ -> Ok (Apply (name, [ arg ]))
 
@@ -1922,7 +1958,9 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
         (Try
            ( Pipe (Identity, Literal (Bool true)),
              Some (Literal (Bool false)),
-             None ))
+             None
+           )
+        )
   | "builtins" -> Ok (Fn0 Builtins)
   (* Not implemented *)
   | "strftime" -> Error (not_implemented "strftime")
@@ -1930,7 +1968,8 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Error
         (Error.not_implemented
            ~suggestion:"use parse_date(format) with a format string"
-           "parse_date")
+           "parse_date"
+        )
   | "fromdate" | "fromdateiso8601" ->
       Error (Error.deprecated ~old_name:"fromdate" ~new_name:"from_date")
   | "localtime" ->
@@ -1944,11 +1983,13 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Error
         (Error.not_implemented
            ~suggestion:"use `to_string` (input is already JSON)"
-           "tojson/fromjson")
+           "tojson/fromjson"
+        )
   | "input_filename" | "input_line_number" ->
       Error (not_implemented "input metadata")
   (* Default: check registry for functions that require arguments *)
   | _ -> (
       match find_function name with
       | Some f when f.arity <> No_args -> Error (error_for_missing_arg name)
-      | _ -> Ok (Apply (name, [])))
+      | _ -> Ok (Apply (name, []))
+    )
