@@ -86,9 +86,9 @@ subst: ## Run dune substitute
 
 .PHONY: pin
 pin: # pin dependencies
-	opam pin add toffee.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
-	opam pin add matrix.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
-	opam pin add mosaic.dev "https://github.com/davesnx/mosaic.git#20c70887e8357200e2b794cd9dd12095404cabaf" -y
+	opam pin add toffee.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
+	opam pin add matrix.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
+	opam pin add mosaic.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
 	opam pin add reason-react-ppx.dev "https://github.com/reasonml/reason-react.git" -y
 	opam pin add reason-react.dev "https://github.com/reasonml/reason-react.git" -y
 
