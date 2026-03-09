@@ -69,8 +69,8 @@
   mlx
   (melange (>= 5.0.1))
   melange-json
-  reason-react
-  reason-react-ppx
+   (reason-react (>= 0.17.0))
+   (reason-react-ppx (>= 0.17.0))
   (ocamlmerlin-mlx :with-dev-setup)
   (ocamlformat-mlx :with-dev-setup)
   (ocaml-lsp-server :with-dev-setup)
