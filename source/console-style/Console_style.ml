@@ -1,8 +1,31 @@
-open Ansi
-
 let indent n = String.make (n * 1) ' '
 let enter n = String.make n '\n'
 let single_quotes str = "'" ^ str ^ "'"
+
+(* Lightweight ANSI SGR helpers — avoids pulling in matrix.ansi (which contains
+   64-bit integer literals that overflow when compiled to JS). *)
+
+type color = Red | Green | Yellow | Blue | Cyan | Bright_black
+
+let sgr_of_color = function
+  | Red -> "31"
+  | Green -> "32"
+  | Yellow -> "33"
+  | Blue -> "34"
+  | Cyan -> "36"
+  | Bright_black -> "90"
+
+let wrap_sgr codes text = "\027[" ^ codes ^ "m" ^ text ^ "\027[0m"
+
+let styled_string ?fg ?bold text =
+  let codes =
+    match (bold, fg) with
+    | Some true, Some c -> "1;" ^ sgr_of_color c
+    | Some true, None -> "1"
+    | _, Some c -> sgr_of_color c
+    | _ -> ""
+  in
+  if codes = "" then text else wrap_sgr codes text
 
 type t = {
   bold : string -> string;
@@ -12,23 +35,21 @@ type t = {
   blue : string -> string;
   gray : string -> string;
   cyan : string -> string;
-  styled : ?fg:Color.t -> ?bold:bool -> string -> string;
+  styled : ?fg:color -> ?bold:bool -> string -> string;
 }
 
 let make ~colorize =
   let styled ?fg ?bold text =
-    if colorize then
-      Ansi.Style.styled ~reset:true (Ansi.Style.make ?fg ?bold ()) text
-    else text
+    if colorize then styled_string ?fg ?bold text else text
   in
   {
     bold = (fun s -> styled ~bold:true s);
-    red = (fun s -> styled ~fg:Color.red s);
-    green = (fun s -> styled ~fg:Color.green s);
-    yellow = (fun s -> styled ~fg:Color.yellow s);
-    blue = (fun s -> styled ~fg:Color.blue s);
-    gray = (fun s -> styled ~fg:Color.bright_black s);
-    cyan = (fun s -> styled ~fg:Color.cyan s);
+    red = (fun s -> styled ~fg:Red s);
+    green = (fun s -> styled ~fg:Green s);
+    yellow = (fun s -> styled ~fg:Yellow s);
+    blue = (fun s -> styled ~fg:Blue s);
+    gray = (fun s -> styled ~fg:Bright_black s);
+    cyan = (fun s -> styled ~fg:Cyan s);
     styled;
   }
 

@@ -1,5 +1,4 @@
 (library
  (name console_style)
  (public_name query-json.console-style)
- (modules console_style)
- (libraries matrix.ansi))
+ (modules console_style))

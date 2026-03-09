@@ -502,7 +502,7 @@ let function_detail ~(info : Language.function_info) () =
   </box>
 
 let completions ~model ~children:_ () =
-  if List.length model.completions = 0 then empty
+  if List.length model.completions = 0 then Mosaic.empty
   else
     let single_function =
       match model.completions with [ Function f ] -> Some f | _ -> None
