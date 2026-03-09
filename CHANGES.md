@@ -1,5 +1,10 @@
 # Unreleased
 
+## 1.0.0~beta-1
+
+- [FIX] **`pow` requires two arguments**: Bare `pow` no longer silently squares the input — it now produces a helpful error pointing to the correct `pow(x; y)` usage
+- [FIX] **Nested `fn` parameter shadowing**: Inner `fn` definitions that reuse an outer parameter name no longer have the outer argument leak into the inner body
+- [FIX] **`Int + Int` arithmetic stays `Int`**: Small integer arithmetic no longer unnecessarily promotes to `Int64`; overflow is detected and promotes only when needed
 - [FIX] **`fn` without rest expression**: `fn double: . * 2;` no longer errors at EOF, defaults rest to identity
 - [FIX] **Multiline error locations**: Error pointers now show the correct line and column for multi-line queries
 - [REFACTOR] Replace `Str` regex engine with `Re.Pcre` for native PCRE syntax support
@@ -14,9 +19,6 @@
 - [FIX] **Pretty-printer handles `infinity` and `NaN`**: `Pretty.write_float` now serializes non-finite floats as `null` instead of calling `Float.to_int` on them
 - [FIX] **Bare `error()` produces formatted output**: `error("msg")` without `try`/`?` now shows a proper `[user_error]` message instead of a raw OCaml exception
 - [FIX] **Bare `recurse`**: `recurse` and `recurse(.foo[])` work correctly
-
-## 1.0.0~beta-1
-
 - [REFACTOR] Replace menhir-based parser with hand-written recursive descent parser
 - [FIX] **Big_int arithmetic support**: All arithmetic, comparison, and math operations now handle arbitrary-precision integers
 - Rename functions for clarity
