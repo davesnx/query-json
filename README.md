@@ -52,13 +52,6 @@ null
 
 <img src="docs/repl-demo.gif" alt="query-json interactive REPL demo" />
 
-More demos:
-
-- [Basic CLI demo](./docs/cli-basic.gif)
-- [Advanced CLI demo](./docs/cli-advanced.gif)
-- [query-json vs jq demo](./docs/comparison.gif)
-- [jq compatibility demo bundle](./docs/jq-compat-demos/all-demos.gif)
-
 ### Portable
 
 Written in OCaml, it compiles to both native code and JavaScript. Use the same query language:
