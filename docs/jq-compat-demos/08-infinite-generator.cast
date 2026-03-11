@@ -1,0 +1,4 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233394, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005722, "o", "\r\n# infinite generator\r\n"]
+[0.807189, "o", "\r\n$ _opam/bin/query-json '[limit(5; infinite)]' <<< 'null'\r\n"]
+[0.813315, "o", "[ \u001b[32m0\u001b[39m\u001b[0m, \u001b[32m1\u001b[39m\u001b[0m, \u001b[32m2\u001b[39m\u001b[0m, \u001b[32m3\u001b[39m\u001b[0m, \u001b[32m4\u001b[39m\u001b[0m ]\r\n"]

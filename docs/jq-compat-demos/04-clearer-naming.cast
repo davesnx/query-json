@@ -1,0 +1,6 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233382, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005697, "o", "\r\n# Clearer naming\r\n"]
+[0.807597, "o", "\r\n$ echo '\"hello world\"' | jq 'startswith(\"hello\")'\r\n"]
+[0.815211, "o", "\u001b[0;39mtrue\u001b[0m\r\n"]
+[1.818204, "o", "\r\n$ echo '\"hello world\"' | _opam/bin/query-json 'starts_with(\"hello\")'\r\n"]
+[1.825413, "o", "\u001b[32mtrue\u001b[39m\u001b[0m\r\n"]

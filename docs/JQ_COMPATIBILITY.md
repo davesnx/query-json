@@ -461,37 +461,35 @@ query-json includes some functions not found in jq:
 
 ## Video Demos
 
-All the examples in this guide have corresponding VHS tape demos. You can find them in [`docs/jq-compat-demos/`](./jq-compat-demos/) and generate the videos using [VHS](https://github.com/charmbracelet/vhs).
+All the examples in this guide have corresponding asciinema demos. Cast recordings and GIFs are generated from scripts in [`docs/demo-scripts/jq-compat-demos/`](./demo-scripts/jq-compat-demos/).
 
 ### Available Demos
 
-| Demo | Description | Tape File |
-|------|-------------|-----------|
-| **Error Messages** | Helpful error messages with context and hints | [`00-error-messages.tape`](./jq-compat-demos/00-error-messages.tape) |
-| **Null Handling** | Stricter null handling catches bugs early | [`01-stricter-null-handling.tape`](./jq-compat-demos/01-stricter-null-handling.tape) |
-| **fn vs def** | `fn` keyword for user-defined functions | [`02-fn-vs-def.tape`](./jq-compat-demos/02-fn-vs-def.tape) |
-| **Snake_case** | Readable `snake_case` function names | [`03-snake-case-naming.tape`](./jq-compat-demos/03-snake-case-naming.tape) |
-| **Clearer Naming** | Self-explanatory function names | [`04-clearer-naming.tape`](./jq-compat-demos/04-clearer-naming.tape) |
-| **group_by** | Returns object instead of array of arrays | [`05-group-by-behavior.tape`](./jq-compat-demos/05-group-by-behavior.tape) |
-| **keys** | Preserves insertion order | [`06-keys-insertion-order.tape`](./jq-compat-demos/06-keys-insertion-order.tape) |
-| **unique** | Preserves insertion order | [`07-unique-insertion-order.tape`](./jq-compat-demos/07-unique-insertion-order.tape) |
-| **infinite** | Generator producing 0, 1, 2, ... | [`08-infinite-generator.tape`](./jq-compat-demos/08-infinite-generator.tape) |
-| **Optional Functions** | `?` works on function calls | [`09-optional-access-functions.tape`](./jq-compat-demos/09-optional-access-functions.tape) |
-| **Additional Features** | Features unique to query-json | [`10-additional-features.tape`](./jq-compat-demos/10-additional-features.tape) |
-| **All Demos** | Complete overview of all differences | [`all-demos.tape`](./jq-compat-demos/all-demos.tape) |
+| Demo | Description | Make `FILE` | Script | GIF | Cast |
+|------|-------------|-------------|--------|-----|------|
+| **Error Messages** | Helpful error messages with context and hints | `jq-compat-demos/00-error-messages` | [`00-error-messages.sh`](./demo-scripts/jq-compat-demos/00-error-messages.sh) | [`00-error-messages.gif`](./jq-compat-demos/00-error-messages.gif) | [`00-error-messages.cast`](./jq-compat-demos/00-error-messages.cast) |
+| **Null Handling** | Stricter null handling catches bugs early | `jq-compat-demos/01-stricter-null-handling` | [`01-stricter-null-handling.sh`](./demo-scripts/jq-compat-demos/01-stricter-null-handling.sh) | [`01-stricter-null-handling.gif`](./jq-compat-demos/01-stricter-null-handling.gif) | [`01-stricter-null-handling.cast`](./jq-compat-demos/01-stricter-null-handling.cast) |
+| **fn vs def** | `fn` keyword for user-defined functions | `jq-compat-demos/02-fn-vs-def` | [`02-fn-vs-def.sh`](./demo-scripts/jq-compat-demos/02-fn-vs-def.sh) | [`02-fn-vs-def.gif`](./jq-compat-demos/02-fn-vs-def.gif) | [`02-fn-vs-def.cast`](./jq-compat-demos/02-fn-vs-def.cast) |
+| **Snake_case** | Readable `snake_case` function names | `jq-compat-demos/03-snake-case-naming` | [`03-snake-case-naming.sh`](./demo-scripts/jq-compat-demos/03-snake-case-naming.sh) | [`03-snake-case-naming.gif`](./jq-compat-demos/03-snake-case-naming.gif) | [`03-snake-case-naming.cast`](./jq-compat-demos/03-snake-case-naming.cast) |
+| **Clearer Naming** | Self-explanatory function names | `jq-compat-demos/04-clearer-naming` | [`04-clearer-naming.sh`](./demo-scripts/jq-compat-demos/04-clearer-naming.sh) | [`04-clearer-naming.gif`](./jq-compat-demos/04-clearer-naming.gif) | [`04-clearer-naming.cast`](./jq-compat-demos/04-clearer-naming.cast) |
+| **group_by** | Returns object instead of array of arrays | `jq-compat-demos/05-group-by-behavior` | [`05-group-by-behavior.sh`](./demo-scripts/jq-compat-demos/05-group-by-behavior.sh) | [`05-group-by-behavior.gif`](./jq-compat-demos/05-group-by-behavior.gif) | [`05-group-by-behavior.cast`](./jq-compat-demos/05-group-by-behavior.cast) |
+| **keys** | Preserves insertion order | `jq-compat-demos/06-keys-insertion-order` | [`06-keys-insertion-order.sh`](./demo-scripts/jq-compat-demos/06-keys-insertion-order.sh) | [`06-keys-insertion-order.gif`](./jq-compat-demos/06-keys-insertion-order.gif) | [`06-keys-insertion-order.cast`](./jq-compat-demos/06-keys-insertion-order.cast) |
+| **unique** | Preserves insertion order | `jq-compat-demos/07-unique-insertion-order` | [`07-unique-insertion-order.sh`](./demo-scripts/jq-compat-demos/07-unique-insertion-order.sh) | [`07-unique-insertion-order.gif`](./jq-compat-demos/07-unique-insertion-order.gif) | [`07-unique-insertion-order.cast`](./jq-compat-demos/07-unique-insertion-order.cast) |
+| **infinite** | Generator producing 0, 1, 2, ... | `jq-compat-demos/08-infinite-generator` | [`08-infinite-generator.sh`](./demo-scripts/jq-compat-demos/08-infinite-generator.sh) | [`08-infinite-generator.gif`](./jq-compat-demos/08-infinite-generator.gif) | [`08-infinite-generator.cast`](./jq-compat-demos/08-infinite-generator.cast) |
+| **Optional Functions** | `?` works on function calls | `jq-compat-demos/09-optional-access-functions` | [`09-optional-access-functions.sh`](./demo-scripts/jq-compat-demos/09-optional-access-functions.sh) | [`09-optional-access-functions.gif`](./jq-compat-demos/09-optional-access-functions.gif) | [`09-optional-access-functions.cast`](./jq-compat-demos/09-optional-access-functions.cast) |
+| **Additional Features** | Features unique to query-json | `jq-compat-demos/10-additional-features` | [`10-additional-features.sh`](./demo-scripts/jq-compat-demos/10-additional-features.sh) | [`10-additional-features.gif`](./jq-compat-demos/10-additional-features.gif) | [`10-additional-features.cast`](./jq-compat-demos/10-additional-features.cast) |
+| **All Demos** | Complete overview of all differences | `jq-compat-demos/all-demos` | [`all-demos.sh`](./demo-scripts/jq-compat-demos/all-demos.sh) | [`all-demos.gif`](./jq-compat-demos/all-demos.gif) | [`all-demos.cast`](./jq-compat-demos/all-demos.cast) |
 
 ### Generating Videos
 
-To generate all demo videos:
+To generate all demo casts and GIFs:
 
 ```bash
 # Generate all demos
-for tape in docs/jq-compat-demos/*.tape; do
-  vhs "$tape"
-done
+make demo-all
 
 # Or generate a specific demo
-vhs docs/jq-compat-demos/all-demos.tape
+make demo FILE=jq-compat-demos/all-demos
 ```
 
-The generated `.mp4` files will be placed in `docs/jq-compat-demos/`.
+The generated `.cast` and `.gif` files are placed in `docs/jq-compat-demos/`.

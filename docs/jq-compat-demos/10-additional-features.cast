@@ -1,0 +1,8 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233399, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005794, "o", "\r\n# Additional query-json features\r\n"]
+[0.807239, "o", "\r\n$ _opam/bin/query-json 'pluck(.name)' <<< '[{\"name\":\"A\"},{\"name\":\"B\"}]'\r\n"]
+[0.813443, "o", "[ \u001b[32m\"A\"\u001b[39m\u001b[0m, \u001b[32m\"B\"\u001b[39m\u001b[0m ]\r\n"]
+[1.815946, "o", "\r\n$ _opam/bin/query-json 'partition(. > 10)' <<< '[3,12,1,20]'\r\n"]
+[1.822734, "o", "[ [ \u001b[32m12\u001b[39m\u001b[0m, \u001b[32m20\u001b[39m\u001b[0m ], [ \u001b[32m3\u001b[39m\u001b[0m, \u001b[32m1\u001b[39m\u001b[0m ] ]\r\n"]
+[2.82536, "o", "\r\n$ _opam/bin/query-json 'find(. > 10)' <<< '[3,12,1,20]'\r\n"]
+[2.831165, "o", "\u001b[32m12\u001b[39m\u001b[0m\r\n"]

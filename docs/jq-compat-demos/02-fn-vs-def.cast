@@ -1,0 +1,6 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233376, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.007009, "o", "\r\n# fn vs def\r\n"]
+[0.808716, "o", "\r\n$ echo '[1,2,3]' | jq 'def double: . * 2; map(double)'\r\n"]
+[0.811913, "o", "\u001b[1;39m[\r\n  \u001b[0;39m2\u001b[0m\u001b[1;39m,\r\n  \u001b[0;39m4\u001b[0m\u001b[1;39m,\r\n  \u001b[0;39m6\u001b[0m\u001b[1;39m\r\n\u001b[1;39m]\u001b[0m\r\n"]
+[1.814563, "o", "\r\n$ echo '[1,2,3]' | _opam/bin/query-json 'fn double: . * 2; map(double)'\r\n"]
+[1.820962, "o", "[ \u001b[32m2\u001b[39m\u001b[0m, \u001b[32m4\u001b[39m\u001b[0m, \u001b[32m6\u001b[39m\u001b[0m ]\r\n"]

@@ -1,11 +1,11 @@
-# query-json REPL Demo (autocast)
-# Generates an asciinema .cast file
-# Usage: autocast docs/repl-demo.yaml docs/repl-demo.cast
-# Then:  agg docs/repl-demo.cast docs/repl-demo.gif
+# Legacy autocast config for the REPL demo.
+# The active recording pipeline uses:
+#   make demo-cast FILE=repl-demo
+#   make demo-gif FILE=repl-demo
 
 settings:
-  width: 100
-  height: 40
+  width: 140
+  height: 48
   title: "query-json REPL Demo"
   type_speed: 80ms
   timeout: 60s

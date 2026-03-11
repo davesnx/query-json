@@ -1,0 +1,6 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233373, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005206, "o", "\r\n# Stricter null handling\r\n"]
+[0.80656, "o", "\r\n$ _opam/bin/query-json '.missing.key' '{\"name\":\"Alice\"}'\r\n"]
+[0.81256, "o", "\r\n\u001b[31m\u001b[1merror\u001b[0m\u001b[0m\u001b[31m[key_not_found]\u001b[0m\u001b[31m:\u001b[0m Key 'missing' not found in object\r\n\r\n  \u001b[90min:\u001b[0m { \u001b[1m\u001b[34m\"name\"\u001b[39m\u001b[0m: \u001b[90m...\u001b[39m\u001b[0m }\r\n  \u001b[36mhint:\u001b[0m Use .missing? for optional access\r\n\r\n"]
+[1.814476, "o", "\r\n$ _opam/bin/query-json '.missing?.key?' '{\"name\":\"Alice\"}'\r\n"]
+[1.820203, "o", "\u001b[32mnull\u001b[39m\u001b[0m\r\n"]

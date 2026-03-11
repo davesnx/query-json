@@ -50,7 +50,14 @@ $ jq ".naem" <<< '{"name": "Alice", "age": 30}'
 null
 ```
 
-<video src="docs/repl-demo.mp4" autoplay loop muted playsinline></video>
+<img src="docs/repl-demo.gif" alt="query-json interactive REPL demo" />
+
+More demos:
+
+- [Basic CLI demo](./docs/cli-basic.gif)
+- [Advanced CLI demo](./docs/cli-advanced.gif)
+- [query-json vs jq demo](./docs/comparison.gif)
+- [jq compatibility demo bundle](./docs/jq-compat-demos/all-demos.gif)
 
 ### Portable
 

@@ -1,0 +1,6 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233388, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005452, "o", "\r\n# keys insertion order\r\n"]
+[0.806814, "o", "\r\n$ echo '{\"z\":1,\"a\":2,\"m\":3}' | jq 'keys'\r\n"]
+[0.809091, "o", "\u001b[1;39m[\r\n  \u001b[0;32m\"a\"\u001b[0m\u001b[1;39m,\r\n  \u001b[0;32m\"m\"\u001b[0m\u001b[1;39m,\r\n  \u001b[0;32m\"z\"\u001b[0m\u001b[1;39m\r\n\u001b[1;39m]\u001b[0m\r\n"]
+[1.810621, "o", "\r\n$ echo '{\"z\":1,\"a\":2,\"m\":3}' | _opam/bin/query-json 'keys'\r\n"]
+[1.816343, "o", "[ \u001b[32m\"z\"\u001b[39m\u001b[0m, \u001b[32m\"a\"\u001b[39m\u001b[0m, \u001b[32m\"m\"\u001b[39m\u001b[0m ]\r\n"]

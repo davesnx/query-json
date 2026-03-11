@@ -106,14 +106,75 @@ npm-install: ## Install npm dependencies
 .PHONY: init
 init: setup-githooks create-switch pin install npm-install ## Create a local dev enviroment
 
+DEMO_FILES = \
+	repl-demo \
+	cli-basic \
+	cli-advanced \
+	comparison \
+	jq-compat-demos/00-error-messages \
+	jq-compat-demos/01-stricter-null-handling \
+	jq-compat-demos/02-fn-vs-def \
+	jq-compat-demos/03-snake-case-naming \
+	jq-compat-demos/04-clearer-naming \
+	jq-compat-demos/05-group-by-behavior \
+	jq-compat-demos/06-keys-insertion-order \
+	jq-compat-demos/07-unique-insertion-order \
+	jq-compat-demos/08-infinite-generator \
+	jq-compat-demos/09-optional-access-functions \
+	jq-compat-demos/10-additional-features \
+	jq-compat-demos/all-demos
+
+
 .PHONY: demo
-demo: ## Generate demo from tape file (usage: make demo FILE=cli-basic)
+demo: demo-cast demo-gif ## Generate cast+gif demo (usage: make demo FILE=cli-basic)
+
+.PHONY: demo-cast
+demo-cast: ## Record demo cast (usage: make demo-cast FILE=cli-basic)
 	@if [ -z "$(FILE)" ]; then \
-		echo "Error: FILE is required. Usage: make demo FILE=cli-basic"; \
+		echo "Error: FILE is required. Usage: make demo FILE=repl-demo"; \
 		exit 1; \
 	fi
 	$(DUNE) install
-	vhs "docs/$(FILE).tape"
+	@if [ "$(FILE)" = "repl-demo" ]; then \
+		asciinema rec --overwrite --cols 140 --rows 48 -c "python3 docs/record-repl-demo.py" docs/repl-demo.cast; \
+	elif [ -f "docs/demo-scripts/$(FILE).sh" ]; then \
+		asciinema rec --overwrite --cols 140 --rows 48 -c "bash docs/demo-scripts/$(FILE).sh" "docs/$(FILE).cast"; \
+	else \
+		echo "Error: unknown demo '$(FILE)'. Expected docs/demo-scripts/$(FILE).sh"; \
+		exit 1; \
+	fi
+
+.PHONY: demo-gif
+demo-gif: ## Render demo gif from cast (usage: make demo-gif FILE=cli-basic)
+	@if [ -z "$(FILE)" ]; then \
+		echo "Error: FILE is required. Usage: make demo-gif FILE=repl-demo"; \
+		exit 1; \
+	fi
+	@if [ ! -f "docs/$(FILE).cast" ]; then \
+		echo "Error: docs/$(FILE).cast not found. Run: make demo-cast FILE=$(FILE)"; \
+		exit 1; \
+	fi
+	@if ! command -v agg >/dev/null 2>&1; then \
+		echo "Error: agg is required to render GIFs."; \
+		echo "Install it from: https://github.com/asciinema/agg"; \
+		exit 1; \
+	fi
+	agg "docs/$(FILE).cast" "docs/$(FILE).gif"
+
+.PHONY: demo-all-cast
+demo-all-cast: ## Record all demos as .cast files
+	@for demo in $(DEMO_FILES); do \
+		$(MAKE) demo-cast FILE=$$demo || exit 1; \
+	done
+
+.PHONY: demo-all-gif
+demo-all-gif: ## Render all demos as .gif files
+	@for demo in $(DEMO_FILES); do \
+		$(MAKE) demo-gif FILE=$$demo || exit 1; \
+	done
+
+.PHONY: demo-all
+demo-all: demo-all-cast demo-all-gif ## Record and render all demos
 
 .PHONY: bench
 bench: ## Run benchmarks

@@ -1,0 +1,10 @@
+{"version": 2, "width": 140, "height": 48, "timestamp": 1773233356, "env": {"SHELL": "/usr/bin/zsh", "TERM": "xterm-256color"}}
+[0.005209, "o", "\r\n# query-json basic CLI\r\n"]
+[0.80653, "o", "\r\n$ _opam/bin/query-json --version\r\n"]
+[0.812294, "o", "1.0.0~beta-1\r\n"]
+[1.814421, "o", "\r\n$ _opam/bin/query-json '.second.store.books[0].title' test/mock.json\r\n"]
+[1.819899, "o", "\r\nJSON parse error: Line 1, bytes 0-14:\r\nInvalid token 'test/mock.json'\r\n\r\n"]
+[2.821833, "o", "\r\n$ cat test/mock.json | _opam/bin/query-json '.second.store.books | length'\r\n"]
+[2.822937, "o", "cat: test/mock.json"]
+[2.823025, "o", ": No such file or directory\r\n"]
+[2.827757, "o", "\r\nJSON parse error: Blank input data\r\n\r\n"]
