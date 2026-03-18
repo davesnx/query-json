@@ -2,7 +2,11 @@ open Sedlexing.Utf8
 
 let digit = [%sedlex.regexp? '0' .. '9']
 let integer = [%sedlex.regexp? Plus digit]
-let float_number = [%sedlex.regexp? Plus digit, '.', Plus digit]
+let exponent = [%sedlex.regexp? ('e' | 'E'), Opt ('+' | '-'), Plus digit]
+
+let decimal_number =
+  [%sedlex.regexp?
+    Plus digit, '.', Plus digit, Opt exponent | Plus digit, exponent]
 let space = [%sedlex.regexp? Plus ('\n' | '\t' | ' ')]
 
 let identifier =
@@ -14,7 +18,7 @@ type token =
   | INT of int (* small integers *)
   | INT64 of int64 (* large integers *)
   | BIG_INT of Z.t [@printer fun fmt z -> Z.pp_print fmt z] (* huge integers *)
-  | FLOAT of float
+  | DECIMAL of string
   | STRING of string
   | BOOL of bool
   | IDENTIFIER of string
@@ -80,8 +84,8 @@ let humanize = function
       Printf.sprintf "%Ld" n
   | BIG_INT n ->
       Z.to_string n
-  | FLOAT n ->
-      Printf.sprintf "%g" n
+  | DECIMAL n ->
+      n
   | STRING s ->
       Printf.sprintf "\"%s\"" s
   | BOOL b ->
@@ -411,9 +415,8 @@ let rec tokenize buf =
       | _ ->
           Ok (IDENTIFIER ident)
     )
-  | float_number ->
-      let num = lexeme buf in
-      Ok (FLOAT (Float.of_string num))
+  | decimal_number ->
+      Ok (DECIMAL (lexeme buf))
   | integer -> (
       let num = lexeme buf in
       (* Parse into smallest fitting type: int -> int64 -> Big_int *)

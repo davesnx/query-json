@@ -331,7 +331,7 @@ let rec substitute_params (params : string list) (args : expression list)
   | Apply (name, call_args) ->
       Apply (name, List.map sub call_args)
 
-let fail_invalid_type ~ctx op json =
+let fail_invalid_type ~ctx op (json : Json.t) =
   let type_desc =
     match json with
     | `List _ | `Assoc _ ->
@@ -340,7 +340,7 @@ let fail_invalid_type ~ctx op json =
         "a " ^ Json.type_of json
     | `Bool _ ->
         "a boolean"
-    | `Float _ | `Int _ | `Int64 _ | `Big_int _ ->
+    | `Float _ | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ ->
         "a number"
     | `Null ->
         "null"
@@ -365,38 +365,53 @@ module Operators = struct
         Some (Int64.to_float n)
     | `Big_int z ->
         Some (Z.to_float z)
+    | `Decimal (d : Json.decimal) ->
+        Some (Json.Decimal.to_float d)
     | _ ->
         None
 
+  let exact_decimal_of_json = function
+    | `Int n ->
+        Some (Json.Decimal.of_integer (Z.of_int n))
+    | `Int64 n ->
+        Some (Json.Decimal.of_integer (Z.of_int64 n))
+    | `Big_int z ->
+        Some (Json.Decimal.of_integer z)
+    | `Decimal (d : Json.decimal) ->
+        Some d
+    | _ ->
+        None
+
+  let z_int_min = Z.of_int Int.min_int
+  let z_int_max = Z.of_int Int.max_int
+  let z_int64_min = Z.of_int64 Int64.min_int
+  let z_int64_max = Z.of_int64 Int64.max_int
+
+  let json_of_integer_z z =
+    if Z.compare z z_int_min >= 0 && Z.compare z z_int_max <= 0 then
+      `Int (Z.to_int z)
+    else if Z.compare z z_int64_min >= 0 && Z.compare z z_int64_max <= 0 then
+      `Int64 (Z.to_int64 z)
+    else
+      `Big_int z
+
+  let json_of_decimal (d : Json.decimal) =
+    if d.scale = 0 then
+      json_of_integer_z d.coeff
+    else
+      `Decimal d
+
+  let add_exact l r = Json.Decimal.add l r |> json_of_decimal
+  let sub_exact l r = Json.Decimal.sub l r |> json_of_decimal
+  let mul_exact l r = Json.Decimal.mul l r |> json_of_decimal
+
   let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
-    | `Big_int l, `Big_int r ->
-        `Big_int (Z.add l r)
-    | `Big_int l, `Int r ->
-        `Big_int (Z.add l (Z.of_int r))
-    | `Int l, `Big_int r ->
-        `Big_int (Z.add (Z.of_int l) r)
-    | `Big_int l, `Int64 r ->
-        `Big_int (Z.add l (Z.of_int64 r))
-    | `Int64 l, `Big_int r ->
-        `Big_int (Z.add (Z.of_int64 l) r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l +. r)
-    | `Float l, `Big_int r ->
-        `Float (l +. Z.to_float r)
-    | `Int64 l, `Int64 r ->
-        `Int64 (Int64.add l r)
-    | `Int64 l, `Int r ->
-        `Int64 (Int64.add l (Int64.of_int r))
-    | `Int l, `Int64 r ->
-        `Int64 (Int64.add (Int64.of_int l) r)
-    | `Int l, `Int r ->
-        let result = l + r in
-        (* Check for overflow: if signs of operands are the same but result differs *)
-        if l lxor r >= 0 && l lxor result < 0 then
-          `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
-        else
-          `Int result
+    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
+        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
+        add_exact
+          (Option.get (exact_decimal_of_json l))
+          (Option.get (exact_decimal_of_json r))
     | `Float l, `Float r ->
         `Float (l +. r)
     | `Int l, `Float r ->
@@ -407,6 +422,14 @@ module Operators = struct
         `Float (Int64.to_float l +. r)
     | `Float l, `Int64 r ->
         `Float (l +. Int64.to_float r)
+    | `Decimal l, `Float r ->
+        `Float (Json.Decimal.to_float l +. r)
+    | `Float l, `Decimal r ->
+        `Float (l +. Json.Decimal.to_float r)
+    | `Big_int l, `Float r ->
+        `Float (Z.to_float l +. r)
+    | `Float l, `Big_int r ->
+        `Float (l +. Z.to_float r)
     | `String l, `String r ->
         `String (l ^ r)
     | `Assoc l_entries, `Assoc r_entries ->
@@ -451,8 +474,8 @@ module Operators = struct
 
   let compare ~ctx:_ str int_fn (left : Json.t) (right : Json.t) =
     match (left, right) with
-    | ( (`Int _ | `Int64 _ | `Big_int _ | `Float _),
-        (`Int _ | `Int64 _ | `Big_int _ | `Float _) ) ->
+    | ( (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _),
+        (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) ) ->
         `Bool (int_fn (Json.compare left right) 0)
     | _ ->
         Runtime_error.invalid_argument ~fn:str ~expected:"numbers"
@@ -483,34 +506,11 @@ module Operators = struct
 
   let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
-    | `Big_int l, `Big_int r ->
-        `Big_int (Z.sub l r)
-    | `Big_int l, `Int r ->
-        `Big_int (Z.sub l (Z.of_int r))
-    | `Int l, `Big_int r ->
-        `Big_int (Z.sub (Z.of_int l) r)
-    | `Big_int l, `Int64 r ->
-        `Big_int (Z.sub l (Z.of_int64 r))
-    | `Int64 l, `Big_int r ->
-        `Big_int (Z.sub (Z.of_int64 l) r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l -. r)
-    | `Float l, `Big_int r ->
-        `Float (l -. Z.to_float r)
-    | `Int64 l, `Int64 r ->
-        `Int64 (Int64.sub l r)
-    | `Int64 l, `Int r ->
-        `Int64 (Int64.sub l (Int64.of_int r))
-    | `Int l, `Int64 r ->
-        `Int64 (Int64.sub (Int64.of_int l) r)
-    | `Int l, `Int r ->
-        let result = l - r in
-        (* Check for overflow: subtraction overflows when operands have different signs
-           and result sign differs from left operand *)
-        if l lxor r < 0 && l lxor result < 0 then
-          `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
-        else
-          `Int result
+    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
+        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
+        sub_exact
+          (Option.get (exact_decimal_of_json l))
+          (Option.get (exact_decimal_of_json r))
     | `Float l, `Float r ->
         `Float (l -. r)
     | `Int l, `Float r ->
@@ -521,6 +521,14 @@ module Operators = struct
         `Float (Int64.to_float l -. r)
     | `Float l, `Int64 r ->
         `Float (l -. Int64.to_float r)
+    | `Decimal l, `Float r ->
+        `Float (Json.Decimal.to_float l -. r)
+    | `Float l, `Decimal r ->
+        `Float (l -. Json.Decimal.to_float r)
+    | `Big_int l, `Float r ->
+        `Float (Z.to_float l -. r)
+    | `Float l, `Big_int r ->
+        `Float (l -. Z.to_float r)
     | `List l, `List r ->
         let in_r x = List.exists (fun y -> Json.equal x y) r in
         `List (List.filter (fun x -> Stdlib.not (in_r x)) l)
@@ -554,36 +562,11 @@ module Operators = struct
 
   let multiply ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
-    | `Big_int l, `Big_int r ->
-        `Big_int (Z.mul l r)
-    | `Big_int l, `Int r ->
-        `Big_int (Z.mul l (Z.of_int r))
-    | `Int l, `Big_int r ->
-        `Big_int (Z.mul (Z.of_int l) r)
-    | `Big_int l, `Int64 r ->
-        `Big_int (Z.mul l (Z.of_int64 r))
-    | `Int64 l, `Big_int r ->
-        `Big_int (Z.mul (Z.of_int64 l) r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l *. r)
-    | `Float l, `Big_int r ->
-        `Float (l *. Z.to_float r)
-    | `Int64 l, `Int64 r ->
-        `Int64 (Int64.mul l r)
-    | `Int64 l, `Int r ->
-        `Int64 (Int64.mul l (Int64.of_int r))
-    | `Int l, `Int64 r ->
-        `Int64 (Int64.mul (Int64.of_int l) r)
-    | `Int l, `Int r ->
-        (* Check for multiplication overflow using Int64 *)
-        let result64 = Int64.mul (Int64.of_int l) (Int64.of_int r) in
-        if
-          result64 >= Int64.of_int Int.min_int
-          && result64 <= Int64.of_int Int.max_int
-        then
-          `Int (Int64.to_int result64)
-        else
-          `Int64 result64
+    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
+        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
+        mul_exact
+          (Option.get (exact_decimal_of_json l))
+          (Option.get (exact_decimal_of_json r))
     | `Float l, `Float r ->
         `Float (l *. r)
     | `Int l, `Float r ->
@@ -594,6 +577,14 @@ module Operators = struct
         `Float (Int64.to_float l *. r)
     | `Float l, `Int64 r ->
         `Float (l *. Int64.to_float r)
+    | `Decimal l, `Float r ->
+        `Float (Json.Decimal.to_float l *. r)
+    | `Float l, `Decimal r ->
+        `Float (l *. Json.Decimal.to_float r)
+    | `Big_int l, `Float r ->
+        `Float (Z.to_float l *. r)
+    | `Float l, `Big_int r ->
+        `Float (l *. Z.to_float r)
     | `String s, `Int n ->
         if n <= 0 then
           `String ""
@@ -607,6 +598,12 @@ module Operators = struct
           `String (String.concat "" (List.init count (fun _ -> s)))
     | `String s, `Float f ->
         let count = Int.of_float f in
+        if count <= 0 then
+          `String ""
+        else
+          `String (String.concat "" (List.init count (fun _ -> s)))
+    | `String s, `Decimal d ->
+        let count = Int.of_float (Json.Decimal.to_float d) in
         if count <= 0 then
           `String ""
         else
@@ -626,6 +623,8 @@ module Operators = struct
         f = 0.0
     | `Big_int z ->
         Z.equal z Z.zero
+    | `Decimal (d : Json.decimal) ->
+        Z.equal d.coeff Z.zero
     | _ ->
         false
 
@@ -634,38 +633,31 @@ module Operators = struct
       Runtime_error.invalid_argument ~fn:"divide" ~expected:"non-zero divisor"
         ~found:"zero";
     match (left, right) with
-    | `Big_int l, `Big_int r ->
-        `Float (Z.to_float l /. Z.to_float r)
-    | `Big_int l, `Int r ->
-        `Float (Z.to_float l /. Int.to_float r)
-    | `Int l, `Big_int r ->
-        `Float (Int.to_float l /. Z.to_float r)
-    | `Big_int l, `Int64 r ->
-        `Float (Z.to_float l /. Int64.to_float r)
-    | `Int64 l, `Big_int r ->
-        `Float (Int64.to_float l /. Z.to_float r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l /. r)
-    | `Float l, `Big_int r ->
-        `Float (l /. Z.to_float r)
+    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
+        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) -> (
+        let ld = Option.get (exact_decimal_of_json l) in
+        let rd = Option.get (exact_decimal_of_json r) in
+        let exact = Json.Decimal.div_exact_or_none ld rd in
+        match exact with
+        | Some d ->
+            json_of_decimal d
+        | None ->
+            `Float (Json.Decimal.to_float ld /. Json.Decimal.to_float rd)
+      )
     | `Float l, `Float r ->
         `Float (l /. r)
     | `Int l, `Float r ->
         `Float (Int.to_float l /. r)
     | `Float l, `Int r ->
         `Float (l /. Int.to_float r)
-    | `Int l, `Int r ->
-        `Float (Int.to_float l /. Int.to_float r)
     | `Int64 l, `Float r ->
         `Float (Int64.to_float l /. r)
     | `Float l, `Int64 r ->
         `Float (l /. Int64.to_float r)
-    | `Int64 l, `Int64 r ->
-        `Float (Int64.to_float l /. Int64.to_float r)
-    | `Int64 l, `Int r ->
-        `Float (Int64.to_float l /. Int.to_float r)
-    | `Int l, `Int64 r ->
-        `Float (Int.to_float l /. Int64.to_float r)
+    | `Decimal l, `Float r ->
+        `Float (Json.Decimal.to_float l /. r)
+    | `Float l, `Decimal r ->
+        `Float (l /. Json.Decimal.to_float r)
     | `String s, `String delim ->
         `List
           (Re.split_delim (Re.compile (Re.str delim)) s
@@ -698,6 +690,14 @@ module Operators = struct
         `Int64 (Int64.rem (Int64.of_int l) r)
     | `Int l, `Int r ->
         `Int (l mod r)
+    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
+        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
+        let ld = Option.get (exact_decimal_of_json l) in
+        let rd = Option.get (exact_decimal_of_json r) in
+        if ld.scale = 0 && rd.scale = 0 then
+          json_of_integer_z (Z.rem ld.coeff rd.coeff)
+        else
+          apply_float_operation ~ctx "%" mod_float left right
     | _ ->
         apply_float_operation ~ctx "%" mod_float left right
 end
@@ -905,7 +905,8 @@ let rec set_path value path_components new_value =
       | _ ->
           value
     )
-  | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
+  | ((`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) as num) :: rest
+    -> (
       let idx =
         match num with
         | `Int i ->
@@ -916,6 +917,11 @@ let rec set_path value path_components new_value =
             Z.to_int z
         | `Float f ->
             Float.to_int f
+        | `Decimal (d : Json.decimal) ->
+            if d.scale = 0 then
+              Z.to_int d.coeff
+            else
+              Float.to_int (Json.Decimal.to_float d)
         | _ ->
             0
       in
@@ -1253,6 +1259,38 @@ let stderr json =
       Printf.eprintf "%s\n%!" str;
       yield json
 
+let json_number_of_ast_number = function
+  | Ast.Integer s -> (
+      match int_of_string_opt s with
+      | Some i ->
+          `Int i
+      | None -> (
+          match Int64.of_string_opt s with
+          | Some i ->
+              `Int64 i
+          | None ->
+              `Big_int (Z.of_string s)
+        )
+    )
+  | Ast.Decimal s ->
+      `Decimal (Json.Decimal.of_lexeme_exn s)
+
+let int_of_ast_number = function
+  | Ast.Integer s -> (
+      match int_of_string_opt s with
+      | Some i ->
+          i
+      | None -> (
+          match Int64.of_string_opt s with
+          | Some i ->
+              Int64.to_int i
+          | None ->
+              Z.to_int (Z.of_string s)
+        )
+    )
+  | Ast.Decimal s ->
+      Float.to_int (Float.of_string s)
+
 let has ~ctx (json : Json.t) key =
   match key with
   | String key -> (
@@ -1262,33 +1300,10 @@ let has ~ctx (json : Json.t) key =
       | _ ->
           fail_invalid_type ~ctx "has" json
     )
-  | Int n -> (
+  | Number number -> (
       match json with
       | `List list ->
-          `Bool (n >= 0 && n < List.length list)
-      | _ ->
-          fail_invalid_type ~ctx "has" json
-    )
-  | Int64 n -> (
-      match json with
-      | `List list ->
-          let n = Int64.to_int n in
-          `Bool (n >= 0 && n < List.length list)
-      | _ ->
-          fail_invalid_type ~ctx "has" json
-    )
-  | Big_int n -> (
-      match json with
-      | `List list ->
-          let n = Z.to_int n in
-          `Bool (n >= 0 && n < List.length list)
-      | _ ->
-          fail_invalid_type ~ctx "has" json
-    )
-  | Float n -> (
-      match json with
-      | `List list ->
-          let n = Int.of_float n in
+          let n = int_of_ast_number number in
           `Bool (n >= 0 && n < List.length list)
       | _ ->
           fail_invalid_type ~ctx "has" json
@@ -1344,6 +1359,8 @@ let length ~ctx (json : Json.t) =
       `Int64 (Int64.abs n)
   | `Big_int z ->
       `Big_int (Z.abs z)
+  | `Decimal (d : Json.decimal) ->
+      `Decimal (Json.Decimal.make (Z.abs d.coeff) d.scale)
   | `Float f ->
       `Float (Float.abs f)
   | _ ->
@@ -1380,6 +1397,8 @@ let math_fn ~ctx fn name json =
       `Float (fn (Int64.to_float n))
   | `Big_int z ->
       `Float (fn (Z.to_float z))
+  | `Decimal (d : Json.decimal) ->
+      `Float (fn (Json.Decimal.to_float d))
   | _ ->
       fail_invalid_type ~ctx name json
 
@@ -1393,6 +1412,8 @@ let abs_op ~ctx json =
       `Int64 (Int64.abs n)
   | `Big_int z ->
       `Big_int (Z.abs z)
+  | `Decimal (d : Json.decimal) ->
+      `Decimal (Json.Decimal.make (Z.abs d.coeff) d.scale)
   | _ ->
       fail_invalid_type ~ctx "abs" json
 
@@ -1406,6 +1427,11 @@ let ceil_op ~ctx json =
       `Int64 n
   | `Big_int z ->
       `Big_int z
+  | `Decimal (d : Json.decimal) ->
+      if d.scale = 0 then
+        Operators.json_of_integer_z d.coeff
+      else
+        `Int64 (Int64.of_float (Float.ceil (Json.Decimal.to_float d)))
   | _ ->
       fail_invalid_type ~ctx "ceil" json
 
@@ -1419,6 +1445,11 @@ let round_op ~ctx json =
       `Int64 n
   | `Big_int z ->
       `Big_int z
+  | `Decimal (d : Json.decimal) ->
+      if d.scale = 0 then
+        Operators.json_of_integer_z d.coeff
+      else
+        `Int64 (Int64.of_float (Float.round (Json.Decimal.to_float d)))
   | _ ->
       fail_invalid_type ~ctx "round" json
 
@@ -1426,7 +1457,7 @@ let is_normal_op ~ctx json =
   match json with
   | `Float f ->
       `Bool (Float.is_finite f && not (Float.is_nan f))
-  | `Int _ | `Int64 _ | `Big_int _ ->
+  | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ ->
       `Bool true
   | _ ->
       fail_invalid_type ~ctx "is_normal" json
@@ -1441,6 +1472,8 @@ let logb_op ~ctx json =
       `Float (Float.log2 (Float.abs (Int64.to_float n)) |> Float.floor)
   | `Big_int z ->
       `Float (Float.log2 (Float.abs (Z.to_float z)) |> Float.floor)
+  | `Decimal (d : Json.decimal) ->
+      `Float (Float.log2 (Float.abs (Json.Decimal.to_float d)) |> Float.floor)
   | _ ->
       fail_invalid_type ~ctx "logb" json
 
@@ -1454,6 +1487,11 @@ let floor ~ctx (json : Json.t) =
       `Int64 n
   | `Big_int z ->
       `Big_int z
+  | `Decimal (d : Json.decimal) ->
+      if d.scale = 0 then
+        Operators.json_of_integer_z d.coeff
+      else
+        `Int64 (Int64.of_float (floor (Json.Decimal.to_float d)))
   | _ ->
       fail_invalid_type ~ctx "floor" json
 
@@ -1467,16 +1505,17 @@ let sqrt ~ctx (json : Json.t) =
       `Float (sqrt (Int64.to_float n))
   | `Big_int z ->
       `Float (sqrt (Z.to_float z))
+  | `Decimal (d : Json.decimal) ->
+      `Float (sqrt (Json.Decimal.to_float d))
   | _ ->
       fail_invalid_type ~ctx "sqrt" json
 
 let to_number ~ctx (json : Json.t) =
   match json with
   | `String s -> (
-      (* try to parse as Int64 first, then fall back to float *)
-      match Int64.of_string_opt s with
-      | Some i ->
-          `Int64 i
+      match Json.Decimal.of_lexeme_opt s with
+      | Some d ->
+          Operators.json_of_decimal d
       | None -> (
           match Float.of_string_opt s with
           | Some f ->
@@ -1485,7 +1524,7 @@ let to_number ~ctx (json : Json.t) =
               fail_invalid_type ~ctx "to_number" json
         )
     )
-  | `Int _ | `Int64 _ | `Big_int _ | `Float _ ->
+  | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ | `Float _ ->
       json
   | _ ->
       fail_invalid_type ~ctx "to_number" json
@@ -1679,6 +1718,11 @@ let from_codepoints ~ctx:_ (json : Json.t) =
               add_codepoint (Int64.to_int n)
           | `Big_int n ->
               add_codepoint (Z.to_int n)
+          | `Decimal (d : Json.decimal) ->
+              if d.scale = 0 then
+                add_codepoint (Z.to_int d.coeff)
+              else
+                add_codepoint (Float.to_int (Json.Decimal.to_float d))
           | `Float n ->
               add_codepoint (Float.to_int n)
           | _ ->
@@ -1695,7 +1739,7 @@ let is_nan ~ctx (json : Json.t) =
   match json with
   | `Float f ->
       `Bool (Float.is_nan f)
-  | `Int _ | `Int64 _ | `Big_int _ ->
+  | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ ->
       `Bool false
   | _ ->
       fail_invalid_type ~ctx "is_nan" json
@@ -2102,14 +2146,8 @@ let rec interp ~ctx expression json : unit =
       match literal with
       | Bool b ->
           yield (`Bool b)
-      | Int i ->
-          yield (`Int i)
-      | Int64 i ->
-          yield (`Int64 i)
-      | Big_int z ->
-          yield (`Big_int z)
-      | Float f ->
-          yield (`Float f)
+      | Number n ->
+          yield (json_number_of_ast_number n)
       | String s ->
           yield (`String s)
       | Null ->
@@ -2458,8 +2496,7 @@ and interp_fn1 ~ctx fn1 json =
           binary_search ~ctx expr json
       | Has -> (
           match expr with
-          | Literal ((String _ | Int _ | Int64 _ | Big_int _ | Float _) as lit)
-            ->
+          | Literal ((String _ | Number _) as lit) ->
               yield (has ~ctx json lit)
           | _ ->
               Runtime_error.invalid_argument ~fn:"has"
@@ -4021,6 +4058,10 @@ and json_to_float_opt = function
       Some (Float.of_int n)
   | `Int64 n ->
       Some (Int64.to_float n)
+  | `Big_int z ->
+      Some (Z.to_float z)
+  | `Decimal (d : Json.decimal) ->
+      Some (Json.Decimal.to_float d)
   | _ ->
       None
 
@@ -4029,6 +4070,13 @@ and json_to_int_opt = function
       Some n
   | `Int64 n ->
       Some (Int64.to_int n)
+  | `Big_int z ->
+      Some (Z.to_int z)
+  | `Decimal (d : Json.decimal) ->
+      if d.scale = 0 then
+        Some (Z.to_int d.coeff)
+      else
+        Some (Float.to_int (Json.Decimal.to_float d))
   | `Float f ->
       Some (Float.to_int f)
   | _ ->
@@ -4328,7 +4376,7 @@ and delete_path value path_components =
         | _ ->
             value
       )
-    | [ ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) ] -> (
+    | [ ((`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) as num) ] -> (
         let idx =
           match num with
           | `Int i ->
@@ -4339,6 +4387,11 @@ and delete_path value path_components =
               Z.to_int z
           | `Float f ->
               Float.to_int f
+          | `Decimal (d : Json.decimal) ->
+              if d.scale = 0 then
+                Z.to_int d.coeff
+              else
+                Float.to_int (Json.Decimal.to_float d)
           | _ ->
               0
         in
@@ -4364,7 +4417,8 @@ and delete_path value path_components =
         | _ ->
             value
       )
-    | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
+    | ((`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) as num) :: rest
+      -> (
         let idx =
           match num with
           | `Int i ->
@@ -4375,6 +4429,11 @@ and delete_path value path_components =
               Z.to_int z
           | `Float f ->
               Float.to_int f
+          | `Decimal (d : Json.decimal) ->
+              if d.scale = 0 then
+                Z.to_int d.coeff
+              else
+                Float.to_int (Json.Decimal.to_float d)
           | _ ->
               0
         in
@@ -4481,7 +4540,8 @@ and setpath ~ctx path value_expr json =
             | _ ->
                 value
           )
-        | ((`Int _ | `Int64 _ | `Big_int _ | `Float _) as num) :: rest -> (
+        | ((`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) as num)
+          :: rest -> (
             let idx =
               match num with
               | `Int i ->
@@ -4492,6 +4552,11 @@ and setpath ~ctx path value_expr json =
                   Z.to_int z
               | `Float f ->
                   Float.to_int f
+              | `Decimal (d : Json.decimal) ->
+                  if d.scale = 0 then
+                    Z.to_int d.coeff
+                  else
+                    Float.to_int (Json.Decimal.to_float d)
               | _ ->
                   0
             in

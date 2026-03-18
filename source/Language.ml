@@ -1615,7 +1615,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
       Ok (Try (arg1, Some arg2, None))
   | "limit" -> (
       match arg1 with
-      | Literal ((Int _ | Float _) as n) ->
+      | Literal (Number _ as n) ->
           Ok (Fn2 (Limit, Literal n, arg2))
       | _ ->
           Error
@@ -1626,7 +1626,7 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
     )
   | "skip" -> (
       match arg1 with
-      | Literal ((Int _ | Float _) as n) ->
+      | Literal (Number _ as n) ->
           Ok (Fn2 (Skip, Literal n, arg2))
       | _ ->
           Error
@@ -1934,7 +1934,7 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn Error_msg arg)
   | "halt_error" -> (
       match arg with
-      | Literal (Int _ | Int64 _ | Big_int _ | Float _) ->
+      | Literal (Number _) ->
           Ok (make_expr_fn Halt_error_n arg)
       | _ ->
           Error
@@ -2193,7 +2193,7 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   | "halt" ->
       Ok (Fn0 Halt)
   | "halt_error" ->
-      Ok (make_expr_fn Halt_error_n (Literal (Int 5)))
+      Ok (make_expr_fn Halt_error_n (Literal (Number (Integer "5"))))
   (* Type selectors *)
   | "numbers" ->
       Ok (Fn0 Numbers)

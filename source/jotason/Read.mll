@@ -173,7 +173,7 @@ rule read_json v = parse
   | '"'           { Buffer.clear v.buf; `String (finish_string v lexbuf) }
   | positive_int  { make_positive_int v lexbuf }
   | '-' positive_int { make_negative_int v lexbuf }
-  | float         { `Float (float_of_string (Lexing.lexeme lexbuf)) }
+  | float         { `Decimal (Common.Decimal.of_lexeme_exn (Lexing.lexeme lexbuf)) }
   | '{' {
       let acc = ref [] in
       try

@@ -24,7 +24,7 @@ let type_of (json : t) =
       "object"
   | `Bool _ ->
       "boolean"
-  | `Float _ | `Int _ | `Int64 _ | `Big_int _ ->
+  | `Float _ | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ ->
       "number"
   | `Null ->
       "null"
@@ -65,6 +65,24 @@ let rec equal (a : t) (b : t) : bool =
       Z.to_float x = y
   | `Float x, `Big_int y ->
       x = Z.to_float y
+  | `Decimal x, `Decimal y ->
+      Common.Decimal.compare x y = 0
+  | `Decimal x, `Int y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer (Z.of_int y)) = 0
+  | `Int x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer (Z.of_int x)) y = 0
+  | `Decimal x, `Int64 y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer (Z.of_int64 y)) = 0
+  | `Int64 x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer (Z.of_int64 x)) y = 0
+  | `Decimal x, `Big_int y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer y) = 0
+  | `Big_int x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer x) y = 0
+  | `Decimal x, `Float y ->
+      Common.Decimal.to_float x = y
+  | `Float x, `Decimal y ->
+      x = Common.Decimal.to_float y
   | `String x, `String y ->
       x = y
   | `Bool x, `Bool y ->
@@ -151,9 +169,27 @@ let rec compare (a : t) (b : t) : int =
       Float.compare (Z.to_float x) y
   | `Float x, `Big_int y ->
       Float.compare x (Z.to_float y)
-  | (`Int _ | `Int64 _ | `Big_int _ | `Float _), _ ->
+  | `Decimal x, `Decimal y ->
+      Common.Decimal.compare x y
+  | `Decimal x, `Int y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer (Z.of_int y))
+  | `Int x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer (Z.of_int x)) y
+  | `Decimal x, `Int64 y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer (Z.of_int64 y))
+  | `Int64 x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer (Z.of_int64 x)) y
+  | `Decimal x, `Big_int y ->
+      Common.Decimal.compare x (Common.Decimal.of_integer y)
+  | `Big_int x, `Decimal y ->
+      Common.Decimal.compare (Common.Decimal.of_integer x) y
+  | `Decimal x, `Float y ->
+      Float.compare (Common.Decimal.to_float x) y
+  | `Float x, `Decimal y ->
+      Float.compare x (Common.Decimal.to_float y)
+  | (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _), _ ->
       -1
-  | _, (`Int _ | `Int64 _ | `Big_int _ | `Float _) ->
+  | _, (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) ->
       1
   | `String x, `String y ->
       String.compare x y

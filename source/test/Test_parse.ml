@@ -15,11 +15,15 @@ let test input expected =
 
 open Ast
 
+let int_num n = Literal (Number (Integer (Int.to_string n)))
+let integer_num s = Literal (Number (Integer s))
+let decimal_num s = Literal (Number (Decimal s))
+
 let tests =
   [
     test ".[-1]" (Pipe (Identity, Index [ -1 ]));
     test ".[1]" (Pipe (Identity, Index [ 1 ]));
-    test "[1]" (List (Some (Literal (Int 1))));
+    test "[1]" (List (Some (int_num 1)));
     test ".store.books" (Pipe (Key "store", Key "books"));
     test ".books[1]" (Pipe (Key "books", Index [ 1 ]));
     test ".books[1].author"
@@ -30,28 +34,21 @@ let tests =
     test ". | map(.price + 1)"
       (Pipe
          ( Identity,
-           Fn1 (With_expr (Map, Operation (Key "price", Add, Literal (Int 1))))
+           Fn1 (With_expr (Map, Operation (Key "price", Add, int_num 1)))
          )
       );
     test ".WAT" (Key "WAT");
     test "head" (Fn0 First);
     test ".WAT?" (Optional (Key "WAT"));
-    test "1, 2" (Comma (Literal (Int 1), Literal (Int 2)));
+    test "1, 2" (Comma (int_num 1, int_num 2));
     test "empty" (Fn0 Empty);
-    test "(1, 2) + 3"
-      (Operation (Comma (Literal (Int 1), Literal (Int 2)), Add, Literal (Int 3))
-      );
+    test "(1, 2) + 3" (Operation (Comma (int_num 1, int_num 2), Add, int_num 3));
     test "1 + 2 * 3"
-      (Operation
-         ( Literal (Int 1),
-           Add,
-           Operation (Literal (Int 2), Multiply, Literal (Int 3))
-         )
-      );
-    test "[1, 2]" (List (Some (Comma (Literal (Int 1), Literal (Int 2)))));
+      (Operation (int_num 1, Add, Operation (int_num 2, Multiply, int_num 3)));
+    test "[1, 2]" (List (Some (Comma (int_num 1, int_num 2))));
     test "select(true)" (Fn1 (With_expr (Select, Literal (Bool true))));
-    test "[1][0]" (Pipe (List (Some (Literal (Int 1))), Index [ 0 ]));
-    test "[1].foo" (Pipe (List (Some (Literal (Int 1))), Key "foo"));
+    test "[1][0]" (Pipe (List (Some (int_num 1)), Index [ 0 ]));
+    test "[1].foo" (Pipe (List (Some (int_num 1)), Key "foo"));
     test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo")));
     (* Optional access on nullary functions *)
     test "first?" (Optional (Fn0 First));
@@ -64,9 +61,7 @@ let tests =
     test "map(.x)?" (Optional (Fn1 (With_expr (Map, Key "x"))));
     (* Optional function call syntax: fn?(args) is equivalent to fn(args)? *)
     test "first?(range(3))"
-      (Optional
-         (Fn1 (With_expr (First_expr, Range (Literal (Int 3), None, None))))
-      );
+      (Optional (Fn1 (With_expr (First_expr, Range (int_num 3, None, None)))));
     test "last?(empty)" (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty))));
     (* Optional access on parenthesized expressions *)
     test "(first)?" (Optional (Fn0 First));
@@ -85,21 +80,16 @@ let tests =
     test "{\"foo\": 42, bar: [\"hello world\", 42], user}"
       (Object
          [
-           (Literal (String "foo"), Some (Literal (Int 42)));
+           (Literal (String "foo"), Some (int_num 42));
            ( Literal (String "bar"),
              Some
-               (List
-                  (Some
-                     (Comma (Literal (String "hello world"), Literal (Int 42)))
-                  )
-               )
+               (List (Some (Comma (Literal (String "hello world"), int_num 42))))
            );
            (Literal (String "user"), None);
          ]
       );
-    test "range(1;2)" (Range (Literal (Int 1), Some (Literal (Int 2)), None));
-    test "range(1;2;3)"
-      (Range (Literal (Int 1), Some (Literal (Int 2)), Some (Literal (Int 3))));
+    test "range(1;2)" (Range (int_num 1, Some (int_num 2), None));
+    test "range(1;2;3)" (Range (int_num 1, Some (int_num 2), Some (int_num 3)));
     test "if true then \"Hello\" else \"Welcome\" end"
       (If_then_else
          ( Literal (Bool true),
@@ -136,27 +126,24 @@ let tests =
          )
       );
     test "99999999999999999999999999999"
-      (Literal (Big_int (Z.of_string "99999999999999999999999999999")));
-    test "9223372036854775808"
-      (Literal (Big_int (Z.of_string "9223372036854775808")));
+      (integer_num "99999999999999999999999999999");
+    test "9223372036854775808" (integer_num "9223372036854775808");
     test "-99999999999999999999999999999"
-      (Literal (Big_int (Z.of_string "-99999999999999999999999999999")));
+      (integer_num "-99999999999999999999999999999");
     test "99999999999999999999999999999 + 1"
-      (Operation
-         ( Literal (Big_int (Z.of_string "99999999999999999999999999999")),
-           Add,
-           Literal (Int 1)
-         )
-      );
+      (Operation (integer_num "99999999999999999999999999999", Add, int_num 1));
+    test "0.1" (decimal_num "0.1");
+    test "1.23456e+14" (decimal_num "1.23456e+14");
+    test "-1.5e-2" (decimal_num "-1.5e-2");
+    test "has(2)" (Fn1 (With_expr (Has, int_num 2)));
+    test "has(1e0)" (Fn1 (With_expr (Has, decimal_num "1e0")));
     test "fn double: . * 2;"
       (Pipe
-         ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
-           Identity
-         )
+         (Fn ("double", [], Operation (Identity, Multiply, int_num 2)), Identity)
       );
     test "fn double: . * 2; double"
       (Pipe
-         ( Fn ("double", [], Operation (Identity, Multiply, Literal (Int 2))),
+         ( Fn ("double", [], Operation (Identity, Multiply, int_num 2)),
            Apply ("double", [])
          )
       );

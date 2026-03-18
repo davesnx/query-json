@@ -1,11 +1,10 @@
+type number = Integer of string | Decimal of string
+[@@deriving show { with_path = false }]
+
 type literal =
   | Bool of bool (* true *)
   | String of string (* "TEXT" *)
-  | Int of int (* small integers that fit in native int *)
-  | Int64 of int64 (* large integers that need 64-bit *)
-  | Big_int of Z.t [@printer fun fmt z -> Z.pp_print fmt z]
-    (* huge integers beyond int64 range *)
-  | Float of float (* 123.0 - floating point literals *)
+  | Number of number (* numeric lexeme from source code *)
   | Null (* null *)
 [@@deriving show { with_path = false }]
 

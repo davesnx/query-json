@@ -1,3 +1,5 @@
+let decimal s : Json.t = `Decimal (Json.Decimal.of_lexeme_exn s)
+
 let json_value : Json.t =
   `Assoc
     [
@@ -5,7 +7,7 @@ let json_value : Json.t =
       ("bool", `Bool true);
       ("int", `Int 0);
       ("big_int", `Big_int (Z.of_string "10000000000000000000"));
-      ("float", `Float 0.);
+      ("float", decimal "0.0");
       ("string", `String "string");
       ("list", `List [ `Int 0; `Int 1; `Int 2 ]);
       ("assoc", `Assoc [ ("value", `Int 42) ]);
@@ -52,17 +54,17 @@ let big_int_value : Json.t =
   `Big_int (Z.of_string "99999999999999999999999999999")
 
 let float_json = "3.14159"
-let float_value : Json.t = `Float 3.14159
+let float_value : Json.t = decimal "3.14159"
 let negative_float_json = "-2.718"
-let negative_float_value : Json.t = `Float (-2.718)
+let negative_float_value : Json.t = decimal "-2.718"
 let exp_float_json = "1.23e10"
-let exp_float_value : Json.t = `Float 1.23e10
+let exp_float_value : Json.t = decimal "1.23e10"
 let exp_negative_json = "1.5e-5"
-let exp_negative_value : Json.t = `Float 1.5e-5
+let exp_negative_value : Json.t = decimal "1.5e-5"
 let exp_positive_json = "2.5E+3"
-let exp_positive_value : Json.t = `Float 2.5e3
+let exp_positive_value : Json.t = decimal "2.5E+3"
 let zero_point_json = "0.0"
-let zero_point_value : Json.t = `Float 0.0
+let zero_point_value : Json.t = decimal "0.0"
 let empty_string_json = {|""|}
 let empty_string_value : Json.t = `String ""
 let simple_string_json = {|"hello world"|}
@@ -102,7 +104,7 @@ let single_array_value : Json.t = `List [ `Int 1 ]
 let mixed_array_json = {|[1, "two", true, null, 3.14]|}
 
 let mixed_array_value : Json.t =
-  `List [ `Int 1; `String "two"; `Bool true; `Null; `Float 3.14 ]
+  `List [ `Int 1; `String "two"; `Bool true; `Null; decimal "3.14" ]
 
 let nested_array_json = "[[1, 2], [3, 4]]"
 
@@ -152,4 +154,4 @@ let tabs_value : Json.t = `Assoc [ ("a", `Int 1) ]
 let duplicate_keys_json = {|{"a": 1, "a": 2}|}
 let duplicate_keys_value : Json.t = `Assoc [ ("a", `Int 1); ("a", `Int 2) ]
 let leading_zero_float_json = "0.123"
-let leading_zero_float_value : Json.t = `Float 0.123
+let leading_zero_float_value : Json.t = decimal "0.123"

@@ -493,9 +493,9 @@ and parse_index_number stream =
       | BIG_INT number ->
           advance stream;
           Z.to_int (Z.neg number)
-      | FLOAT number ->
+      | DECIMAL number ->
           advance stream;
-          int_of_float (-.number)
+          int_of_float (-.Float.of_string number)
       | _ ->
           error stream "expected number after '-'"
     )
@@ -508,9 +508,9 @@ and parse_index_number stream =
   | BIG_INT number ->
       advance stream;
       Z.to_int number
-  | FLOAT number ->
+  | DECIMAL number ->
       advance stream;
-      int_of_float number
+      int_of_float (Float.of_string number)
   | _ ->
       error stream "expected index number"
 
@@ -521,31 +521,31 @@ and parse_number_literal stream =
       match (peek stream : Lexer.token) with
       | INT number ->
           advance stream;
-          Int (-number)
+          Number (Integer ("-" ^ Int.to_string number))
       | INT64 number ->
           advance stream;
-          Int64 (Int64.neg number)
+          Number (Integer ("-" ^ Int64.to_string number))
       | BIG_INT number ->
           advance stream;
-          Big_int (Z.neg number)
-      | FLOAT number ->
+          Number (Integer ("-" ^ Z.to_string number))
+      | DECIMAL number ->
           advance stream;
-          Float (-.number)
+          Number (Decimal ("-" ^ number))
       | _ ->
           error stream "expected number after '-'"
     )
   | INT number ->
       advance stream;
-      Int number
+      Number (Integer (Int.to_string number))
   | INT64 number ->
       advance stream;
-      Int64 number
+      Number (Integer (Int64.to_string number))
   | BIG_INT number ->
       advance stream;
-      Big_int number
-  | FLOAT number ->
+      Number (Integer (Z.to_string number))
+  | DECIMAL number ->
       advance stream;
-      Float number
+      Number (Decimal number)
   | _ ->
       error stream "expected number"
 
@@ -556,7 +556,7 @@ and parse_primary stream =
   | STRING text ->
       advance stream;
       Literal (String text)
-  | INT _ | INT64 _ | BIG_INT _ | FLOAT _ | SUB ->
+  | INT _ | INT64 _ | BIG_INT _ | DECIMAL _ | SUB ->
       Literal (parse_number_literal stream)
   | BOOL value ->
       advance stream;

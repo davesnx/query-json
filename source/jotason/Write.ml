@@ -86,6 +86,7 @@ let write_int ob x =
 
 let write_int64 ob x = Buffer.add_string ob (Int64.to_string x)
 let write_big_int ob x = Buffer.add_string ob (Z.to_string x)
+let write_decimal ob x = Buffer.add_string ob (Common.Decimal.to_string x)
 
 let float_needs_period s =
   try
@@ -168,6 +169,8 @@ let rec write_json ob (x : t) =
       write_int64 ob i
   | `Big_int z ->
       write_big_int ob z
+  | `Decimal d ->
+      write_decimal ob d
   | `Float f ->
       write_float ob f
   | `String s ->
@@ -204,6 +207,8 @@ let rec write_std_json ob (x : t) =
       write_int64 ob i
   | `Big_int z ->
       write_big_int ob z
+  | `Decimal d ->
+      write_decimal ob d
   | `Float f ->
       write_std_float ob f
   | `String s ->
@@ -355,6 +360,10 @@ let rec pp fmt = function
       Format.fprintf fmt "`Big_int (@[<hov>";
       Format.fprintf fmt "%s" (Z.to_string x);
       Format.fprintf fmt "@])"
+  | `Decimal x ->
+      Format.fprintf fmt "`Decimal (@[<hov>";
+      Format.fprintf fmt "%s" (Common.Decimal.to_string x);
+      Format.fprintf fmt "@])"
   | `Float x ->
       Format.fprintf fmt "`Float (@[<hov>";
       Format.fprintf fmt "%F" x;
@@ -398,59 +407,7 @@ let rec pp fmt = function
 
 let show x = Format.asprintf "%a" pp x
 
-let rec equal a b =
-  match (a, b) with
-  | `Null, `Null ->
-      true
-  | `Bool a, `Bool b ->
-      a = b
-  | `Int a, `Int b ->
-      a = b
-  | `Int64 a, `Int64 b ->
-      Int64.equal a b
-  | `Int a, `Int64 b ->
-      Int64.equal (Int64.of_int a) b
-  | `Int64 a, `Int b ->
-      Int64.equal a (Int64.of_int b)
-  | `Big_int a, `Big_int b ->
-      Z.equal a b
-  | `Big_int a, `Int b ->
-      Z.equal a (Z.of_int b)
-  | `Int a, `Big_int b ->
-      Z.equal (Z.of_int a) b
-  | `Big_int a, `Int64 b ->
-      Z.equal a (Z.of_int64 b)
-  | `Int64 a, `Big_int b ->
-      Z.equal (Z.of_int64 a) b
-  | `Float a, `Float b ->
-      a = b
-  | `String a, `String b ->
-      a = b
-  | `Assoc xs, `Assoc ys -> (
-      let compare_keys = fun (key, _) (key', _) -> String.compare key key' in
-      let xs = List.stable_sort compare_keys xs in
-      let ys = List.stable_sort compare_keys ys in
-      match
-        List.for_all2
-          (fun (key, value) (key', value') ->
-            match key = key' with false -> false | true -> equal value value'
-          )
-          xs ys
-      with
-      | result ->
-          result
-      | exception Invalid_argument _ ->
-          false
-    )
-  | `List xs, `List ys -> (
-      match List.for_all2 equal xs ys with
-      | result ->
-          result
-      | exception Invalid_argument _ ->
-          false
-    )
-  | _ ->
-      false
+let equal = Common.equal
 
 module Pretty = struct
   let indent_str = "  "
@@ -480,6 +437,8 @@ module Pretty = struct
           add (String.length (Int64.to_string i))
       | `Big_int z ->
           add (String.length (Z.to_string z))
+      | `Decimal d ->
+          add (String.length (Common.Decimal.to_string d))
       | `Float f ->
           add
             ( if not (Float.is_finite f) then
@@ -562,6 +521,10 @@ module Pretty = struct
         value buf;
         Buffer.add_string buf (Z.to_string z);
         reset buf
+    | `Decimal d ->
+        value buf;
+        Buffer.add_string buf (Common.Decimal.to_string d);
+        reset buf
     | `Float f ->
         value buf;
         write_float buf f;
@@ -590,6 +553,8 @@ module Pretty = struct
         Buffer.add_string buf (Int64.to_string i)
     | `Big_int z ->
         Buffer.add_string buf (Z.to_string z)
+    | `Decimal d ->
+        Buffer.add_string buf (Common.Decimal.to_string d)
     | `Float f ->
         write_float buf f
     | `String s ->

@@ -2,7 +2,7 @@ type token =
   | INT of int
   | INT64 of int64
   | BIG_INT of Z.t
-  | FLOAT of float
+  | DECIMAL of string
   | STRING of string
   | BOOL of bool
   | IDENTIFIER of string

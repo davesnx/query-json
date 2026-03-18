@@ -66,14 +66,14 @@ let int64_precision =
     test {|1000000000000000000 * 2|} {|null|} {|2000000000000000000|};
     test {|9000000000000000000 + 223372036854775807|} {|null|}
       {|9223372036854775807|};
-    (* Mixed Int64/Float - result is Float *)
+    (* Mixed Int64/Decimal remains exact *)
     test {|5 + 0.5|} {|null|} {|5.5|};
-    test {|9007199254740993 + 0.0|} {|null|} {|9007199254740992|};
-    (* loses precision when mixed with float *)
-    (* Division always produces Float *)
+    test {|9007199254740993 + 0.0|} {|null|} {|9007199254740993|};
+    (* loses precision when mixed with float results (e.g. pow) *)
+    test {|9007199254740993 + pow(2; 0.5)|} {|null|} {|9007199254740994|};
     test {|10 / 3|} {|null|} {|3.33333|};
     test {|9007199254740994 / 1|} {|null|} {|9007199254740994|};
-    (* but integer division preserves when result is integer *)
+    (* integer division preserves when result is integer *)
     (* Modulo preserves Int64 *)
     test {|9007199254740993 % 10|} {|null|} {|3|};
     test {|9223372036854775807 % 1000000000000000000|} {|null|}
@@ -558,6 +558,8 @@ let has =
     (* boundary: index equal to length should return false *)
     test {|has(3)|} {|[1, 2, 3]|} {|false|};
     test {|has(0)|} {|[1, 2, 3]|} {|true|};
+    test {|has(1e0)|} {|[1, 2, 3]|} {|true|};
+    test {|has(3e0)|} {|[1, 2, 3]|} {|false|};
   ]
 
 let in_ =
@@ -1216,12 +1218,15 @@ let generators_iterators =
     (* TODO: test {|fn while(cond; update): fn _while: if cond then ., (update | _while) else empty end; _while; [while(.<100; .*2)]|} {|1|} {|[1,2,4,8,16,32,64]|}; *) ]
 
 let decimal_number =
-  [ (* TODO: test {|.|} {|0.12345678901234567890123456789|} {|0.12345678901234567890123456789|}; *)
-    (* TODO: test {|[., tojson] == if have_decnum then [12345678909876543212345,"12345678909876543212345"] else [12345678909876543000000,"12345678909876543000000"] end|} {|12345678909876543212345|} {|true|}; *)
-    (* TODO: test {|[1234567890987654321,-1234567890987654321 | tojson] == if have_decnum then ["1234567890987654321","-1234567890987654321"] else ["1234567890987654400","-1234567890987654400"] end|} {|null|} {|true|}; *)
-    (* TODO: test {|. < 0.12345678901234567890123456788|} {|0.12345678901234567890123456789|} {|false|}; - passes but depends on bignum *)
-    (* TODO: test {|map([., . == 1]) | tojson == if have_decnum then "[[1,true],[1.000,true],[1.0,true],[1.00,true]]" else "[[1,true],[1,true],[1,true],[1,true]]" end|} {|[1, 1.000, 1.0, 100e-2]|} {|true|}; *)
-    (* TODO: test {|. as $big | [$big, $big + 1] | map(. > 10000000000000000000000000000000) | . == if have_decnum then [true, false] else [false, false] end|} {|10000000000000000000000000000001|} {|true|}; *) ]
+  [
+    test {|.|} {|1123143412412341234.1|} {|1123143412412341234.1|};
+    test {|.|} {|1.23456e+14|} {|1.23456e+14|};
+    test {|. + 1|} {|1123143412412341234.1|} {|1123143412412341235.1|};
+    test {|0.1 + 0.2|} {|null|} {|0.3|};
+    test {|0.1 + 0.2 == 0.3|} {|null|} {|true|};
+    test {|1 / 8|} {|null|} {|0.125|};
+    test {|1 / 3|} {|null|} {|0.333333|};
+  ]
 
 let tobase =
   [
