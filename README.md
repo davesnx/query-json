@@ -79,7 +79,7 @@ The old jq names still work but show deprecation warnings. See the full [jq Comp
 
 Check the content of [scripts/install.sh](./scripts/install.sh) before running anything in your local. [Friends don't let friends curl | bash](https://sysdig.com/blog/friends-dont-let-friends-curl-bash).
 ```bash
-curl -sfL https://query-json.page.dev/install.sh | bash
+curl -sfL https://query-json.pages.dev/install.sh | bash
 ```
 
 ### Using npm
