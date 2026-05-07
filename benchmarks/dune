@@ -1,3 +1,7 @@
 (executable
  (name bench_parser)
  (libraries query-json.core unix sedlex))
+
+(executable
+ (name bench_gc_pressure)
+ (libraries query-json.core unix))

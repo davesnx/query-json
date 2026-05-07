@@ -26,6 +26,39 @@ MIN_RUNS=3 WARMUP=1 ./benchmarks/bench.sh
 
 The benchmark suite uses [hyperfine](https://github.com/sharkdp/hyperfine) for accurate, statistical benchmarking with warmup runs and multiple iterations.
 
+## GC Pressure / OCaml Compactor Benchmark
+
+`bench_gc_pressure` is an in-process benchmark for comparing OCaml runtime GC and compaction behavior. It is intended for testing runtime branches such as [`new_compactor`](https://github.com/sadiqj/ocaml/tree/new_compactor), where CLI wall-clock benchmarks hide the compactor signal behind process startup, parsing, and I/O noise.
+
+```bash
+# Default: benchmarks/big.json, 8 iterations per scenario
+dune exec benchmarks/bench_gc_pressure.exe
+
+# Larger heap pressure; reduce iterations for huge.json
+dune exec benchmarks/bench_gc_pressure.exe -- --file benchmarks/huge.json --iterations 3
+```
+
+The benchmark reports Markdown tables with:
+
+- Work time before explicit GC cleanup.
+- `Gc.full_major ()` time after the workload.
+- `Gc.compact ()` time after the full major collection.
+- Allocation and promotion deltas from `Gc.quick_stat`.
+- Heap, free-space, fragment, and RSS snapshots before and after compaction.
+
+The most useful comparison workflow is to run the same command under two opam switches and diff the tables:
+
+```bash
+opam switch set 5.4.0
+dune exec benchmarks/bench_gc_pressure.exe -- --file benchmarks/big.json --iterations 8 > /tmp/query-json-gc-5.4.md
+
+opam switch set new-compactor
+dune clean
+dune exec benchmarks/bench_gc_pressure.exe -- --file benchmarks/big.json --iterations 8 > /tmp/query-json-gc-new-compactor.md
+```
+
+See [`gc-pressure-baseline.md`](./gc-pressure-baseline.md) for one local OCaml 5.4.0 baseline and [`gc-pressure-ocaml-5.5-beta1.md`](./gc-pressure-ocaml-5.5-beta1.md) for a local OCaml 5.5.0 beta1 run.
+
 ## Detailed Results
 
 ### Small File Tests (1.3KB)
