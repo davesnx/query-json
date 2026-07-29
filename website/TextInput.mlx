@@ -37,7 +37,8 @@ let[@react.component] make ~value ~placeholder ~on_change =
                            transition-colors cursor-pointer">
                 <Icons.Delete size=Small />
               </button>
-            else React.null
+            else
+              React.null
           )
         </div>
       </div>

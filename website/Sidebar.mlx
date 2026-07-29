@@ -42,8 +42,12 @@ module CategorySection = struct
             (React.string (Int.to_string (List.length functions) ^ " functions"))
           </span>
         </div>
-        ( if is_open then <Icons.ChevronDown size=Small />
-          else <Icons.ChevronRight size=Small />
+        ( if is_open then
+            <Icons.ChevronDown size=Small
+          />
+          else
+            <Icons.ChevronRight size=Small
+          />
         )
       </button>
       ( if is_open then
@@ -72,7 +76,8 @@ module CategorySection = struct
                                      text-muted-foreground/70 truncate block">
                           (React.string example_text)
                         </code>
-                      else React.null
+                      else
+                        React.null
                     )
                   </div>
                 </button>
@@ -80,13 +85,15 @@ module CategorySection = struct
             |> Array.of_list |> React.array
             )
           </div>
-        else React.null
+        else
+          React.null
       )
     </div>
 end
 
 let[@react.component] make ~is_open ~on_close ~on_select_function =
-  if not is_open then React.null
+  if not is_open then
+    React.null
   else
     <div
       className="fixed inset-y-0 left-0 z-40 w-96 bg-card border-r \

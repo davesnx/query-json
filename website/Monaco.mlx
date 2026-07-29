@@ -43,8 +43,10 @@ let[@react.component] make ~(value : string)
     ~on_change:(on_change_value : on_change) ~(mode : mode) =
   let on_change =
     match on_change_value with
-    | Read_only -> fun _ -> ()
-    | Write handler -> handler
+    | Read_only ->
+        fun _ -> ()
+    | Write handler ->
+        handler
   in
   let options =
     {

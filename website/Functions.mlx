@@ -30,29 +30,38 @@ module FunctionCard = struct
     let applicable_types = Array.to_list fn.applicableTo in
     let arity_text =
       match fn.arity.type_ with
-      | "no_args" -> fn.name
+      | "no_args" ->
+          fn.name
       | "one_arg" -> (
           match fn.arity.arg1 with
-          | Some arg -> fn.name ^ "(" ^ arg ^ ")"
-          | None -> fn.name ^ "(...)"
+          | Some arg ->
+              fn.name ^ "(" ^ arg ^ ")"
+          | None ->
+              fn.name ^ "(...)"
         )
       | "two_args" -> (
           match (fn.arity.arg1, fn.arity.arg2) with
-          | Some a1, Some a2 -> fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ ")"
-          | _ -> fn.name ^ "(...; ...)"
+          | Some a1, Some a2 ->
+              fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ ")"
+          | _ ->
+              fn.name ^ "(...; ...)"
         )
       | "three_args" -> (
           match (fn.arity.arg1, fn.arity.arg2, fn.arity.arg3) with
           | Some a1, Some a2, Some a3 ->
               fn.name ^ "(" ^ a1 ^ "; " ^ a2 ^ "; " ^ a3 ^ ")"
-          | _ -> fn.name ^ "(...)"
+          | _ ->
+              fn.name ^ "(...)"
         )
       | "variable_args" -> (
           match fn.arity.arg1 with
-          | Some args -> fn.name ^ "(" ^ args ^ ")"
-          | None -> fn.name ^ "(...)"
+          | Some args ->
+              fn.name ^ "(" ^ args ^ ")"
+          | None ->
+              fn.name ^ "(...)"
         )
-      | _ -> fn.name
+      | _ ->
+          fn.name
     in
     <div
       className="bg-card border border-border rounded-lg p-4 hover:border-ring \
@@ -70,7 +79,8 @@ module FunctionCard = struct
                          transition-colors cursor-pointer">
               (React.string "Try it")
             </button>
-        | None -> React.null
+        | None ->
+            React.null
         )
       </div>
       <p className="text-sm text-muted-foreground mb-3">
@@ -81,7 +91,8 @@ module FunctionCard = struct
             <span className="font-medium">(React.string "Aliases: ")</span>
             (React.string (String.concat ", " aliases))
           </div>
-        else React.null
+        else
+          React.null
       )
       ( match example_text with
       | Some ex ->
@@ -90,7 +101,8 @@ module FunctionCard = struct
                        text-foreground overflow-x-auto">
             <code>(React.string ex)</code>
           </div>
-      | None -> React.null
+      | None ->
+          React.null
       )
       <div className="flex flex-wrap gap-1 mt-3">
         (applicable_types
@@ -183,8 +195,10 @@ module CategoryNav = struct
         |> List.map (fun (cat : category) ->
             let is_active =
               match active_category with
-              | Some c -> c = cat.name
-              | None -> false
+              | Some c ->
+                  c = cat.name
+              | None ->
+                  false
             in
             <button
               key=cat.name
@@ -223,12 +237,14 @@ let[@react.component] make ~on_navigate_home ~on_try_function =
           let matches_category =
             match active_category with Some c -> c = cat.name | None -> true
           in
-          if not matches_category then None
+          if not matches_category then
+            None
           else
             let filtered_functions =
               cat.functions |> Array.to_list
               |> List.filter (fun (fn : function_info) ->
-                  if String.length search = 0 then true
+                  if String.length search = 0 then
+                    true
                   else
                     let name_matches =
                       Js.String.includes ~search:search_lower
@@ -248,8 +264,10 @@ let[@react.component] make ~on_navigate_home ~on_try_function =
                     name_matches || desc_matches || alias_matches
               )
             in
-            if List.length filtered_functions = 0 then None
-            else Some { cat with functions = Array.of_list filtered_functions }
+            if List.length filtered_functions = 0 then
+              None
+            else
+              Some { cat with functions = Array.of_list filtered_functions }
       )
   in
 

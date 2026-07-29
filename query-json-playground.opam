@@ -14,14 +14,14 @@ homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
   "dune" {>= "3.17"}
-  "ocaml" {>= "5.4.0"}
-  "mlx"
+  "ocaml" {>= "5.5.1"}
+  "mlx" {>= "0.11"}
   "melange" {>= "5.0.1"}
   "melange-json"
   "reason-react" {>= "0.17.0"}
   "reason-react-ppx" {>= "0.17.0"}
   "ocamlmerlin-mlx" {with-dev-setup}
-  "ocamlformat-mlx" {with-dev-setup}
+  "ocamlformat-mlx" {>= "0.29.0.0" & with-dev-setup}
   "ocaml-lsp-server" {with-dev-setup}
   "odoc" {with-doc}
 ]

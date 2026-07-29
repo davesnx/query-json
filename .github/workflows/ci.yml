@@ -9,7 +9,7 @@ on:
   pull_request:
 
 env:
-  OCAML_COMPILER: 5.4.0
+  OCAML_COMPILER: 5.5.1
 
 permissions:
   contents: write

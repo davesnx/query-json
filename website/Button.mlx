@@ -10,12 +10,15 @@ let[@react.component] make ~(kind : kind) ?(size : size = Default) ?className
     | Secondary ->
         "bg-secondary text-secondary-foreground hover:bg-secondary/80 \
          border-secondary"
-    | Ghost -> "hover:bg-accent hover:text-accent-foreground"
+    | Ghost ->
+        "hover:bg-accent hover:text-accent-foreground"
   in
   let size_class_name =
     match size with
-    | Sm -> "gap-2 text-sm py-2 px-3"
-    | Default -> "gap-2 text-sm py-2 px-4"
+    | Sm ->
+        "gap-2 text-sm py-2 px-3"
+    | Default ->
+        "gap-2 text-sm py-2 px-4"
   in
   let extra =
     className |> Option.map (fun s -> " " ^ s) |> Option.value ~default:""

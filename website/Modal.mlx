@@ -16,12 +16,13 @@ let[@react.component] make ~is_open ~on_close ~title ~description ~children =
           (fun () ->
             Web.Window.remove_event_listener Web.window "keydown" handle_keydown
           )
-      )
-      else None
+      ) else
+        None
     )
     [| is_open |];
 
-  if not is_open then React.null
+  if not is_open then
+    React.null
   else
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 \

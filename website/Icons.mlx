@@ -56,9 +56,12 @@ module XIcon = struct
   let[@react.component] make ?(size : size = Medium) ?(className = "") =
     let size_classname =
       match size with
-      | Small -> "text-base"
-      | Medium -> "text-xl"
-      | Large -> "text-2xl"
+      | Small ->
+          "text-base"
+      | Medium ->
+          "text-xl"
+      | Large ->
+          "text-2xl"
     in
     <span className=(size_classname ^ " " ^ className)>
       (React.string {js|𝕏|js})

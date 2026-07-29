@@ -29,8 +29,7 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.4.0))
-  (dune (>= 3.17))
+  (ocaml (>= 5.5.1))
   dune-build-info
   (cmdliner (>= 1.1.0))
   sedlex
@@ -65,14 +64,14 @@
 
   Play with it in the online playground: https://query-json.pages.dev")
  (depends
-  (ocaml (>= 5.4.0))
-  mlx
+  (ocaml (>= 5.5.1))
+  (mlx (>= 0.11))
   (melange (>= 5.0.1))
   melange-json
    (reason-react (>= 0.17.0))
    (reason-react-ppx (>= 0.17.0))
   (ocamlmerlin-mlx :with-dev-setup)
-  (ocamlformat-mlx :with-dev-setup)
+  (ocamlformat-mlx (and (>= "0.29.0.0") :with-dev-setup))
   (ocaml-lsp-server :with-dev-setup)
 ))
 

@@ -14,8 +14,8 @@ license: "MIT"
 homepage: "https://github.com/davesnx/query-json"
 bug-reports: "https://github.com/davesnx/query-json/issues"
 depends: [
-  "ocaml" {>= "5.4.0"}
   "dune" {>= "3.17"}
+  "ocaml" {>= "5.5.1"}
   "dune-build-info"
   "cmdliner" {>= "1.1.0"}
   "sedlex"

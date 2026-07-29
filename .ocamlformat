@@ -1,4 +1,4 @@
-ocaml-version = 5.4.0
+ocaml-version = 5.5.1
 profile = default
 
 if-then-else = k-r

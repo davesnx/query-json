@@ -56,11 +56,16 @@ type actions =
   | Navigate_to of page
 
 let reduce state = function
-  | Update_query query -> { state with query }
-  | Update_json json -> { state with json = Some json }
-  | Set_copied copied -> { state with copied }
-  | Set_modal_open isModalOpen -> { state with isModalOpen }
-  | Navigate_to page -> { state with current_page = page }
+  | Update_query query ->
+      { state with query }
+  | Update_json json ->
+      { state with json = Some json }
+  | Set_copied copied ->
+      { state with copied }
+  | Set_modal_open isModalOpen ->
+      { state with isModalOpen }
+  | Navigate_to page ->
+      { state with current_page = page }
 
 module Query_params = struct
   open Melange_json.Primitives
@@ -89,9 +94,12 @@ module Query_json = struct
 
   let to_result (res : jsoo_result) =
     match res.first with
-    | 0 -> Ok res.second
-    | 1 -> Error res.second
-    | _ -> Error "Invalid result from QueryJsonJs"
+    | 0 ->
+        Ok res.second
+    | 1 ->
+        Error res.second
+    | _ ->
+        Error "Invalid result from QueryJsonJs"
 
   let query_json_run : string -> string -> jsoo_result =
     [%mel.raw
@@ -112,8 +120,10 @@ module Playground_page = struct
       React.useMemo2
         (fun () ->
           match (state.json, state.query) with
-          | Some _, "" | None, _ -> None
-          | Some json, _ -> Some (Query_json.run state.query json)
+          | Some _, "" | None, _ ->
+              None
+          | Some json, _ ->
+              Some (Query_json.run state.query json)
         )
         (state.json, state.query)
     in
@@ -143,7 +153,8 @@ module Playground_page = struct
                 )
               in
               ()
-          | None -> Printf.eprintf "Error encoding state"
+          | None ->
+              Printf.eprintf "Error encoding state"
         )
         (state.query, state.json)
     in
@@ -212,8 +223,10 @@ let[@react.component] make () =
 
   let initial_page =
     match Router.get_pathname () with
-    | "/functions" -> Functions
-    | _ -> Playground
+    | "/functions" ->
+        Functions
+    | _ ->
+        Playground
   in
 
   let initial_state =
@@ -253,8 +266,10 @@ let[@react.component] make () =
   in
   let on_try_function fn_name =
     let new_query =
-      if state.query = "" || state.query = "." then fn_name
-      else state.query ^ " | " ^ fn_name
+      if state.query = "" || state.query = "." then
+        fn_name
+      else
+        state.query ^ " | " ^ fn_name
     in
     update_query new_query;
     navigate_to Playground;
@@ -271,4 +286,5 @@ let[@react.component] make () =
         set_modal_open
         on_navigate_functions
       />
-  | Functions -> <Functions on_navigate_home on_try_function />
+  | Functions ->
+      <Functions on_navigate_home on_try_function />

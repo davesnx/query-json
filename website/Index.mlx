@@ -6,4 +6,5 @@ let () =
       let root = ReactDOM.Client.createRoot el in
       let _ = ReactDOM.Client.render root <App /> in
       ()
-  | None -> Js.log "No root element found"
+  | None ->
+      Js.log "No root element found"
