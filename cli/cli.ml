@@ -171,6 +171,27 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         usage ()
     | Some query -> (
         let output =
+          (* Free-ish size hint (a stat, not a read) so Core.run can start
+             its output buffer close to the input's size instead of always
+             growing from scratch: cuts the doubling-copy cost on large
+             inputs. Pretty-printed output (indentation, spacing) tends to
+             run bigger than its compact input, so pad by half. Stdin/-n
+             keep the small default; that's fine, no size to know ahead of
+             time there. *)
+          let buf_size_hint =
+            if null_input then
+              0
+            else
+              match position_1 with
+              | Some f when Sys.file_exists f -> (
+                  try (Unix.stat f).Unix.st_size * 3 / 2
+                  with Unix.Unix_error _ -> 0
+                )
+              | Some s ->
+                  String.length s * 3 / 2
+              | None ->
+                  0
+          in
           let* json =
             if null_input then
               Ok `Null
@@ -184,7 +205,7 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
                   Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
           in
           Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
-            query json
+            ~buf_size_hint query json
         in
         match output with
         | Ok results ->

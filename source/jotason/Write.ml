@@ -413,6 +413,14 @@ module Pretty = struct
   let indent_str = "  "
   let max_compact_width = 120
 
+  (* Same C primitive Printf's "%g" ultimately calls (see
+     camlinternalFormat.ml: Float_g with no explicit precision expands to
+     exactly "%.6g"). Calling it directly gives byte-identical output to
+     `Printf.bprintf buf "%g" f` / `Printf.sprintf "%g" f` without paying for
+     CamlinternalFormat's generic format-string parsing on every float. *)
+  external format_float_g : string -> float -> string = "caml_format_float"
+  let format_g f = format_float_g "%.6g" f
+
   let should_compact (json : t) =
     let exception Not_compact in
     let width = ref 0 in
@@ -446,7 +454,7 @@ module Pretty = struct
               else if Float.equal (Float.round f) f then
                 String.length (Int.to_string (Float.to_int f))
               else
-                String.length (Printf.sprintf "%g" f)
+                String.length (format_g f)
             )
       | `String s ->
           add (String.length s + 2)
@@ -474,10 +482,27 @@ module Pretty = struct
     in
     match check json with () -> true | exception Not_compact -> false
 
-  let write_indent buf indent =
-    for _ = 1 to indent do
-      Buffer.add_string buf indent_str
-    done
+  (* Cache indent strings by depth so a deeply nested document doesn't pay
+     for `indent` separate small Buffer.add_string calls per line: depths
+     repeat constantly across a large document, so this amortizes to a
+     handful of allocations total. *)
+  let indent_cache = ref [| "" |]
+
+  let indent_for n =
+    let cache = !indent_cache in
+    if n < Array.length cache then
+      cache.(n)
+    else begin
+      let grown = Array.make (n + 1) "" in
+      Array.blit cache 0 grown 0 (Array.length cache);
+      for i = Array.length cache to n do
+        grown.(i) <- grown.(i - 1) ^ indent_str
+      done;
+      indent_cache := grown;
+      grown.(n)
+    end
+
+  let write_indent buf indent = Buffer.add_string buf (indent_for indent)
 
   let write_float buf f =
     match classify_float f with
@@ -487,7 +512,7 @@ module Pretty = struct
         if Float.equal (Float.round f) f then
           Buffer.add_string buf (Int.to_string (Float.to_int f))
         else
-          Printf.bprintf buf "%g" f
+          Buffer.add_string buf (format_g f)
 
   let write_quoted_string buf s =
     Buffer.add_char buf '"';
@@ -676,45 +701,52 @@ module Pretty = struct
       | _ ->
           ()
 
+  (* write_list_item/write_assoc_item are their own named (mutually
+     recursive) functions rather than a `let write_item = ... in` closure
+     re-defined inside write_list_items/write_assoc_items: the latter shape
+     allocates a fresh closure on every element of every array/object in the
+     document, which dominates render cost on large inputs. A top-level
+     function here compiles to a direct call with no per-element
+     allocation. *)
+  and write_list_item buf ~value ~key ~reset ~indent ~last x =
+    write_indent buf indent;
+    write_json buf ~value ~key ~reset ~indent x;
+    Buffer.add_string buf
+      ( if last then
+          "\n"
+        else
+          ",\n"
+      )
+
   and write_list_items buf ~value ~key ~reset ~indent items =
-    let write_item ~last x =
-      write_indent buf indent;
-      write_json buf ~value ~key ~reset ~indent x;
-      Buffer.add_string buf
-        ( if last then
-            "\n"
-          else
-            ",\n"
-        )
-    in
     match items with
     | [] ->
         ()
     | [ x ] ->
-        write_item ~last:true x
+        write_list_item buf ~value ~key ~reset ~indent ~last:true x
     | x :: rest ->
-        write_item ~last:false x;
+        write_list_item buf ~value ~key ~reset ~indent ~last:false x;
         write_list_items buf ~value ~key ~reset ~indent rest
 
+  and write_assoc_item buf ~value ~key ~reset ~indent ~last (k, v) =
+    write_indent buf indent;
+    write_key buf ~key ~reset k;
+    write_json buf ~value ~key ~reset ~indent v;
+    Buffer.add_string buf
+      ( if last then
+          "\n"
+        else
+          ",\n"
+      )
+
   and write_assoc_items buf ~value ~key ~reset ~indent items =
-    let write_item ~last (k, v) =
-      write_indent buf indent;
-      write_key buf ~key ~reset k;
-      write_json buf ~value ~key ~reset ~indent v;
-      Buffer.add_string buf
-        ( if last then
-            "\n"
-          else
-            ",\n"
-        )
-    in
     match items with
     | [] ->
         ()
     | [ kv ] ->
-        write_item ~last:true kv
+        write_assoc_item buf ~value ~key ~reset ~indent ~last:true kv
     | kv :: rest ->
-        write_item ~last:false kv;
+        write_assoc_item buf ~value ~key ~reset ~indent ~last:false kv;
         write_assoc_items buf ~value ~key ~reset ~indent rest
 
   let rec write_compact_plain buf json =
@@ -767,45 +799,45 @@ module Pretty = struct
       | _ ->
           ()
 
+  and write_list_item_plain buf ~indent ~last x =
+    write_indent buf indent;
+    write_json_plain buf ~indent x;
+    Buffer.add_string buf
+      ( if last then
+          "\n"
+        else
+          ",\n"
+      )
+
   and write_list_items_plain buf ~indent items =
-    let write_item ~last x =
-      write_indent buf indent;
-      write_json_plain buf ~indent x;
-      Buffer.add_string buf
-        ( if last then
-            "\n"
-          else
-            ",\n"
-        )
-    in
     match items with
     | [] ->
         ()
     | [ x ] ->
-        write_item ~last:true x
+        write_list_item_plain buf ~indent ~last:true x
     | x :: rest ->
-        write_item ~last:false x;
+        write_list_item_plain buf ~indent ~last:false x;
         write_list_items_plain buf ~indent rest
 
+  and write_assoc_item_plain buf ~indent ~last (k, v) =
+    write_indent buf indent;
+    write_key_plain buf k;
+    write_json_plain buf ~indent v;
+    Buffer.add_string buf
+      ( if last then
+          "\n"
+        else
+          ",\n"
+      )
+
   and write_assoc_items_plain buf ~indent items =
-    let write_item ~last (k, v) =
-      write_indent buf indent;
-      write_key_plain buf k;
-      write_json_plain buf ~indent v;
-      Buffer.add_string buf
-        ( if last then
-            "\n"
-          else
-            ",\n"
-        )
-    in
     match items with
     | [] ->
         ()
     | [ kv ] ->
-        write_item ~last:true kv
+        write_assoc_item_plain buf ~indent ~last:true kv
     | kv :: rest ->
-        write_item ~last:false kv;
+        write_assoc_item_plain buf ~indent ~last:false kv;
         write_assoc_items_plain buf ~indent rest
 
   let to_buffer_colored buf ~colorize ~summarize json =
