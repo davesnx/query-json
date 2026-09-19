@@ -1311,24 +1311,30 @@ let has ~ctx (json : Json.t) key =
   | _ ->
       fail_invalid_type ~ctx "has" json
 
-let range_list ?(step = 1) start stop =
+(* Yields range elements one at a time (instead of building the whole list
+   first) so that laziness (limit/first stopping the generator early) and
+   deep ranges (millions of elements) both work without a giant intermediate
+   list or unbounded stack growth. The [loop] below is tail-recursive. *)
+let yield_range_list ?(step = 1) start stop =
   if step = 0 then
-    []
+    ()
   else
     let rec loop current =
       if (step > 0 && current >= stop) || (step < 0 && current <= stop) then
-        []
-      else
-        current :: loop (current + step)
+        ()
+      else (
+        yield (`Int64 (Int64.of_int current));
+        loop (current + step)
+      )
     in
     loop start
 
-let range ?step from upto =
+let yield_range ?step from upto =
   match upto with
   | None ->
-      range_list 0 from
+      yield_range_list 0 from
   | Some stop ->
-      range_list ?step from stop
+      yield_range_list ?step from stop
 
 let length ~ctx (json : Json.t) =
   let utf8_codepoint_length s =
@@ -2831,14 +2837,7 @@ and range_expr ~ctx from_expr upto_expr step_expr json =
   List.iter
     (fun from ->
       List.iter
-        (fun upto ->
-          List.iter
-            (fun step ->
-              let vals = range ?step from upto in
-              List.iter (fun i -> yield (`Int64 (Int64.of_int i))) vals
-            )
-            steps
-        )
+        (fun upto -> List.iter (fun step -> yield_range ?step from upto) steps)
         uptos
     )
     froms
@@ -3929,21 +3928,36 @@ and first_of_expr ~ctx expr json =
       yield v
 
 and last_of_array ~ctx json =
+  (* Walk to the end instead of List.rev-ing the whole array just to read
+     its head: same O(n) time, no extra n-cons-cell allocation. *)
+  let rec last = function
+    | [ x ] ->
+        x
+    | _ :: tl ->
+        last tl
+    | [] ->
+        assert false
+  in
   match json with
   | `List [] ->
       Runtime_error.empty_array "last"
   | `List l ->
-      yield (List.hd (List.rev l))
+      yield (last l)
   | _ ->
       fail_invalid_type ~ctx "last" json
 
 and last_of_expr ~ctx expr json =
-  match collect ~ctx expr json with
-  | [] ->
+  (* Track the last yielded value directly instead of collecting every
+     value into a list and reversing it twice (once inside [collect], once
+     here) just to read the final element. *)
+  let found = ref None in
+  on_yield (fun () -> interp ~ctx expr json) ~then_:(fun v -> found := Some v);
+  match !found with
+  | None ->
       Runtime_error.empty_result ~op:"last"
         ~suggestion:"Use last? for optional access" ()
-  | l ->
-      yield (List.hd (List.rev l))
+  | Some v ->
+      yield v
 
 and nth ~ctx n_expr expr json =
   let n_results = collect ~ctx n_expr json in

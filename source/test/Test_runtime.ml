@@ -477,6 +477,9 @@ let reduce =
     test {|reduce .[] as $item (0; . + $item)|} {|[1,2,3,4,5]|} {|15|};
     test {|reduce .[] as [$i,$j] (0; . + $i * $j)|} {|[[1,2],[3,4],[5,6]]|}
       {|44|};
+    (* reduce over an empty generator keeps the init value unchanged *)
+    test {|reduce empty as $x (0; . + $x)|} {|null|} {|0|};
+    test {|reduce .[] as $x (10; . + $x)|} {|[]|} {|10|};
   ]
 
 let foreach =
@@ -501,6 +504,9 @@ let limit =
     test {|[limit(3; range(10))]|} {|null|} {|[ 0, 1, 2 ]|};
     test {|[limit(3; .[])]|} {|[0,1,2,3,4,5,6,7,8,9]|} {|[ 0, 1, 2 ]|};
     test {|[limit(5; infinite)]|} {|null|} {|[ 0, 1, 2, 3, 4 ]|};
+    (* limit(0; ...) must stop before pulling any value from the generator *)
+    test {|[limit(0; range(10))]|} {|null|} {|[]|};
+    test {|[limit(0; infinite)]|} {|null|} {|[]|};
   ]
 
 let is_empty =
@@ -1643,6 +1649,19 @@ let deep_traversal =
       {|[ "alice", "bob" ]|};
   ]
 
+(* 10,000-deep nesting must not overflow the stack for any traversal
+   strategy (breadth-first descend, depth-first dive/recurse, paths). *)
+let deep_nesting =
+  let depth = 10_000 in
+  let deeply_nested = String.make depth '[' ^ "0" ^ String.make depth ']' in
+  let node_count = Int.to_string (depth + 1) in
+  [
+    test {|[descend] | length|} deeply_nested node_count;
+    test {|[dive] | length|} deeply_nested node_count;
+    test {|[recurse] | length|} deeply_nested node_count;
+    test {|[paths] | length|} deeply_nested (Int.to_string depth);
+  ]
+
 let tests =
   List.concat
     [
@@ -1677,6 +1696,7 @@ let tests =
       while_;
       until;
       recurse;
+      deep_nesting;
       walk;
       reduce;
       foreach;
