@@ -1594,21 +1594,27 @@ let flatten ~ctx depth (json : Json.t) =
 let sort ~ctx (json : Json.t) =
   match json with
   | `List l ->
-      `List (List.sort Json.compare l)
+      `List (List.stable_sort Json.compare l)
   | _ ->
       fail_invalid_type ~ctx "sort" json
 
 let unique ~ctx (json : Json.t) =
   match json with
   | `List l ->
+      (* Hash set instead of `List.mem x acc`: same structural-equality,
+         first-occurrence semantics, but O(1) average lookup instead of
+         O(n), avoiding an O(n^2) blowup on large inputs. *)
+      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
       let rec unique acc = function
         | [] ->
             List.rev acc
         | x :: xs ->
-            if List.mem x acc then
+            if Hashtbl.mem seen x then
               unique acc xs
-            else
+            else (
+              Hashtbl.add seen x ();
               unique (x :: acc) xs
+            )
       in
       `List (unique [] l)
   | _ ->
@@ -2943,9 +2949,11 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
 and sort_by ~ctx expr json =
   match json with
   | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
+      (* Decorate-sort-undecorate: evaluate the key expression once per
+         element instead of once per comparison (List.sort would otherwise
+         call it O(n log n) times). *)
+      let decorated = List.map (fun item -> (collect ~ctx expr item, item)) l in
+      let compare_by (res_a, _) (res_b, _) =
         let rec compare_lists la lb =
           match (la, lb) with
           | [], [] ->
@@ -2963,8 +2971,8 @@ and sort_by ~ctx expr json =
         in
         compare_lists res_a res_b
       in
-      let sorted = List.sort compare_by l in
-      yield (`List sorted)
+      let sorted = List.stable_sort compare_by decorated in
+      yield (`List (List.map snd sorted))
   | _ ->
       fail_invalid_type ~ctx "sort_by" json
 
@@ -2972,25 +2980,30 @@ and min_by ~ctx expr json =
   match json with
   | `List [] ->
       Runtime_error.empty_array "min_by"
-  | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
-        match (res_a, res_b) with
-        | [ av ], [ bv ] ->
-            Json.compare av bv
-        | _ ->
-            0
+  | `List (hd :: tl) ->
+      (* Evaluate each element's key once instead of re-evaluating the
+         accumulator's key on every fold step. *)
+      let key_of x =
+        match collect ~ctx expr x with [ v ] -> Some v | _ -> None
       in
-      let min_elem =
+      let is_less kx acc_key =
+        match (kx, acc_key) with
+        | Some a, Some b ->
+            Json.compare a b < 0
+        | _ ->
+            false
+      in
+      let _, min_elem =
         List.fold_left
-          (fun acc x ->
-            if compare_by x acc < 0 then
-              x
+          (fun (acc_key, acc_elem) x ->
+            let kx = key_of x in
+            if is_less kx acc_key then
+              (kx, x)
             else
-              acc
+              (acc_key, acc_elem)
           )
-          (List.hd l) (List.tl l)
+          (key_of hd, hd)
+          tl
       in
       yield min_elem
   | _ ->
@@ -3000,25 +3013,28 @@ and max_by ~ctx expr json =
   match json with
   | `List [] ->
       Runtime_error.empty_array "max_by"
-  | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
-        match (res_a, res_b) with
-        | [ av ], [ bv ] ->
-            Json.compare av bv
-        | _ ->
-            0
+  | `List (hd :: tl) ->
+      let key_of x =
+        match collect ~ctx expr x with [ v ] -> Some v | _ -> None
       in
-      let max_elem =
+      let is_greater kx acc_key =
+        match (kx, acc_key) with
+        | Some a, Some b ->
+            Json.compare a b > 0
+        | _ ->
+            false
+      in
+      let _, max_elem =
         List.fold_left
-          (fun acc x ->
-            if compare_by x acc > 0 then
-              x
+          (fun (acc_key, acc_elem) x ->
+            let kx = key_of x in
+            if is_greater kx acc_key then
+              (kx, x)
             else
-              acc
+              (acc_key, acc_elem)
           )
-          (List.hd l) (List.tl l)
+          (key_of hd, hd)
+          tl
       in
       yield max_elem
   | _ ->
@@ -3027,22 +3043,28 @@ and max_by ~ctx expr json =
 and unique_by ~ctx expr json =
   match json with
   | `List l ->
-      let rec unique acc seen = function
+      (* A hash set gives the same first-occurrence semantics as the old
+         `List.mem key seen` scan (structural equality), but O(1) average
+         lookup instead of O(n), avoiding an O(n^2) blowup on large inputs. *)
+      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
+      let rec unique acc = function
         | [] ->
             List.rev acc
         | x :: xs -> (
             let keys = collect ~ctx expr x in
             match keys with
             | [ key ] ->
-                if List.mem key seen then
-                  unique acc seen xs
-                else
-                  unique (x :: acc) (key :: seen) xs
+                if Hashtbl.mem seen key then
+                  unique acc xs
+                else (
+                  Hashtbl.add seen key ();
+                  unique (x :: acc) xs
+                )
             | _ ->
-                unique (x :: acc) seen xs
+                unique (x :: acc) xs
           )
       in
-      yield (`List (unique [] [] l))
+      yield (`List (unique [] l))
   | _ ->
       fail_invalid_type ~ctx "unique_by" json
 

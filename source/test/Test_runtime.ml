@@ -620,6 +620,19 @@ let sort =
     test {|sort_by(.foo, .bar)|}
       {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|}
       {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 3, "bar": 20 }, { "foo": 4, "bar": 10 } ]|};
+    (* jq type ordering across every kind at once: null < false < true <
+       numbers (mixed int/float) < strings (by codepoint) < arrays < objects *)
+    test {|sort|}
+      {|[null,true,false,1,1.5,"a",[1],{"a":1},{"a":0,"b":1},"B",-2]|}
+      {|[ null, false, true, -2, 1, 1.5, "B", "a", [ 1 ], { "a": 1 }, { "a": 0, "b": 1 } ]|};
+    (* stability: elements with equal sort keys keep their original relative order *)
+    test {|sort_by(.a)|}
+      {|[{"a":1,"b":1},{"a":1,"b":2},{"a":0,"b":3},{"a":1,"b":4}]|}
+      {|[ { "a": 0, "b": 3 }, { "a": 1, "b": 1 }, { "a": 1, "b": 2 }, { "a": 1, "b": 4 } ]|};
+    (* objects with the same keys inserted in a different order compare equal,
+       so sort (stable) keeps their original relative order *)
+    test {|sort|} {|[{"b":1,"a":2},{"a":2,"b":1}]|}
+      {|[ { "b": 1, "a": 2 }, { "a": 2, "b": 1 } ]|};
   ]
 
 (* unique, unique_by *)
