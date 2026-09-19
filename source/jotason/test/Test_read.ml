@@ -125,6 +125,34 @@ let parse_leading_zero_float () =
   check_parse "0.123" Fixtures.leading_zero_float_json
     Fixtures.leading_zero_float_value ()
 
+(* Decimal parsing: independent checks (not routed through
+   Decimal.of_lexeme_exn on both sides) of the value the lexer's fast
+   path (plain machine-sized mantissa) and slow path (arbitrary
+   precision / positive exponent shift) compute, plus a literal
+   round-trip check of the preserved source representation. *)
+let check_decimal name json_str expected_value expected_repr () =
+  let v = Json.from_string json_str in
+  Alcotest.(check bool) (name ^ " value") true (Json.equal v expected_value);
+  Alcotest.(check string) (name ^ " roundtrip") expected_repr (Json.to_string v)
+
+let parse_decimal_trims_to_integer () =
+  check_decimal "1.0 trims to integer 1" "1.0" (`Int 1) "1.0" ()
+
+let parse_decimal_small_fraction () =
+  check_decimal "0.1 keeps fractional value" "0.1" (`Float 0.1) "0.1" ()
+
+let parse_decimal_positive_exponent () =
+  check_decimal "1e5 expands to 100000" "1e5" (`Int 100_000) "1e5" ()
+
+let parse_decimal_negative_exponent () =
+  check_decimal "1E-7 keeps small fractional value" "1E-7" (`Float 1e-7) "1E-7"
+    ()
+
+let parse_decimal_huge_exponent () =
+  check_decimal "1e400 keeps exact big magnitude" "1e400"
+    (`Big_int (Z.pow (Z.of_int 10) 400))
+    "1e400" ()
+
 let parse_empty_string () =
   check_parse "empty string" Fixtures.empty_string_json
     Fixtures.empty_string_value ()
@@ -355,6 +383,11 @@ let single_json =
     ("parse_exp_positive", `Quick, parse_exp_positive);
     ("parse_zero_point", `Quick, parse_zero_point);
     ("parse_leading_zero_float", `Quick, parse_leading_zero_float);
+    ("parse_decimal_trims_to_integer", `Quick, parse_decimal_trims_to_integer);
+    ("parse_decimal_small_fraction", `Quick, parse_decimal_small_fraction);
+    ("parse_decimal_positive_exponent", `Quick, parse_decimal_positive_exponent);
+    ("parse_decimal_negative_exponent", `Quick, parse_decimal_negative_exponent);
+    ("parse_decimal_huge_exponent", `Quick, parse_decimal_huge_exponent);
     (* Strings *)
     ("parse_empty_string", `Quick, parse_empty_string);
     ("parse_simple_string", `Quick, parse_simple_string);
