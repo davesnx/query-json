@@ -1267,6 +1267,36 @@ let decimal_number =
     test {|1 / 3|} {|null|} {|0.333333|};
   ]
 
+let numeric_fast_path_boundaries =
+  (* Coverage for the Int/Int64 add & subtract fast paths: overflow must
+     still promote exactly like the generic Decimal path (Int -> Int64 ->
+     Big_int), and every other representation pairing must stay untouched. *)
+  [
+    (* Int - Int underflow at min_int promotes to Int64 *)
+    test {|-4611686018427387904 - 1|} {|null|} {|-4611686018427387905|};
+    (* Int64 + Int64 overflow promotes to Big_int *)
+    test {|9223372036854775807 + 9223372036854775807|} {|null|}
+      {|18446744073709551614|};
+    (* Int64 - Int64 underflow promotes to Big_int *)
+    test {|(-9223372036854775808) - 9223372036854775807|} {|null|}
+      {|-18446744073709551615|};
+    (* Decimal + Float and Float + Decimal (unaffected by the fast path) *)
+    test {|1.5 + (4|sqrt)|} {|null|} {|3.5|};
+    test {|(4|sqrt) + 1.5|} {|null|} {|3.5|};
+    (* Big_int + Int, Int on the left *)
+    test {|1 + 99999999999999999999999999999|} {|null|}
+      {|100000000000000000000000000000|};
+    (* Modulo keeps the dividend's sign, like jq/C *)
+    test {|(-7) % (-3)|} {|null|} {|-1|};
+    test {|7 % (-3)|} {|null|} {|1|};
+    test {|(-7) % 3|} {|null|} {|-1|};
+    (* Comparisons across representations with numerically equal values *)
+    test {|1 == 1.00|} {|null|} {|true|};
+    test {|1.0 == 1.00|} {|null|} {|true|};
+    test {|1 < 1.5|} {|null|} {|true|};
+    test {|1.50 > 1|} {|null|} {|true|};
+  ]
+
 let tobase =
   [
     test
@@ -1785,6 +1815,7 @@ let tests =
       optional_functions;
       generators_iterators;
       decimal_number;
+      numeric_fast_path_boundaries;
       index_operations;
       snake_case_aliases;
       collection_helpers;

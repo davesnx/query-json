@@ -462,8 +462,48 @@ module Operators = struct
         ~r_lookup:(fun k -> List.assoc_opt k r_entries)
         new_keys l_entries
 
+  let int64_min_as_int = Int64.of_int Int.min_int
+  let int64_max_as_int = Int64.of_int Int.max_int
+
+  (* Fast paths for plain-integer +/- : Int/Int64 add and subtract never need
+     exact decimal arithmetic (no fractional scale is involved), so they skip
+     the Z round-trip that [add_exact]/[sub_exact] pay for every Decimal
+     operation. Overflow still promotes exactly like [json_of_integer_z]
+     would: Int -> Int64 -> Big_int. *)
+  let add_int64 (l : int64) (r : int64) : Json.t =
+    let result = Int64.add l r in
+    if Int64.logxor l r >= 0L && Int64.logxor l result < 0L then
+      json_of_integer_z (Z.add (Z.of_int64 l) (Z.of_int64 r))
+    else if result >= int64_min_as_int && result <= int64_max_as_int then
+      `Int (Int64.to_int result)
+    else
+      `Int64 result
+
+  let sub_int64 (l : int64) (r : int64) : Json.t =
+    let result = Int64.sub l r in
+    if Int64.logxor l r < 0L && Int64.logxor l result < 0L then
+      json_of_integer_z (Z.sub (Z.of_int64 l) (Z.of_int64 r))
+    else if result >= int64_min_as_int && result <= int64_max_as_int then
+      `Int (Int64.to_int result)
+    else
+      `Int64 result
+
   let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    | `Int l, `Int r ->
+        let result = l + r in
+        (* two 63-bit ints always sum within Int64 range, so overflow never
+           needs to reach Big_int here *)
+        if l lxor r >= 0 && l lxor result < 0 then
+          `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
+    | `Int64 l, `Int64 r ->
+        add_int64 l r
+    | `Int l, `Int64 r ->
+        add_int64 (Int64.of_int l) r
+    | `Int64 l, `Int r ->
+        add_int64 l (Int64.of_int r)
     | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
         ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
         add_exact
@@ -546,6 +586,19 @@ module Operators = struct
 
   let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    | `Int l, `Int r ->
+        let result = l - r in
+        (* two 63-bit ints always differ within Int64 range *)
+        if l lxor r < 0 && l lxor result < 0 then
+          `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
+    | `Int64 l, `Int64 r ->
+        sub_int64 l r
+    | `Int l, `Int64 r ->
+        sub_int64 (Int64.of_int l) r
+    | `Int64 l, `Int r ->
+        sub_int64 l (Int64.of_int r)
     | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
         ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
         sub_exact
