@@ -597,6 +597,53 @@ module Pretty = struct
     write_quoted_string buf k;
     Buffer.add_string buf ": "
 
+  (* Specialized for the non-summarized colored path, where colorize is
+     always true (see [to_buffer_colored]): writes ANSI codes directly
+     instead of going through [~value ~key ~reset] closures, and merges
+     adjacent constant writes into single [Buffer.add_string] calls. *)
+  let write_primitive_colored buf json =
+    match (json : t) with
+    | `Null ->
+        Buffer.add_string buf "\027[32mnull\027[39m\027[0m"
+    | `Bool b ->
+        Buffer.add_string buf
+          ( if b then
+              "\027[32mtrue\027[39m\027[0m"
+            else
+              "\027[32mfalse\027[39m\027[0m"
+          )
+    | `Int i ->
+        Buffer.add_string buf "\027[32m";
+        Buffer.add_string buf (Int.to_string i);
+        Buffer.add_string buf "\027[39m\027[0m"
+    | `Int64 i ->
+        Buffer.add_string buf "\027[32m";
+        Buffer.add_string buf (Int64.to_string i);
+        Buffer.add_string buf "\027[39m\027[0m"
+    | `Big_int z ->
+        Buffer.add_string buf "\027[32m";
+        Buffer.add_string buf (Z.to_string z);
+        Buffer.add_string buf "\027[39m\027[0m"
+    | `Decimal d ->
+        Buffer.add_string buf "\027[32m";
+        Buffer.add_string buf (Common.Decimal.to_string d);
+        Buffer.add_string buf "\027[39m\027[0m"
+    | `Float f ->
+        Buffer.add_string buf "\027[32m";
+        write_float buf f;
+        Buffer.add_string buf "\027[39m\027[0m"
+    | `String s ->
+        Buffer.add_string buf "\027[32m";
+        write_quoted_string buf s;
+        Buffer.add_string buf "\027[39m\027[0m"
+    | _ ->
+        ()
+
+  let write_key_colored buf k =
+    Buffer.add_string buf "\027[1m\027[34m";
+    write_quoted_string buf k;
+    Buffer.add_string buf "\027[39m\027[0m: "
+
   let is_primitive (json : t) =
     match json with `List _ | `Assoc _ -> false | _ -> true
 
@@ -612,31 +659,29 @@ module Pretty = struct
         Buffer.add_string buf sep;
         write_sep_list buf sep write_item rest
 
-  let rec write_compact buf ~value ~key ~reset json =
+  let rec write_compact_colored buf json =
     if is_primitive json then
-      write_primitive buf ~value ~reset json
+      write_primitive_colored buf json
     else
       match (json : t) with
       | `List [] ->
           Buffer.add_string buf "[]"
       | `List items ->
           Buffer.add_string buf "[ ";
-          write_sep_list buf ", " (write_compact buf ~value ~key ~reset) items;
+          write_sep_list buf ", " (write_compact_colored buf) items;
           Buffer.add_string buf " ]"
       | `Assoc [] ->
           Buffer.add_string buf "{}"
       | `Assoc items ->
           Buffer.add_string buf "{ ";
-          write_sep_list buf ", "
-            (write_compact_entry buf ~value ~key ~reset)
-            items;
+          write_sep_list buf ", " (write_compact_entry_colored buf) items;
           Buffer.add_string buf " }"
       | _ ->
           ()
 
-  and write_compact_entry buf ~value ~key ~reset (k, v) =
-    write_key buf ~key ~reset k;
-    write_compact buf ~value ~key ~reset v
+  and write_compact_entry_colored buf (k, v) =
+    write_key_colored buf k;
+    write_compact_colored buf v
 
   let rec write_summarized buf ~value ~key ~meta ~reset json =
     match (json : t) with
@@ -675,42 +720,40 @@ module Pretty = struct
     Buffer.add_string buf "...";
     reset buf
 
-  let rec write_json buf ~value ~key ~reset ~indent json =
+  let rec write_json_colored buf ~indent json =
     if is_primitive json then
-      write_primitive buf ~value ~reset json
+      write_primitive_colored buf json
     else
       match (json : t) with
       | `List [] ->
           Buffer.add_string buf "[]"
       | `List _ when indent = 0 && should_compact json ->
-          write_compact buf ~value ~key ~reset json
+          write_compact_colored buf json
       | `List items ->
           Buffer.add_string buf "[\n";
-          write_list_items buf ~value ~key ~reset ~indent:(indent + 1) items;
+          write_list_items_colored buf ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf ']'
       | `Assoc [] ->
           Buffer.add_string buf "{}"
       | `Assoc _ when indent = 0 && should_compact json ->
-          write_compact buf ~value ~key ~reset json
+          write_compact_colored buf json
       | `Assoc items ->
           Buffer.add_string buf "{\n";
-          write_assoc_items buf ~value ~key ~reset ~indent:(indent + 1) items;
+          write_assoc_items_colored buf ~indent:(indent + 1) items;
           write_indent buf indent;
           Buffer.add_char buf '}'
       | _ ->
           ()
 
-  (* write_list_item/write_assoc_item are their own named (mutually
-     recursive) functions rather than a `let write_item = ... in` closure
-     re-defined inside write_list_items/write_assoc_items: the latter shape
-     allocates a fresh closure on every element of every array/object in the
-     document, which dominates render cost on large inputs. A top-level
-     function here compiles to a direct call with no per-element
-     allocation. *)
-  and write_list_item buf ~value ~key ~reset ~indent ~last x =
+  (* The per-item writers are named (mutually recursive) functions rather
+     than a `let write_item = ... in` closure re-defined inside the *_items
+     functions: that shape allocates a fresh closure on every element of
+     every array/object in the document, which dominates render cost on
+     large inputs. A top-level function compiles to a direct call. *)
+  and write_list_item_colored buf ~indent ~last x =
     write_indent buf indent;
-    write_json buf ~value ~key ~reset ~indent x;
+    write_json_colored buf ~indent x;
     Buffer.add_string buf
       ( if last then
           "\n"
@@ -718,20 +761,20 @@ module Pretty = struct
           ",\n"
       )
 
-  and write_list_items buf ~value ~key ~reset ~indent items =
+  and write_list_items_colored buf ~indent items =
     match items with
     | [] ->
         ()
     | [ x ] ->
-        write_list_item buf ~value ~key ~reset ~indent ~last:true x
+        write_list_item_colored buf ~indent ~last:true x
     | x :: rest ->
-        write_list_item buf ~value ~key ~reset ~indent ~last:false x;
-        write_list_items buf ~value ~key ~reset ~indent rest
+        write_list_item_colored buf ~indent ~last:false x;
+        write_list_items_colored buf ~indent rest
 
-  and write_assoc_item buf ~value ~key ~reset ~indent ~last (k, v) =
+  and write_assoc_item_colored buf ~indent ~last (k, v) =
     write_indent buf indent;
-    write_key buf ~key ~reset k;
-    write_json buf ~value ~key ~reset ~indent v;
+    write_key_colored buf k;
+    write_json_colored buf ~indent v;
     Buffer.add_string buf
       ( if last then
           "\n"
@@ -739,15 +782,15 @@ module Pretty = struct
           ",\n"
       )
 
-  and write_assoc_items buf ~value ~key ~reset ~indent items =
+  and write_assoc_items_colored buf ~indent items =
     match items with
     | [] ->
         ()
     | [ kv ] ->
-        write_assoc_item buf ~value ~key ~reset ~indent ~last:true kv
+        write_assoc_item_colored buf ~indent ~last:true kv
     | kv :: rest ->
-        write_assoc_item buf ~value ~key ~reset ~indent ~last:false kv;
-        write_assoc_items buf ~value ~key ~reset ~indent rest
+        write_assoc_item_colored buf ~indent ~last:false kv;
+        write_assoc_items_colored buf ~indent rest
 
   let rec write_compact_plain buf json =
     if is_primitive json then
@@ -843,23 +886,28 @@ module Pretty = struct
   let to_buffer_colored buf ~colorize ~summarize json =
     if (not colorize) && not summarize then
       write_json_plain buf ~indent:0 json
-    else begin
-      let module Color = struct
-        let green buf = if colorize then Buffer.add_string buf "\027[32m"
+    else if summarize then begin
+      (* [colorize] can still be false here (a summarized value with color
+         disabled), so [write_summarized] needs the checked closures. This
+         is not the hot identity-query path, so the indirection is fine. *)
+        let module Color = struct
+          let green buf = if colorize then Buffer.add_string buf "\027[32m"
 
-        let blue_bold buf =
-          if colorize then Buffer.add_string buf "\027[1m\027[34m"
+          let blue_bold buf =
+            if colorize then Buffer.add_string buf "\027[1m\027[34m"
 
-        let gray buf = if colorize then Buffer.add_string buf "\027[90m"
-        let reset buf = if colorize then Buffer.add_string buf "\027[39m\027[0m"
-      end in
-      if summarize then
+          let gray buf = if colorize then Buffer.add_string buf "\027[90m"
+          let reset buf =
+            if colorize then Buffer.add_string buf "\027[39m\027[0m"
+        end in
         write_summarized buf json ~value:Color.green ~key:Color.blue_bold
           ~meta:Color.gray ~reset:Color.reset
-      else
-        write_json buf json ~indent:0 ~value:Color.green ~key:Color.blue_bold
-          ~reset:Color.reset
-    end
+    end else
+      (* colorize=true, summarize=false: the only remaining case, and the
+         identity-query hot path. Write ANSI codes directly (see
+         [write_primitive_colored]/[write_key_colored]) instead of paying
+         for closures and an always-true [if colorize] check per token. *)
+      write_json_colored buf ~indent:0 json
 
   let to_string_colored ~colorize ~summarize json =
     let buf = Buffer.create 4096 in

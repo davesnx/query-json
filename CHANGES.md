@@ -1,5 +1,7 @@
 # Unreleased
 
+- [BREAKING] **Color output now follows `jq`'s rules**: colored output is on only when stdout is a terminal (or `-C`/`--color` forces it), off when piped/redirected or when `NO_COLOR` is set (`-c`/`--no-color` still forces it off; `-C` wins over `NO_COLOR`)
+
 ## 1.0.0~beta-1
 
 - [FIX] **`pow` requires two arguments**: Bare `pow` no longer silently squares the input — it now produces a helpful error pointing to the correct `pow(x; y)` usage

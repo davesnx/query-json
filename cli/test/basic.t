@@ -62,3 +62,14 @@ raw output with string containing escape sequences
   $ printf '{"message": "Hello\\nWorld\\t!"}' | query-json --no-color -r '.message'
   Hello
   World	!
+
+color is off by default when stdout is not a terminal (cram output is a pipe)
+
+  $ query-json '.first.name' mock.json
+  "John Doe"
+
+-C forces color on even when stdout is not a terminal
+
+  $ query-json -C '.first.name' mock.json | od -c | head -2
+  0000000 033   [   3   2   m   "   J   o   h   n       D   o   e   " 033
+  0000020   [   3   9   m 033   [   0   m  \n
