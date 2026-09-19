@@ -219,6 +219,39 @@ let parse_utf8_emoji () =
   check_parse "direct utf8 emoji" Fixtures.utf8_emoji_json
     Fixtures.utf8_emoji_value ()
 
+let parse_escape_then_plain () =
+  check_parse "escape followed by unescaped run before closing quote"
+    Fixtures.escape_then_plain_json Fixtures.escape_then_plain_value ()
+
+let parse_unicode_null () =
+  check_parse "\\u0000 escape" Fixtures.unicode_null_json
+    Fixtures.unicode_null_value ()
+
+let parse_invalid_utf8 () =
+  check_parse "invalid utf8 bytes pass through unvalidated"
+    Fixtures.invalid_utf8_json Fixtures.invalid_utf8_value ()
+
+let parse_long_unescaped_string () =
+  check_parse "very long string without escapes"
+    Fixtures.long_unescaped_string_json Fixtures.long_unescaped_string_value ()
+
+let fail_lone_high_surrogate () =
+  Alcotest.check_raises "high surrogate with no low surrogate following"
+    (Json.Json_error
+       "Line 1, bytes 7-9:\n\
+        Missing escape sequence representing low surrogate for code point \
+        beyond U+FFFF 'X\"'"
+    )
+    (parse {|"\uD800X"|})
+
+let fail_invalid_low_surrogate () =
+  Alcotest.check_raises "high surrogate followed by a non-low-surrogate escape"
+    (Json.Json_error
+       "Line 1, bytes 7-14:\n\
+        Invalid low surrogate for code point beyond U+FFFF '\\u0041\"'"
+    )
+    (parse {|"\uD800\u0041"|})
+
 let parse_empty_array () =
   check_parse "empty array" Fixtures.empty_array_json Fixtures.empty_array_value
     ()
@@ -406,6 +439,12 @@ let single_json =
     ("parse_unicode_surrogate", `Quick, parse_unicode_surrogate);
     ("parse_utf8_direct", `Quick, parse_utf8_direct);
     ("parse_utf8_emoji", `Quick, parse_utf8_emoji);
+    ("parse_escape_then_plain", `Quick, parse_escape_then_plain);
+    ("parse_unicode_null", `Quick, parse_unicode_null);
+    ("parse_invalid_utf8", `Quick, parse_invalid_utf8);
+    ("parse_long_unescaped_string", `Quick, parse_long_unescaped_string);
+    ("fail_lone_high_surrogate", `Quick, fail_lone_high_surrogate);
+    ("fail_invalid_low_surrogate", `Quick, fail_invalid_low_surrogate);
     (* Arrays *)
     ("parse_empty_array", `Quick, parse_empty_array);
     ("parse_single_array", `Quick, parse_single_array);
