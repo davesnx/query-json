@@ -352,6 +352,58 @@ let fail_invalid_type ~ctx op (json : Json.t) =
     ^ " to " ^ type_desc
     )
 
+module Literal_str = struct
+  (* Plain byte-string search for a literal (non-regex) needle: no
+     Re.compile per call, so splitting/searching one string doesn't pay for
+     building a throwaway automaton. [needle] must be non-empty; callers
+     special-case the empty needle themselves (jq treats it as "no match"
+     for search, and as "one part per char" for split). *)
+  let index_from haystack needle start =
+    let needle_len = String.length needle in
+    let hay_len = String.length haystack in
+    let limit = hay_len - needle_len in
+    let first = String.unsafe_get needle 0 in
+    let matches_at idx =
+      let rec aux k =
+        k >= needle_len
+        || String.unsafe_get haystack (idx + k) = String.unsafe_get needle k
+           && aux (k + 1)
+      in
+      aux 1
+    in
+    let rec loop i =
+      if i > limit then
+        None
+      else
+        match String.index_from_opt haystack i first with
+        | None ->
+            None
+        | Some idx when idx > limit ->
+            None
+        | Some idx ->
+            if matches_at idx then
+              Some idx
+            else
+              loop (idx + 1)
+    in
+    if start > limit then
+      None
+    else
+      loop start
+
+  let split s sep =
+    let len = String.length s in
+    let sep_len = String.length sep in
+    let rec loop start acc =
+      match index_from s sep start with
+      | None ->
+          List.rev (String.sub s start (len - start) :: acc)
+      | Some idx ->
+          loop (idx + sep_len) (String.sub s start (idx - start) :: acc)
+    in
+    loop 0 []
+end
+
 module Operators = struct
   let not (json : Json.t) =
     match json with `Bool false | `Null -> `Bool true | _ -> `Bool false
@@ -734,11 +786,16 @@ module Operators = struct
         `Float (Json.Decimal.to_float l /. r)
     | `Float l, `Decimal r ->
         `Float (l /. Json.Decimal.to_float r)
-    | `String s, `String delim ->
+    | `String s, `String "" ->
+        (* keep the existing (Re-driven) empty-pattern semantics: this is a
+           distinct, rarely used edge case from split("")'s per-char split,
+           and not perf sensitive *)
         `List
-          (Re.split_delim (Re.compile (Re.str delim)) s
+          (Re.split_delim (Re.compile (Re.str "")) s
           |> List.map (fun part -> `String part)
           )
+    | `String s, `String delim ->
+        `List (Literal_str.split s delim |> List.map (fun part -> `String part))
     | _ ->
         fail_invalid_type ~ctx "/" left
 
@@ -779,36 +836,39 @@ module Operators = struct
 end
 
 module Search = struct
+  (* [needle = ""] is special-cased to "no match" here (matching jq), which
+     also sidesteps looping forever advancing by zero positions. *)
   let string_first haystack needle =
-    match Re.exec_opt (Re.compile (Re.str needle)) haystack with
-    | Some g ->
-        Some (fst (Re.Group.offset g 0))
-    | None ->
-        None
+    if needle = "" then
+      None
+    else
+      Literal_str.index_from haystack needle 0
 
   let string_last haystack needle =
-    let compiled = Re.compile (Re.str needle) in
-    let rec search pos last =
-      match Re.exec_opt ~pos compiled haystack with
-      | Some g ->
-          let found = fst (Re.Group.offset g 0) in
-          search (found + 1) (Some found)
-      | None ->
-          last
-    in
-    search 0 None
+    if needle = "" then
+      None
+    else
+      let rec search pos last =
+        match Literal_str.index_from haystack needle pos with
+        | Some found ->
+            search (found + 1) (Some found)
+        | None ->
+            last
+      in
+      search 0 None
 
   let string_all haystack needle =
-    let compiled = Re.compile (Re.str needle) in
-    let rec search pos acc =
-      match Re.exec_opt ~pos compiled haystack with
-      | Some g ->
-          let found = fst (Re.Group.offset g 0) in
-          search (found + 1) (found :: acc)
-      | None ->
-          List.rev acc
-    in
-    search 0 []
+    if needle = "" then
+      []
+    else
+      let rec search pos acc =
+        match Literal_str.index_from haystack needle pos with
+        | Some found ->
+            search (found + 1) (found :: acc)
+        | None ->
+            List.rev acc
+      in
+      search 0 []
 
   let sublist_matches_at haystack sublist idx =
     let sublen = List.length sublist in
@@ -2090,7 +2150,7 @@ let split_sep ~ctx sep json =
         if sep = "" then
           List.init (String.length s) (fun i -> String.make 1 (String.get s i))
         else
-          Re.split_delim (Re.compile (Re.str sep)) s
+          Literal_str.split s sep
       in
       `List (List.map (fun p -> `String p) parts)
   | _ ->
@@ -3703,7 +3763,7 @@ and contains ~ctx expr json =
   let rec value_contains haystack needle =
     match (haystack, needle) with
     | `String s, `String sub ->
-        Re.execp (Re.compile (Re.str sub)) s
+        sub = "" || Option.is_some (Literal_str.index_from s sub 0)
     | `List haystack, `List needle ->
         (* every element in needle must be contained by some element in haystack *)
         List.for_all
@@ -3792,7 +3852,12 @@ and inside ~ctx expr json =
   |> List.iter (fun container ->
       match (json, container) with
       | `String needle, `String haystack ->
-          yield (`Bool (Re.execp (Re.compile (Re.str needle)) haystack))
+          yield
+            (`Bool
+               (needle = ""
+               || Option.is_some (Literal_str.index_from haystack needle 0)
+               )
+            )
       | `List needles, `List haystack ->
           yield
             (`Bool

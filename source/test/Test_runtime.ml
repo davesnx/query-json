@@ -764,6 +764,8 @@ let contains =
     test {|contains(["baz", "bar"])|} {|["foobar", "foobaz", "blarp"]|} {|true|};
     test {|contains({foo: 12, bar: [{barp: 12}]})|}
       {|{"foo": 12, "bar":[1,2,{"barp":12, "blip":13}]}|} {|true|};
+    test {|contains("")|} {|"anything"|} {|true|};
+    test {|contains("")|} {|""|} {|true|};
     test {|contains({foo: 12, bar: [{barp: 15}]})|}
       {|{"foo": 12, "bar":[1,2,{"barp":12, "blip":13}]}|} {|false|};
   ]
@@ -824,6 +826,10 @@ let split_join =
     test {|join(", ")|} {|["a","b,c,d","e"]|} {|"a, b,c,d, e"|};
     test {|split(", ")|} {|"a, b,c,d, e, "|} {|[ "a", "b,c,d", "e", "" ]|};
     test {|join(" ")|} {|["a",1,2.3,true,null,false]|} {|"a 1 2.3 true false"|};
+    test {|split("é")|} {|"café"|} {|[ "caf", "" ]|};
+    (* separator at both ends *)
+    test {|split(",")|} {|",a,b,"|} {|[ "", "a", "b", "" ]|};
+    test {|split("")|} {|""|} {|[]|};
   ]
 
 let explode_implode =
@@ -854,6 +860,11 @@ let index =
     test {|indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
     test {|indices(1)|} {|[0,1,2,1,3,1,4]|} {|[ 1, 3, 5 ]|};
     test {|indices([1,2])|} {|[0,1,2,3,1,4,2,5,1,2,6,7]|} {|[ 1, 8 ]|};
+    test {|index("é")|} {|"café"|} {|3|};
+    (* empty needle: no match, like jq (also avoids looping forever) *)
+    test {|index("")|} {|"abc"|} {|null|};
+    test {|rindex("")|} {|"abc"|} {|null|};
+    test {|indices("")|} {|"abc"|} {|[]|};
   ]
 
 let math_abs =
