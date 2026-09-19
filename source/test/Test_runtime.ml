@@ -938,6 +938,17 @@ let regex_sub_gsub =
   [
     test {|sub("world"; "universe")|} {|"hello world"|} {|"hello universe"|};
     test {|gsub("l"; "L")|} {|"hello"|} {|"heLLo"|};
+    (* an invalid pattern silently passes the value through unchanged, and
+       does so every time it is evaluated, not just on the first (uncached)
+       compile attempt *)
+    test {|sub("(unclosed"; "Z")|} {|"abc"|} {|"abc"|};
+    test {|[.[] | sub("(unclosed"; "Z")]|} {|["a1", "b2"]|} {|[ "a1", "b2" ]|};
+    (* gsub with a pattern that can match the empty string *)
+    test {|gsub("x*"; "-")|} {|"abc"|} {|"-a-b-c-"|};
+    (* two distinct literal patterns compiled in the same run must not
+       collide in the compiled-regex cache *)
+    test {|[.[] | sub("a"; "1")]|} {|["cat", "dog"]|} {|[ "c1t", "dog" ]|};
+    test {|[.[] | gsub("o"; "2")]|} {|["cat", "dog"]|} {|[ "cat", "d2g" ]|};
     (* TODO: test {|sub("[^a-z]*(?<x>[a-z]+)"; "Z\(.x)"; "g")|} {|"123abc456def"|} {|"ZabcZdef"|}; *)
     (* TODO: test {|[sub("(?<a>.)"; "\(.a|to_uppercase)", "\(.a|to_lowercase)")]|} {|"aB"|} {|["AB","aB"]|}; *)
     (* TODO: test {|gsub("(?<x>.)[^a]*"; "+\(.x)-")|} {|"Abcabc"|} {|"+A-+a-"|}; *)

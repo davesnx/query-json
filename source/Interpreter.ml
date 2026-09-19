@@ -1835,13 +1835,35 @@ let descend_depth json =
   in
   List.rev (descend [] json)
 
+(* [sub]/[gsub] only ever see a pattern that is a string literal fixed at
+   parse time (Language.ml requires it), so the same pattern text is
+   recompiled on every input value that flows through a `map`/pipe. Cache
+   the compiled regex (or the fact that it fails to compile) keyed by
+   pattern text, bounded so a pathological program can't grow it forever. *)
+let regex_cache : (string, Re.re option) Hashtbl.t = Hashtbl.create 16
+
+let compiled_pcre_cached pattern =
+  match Hashtbl.find_opt regex_cache pattern with
+  | Some cached ->
+      cached
+  | None ->
+      let compiled =
+        try Some (Re.compile (Re.Pcre.re pattern)) with _ -> None
+      in
+      if Hashtbl.length regex_cache >= 64 then Hashtbl.reset regex_cache;
+      Hashtbl.add regex_cache pattern compiled;
+      compiled
+
 let replace_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
-      try
-        let regex = Re.compile (Re.Pcre.re pattern) in
-        `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
-      with _ -> json
+      match compiled_pcre_cached pattern with
+      | Some regex -> (
+          try `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
+          with _ -> json
+        )
+      | None ->
+          json
     )
   | _ ->
       fail_invalid_type ~ctx "replace" json
@@ -1849,10 +1871,13 @@ let replace_regex ~ctx pattern replacement json =
 let replace_all_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
-      try
-        let regex = Re.compile (Re.Pcre.re pattern) in
-        `String (Re.replace regex ~f:(fun _ -> replacement) s)
-      with _ -> json
+      match compiled_pcre_cached pattern with
+      | Some regex -> (
+          try `String (Re.replace regex ~f:(fun _ -> replacement) s)
+          with _ -> json
+        )
+      | None ->
+          json
     )
   | _ ->
       fail_invalid_type ~ctx "replace_all" json
