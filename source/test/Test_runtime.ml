@@ -744,6 +744,14 @@ let entries =
       {|{"a": 3, "b": 10}|} {|{ "a": 3, "b": 20 }|};
     test {|with_entries(.key |= "KEY_" + .)|} {|{"a": 1, "b": 2}|}
       {|{ "KEY_a": 1, "KEY_b": 2 }|};
+    (* first entry wins on lookup, but from_entries keeps every entry it was given *)
+    test {|from_entries|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
+      {|{ "a": 1, "a": 2 }|};
+    test {|from_entries | .a|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
+      {|1|};
+    (* renaming every entry to the same key keeps them all, in order *)
+    test {|with_entries(.key = "dup")|} {|{"a": 1, "b": 2}|}
+      {|{ "dup": 1, "dup": 2 }|};
   ]
 
 let contains =
@@ -1022,6 +1030,7 @@ let del =
     test {|delete(.foo)|} {|{"foo": 42, "bar": 9001, "baz": 42}|}
       {|{ "bar": 9001, "baz": 42 }|};
     test {|delete(.[1, 2])|} {|["foo", "bar", "baz"]|} {|[ "foo" ]|};
+    test {|delete(.nope)|} {|{"a": 1, "b": 2}|} {|{ "a": 1, "b": 2 }|};
   ]
 
 let object_index_brackets =
@@ -1466,6 +1475,9 @@ let object_merge =
       {|{ "a": { "x": 1, "y": 2 } }|};
     test {|reduce .[] as $obj ({}; . * $obj)|}
       {|[{"a": 1, "b": 2}, {"b": 3, "c": 4}]|} {|{ "a": 1, "b": 3, "c": 4 }|};
+    (* a key present on both sides keeps its left-hand position; new keys append after *)
+    test {|. + {"b": 30, "c": 40}|} {|{"a": 1, "b": 2}|}
+      {|{ "a": 1, "b": 30, "c": 40 }|};
   ]
 
 let array_algorithms =

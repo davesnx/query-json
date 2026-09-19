@@ -405,6 +405,63 @@ module Operators = struct
   let sub_exact l r = Json.Decimal.sub l r |> json_of_decimal
   let mul_exact l r = Json.Decimal.mul l r |> json_of_decimal
 
+  (* Merge two association lists: left entries keep their position, a key
+     present on both sides is combined with [merge_value], and keys only on
+     the right are appended after, in their original (first-occurrence)
+     order. [merge_left] walks [l_entries] once and conses [new_keys]
+     straight onto the tail (via [@tail_mod_cons], so this is one O(n)
+     allocation pass, not a map followed by a separate `@` copy), reusing
+     the original pair when [r_lookup] finds nothing so unrelated keys cost
+     no extra allocation.
+     Above [merge_threshold] keys on the right we index it in a hashtable so
+     each left key resolves in O(1) instead of rescanning the right list;
+     below it, a linear scan is cheaper (no hashing/allocation overhead). *)
+  let merge_threshold = 32
+
+  let[@tail_mod_cons] rec merge_left ~merge_value ~r_lookup new_keys l_entries =
+    match l_entries with
+    | [] ->
+        new_keys
+    | ((k, v) as pair) :: rest -> (
+        match r_lookup k with
+        | Some r_val ->
+            (k, merge_value v r_val)
+            :: merge_left ~merge_value ~r_lookup new_keys rest
+        | None ->
+            pair :: merge_left ~merge_value ~r_lookup new_keys rest
+      )
+
+  let assoc_merge ~merge_value (l_entries : (string * Json.t) list)
+      (r_entries : (string * Json.t) list) =
+    if List.length r_entries > merge_threshold then (
+      let r_tbl : (string, Json.t) Hashtbl.t =
+        Hashtbl.create (2 * List.length r_entries)
+      in
+      List.iter
+        (fun (k, v) ->
+          (* keep the first occurrence, matching List.assoc_opt semantics *)
+          if Stdlib.not (Hashtbl.mem r_tbl k) then Hashtbl.add r_tbl k v
+        )
+        r_entries;
+      let l_keys : (string, unit) Hashtbl.t =
+        Hashtbl.create (2 * List.length l_entries)
+      in
+      List.iter (fun (k, _) -> Hashtbl.replace l_keys k ()) l_entries;
+      let new_keys =
+        List.filter (fun (k, _) -> Stdlib.not (Hashtbl.mem l_keys k)) r_entries
+      in
+      merge_left ~merge_value ~r_lookup:(Hashtbl.find_opt r_tbl) new_keys
+        l_entries
+    ) else
+      let new_keys =
+        List.filter
+          (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
+          r_entries
+      in
+      merge_left ~merge_value
+        ~r_lookup:(fun k -> List.assoc_opt k r_entries)
+        new_keys l_entries
+
   let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
     | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
@@ -434,24 +491,7 @@ module Operators = struct
         `String (l ^ r)
     | `Assoc l_entries, `Assoc r_entries ->
         (* right side wins for duplicate keys (override, not merge) *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some v' ->
-                  (k, v')
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* then add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
+        `Assoc (assoc_merge ~merge_value:(fun _l r -> r) l_entries r_entries)
     | `List l, `List r ->
         `List (l @ r)
     | `Null, r ->
@@ -539,24 +579,7 @@ module Operators = struct
     match (left, right) with
     | `Assoc l_entries, `Assoc r_entries ->
         (* preserve key order: update existing keys from l with recursive merge from r *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some r_val ->
-                  (k, deep_merge v r_val)
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
+        `Assoc (assoc_merge ~merge_value:deep_merge l_entries r_entries)
     | _, r ->
         r
 
