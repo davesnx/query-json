@@ -44,38 +44,26 @@ let usage ?(colorize = true) () =
   |> String.concat (Console_style.enter 1)
   |> print_endline
 
-let repl_usage ?(colorize = true) () =
-  let t = Console_style.make ~colorize in
-  [
-    Console_style.enter 0;
-    t.yellow "Missing JSON file or inline JSON for REPL mode";
-    Console_style.enter 1 ^ "Usage:" ^ Console_style.enter 2
-    ^ t.bold "query-json" ^ " --repl "
-    ^ t.gray "[JSON_FILE | INLINE_JSON]"
-    ^ Console_style.enter 2 ^ Console_style.indent 1 ^ t.bold "EXAMPLES";
-    Console_style.indent 3 ^ "query-json --repl package.json";
-    Console_style.indent 3 ^ "query-json --repl '[1, 2, 3]'";
-    Console_style.indent 3 ^ "query-json --repl '{\"name\": \"test\"}'";
-    Console_style.indent 3 ^ "cat data.json | query-json --repl";
-    Console_style.enter 1;
-  ]
-  |> String.concat (Console_style.enter 1)
-  |> print_endline
-
 let ( let* ) = Result.bind
 
-(* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
-
-   This function reconnects stdin to /dev/tty (the controlling terminal),
-   allowing the REPL to receive keyboard input after reading piped JSON.
-   This is the standard Unix pattern used by programs like fzf, less, and vim. *)
-let reconnect_stdin_to_tty () =
-  try
-    let tty_fd = Unix.openfile "/dev/tty" [ Unix.O_RDONLY ] 0 in
-    Unix.dup2 tty_fd Unix.stdin;
-    Unix.close tty_fd;
-    true
-  with Unix.Unix_error _ -> false
+(* The REPL is the separate query-json-repl binary: its TUI stack costs about
+   3 ms of module initialization per process, which every plain query would
+   otherwise pay. Look next to this executable first, then on PATH. *)
+let run_repl args =
+  let dir = Filename.dirname Sys.executable_name in
+  let ext = Filename.extension Sys.executable_name in
+  let sibling = Filename.concat dir ("query-json-repl" ^ ext) in
+  let exe =
+    if Sys.file_exists sibling then
+      sibling
+    else
+      "query-json-repl"
+  in
+  let code = Sys.command (Filename.quote_command exe args) in
+  if code = 127 then
+    print_error_message ~colorize:true
+      "query-json-repl was not found. Install it next to query-json or on PATH.";
+  Stdlib.exit code
 
 let execution position_0 position_1 verbose debug no_color raw_output null_input
     repl functions =
@@ -97,74 +85,7 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
             Stdlib.exit 1
       )
   else if repl then
-    match (position_1, position_0) with
-    | Some file_or_json, query -> (
-        let initial_query = Option.value ~default:"." query in
-        let json =
-          if Sys.file_exists file_or_json then
-            Json.parse_file file_or_json
-          else
-            Json.parse_string file_or_json
-        in
-        let path =
-          if Sys.file_exists file_or_json then
-            file_or_json
-          else
-            "<inline>"
-        in
-        match json with
-        | Ok json ->
-            Repl.make ~json ~path ~query:initial_query
-        | Error err ->
-            print_error_message ~colorize err;
-            Stdlib.exit 1
-      )
-    | None, Some file_or_json when Sys.file_exists file_or_json -> (
-        match Json.parse_file file_or_json with
-        | Ok json ->
-            Repl.make ~json ~path:file_or_json ~query:"."
-        | Error err ->
-            print_error_message ~colorize err;
-            Stdlib.exit 1
-      )
-    | None, Some query -> (
-        if Unix.isatty Unix.stdin then (
-          repl_usage ~colorize ();
-          Stdlib.exit 1
-        ) else
-          let json_result =
-            Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
-          in
-          if not (reconnect_stdin_to_tty ()) then (
-            print_error_message ~colorize
-              "REPL requires an interactive terminal. No TTY available.";
-            Stdlib.exit 1
-          );
-          match json_result with
-          | Ok json ->
-              Repl.make ~json ~path:"<stdin>" ~query
-          | Error err ->
-              print_error_message ~colorize err;
-              Stdlib.exit 1
-      )
-    | None, None -> (
-        if Unix.isatty Unix.stdin then (
-          repl_usage ~colorize ();
-          Stdlib.exit 1
-        ) else
-          let json = Json.parse_channel (Unix.in_channel_of_descr Unix.stdin) in
-          if not (reconnect_stdin_to_tty ()) then (
-            print_error_message ~colorize
-              "REPL requires an interactive terminal. No TTY available.";
-            Stdlib.exit 1
-          );
-          match json with
-          | Ok json ->
-              Repl.make ~json ~path:"<stdin>" ~query:"."
-          | Error err ->
-              print_error_message ~colorize err;
-              Stdlib.exit 1
-      )
+    run_repl (List.filter_map Fun.id [ position_0; position_1 ])
   else
     match position_0 with
     | None ->

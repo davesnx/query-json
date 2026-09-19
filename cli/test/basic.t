@@ -62,3 +62,11 @@ raw output with string containing escape sequences
   $ printf '{"message": "Hello\\nWorld\\t!"}' | query-json --no-color -r '.message'
   Hello
   World	!
+
+--repl launches query-json-repl, which reports JSON errors before opening the UI
+
+  $ echo '{' > bad.json
+  $ query-json --repl . bad.json > repl.out; echo "exit $?"; grep . repl.out
+  exit 1
+  JSON parse error: Line 2, bytes -1-0:
+  Unexpected end of input

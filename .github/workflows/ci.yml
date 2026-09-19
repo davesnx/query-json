@@ -189,7 +189,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.os }}-${{ matrix.arch }}-artifact
-          path: _build/default/cli/cli.exe
+          path: |
+            _build/default/cli/cli.exe
+            _build/default/cli/repl.exe
 
       - name: Upload JavaScript artifacts for NPM
         if: matrix.os == 'ubuntu-latest'
@@ -278,11 +280,11 @@ jobs:
           mkdir -p _release/platform-darwin-x64
           mkdir -p _release/platform-darwin-arm64
           mkdir -p _release/platform-windows-x64
-          mv _release/ubuntu-latest-x64-artifact/cli.exe _release/platform-linux-x64/
-          mv _release/macos-15-intel-x64-artifact/cli.exe _release/platform-darwin-x64/
-          mv _release/macos-latest-arm64-artifact/cli.exe _release/platform-darwin-arm64/
-          mv _release/windows-latest-x64-artifact/cli.exe _release/platform-windows-x64/
-          chmod +x _release/platform-linux-x64/cli.exe
+          mv _release/ubuntu-latest-x64-artifact/{cli,repl}.exe _release/platform-linux-x64/
+          mv _release/macos-15-intel-x64-artifact/{cli,repl}.exe _release/platform-darwin-x64/
+          mv _release/macos-latest-arm64-artifact/{cli,repl}.exe _release/platform-darwin-arm64/
+          mv _release/windows-latest-x64-artifact/{cli,repl}.exe _release/platform-windows-x64/
+          chmod +x _release/platform-linux-x64/{cli,repl}.exe
 
       - name: Get version
         if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/')
@@ -312,21 +314,25 @@ jobs:
         run: |
           cd _release/platform-darwin-x64
           mv cli.exe query-json
+          mv repl.exe query-json-repl
           zip -r ../../query-json-darwin-x64.zip .
           cd ../..
 
           cd _release/platform-darwin-arm64
           mv cli.exe query-json
+          mv repl.exe query-json-repl
           zip -r ../../query-json-darwin-arm64.zip .
           cd ../..
 
           cd _release/platform-linux-x64
           mv cli.exe query-json
+          mv repl.exe query-json-repl
           zip -r ../../query-json-linux-x64.zip .
           cd ../..
 
           cd _release/platform-windows-x64
           mv cli.exe query-json
+          mv repl.exe query-json-repl
           zip -r ../../query-json-windows-x64.zip .
           cd ../..
 

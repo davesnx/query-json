@@ -33,7 +33,7 @@ Fs.copyFileSync(
   Path.join(releaseFolder, 'postinstall.js')
 );
 
-const filesToTouch = ['query-json'];
+const filesToTouch = ['query-json', 'query-json-repl'];
 
 /* Generate an empty binary */
 for (const file of filesToTouch) {
@@ -53,7 +53,8 @@ const pkgJson = {
   },
   "main": "query-json-js/js.bc.js",
   "bin": {
-    "query-json": "query-json"
+    "query-json": "query-json",
+    "query-json-repl": "query-json-repl"
   },
   "files": [
     "platform-windows-x64/",

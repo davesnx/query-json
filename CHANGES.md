@@ -1,5 +1,7 @@
 # Unreleased
 
+- [PERF] **Faster startup**: the REPL now ships as the separate `query-json-repl` binary, launched by `query-json --repl`. Plain queries no longer load the terminal UI stack, whose initialization cost about 3 ms and 8 MB per process (4.4 ms to 1.6 ms startup on Linux, binary 14 MB to 8 MB)
+
 ## 1.0.0~beta-1
 
 - [FIX] **`pow` requires two arguments**: Bare `pow` no longer silently squares the input — it now produces a helpful error pointing to the correct `pow(x; y)` usage

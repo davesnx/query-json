@@ -61,7 +61,8 @@ download() {
 
   unzip -q "$DOWNLOAD_DIR/$FILENAME.zip" -d "$DOWNLOAD_DIR"
   mv "$DOWNLOAD_DIR/query-json" "$INSTALL_DIR/query-json"
-  chmod u+x "$INSTALL_DIR/query-json"
+  mv "$DOWNLOAD_DIR/query-json-repl" "$INSTALL_DIR/query-json-repl"
+  chmod u+x "$INSTALL_DIR/query-json" "$INSTALL_DIR/query-json-repl"
 }
 
 check_dependencies() {

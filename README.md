@@ -156,6 +156,10 @@ Options:
   --help              Print help
 ```
 
+The REPL is a separate `query-json-repl` binary, installed next to `query-json`.
+`query-json --repl` launches it. Keeping the terminal UI out of the main binary
+keeps plain queries starting fast.
+
 ## Contributing
 
 Contributions are welcome! See the [development setup](#development) below to get started.

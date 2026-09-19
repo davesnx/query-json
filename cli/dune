@@ -3,6 +3,20 @@
  (modes native)
  (public_name query-json)
  (package query-json)
+ (modules cli Help)
+ (libraries
+  query-json.core
+  query-json.console-style
+  cmdliner
+  unix
+  dune-build-info))
+
+(executable
+ (name repl)
+ (modes native)
+ (public_name query-json-repl)
+ (package query-json)
+ (modules repl Repl_ui)
  (libraries
   query-json.core
   query-json.console-style
