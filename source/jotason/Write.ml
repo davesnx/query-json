@@ -488,19 +488,27 @@ module Pretty = struct
      handful of allocations total. *)
   let indent_cache = ref [| "" |]
 
+  (* Cap how deep the cache grows: pathologically deep documents shouldn't
+     hold one string per level forever. Past this depth, build the indent
+     directly instead of caching it. *)
+  let max_cached_indent = 64
+
   let indent_for n =
-    let cache = !indent_cache in
-    if n < Array.length cache then
-      cache.(n)
-    else begin
-      let grown = Array.make (n + 1) "" in
-      Array.blit cache 0 grown 0 (Array.length cache);
-      for i = Array.length cache to n do
-        grown.(i) <- grown.(i - 1) ^ indent_str
-      done;
-      indent_cache := grown;
-      grown.(n)
-    end
+    if n > max_cached_indent then
+      String.make (2 * n) ' '
+    else
+      let cache = !indent_cache in
+      if n < Array.length cache then
+        cache.(n)
+      else begin
+        let grown = Array.make (n + 1) "" in
+        Array.blit cache 0 grown 0 (Array.length cache);
+        for i = Array.length cache to n do
+          grown.(i) <- grown.(i - 1) ^ indent_str
+        done;
+        indent_cache := grown;
+        grown.(n)
+      end
 
   let write_indent buf indent = Buffer.add_string buf (indent_for indent)
 

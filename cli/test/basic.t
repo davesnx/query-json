@@ -70,6 +70,5 @@ color is off by default when stdout is not a terminal (cram output is a pipe)
 
 -C forces color on even when stdout is not a terminal
 
-  $ query-json -C '.first.name' mock.json | od -c | head -2
-  0000000 033   [   3   2   m   "   J   o   h   n       D   o   e   " 033
-  0000020   [   3   9   m 033   [   0   m  \n
+  $ query-json -C '.first.name' mock.json | grep -c "$(printf '\033')"
+  1

@@ -993,6 +993,20 @@ let regex_sub_gsub =
     (* TODO: test {|[gsub("p"; "a", "b")]|} {|"p"|} {|["a","b"]|}; *)
   ]
 
+(* The compiled-regex cache resets once it holds 64 entries. Compile 64
+   distinct never-matching filler patterns after "P0" (65 distinct patterns
+   total) to force the reset and evict "P0", then reuse "P0": it must
+   recompile and match correctly rather than reuse stale cache state. *)
+let regex_cache_eviction =
+  let fillers =
+    String.concat " | "
+      (List.init 64 (fun i -> Printf.sprintf {|gsub("F%d"; "Z")|} (i + 1)))
+  in
+  let query =
+    Printf.sprintf {|gsub("P0"; "P0") | %s | gsub("P0"; "DONE")|} fillers
+  in
+  [ test query {|"P0 hello"|} {|"DONE hello"|} ]
+
 let regex_scan =
   [
     test {|scan("[0-9]+")|} {|"abc123def456"|} "\"123\"\n\"456\"";
@@ -1521,6 +1535,64 @@ let object_merge =
       {|{ "a": 1, "b": 30, "c": 40 }|};
   ]
 
+(* [assoc_merge] switches from a linear scan to a hash-indexed lookup once
+   the right-hand side has more than 32 entries. Build a right-hand object
+   with exactly [n] raw entries: "a" (present on the left, so it overrides
+   rather than appends), "dup" appearing twice (a key only on the right,
+   so both occurrences survive, unlike "a"), and filler keys padding out to
+   [n]. Also derive the expected merge against the fixed left object
+   {"a": 1, "b": 2} for both [+] (override) and [*] (recursive merge, which
+   behaves the same here since every value is a plain int). *)
+let object_merge_threshold_boundary =
+  let compact_object pairs =
+    "{"
+    ^ String.concat ","
+        (List.map (fun (k, v) -> Printf.sprintf {|"%s":%d|} k v) pairs)
+    ^ "}"
+  in
+  (* the merged result has 30+ keys, well past the 120-char compact-width
+     budget, so the default (uncolored, non-`-c`) renderer this test harness
+     uses prints one "key": value per line, matching [assoc_multiline_test]
+     in Test_write.ml. *)
+  let pretty_object pairs =
+    let n = List.length pairs in
+    "{\n"
+    ^ String.concat ""
+        (List.mapi
+           (fun i (k, v) ->
+             Printf.sprintf "  \"%s\": %d%s" k v
+               ( if i = n - 1 then
+                   "\n"
+                 else
+                   ",\n"
+               )
+           )
+           pairs
+        )
+    ^ "}"
+  in
+  let case n =
+    let fillers = List.init (n - 3) (fun i -> (Printf.sprintf "k%d" i, i)) in
+    let raw_pairs = [ ("a", 999); ("dup", 100) ] @ fillers @ [ ("dup", 200) ] in
+    let right_json = compact_object raw_pairs in
+    let merged_pretty =
+      pretty_object
+        ([ ("a", 999); ("b", 2) ]
+        @ List.filter (fun (k, _) -> k <> "a") raw_pairs
+        )
+    in
+    [
+      test
+        (Printf.sprintf {|. + %s|} right_json)
+        {|{"a": 1, "b": 2}|} merged_pretty;
+      test
+        (Printf.sprintf {|. * %s|} right_json)
+        {|{"a": 1, "b": 2}|} merged_pretty;
+    ]
+  in
+  List.concat
+    [ case 32 (* linear-scan path *); case 40 (* hash-indexed path *) ]
+
 let array_algorithms =
   [
     test
@@ -1798,6 +1870,7 @@ let tests =
       regex_match;
       regex_capture;
       regex_sub_gsub;
+      regex_cache_eviction;
       regex_scan;
       regex_split;
       regex_splits;
@@ -1844,6 +1917,7 @@ let tests =
       complex_filtering;
       fizzbuzz;
       object_merge;
+      object_merge_threshold_boundary;
       array_algorithms;
       statistics;
     ]

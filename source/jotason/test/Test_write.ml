@@ -178,6 +178,42 @@ let list_multiline_with_empty_test =
     );
   ]
 
+(* 100 levels of single-child nesting: past `indent_for`'s cached-depth cap
+   (64), so this exercises the uncached `String.make` fallback. *)
+let deep_indent_test =
+  let depth = 100 in
+  let json : Json.t =
+    let rec build n =
+      if n = 0 then
+        `Int 0
+      else
+        `List [ build (n - 1) ]
+    in
+    build depth
+  in
+  let indent n = String.make (2 * n) ' ' in
+  let opens = String.concat "" (List.init depth (fun i -> indent i ^ "[\n")) in
+  let value = indent depth ^ "0\n" in
+  let closes =
+    String.concat ""
+      (List.init depth (fun j ->
+           let line = indent (depth - 1 - j) ^ "]" in
+           if j = depth - 1 then
+             line
+           else
+             line ^ "\n"
+       )
+      )
+  in
+  let expected = opens ^ value ^ closes in
+  [
+    ( "pretty multi-line array: 100-deep single nesting exercises indent_for \
+       past its cached-depth cap",
+      `Quick,
+      fun () -> Alcotest.(check string) __LOC__ expected (pretty_uncolored json)
+    );
+  ]
+
 let single_json =
   List.flatten
     [
@@ -186,4 +222,5 @@ let single_json =
       float_tests;
       assoc_multiline_test;
       list_multiline_with_empty_test;
+      deep_indent_test;
     ]
