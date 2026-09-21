@@ -153,6 +153,34 @@ let parse_decimal_huge_exponent () =
     (`Big_int (Z.pow (Z.of_int 10) 400))
     "1e400" ()
 
+(* The reader has a fast path (Read.try_fast_decimal) that builds a decimal
+   straight from the lexbuf bytes with repr = None, skipping the
+   Lexing.lexeme allocation, whenever the literal's canonical printing is
+   byte-identical to the source text (sign? digits '.' digits, no
+   exponent, no trailing zero in the fraction). Anything else still goes
+   through the slow Decimal.of_lexeme_exn path with repr preserved. These
+   cases exercise both sides of that split. *)
+let parse_decimal_fast_path_canonical () =
+  check_decimal "1234.5678 takes the fast, repr-less path" "1234.5678"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1234.5678"))
+    "1234.5678" ()
+
+let parse_decimal_fast_path_negative () =
+  check_decimal "-12.34 takes the fast path with a sign" "-12.34"
+    (`Decimal (Json.Decimal.of_lexeme_exn "-12.34"))
+    "-12.34" ()
+
+let parse_decimal_trailing_zero_keeps_repr () =
+  check_decimal "1.50 falls back to the slow path (trailing zero)" "1.50"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1.50"))
+    "1.50" ()
+
+let parse_decimal_many_digits_keeps_repr () =
+  check_decimal "1.2345678901234567895 falls back to the slow path (>18 digits)"
+    "1.2345678901234567895"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1.2345678901234567895"))
+    "1.2345678901234567895" ()
+
 let parse_empty_string () =
   check_parse "empty string" Fixtures.empty_string_json
     Fixtures.empty_string_value ()
@@ -421,6 +449,22 @@ let single_json =
     ("parse_decimal_positive_exponent", `Quick, parse_decimal_positive_exponent);
     ("parse_decimal_negative_exponent", `Quick, parse_decimal_negative_exponent);
     ("parse_decimal_huge_exponent", `Quick, parse_decimal_huge_exponent);
+    ( "parse_decimal_fast_path_canonical",
+      `Quick,
+      parse_decimal_fast_path_canonical
+    );
+    ( "parse_decimal_fast_path_negative",
+      `Quick,
+      parse_decimal_fast_path_negative
+    );
+    ( "parse_decimal_trailing_zero_keeps_repr",
+      `Quick,
+      parse_decimal_trailing_zero_keeps_repr
+    );
+    ( "parse_decimal_many_digits_keeps_repr",
+      `Quick,
+      parse_decimal_many_digits_keeps_repr
+    );
     (* Strings *)
     ("parse_empty_string", `Quick, parse_empty_string);
     ("parse_simple_string", `Quick, parse_simple_string);

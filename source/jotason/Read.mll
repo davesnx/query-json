@@ -134,6 +134,72 @@
       try `Int64 (Int64.of_string s)
       with Failure _ -> `Big_int (Z.of_string s)
 
+  (* Fast, allocation-free path for the common decimal shape: sign? digits
+     '.' digits, with no exponent. The JSON grammar's positive_int already
+     forbids a leading zero in the integer part, so the only way such a
+     literal's canonical printing (Decimal.to_string ~preserve_repr:false)
+     can differ from the source text is a trailing zero in the fractional
+     part (e.g. "1.50" -> canonical "1.5"). When that's not the case, build
+     the decimal directly from the lexbuf bytes with repr = None, skipping
+     the Lexing.lexeme substring allocation that the slow path below always
+     pays for. Anything else (exponents, too many digits, trailing zeros)
+     returns None and falls back to the unchanged slow path. *)
+  let try_fast_decimal (lexbuf : Lexing.lexbuf) =
+    let s = lexbuf.lex_buffer in
+    let stop = lexbuf.lex_curr_pos in
+    let start = lexbuf.lex_start_pos in
+    let i = ref start in
+    let sign =
+      if Bytes.get s !i = '-' then (
+        incr i;
+        -1
+      ) else
+        1
+    in
+    let int_start = !i in
+    while !i < stop && Bytes.get s !i >= '0' && Bytes.get s !i <= '9' do
+      incr i
+    done;
+    let int_len = !i - int_start in
+    if !i >= stop || Bytes.get s !i <> '.' then
+      None (* no fractional part right after the digits: exponent literal *)
+    else
+      let frac_start = !i + 1 in
+      let j = ref frac_start in
+      while !j < stop && Bytes.get s !j >= '0' && Bytes.get s !j <= '9' do
+        incr j
+      done;
+      let frac_len = !j - frac_start in
+      if
+        !j <> stop (* trailing exponent after the fractional digits *)
+        || frac_len = 0
+        || Bytes.get s (stop - 1) = '0' (* trailing zero: repr needed *)
+        || int_len + frac_len > Decimal.max_fast_digits
+      then
+        None
+      else begin
+        let n = ref 0 in
+        for k = int_start to int_start + int_len - 1 do
+          n := (!n * 10) + dec (Bytes.get s k)
+        done;
+        for k = frac_start to stop - 1 do
+          n := (!n * 10) + dec (Bytes.get s k)
+        done;
+        Some
+          {
+            coeff = Z.of_int (if sign < 0 then - !n else !n);
+            scale = frac_len;
+            repr = None;
+          }
+      end
+
+  let make_decimal _v lexbuf =
+    match try_fast_decimal lexbuf with
+    | Some d ->
+        `Decimal d
+    | None ->
+        `Decimal (Decimal.of_lexeme_exn (Lexing.lexeme lexbuf))
+
   (* Position tracking *)
   let newline v (lexbuf : Lexing.lexbuf) =
     v.lnum <- v.lnum + 1;
@@ -173,7 +239,7 @@ rule read_json v = parse
   | '"'           { Buffer.clear v.buf; `String (finish_string v lexbuf) }
   | positive_int  { make_positive_int v lexbuf }
   | '-' positive_int { make_negative_int v lexbuf }
-  | float         { `Decimal (Common.Decimal.of_lexeme_exn (Lexing.lexeme lexbuf)) }
+  | float         { make_decimal v lexbuf }
   | '{' {
       let acc = ref [] in
       try
