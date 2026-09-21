@@ -48,22 +48,67 @@ let ( let* ) = Result.bind
 
 (* The REPL is the separate query-json-repl binary: its TUI stack costs about
    3 ms of module initialization per process, which every plain query would
-   otherwise pay. Look next to this executable first, then on PATH. *)
+   otherwise pay. Resolve it ourselves (next to argv.(0), next to the
+   resolved executable, then on PATH) instead of relying on the exit code
+   Sys.command's underlying shell gives for "not found": that's 127 on a
+   POSIX shell but 9009 on Windows' cmd.exe, and either way the shell prints
+   its own "not found" line before we get a chance to. *)
 let run_repl args =
-  let dir = Filename.dirname Sys.executable_name in
-  let ext = Filename.extension Sys.executable_name in
-  let sibling = Filename.concat dir ("query-json-repl" ^ ext) in
-  let exe =
-    if Sys.file_exists sibling then
-      sibling
+  (* Sys.executable_name resolves through symlinks to dune's raw build
+     artifact, whose name always ends in ".exe" (even on Unix), so its
+     extension isn't the shipped binary's. Shipped binaries only carry
+     ".exe" on Windows. *)
+  let ext =
+    if Sys.win32 then
+      ".exe"
     else
-      "query-json-repl"
+      ""
   in
-  let code = Sys.command (Filename.quote_command exe args) in
-  if code = 127 then
-    print_error_message ~colorize:true
-      "query-json-repl was not found. Install it next to query-json or on PATH.";
-  Stdlib.exit code
+  let name = "query-json-repl" ^ ext in
+  let path_dirs =
+    match Sys.getenv_opt "PATH" with
+    | None ->
+        []
+    | Some path ->
+        String.split_on_char
+          ( if Sys.win32 then
+              ';'
+            else
+              ':'
+          )
+          path
+  in
+  (* A bare argv.(0) (found through PATH) has no directory of its own; using
+     "." there would run a stray ./query-json-repl from the current directory. *)
+  let argv0 = Sys.argv.(0) in
+  let argv0_dirs =
+    if Filename.basename argv0 = argv0 then
+      []
+    else
+      [ Filename.dirname argv0 ]
+  in
+  let candidate_dirs =
+    argv0_dirs @ (Filename.dirname Sys.executable_name :: path_dirs)
+  in
+  let exe =
+    List.find_map
+      (fun dir ->
+        let candidate = Filename.concat dir name in
+        if Sys.file_exists candidate then
+          Some candidate
+        else
+          None
+      )
+      candidate_dirs
+  in
+  match exe with
+  | None ->
+      print_error_message ~colorize:true
+        "query-json-repl was not found. Install it next to query-json or on \
+         PATH.";
+      Stdlib.exit 127
+  | Some exe ->
+      Stdlib.exit (Sys.command (Filename.quote_command exe args))
 
 let execution position_0 position_1 verbose debug no_color raw_output null_input
     repl functions =
