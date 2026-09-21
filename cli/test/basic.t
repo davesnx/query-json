@@ -90,9 +90,9 @@ successful output bytes match default mode, including raw edge cases
   >   done
   > done
 
-stream output keeps the prefix before a late compiled error
+stream output keeps the prefix on stdout and sends the late error to stderr
 
-  $ query-json --no-color --stream-output '.[] | .value' '[{"value":1},{"value":2},{}]' | sed '/^$/d'
+  $ query-json --no-color --stream-output '.[] | .value' '[{"value":1},{"value":2},{}]' 2>&1 | sed '/^$/d'
   1
   2
   error[key_not_found]: Key 'value' not found in object

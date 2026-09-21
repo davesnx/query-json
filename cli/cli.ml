@@ -15,6 +15,13 @@ end
 let print_error_message ~colorize:_ str =
   print_endline (Console_style.enter 1 ^ str ^ Console_style.enter 1)
 
+(* --stream-output can leave already-flushed results on stdout, so the
+   terminal error must go to stderr with a failing exit code instead of
+   sharing stdout with the results it followed. *)
+let exit_with_stream_error str =
+  prerr_endline (Console_style.enter 1 ^ str ^ Console_style.enter 1);
+  Stdlib.exit 1
+
 let usage ?(colorize = true) () =
   let t = Console_style.make ~colorize in
   [
@@ -212,7 +219,10 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         | Ok () ->
             ()
         | Error err ->
-            print_error_message ~colorize err
+            if stream_output then
+              exit_with_stream_error err
+            else
+              print_error_message ~colorize err
       )
 
 let () =

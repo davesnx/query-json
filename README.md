@@ -158,10 +158,12 @@ Options:
   --help              Print help
 ```
 
-By default, query output is written only after the query succeeds. With
-`--stream-output`, each result is flushed as it is produced. If a later result or
-input tail fails, earlier output remains and the error starts on a new line.
-Successful output is identical in both modes. This flag has no effect in REPL mode.
+By default, query output is written only after the query succeeds, and an error
+shares stdout with any results. With `--stream-output`, each result is flushed
+to stdout as it is produced. If a later result or input tail fails, earlier
+output on stdout remains, the error is written to stderr instead, and the
+process exits with status 1. Successful output is identical in both modes.
+This flag has no effect in REPL mode.
 
 Default output and `--debug` validate the complete JSON input before execution.
 `--stream-output` can execute complete items before EOF for supported root or

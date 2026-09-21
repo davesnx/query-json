@@ -59,9 +59,9 @@ Debug output must not appear.
   Invalid token '}'
   
   $ for mode in '' '--stream-output'; do
-  >   query-json --no-color --debug $mode '[' "$json" > string.out
-  >   query-json --no-color --debug $mode '[' invalid.json > file.out
-  >   query-json --no-color --debug $mode '[' < invalid.json > channel.out
+  >   query-json --no-color --debug $mode '[' "$json" > string.out 2>&1
+  >   query-json --no-color --debug $mode '[' invalid.json > file.out 2>&1
+  >   query-json --no-color --debug $mode '[' < invalid.json > channel.out 2>&1
   >   cmp input-error.out string.out || exit 1
   >   cmp input-error.out file.out || exit 1
   >   cmp input-error.out channel.out || exit 1
@@ -75,12 +75,15 @@ Valid input returns the saved query error in both modes.
     --> [
         ^
   
-  $ query-json --no-color --debug --stream-output '[' source.json
+  $ query-json --no-color --debug --stream-output '[' source.json 2>&1
   
   error[parse_error]: unexpected token, got end of input
     --> [
         ^
   
+  [1]
+
+
 
 Debug prints the original AST once before execution, even when input is selected.
 
@@ -100,9 +103,9 @@ Selected input remains atomic by default on a late execution error.
     in: {}
     hint: Use .value? for optional access
 
-Streamed selected input keeps results before a late execution error.
+Streamed selected input keeps results on stdout and sends the late error to stderr.
 
-  $ query-json --no-color --stream-output '.keep[] | .value' '{"keep":[{"value":1},{}],"discard":true}' | sed '/^$/d'
+  $ query-json --no-color --stream-output '.keep[] | .value' '{"keep":[{"value":1},{}],"discard":true}' 2>&1 | sed '/^$/d'
   1
   error[key_not_found]: Key 'value' not found in object
     in: {}
@@ -112,8 +115,8 @@ Fallback execution has the same atomic and streamed errors.
 
   $ for mode in '' '--stream-output'; do
   >   json='{"keep":[{"value":1},{}],"discard":true}'
-  >   query-json --no-color $mode '.keep[] | .value' "$json" > selected.out
-  >   query-json --no-color $mode 'fn chosen: .keep[] | .value; chosen' "$json" > fallback.out
+  >   query-json --no-color $mode '.keep[] | .value' "$json" > selected.out 2>&1
+  >   query-json --no-color $mode 'fn chosen: .keep[] | .value; chosen' "$json" > fallback.out 2>&1
   >   cmp selected.out fallback.out || exit 1
   > done
 
@@ -134,9 +137,9 @@ Their errors match full-input parsing, including when the query is invalid.
   >   grep -q 'JSON parse error:' input-error.out || exit 1
   >   for mode in '' '--stream-output'; do
   >     for query in '.keep[]' 'fn chosen: .keep[]; chosen' '['; do
-  >       query-json --no-color --debug $mode "$query" "$json" > string.out
-  >       query-json --no-color --debug $mode "$query" invalid.json > file.out
-  >       query-json --no-color --debug $mode "$query" < invalid.json > channel.out
+  >       query-json --no-color --debug $mode "$query" "$json" > string.out 2>&1
+  >       query-json --no-color --debug $mode "$query" invalid.json > file.out 2>&1
+  >       query-json --no-color --debug $mode "$query" < invalid.json > channel.out 2>&1
   >       cmp input-error.out string.out || exit 1
   >       cmp input-error.out file.out || exit 1
   >       cmp input-error.out channel.out || exit 1

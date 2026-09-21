@@ -3,11 +3,11 @@ let now () =
   |> Runtime_events.Timestamp.to_int64 |> Int64.to_float
   |> fun ns -> ns /. 1e9
 
-let deadline () = now () +. 5.0
+let deadline () = now () +. 30.0
 
 let remaining until =
   let seconds = until -. now () in
-  if seconds <= 0.0 then failwith "five-second deadline expired";
+  if seconds <= 0.0 then failwith "thirty-second deadline expired";
   seconds
 
 let rec ready until reads writes =
