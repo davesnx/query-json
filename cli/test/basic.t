@@ -62,3 +62,46 @@ raw output with string containing escape sequences
   $ printf '{"message": "Hello\\nWorld\\t!"}' | query-json --no-color -r '.message'
   Hello
   World	!
+
+stream output for multiple results
+
+  $ query-json --no-color --stream-output '.[]' '[1,2,3]'
+  1
+  2
+  3
+
+empty stream output still writes one LF
+
+  $ query-json --no-color --stream-output 'empty' 'null' | od -An -tx1
+   0a
+
+raw stream output preserves empty strings and embedded newlines
+
+  $ query-json --no-color --stream-output -r '.[]' '["","a\nb","","\n",""]' | od -An -tx1
+   0a 61 0a 62 0a 0a 0a 0a 0a
+
+successful output bytes match default mode, including raw edge cases
+
+  $ for options in '' '-r'; do
+  >   for json in '[]' '[1,2,3]' '[""]' '["\n"]' '["","a\nb","","\n",""]'; do
+  >     query-json --no-color $options '.[]' "$json" > default.out
+  >     query-json --no-color --stream-output $options '.[]' "$json" > stream.out
+  >     cmp default.out stream.out || exit 1
+  >   done
+  > done
+
+stream output keeps the prefix before a late compiled error
+
+  $ query-json --no-color --stream-output '.[] | .value' '[{"value":1},{"value":2},{}]' | sed '/^$/d'
+  1
+  2
+  error[key_not_found]: Key 'value' not found in object
+    in: {}
+    hint: Use .value? for optional access
+
+default output remains atomic on the same late error
+
+  $ query-json --no-color '.[] | .value' '[{"value":1},{"value":2},{}]' | sed '/^$/d'
+  error[key_not_found]: Key 'value' not found in object
+    in: {}
+    hint: Use .value? for optional access

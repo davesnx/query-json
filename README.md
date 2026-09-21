@@ -136,6 +136,7 @@ query-json '.title | to_lowercase | split(" ") | first' article.json
 - **[Try it online](https://query-json.pages.dev)** - Interactive playground
 - **[Function Reference](https://query-json.pages.dev/functions)** - Complete list of built-in functions
 - **[jq Compatibility Guide](./docs/JQ_COMPATIBILITY.md)** - Migration guide for jq users
+- **[Compiled Query Engine Architecture](./docs/COMPILED_QUERY_ENGINE.md)** - Execution, selective input, and event-input design
 
 ## CLI Options
 
@@ -148,6 +149,7 @@ Arguments:
 
 Options:
   -r, --raw-output    Output strings without quotes
+  --stream-output     Flush each result as it is produced
   --no-color          Disable colored output
   --repl              Start interactive REPL mode
   -v, --verbose       Show verbose output including deprecation warnings
@@ -155,6 +157,21 @@ Options:
   --version           Print version
   --help              Print help
 ```
+
+By default, query output is written only after the query succeeds. With
+`--stream-output`, each result is flushed as it is produced. If a later result or
+input tail fails, earlier output remains and the error starts on a new line.
+Successful output is identical in both modes. This flag has no effect in REPL mode.
+
+Default output and `--debug` validate the complete JSON input before execution.
+`--stream-output` can execute complete items before EOF for supported root or
+direct root-member iteration. Collection barriers and unsupported queries still
+validate first. After a query error, callbacks stop and input validation continues.
+A later input error wins. Invalid JSON also takes precedence over an invalid query.
+The debug AST prints only after valid EOF.
+For supported queries that start with a root object key, file, inline, and stdin
+input can retain only the selected value while validating the rest. Other queries
+retain the complete input. The JavaScript string entry remains validation-first.
 
 ## Contributing
 

@@ -1,169 +1,7 @@
 open Ast
 
-module Runtime_error : sig
-  type t
-  type _ Effect.t += Fail : t -> unit Effect.t
-
-  val to_json : t -> Json.t
-  val kind_string : t -> string
-  val message : t -> string
-  val value : t -> Json.t option
-  val suggestion : t -> string option
-  val key_not_found : key:string -> value:Json.t -> 'a
-  val null_access : key:string -> value:Json.t -> 'a
-  val type_mismatch : value:Json.t -> ?suggestion:string -> string -> 'a
-  val index_out_of_bounds : index:int -> length:int -> value:Json.t -> 'a
-  val empty_array : string -> 'a
-  val invalid_argument : fn:string -> expected:string -> found:string -> 'a
-  val undefined_function : name:string -> 'a
-  val empty_result : op:string -> ?suggestion:string -> unit -> 'a
-  val assertion_error : value:Json.t -> string -> 'a
-  val custom : kind:string -> value:Json.t -> string -> 'a
-end = struct
-  type error_kind =
-    | Key_not_found
-    | Null_access
-    | Type_mismatch
-    | Index_out_of_bounds
-    | Empty_array
-    | Undefined_function
-    | Empty_result
-    | Assertion_error
-    | Invalid_argument
-    | Custom of string
-
-  let error_kind_to_string = function
-    | Key_not_found ->
-        "key_not_found"
-    | Null_access ->
-        "null_access"
-    | Type_mismatch ->
-        "type_mismatch"
-    | Index_out_of_bounds ->
-        "index_out_of_bounds"
-    | Empty_array ->
-        "empty_array"
-    | Undefined_function ->
-        "undefined_function"
-    | Empty_result ->
-        "empty_result"
-    | Assertion_error ->
-        "assertion_error"
-    | Invalid_argument ->
-        "invalid_argument"
-    | Custom s ->
-        s
-
-  type t = {
-    kind : error_kind;
-    message : string;
-    value : Json.t option;
-    suggestion : string option;
-  }
-
-  type _ Effect.t += Fail : t -> unit Effect.t
-
-  let to_json { kind; message; value; suggestion } : Json.t =
-    let fields =
-      [
-        ("kind", `String (error_kind_to_string kind));
-        ("message", `String message);
-      ]
-    in
-    let fields =
-      match value with Some v -> fields @ [ ("value", v) ] | None -> fields
-    in
-    let fields =
-      match suggestion with
-      | Some s ->
-          fields @ [ ("suggestion", `String s) ]
-      | None ->
-          fields
-    in
-    `Assoc fields
-
-  let kind_string err = error_kind_to_string err.kind
-  let message err = err.message
-  let value err = err.value
-  let suggestion err = err.suggestion
-
-  let fail ~kind ?value ?suggestion message =
-    Effect.perform (Fail { kind; message; value; suggestion });
-    assert false
-
-  let key_not_found ~key ~value =
-    let suggestion =
-      match value with
-      | `Assoc assoc -> (
-          let keys = List.map fst assoc in
-          let hyphenated_match =
-            List.find_opt
-              (fun k ->
-                let key_len = String.length key in
-                String.length k > key_len
-                && String.sub k 0 key_len = key
-                && String.get k key_len = '-'
-              )
-              keys
-          in
-          match hyphenated_match with
-          | Some hk ->
-              Printf.sprintf
-                "Did you mean \"%s\"? Use .[\"...\"] or .\"...\" for keys with \
-                 hyphens"
-                hk
-          | None ->
-              "Use ." ^ key ^ "? for optional access"
-        )
-      | _ ->
-          "Use ." ^ key ^ "? for optional access"
-    in
-    fail ~kind:Key_not_found ~value ~suggestion
-      ("Key '" ^ key ^ "' not found in object")
-
-  let null_access ~key ~value =
-    fail ~kind:Null_access ~value ("Cannot access key '" ^ key ^ "' on null")
-
-  let type_mismatch ~value ?suggestion message =
-    fail ~kind:Type_mismatch ~value ?suggestion message
-
-  let index_out_of_bounds ~index ~length ~value =
-    fail ~kind:Index_out_of_bounds ~value
-      ~suggestion:("Use .[" ^ Int.to_string index ^ "]? for optional access")
-      ("Index " ^ Int.to_string index ^ " out of bounds (array has "
-     ^ Int.to_string length ^ " elements)"
-      )
-
-  let empty_array op =
-    fail ~kind:Empty_array
-      ~suggestion:("Use " ^ op ^ "? for optional access")
-      (op ^ ": empty array")
-
-  let invalid_argument ~fn ~expected ~found =
-    fail ~kind:Invalid_argument
-      (Printf.sprintf "`%s`: expected %s, found %s" fn expected found)
-
-  let undefined_function ~name =
-    fail ~kind:Undefined_function
-      ~suggestion:"check function name or define it with 'fn'"
-      ("undefined function: `" ^ name ^ "`")
-
-  let empty_result ~op ?suggestion () =
-    let suggestion =
-      match suggestion with
-      | Some s ->
-          Some s
-      | None ->
-          Some ("Use " ^ op ^ "? for optional access")
-    in
-    fail ~kind:Empty_result ?suggestion (op ^ ": empty expression result")
-
-  let assertion_error ~value message =
-    fail ~kind:Assertion_error ~value
-      ~suggestion:"Check the condition in your assert() call" message
-
-  let custom ~kind ~value message = fail ~kind:(Custom kind) ~value message
-end
+module Runtime_error = Runtime.Runtime_error
+module Operators = Runtime.Operators
 
 type _ Effect.t +=
   | Yield : Json.t -> unit Effect.t
@@ -332,375 +170,7 @@ let rec substitute_params (params : string list) (args : expression list)
       Apply (name, List.map sub call_args)
 
 let fail_invalid_type ~ctx op (json : Json.t) =
-  let type_desc =
-    match json with
-    | `List _ | `Assoc _ ->
-        "an " ^ Json.type_of json
-    | `String _ ->
-        "a " ^ Json.type_of json
-    | `Bool _ ->
-        "a boolean"
-    | `Float _ | `Int _ | `Int64 _ | `Big_int _ | `Decimal _ ->
-        "a number"
-    | `Null ->
-        "null"
-  in
-  let t = Console_style.make ~colorize:ctx.colorize in
-  Runtime_error.type_mismatch ~value:json
-    ("Cannot apply "
-    ^ Console_style.single_quotes (t.bold op)
-    ^ " to " ^ type_desc
-    )
-
-module Operators = struct
-  let not (json : Json.t) =
-    match json with `Bool false | `Null -> `Bool true | _ -> `Bool false
-
-  let to_float = function
-    | `Float f ->
-        Some f
-    | `Int n ->
-        Some (Float.of_int n)
-    | `Int64 n ->
-        Some (Int64.to_float n)
-    | `Big_int z ->
-        Some (Z.to_float z)
-    | `Decimal (d : Json.decimal) ->
-        Some (Json.Decimal.to_float d)
-    | _ ->
-        None
-
-  let exact_decimal_of_json = function
-    | `Int n ->
-        Some (Json.Decimal.of_integer (Z.of_int n))
-    | `Int64 n ->
-        Some (Json.Decimal.of_integer (Z.of_int64 n))
-    | `Big_int z ->
-        Some (Json.Decimal.of_integer z)
-    | `Decimal (d : Json.decimal) ->
-        Some d
-    | _ ->
-        None
-
-  let z_int_min = Z.of_int Int.min_int
-  let z_int_max = Z.of_int Int.max_int
-  let z_int64_min = Z.of_int64 Int64.min_int
-  let z_int64_max = Z.of_int64 Int64.max_int
-
-  let json_of_integer_z z =
-    if Z.compare z z_int_min >= 0 && Z.compare z z_int_max <= 0 then
-      `Int (Z.to_int z)
-    else if Z.compare z z_int64_min >= 0 && Z.compare z z_int64_max <= 0 then
-      `Int64 (Z.to_int64 z)
-    else
-      `Big_int z
-
-  let json_of_decimal (d : Json.decimal) =
-    if d.scale = 0 then
-      json_of_integer_z d.coeff
-    else
-      `Decimal d
-
-  let add_exact l r = Json.Decimal.add l r |> json_of_decimal
-  let sub_exact l r = Json.Decimal.sub l r |> json_of_decimal
-  let mul_exact l r = Json.Decimal.mul l r |> json_of_decimal
-
-  let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
-    match (left, right) with
-    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
-        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
-        add_exact
-          (Option.get (exact_decimal_of_json l))
-          (Option.get (exact_decimal_of_json r))
-    | `Float l, `Float r ->
-        `Float (l +. r)
-    | `Int l, `Float r ->
-        `Float (Int.to_float l +. r)
-    | `Float l, `Int r ->
-        `Float (l +. Int.to_float r)
-    | `Int64 l, `Float r ->
-        `Float (Int64.to_float l +. r)
-    | `Float l, `Int64 r ->
-        `Float (l +. Int64.to_float r)
-    | `Decimal l, `Float r ->
-        `Float (Json.Decimal.to_float l +. r)
-    | `Float l, `Decimal r ->
-        `Float (l +. Json.Decimal.to_float r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l +. r)
-    | `Float l, `Big_int r ->
-        `Float (l +. Z.to_float r)
-    | `String l, `String r ->
-        `String (l ^ r)
-    | `Assoc l_entries, `Assoc r_entries ->
-        (* right side wins for duplicate keys (override, not merge) *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some v' ->
-                  (k, v')
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* then add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
-    | `List l, `List r ->
-        `List (l @ r)
-    | `Null, r ->
-        Runtime_error.type_mismatch ~value:r
-          ~suggestion:"Use (.x ?? 0) for explicit null handling"
-          ("Cannot add null to " ^ Json.type_of r)
-    | l, `Null ->
-        Runtime_error.type_mismatch ~value:l
-          ~suggestion:"Use (.x ?? 0) for explicit null handling"
-          ("Cannot add " ^ Json.type_of l ^ " to null")
-    | _ ->
-        fail_invalid_type ~ctx str left
-
-  let apply_float_operation ~ctx str fn (left : Json.t) (right : Json.t) =
-    match (to_float left, to_float right) with
-    | Some l, Some r ->
-        `Float (fn l r)
-    | _ ->
-        fail_invalid_type ~ctx str left
-
-  let compare ~ctx:_ str int_fn (left : Json.t) (right : Json.t) =
-    match (left, right) with
-    | ( (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _),
-        (`Int _ | `Int64 _ | `Big_int _ | `Float _ | `Decimal _) ) ->
-        `Bool (int_fn (Json.compare left right) 0)
-    | _ ->
-        Runtime_error.invalid_argument ~fn:str ~expected:"numbers"
-          ~found:(Json.type_of left ^ " and " ^ Json.type_of right)
-
-  let gt ~ctx = compare ~ctx ">" ( > )
-  let gte ~ctx = compare ~ctx ">=" ( >= )
-  let lt ~ctx = compare ~ctx "<" ( < )
-  let lte ~ctx = compare ~ctx "<=" ( <= )
-
-  let is_truthy (json : Json.t) : bool =
-    (* in jq, false and null are falsy, everything else is truthy *)
-    match json with
-    | `Bool false | `Null ->
-        false
-    | _ ->
-        true
-
-  let and_ ~ctx:_ (left : Json.t) (right : Json.t) : Json.t =
-    `Bool (is_truthy left && is_truthy right)
-
-  let or_ ~ctx:_ (left : Json.t) (right : Json.t) : Json.t =
-    `Bool (is_truthy left || is_truthy right)
-
-  let equal l r = `Bool (Json.equal l r)
-  let not_equal l r = `Bool (Stdlib.not (Json.equal l r))
-  let add ~ctx = add ~ctx "+"
-
-  let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
-    match (left, right) with
-    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
-        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
-        sub_exact
-          (Option.get (exact_decimal_of_json l))
-          (Option.get (exact_decimal_of_json r))
-    | `Float l, `Float r ->
-        `Float (l -. r)
-    | `Int l, `Float r ->
-        `Float (Int.to_float l -. r)
-    | `Float l, `Int r ->
-        `Float (l -. Int.to_float r)
-    | `Int64 l, `Float r ->
-        `Float (Int64.to_float l -. r)
-    | `Float l, `Int64 r ->
-        `Float (l -. Int64.to_float r)
-    | `Decimal l, `Float r ->
-        `Float (Json.Decimal.to_float l -. r)
-    | `Float l, `Decimal r ->
-        `Float (l -. Json.Decimal.to_float r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l -. r)
-    | `Float l, `Big_int r ->
-        `Float (l -. Z.to_float r)
-    | `List l, `List r ->
-        let in_r x = List.exists (fun y -> Json.equal x y) r in
-        `List (List.filter (fun x -> Stdlib.not (in_r x)) l)
-    | _ ->
-        fail_invalid_type ~ctx "-" left
-
-  let rec deep_merge (left : Json.t) (right : Json.t) : Json.t =
-    match (left, right) with
-    | `Assoc l_entries, `Assoc r_entries ->
-        (* preserve key order: update existing keys from l with recursive merge from r *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some r_val ->
-                  (k, deep_merge v r_val)
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
-    | _, r ->
-        r
-
-  let multiply ~ctx (left : Json.t) (right : Json.t) : Json.t =
-    match (left, right) with
-    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
-        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
-        mul_exact
-          (Option.get (exact_decimal_of_json l))
-          (Option.get (exact_decimal_of_json r))
-    | `Float l, `Float r ->
-        `Float (l *. r)
-    | `Int l, `Float r ->
-        `Float (Int.to_float l *. r)
-    | `Float l, `Int r ->
-        `Float (l *. Int.to_float r)
-    | `Int64 l, `Float r ->
-        `Float (Int64.to_float l *. r)
-    | `Float l, `Int64 r ->
-        `Float (l *. Int64.to_float r)
-    | `Decimal l, `Float r ->
-        `Float (Json.Decimal.to_float l *. r)
-    | `Float l, `Decimal r ->
-        `Float (l *. Json.Decimal.to_float r)
-    | `Big_int l, `Float r ->
-        `Float (Z.to_float l *. r)
-    | `Float l, `Big_int r ->
-        `Float (l *. Z.to_float r)
-    | `String s, `Int n ->
-        if n <= 0 then
-          `String ""
-        else
-          `String (String.concat "" (List.init n (fun _ -> s)))
-    | `String s, `Int64 n ->
-        let count = Int64.to_int n in
-        if count <= 0 then
-          `String ""
-        else
-          `String (String.concat "" (List.init count (fun _ -> s)))
-    | `String s, `Float f ->
-        let count = Int.of_float f in
-        if count <= 0 then
-          `String ""
-        else
-          `String (String.concat "" (List.init count (fun _ -> s)))
-    | `String s, `Decimal d ->
-        let count = Int.of_float (Json.Decimal.to_float d) in
-        if count <= 0 then
-          `String ""
-        else
-          `String (String.concat "" (List.init count (fun _ -> s)))
-    | `Assoc _, `Assoc _ ->
-        deep_merge left right
-    | `Null, r | r, `Null ->
-        r
-    | _ ->
-        fail_invalid_type ~ctx "*" left
-
-  let is_zero_divisor (json : Json.t) =
-    match json with
-    | `Int 0 | `Int64 0L ->
-        true
-    | `Float f ->
-        f = 0.0
-    | `Big_int z ->
-        Z.equal z Z.zero
-    | `Decimal (d : Json.decimal) ->
-        Z.equal d.coeff Z.zero
-    | _ ->
-        false
-
-  let divide ~ctx (left : Json.t) (right : Json.t) : Json.t =
-    if is_zero_divisor right then
-      Runtime_error.invalid_argument ~fn:"divide" ~expected:"non-zero divisor"
-        ~found:"zero";
-    match (left, right) with
-    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
-        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) -> (
-        let ld = Option.get (exact_decimal_of_json l) in
-        let rd = Option.get (exact_decimal_of_json r) in
-        let exact = Json.Decimal.div_exact_or_none ld rd in
-        match exact with
-        | Some d ->
-            json_of_decimal d
-        | None ->
-            `Float (Json.Decimal.to_float ld /. Json.Decimal.to_float rd)
-      )
-    | `Float l, `Float r ->
-        `Float (l /. r)
-    | `Int l, `Float r ->
-        `Float (Int.to_float l /. r)
-    | `Float l, `Int r ->
-        `Float (l /. Int.to_float r)
-    | `Int64 l, `Float r ->
-        `Float (Int64.to_float l /. r)
-    | `Float l, `Int64 r ->
-        `Float (l /. Int64.to_float r)
-    | `Decimal l, `Float r ->
-        `Float (Json.Decimal.to_float l /. r)
-    | `Float l, `Decimal r ->
-        `Float (l /. Json.Decimal.to_float r)
-    | `String s, `String delim ->
-        `List
-          (Re.split_delim (Re.compile (Re.str delim)) s
-          |> List.map (fun part -> `String part)
-          )
-    | _ ->
-        fail_invalid_type ~ctx "/" left
-
-  let modulo ~ctx (left : Json.t) (right : Json.t) : Json.t =
-    match (left, right) with
-    | `Big_int l, `Big_int r ->
-        `Big_int (Z.rem l r)
-    | `Big_int l, `Int r ->
-        `Big_int (Z.rem l (Z.of_int r))
-    | `Int l, `Big_int r ->
-        `Big_int (Z.rem (Z.of_int l) r)
-    | `Big_int l, `Int64 r ->
-        `Big_int (Z.rem l (Z.of_int64 r))
-    | `Int64 l, `Big_int r ->
-        `Big_int (Z.rem (Z.of_int64 l) r)
-    | `Big_int l, `Float r ->
-        `Float (mod_float (Z.to_float l) r)
-    | `Float l, `Big_int r ->
-        `Float (mod_float l (Z.to_float r))
-    | `Int64 l, `Int64 r ->
-        `Int64 (Int64.rem l r)
-    | `Int64 l, `Int r ->
-        `Int64 (Int64.rem l (Int64.of_int r))
-    | `Int l, `Int64 r ->
-        `Int64 (Int64.rem (Int64.of_int l) r)
-    | `Int l, `Int r ->
-        `Int (l mod r)
-    | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
-        ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
-        let ld = Option.get (exact_decimal_of_json l) in
-        let rd = Option.get (exact_decimal_of_json r) in
-        if ld.scale = 0 && rd.scale = 0 then
-          json_of_integer_z (Z.rem ld.coeff rd.coeff)
-        else
-          apply_float_operation ~ctx "%" mod_float left right
-    | _ ->
-        apply_float_operation ~ctx "%" mod_float left right
-end
+  Runtime.fail_invalid_type ~colorize:ctx.colorize op json
 
 module Search = struct
   let string_first haystack needle =
@@ -1258,22 +728,6 @@ let stderr json =
       in
       Printf.eprintf "%s\n%!" str;
       yield json
-
-let json_number_of_ast_number = function
-  | Ast.Integer s -> (
-      match int_of_string_opt s with
-      | Some i ->
-          `Int i
-      | None -> (
-          match Int64.of_string_opt s with
-          | Some i ->
-              `Int64 i
-          | None ->
-              `Big_int (Z.of_string s)
-        )
-    )
-  | Ast.Decimal s ->
-      `Decimal (Json.Decimal.of_lexeme_exn s)
 
 let int_of_ast_number = function
   | Ast.Integer s -> (
@@ -2021,56 +1475,19 @@ let join_sep ~ctx sep json =
   | _ ->
       fail_invalid_type ~ctx "join" json
 
-let member ~ctx:_ (key : string) (json : Json.t) =
-  match json with
-  | `Assoc assoc -> (
-      match List.assoc_opt key assoc with
-      | Some value ->
-          value
-      | None ->
-          Runtime_error.key_not_found ~key ~value:json
-    )
-  | `Null ->
-      Runtime_error.null_access ~key ~value:json
-  | _ ->
-      Runtime_error.type_mismatch ~value:json
-        ("Cannot index " ^ Json.type_of json ^ " with string \"" ^ key ^ "\"")
+let member ~ctx:_ key json = Runtime.member key json
 
 let iterator ~ctx (json : Json.t) =
-  match json with
-  | `List [] ->
-      ()
-  | `List items ->
-      yield_many items
-  | `Assoc obj ->
-      List.iter (fun (_, x) -> yield x) obj
-  | _ ->
-      fail_invalid_type ~ctx "[]" json
+  Seq.iter yield (Runtime.iterator ~colorize:ctx.colorize json)
 
-let rec index ~ctx (indices : int list) (json : Json.t) =
+let index ~ctx (indices : int list) (json : Json.t) =
   match indices with
   | [] ->
       iterator ~ctx json
-  | [ value ] -> (
-      match json with
-      | `List list ->
-          let len = List.length list in
-          let actual_index =
-            if value < 0 then
-              len + value
-            else
-              value
-          in
-          if actual_index >= 0 && actual_index < len then
-            yield (List.nth list actual_index)
-          else
-            Runtime_error.index_out_of_bounds ~index:value ~length:len
-              ~value:json
-      | _ ->
-          fail_invalid_type ~ctx ("[" ^ Int.to_string value ^ "]") json
-    )
   | multiple ->
-      List.iter (fun idx -> index ~ctx [ idx ] json) multiple
+      List.iter
+        (fun idx -> yield (Runtime.index ~colorize:ctx.colorize idx json))
+        multiple
 
 let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
   let start =
@@ -2142,17 +1559,8 @@ let rec interp ~ctx expression json : unit =
       interp_fn1 ~ctx fn1 json
   | Fn2 (f, e1, e2) ->
       interp_fn2 ~ctx f e1 e2 json
-  | Literal literal -> (
-      match literal with
-      | Bool b ->
-          yield (`Bool b)
-      | Number n ->
-          yield (json_number_of_ast_number n)
-      | String s ->
-          yield (`String s)
-      | Null ->
-          yield `Null
-    )
+  | Literal literal ->
+      yield (Runtime.literal literal)
   | Variable name ->
       variable ~ctx name
   | Env_var name -> (
@@ -2831,35 +2239,7 @@ and pipe ~ctx left right json =
         ~then_:(fun json -> interp ~ctx right json)
 
 and operation ~ctx left_expr right_expr op json =
-  let apply_op l_val r_val =
-    match op with
-    | Add ->
-        Operators.add ~ctx l_val r_val
-    | Subtract ->
-        Operators.subtract ~ctx l_val r_val
-    | Multiply ->
-        Operators.multiply ~ctx l_val r_val
-    | Divide ->
-        Operators.divide ~ctx l_val r_val
-    | Modulo ->
-        Operators.modulo ~ctx l_val r_val
-    | Greater_than ->
-        Operators.gt ~ctx l_val r_val
-    | Greater_than_or_equal ->
-        Operators.gte ~ctx l_val r_val
-    | Less_than ->
-        Operators.lt ~ctx l_val r_val
-    | Less_than_or_equal ->
-        Operators.lte ~ctx l_val r_val
-    | Equal ->
-        Operators.equal l_val r_val
-    | Not_equal ->
-        Operators.not_equal l_val r_val
-    | And ->
-        Operators.and_ ~ctx l_val r_val
-    | Or ->
-        Operators.or_ ~ctx l_val r_val
-  in
+  let apply_op = Operators.apply ~colorize:ctx.colorize op in
   on_yield
     (fun () -> interp ~ctx left_expr json)
     ~then_:(fun l_val ->
@@ -2869,16 +2249,9 @@ and operation ~ctx left_expr right_expr op json =
     )
 
 and map ~ctx (expr : expression) (json : Json.t) =
-  match json with
-  | `List list when List.length list > 0 ->
-      let collected =
-        List.concat_map (fun item -> collect ~ctx expr item) list
-      in
-      yield (`List collected)
-  | `List _ ->
-      yield (`List [])
-  | _ ->
-      fail_invalid_type ~ctx "map" json
+  let items = Runtime.map_inputs ~colorize:ctx.colorize json in
+  let collected = List.concat_map (fun item -> collect ~ctx expr item) items in
+  yield (`List collected)
 
 and map_values ~ctx (expr : expression) (json : Json.t) =
   match json with
@@ -3803,7 +3176,7 @@ and add_array ~ctx json =
       yield `Null
   | `List (first :: rest) ->
       let sum =
-        List.fold_left (fun acc el -> Operators.add ~ctx acc el) first rest
+        List.fold_left (Operators.add ~colorize:ctx.colorize) first rest
       in
       yield sum
   | _ ->
@@ -3814,7 +3187,9 @@ and add_expr ~ctx expr json =
   | [] ->
       yield `Null
   | first :: rest ->
-      let sum = List.fold_left (Operators.add ~ctx) first rest in
+      let sum =
+        List.fold_left (Operators.add ~colorize:ctx.colorize) first rest
+      in
       yield sum
 
 and to_uppercase ~ctx json =
@@ -5027,24 +4402,41 @@ and paths_to ~ctx cond_expr json =
 
 type execute_result = Ok of Json.t list | Error of string | Halt of int
 
+type 'a fold_result = Completed of 'a | Failed of string | Halted of int
+
+let fold ~colorize ~verbose ?(env = []) ~init ~f expr json =
+  let ctx = { colorize; verbose; env; fns = [] } in
+  let acc = ref init in
+  match interp ~ctx expr json with
+  | () ->
+      Completed !acc
+  | effect Yield value, k ->
+      (* Handler clauses run outside the interpreter's exception handlers. *)
+      acc := f !acc value;
+      Effect.Deep.continue k ()
+  | effect Runtime_error.Fail err, _ ->
+      Failed (Runtime_error.format ~colorize err)
+  | effect User_error value, _ ->
+      let message = Json.to_string value in
+      let qerr = Error.runtime_error ~kind:"user_error" ~message ~value () in
+      Failed (Error.format ~colorize qerr)
+  | effect Break, _ ->
+      let err =
+        Error.context_error ~message:"break used outside of loop context"
+      in
+      Failed (Error.format ~colorize err)
+  | effect Halt exit_code, _ ->
+      Halted exit_code
+  | exception e ->
+      Failed (Printexc.to_string e)
+
 let execute ~colorize ~verbose ?(env = []) expr json =
   let ctx = { colorize; verbose; env; fns = [] } in
-  let format_error (err : Runtime_error.t) =
-    let qerr =
-      Error.runtime_error
-        ~kind:(Runtime_error.kind_string err)
-        ~message:(Runtime_error.message err)
-        ?value:(Runtime_error.value err)
-        ?suggestion:(Runtime_error.suggestion err)
-        ()
-    in
-    Error.format ~colorize qerr
-  in
   match collect ~ctx expr json with
   | results ->
       Ok results
   | effect Runtime_error.Fail err, _ ->
-      Error (format_error err)
+      Error (Runtime_error.format ~colorize err)
   | effect User_error value, _ ->
       let message = Json.to_string value in
       let qerr = Error.runtime_error ~kind:"user_error" ~message ~value () in

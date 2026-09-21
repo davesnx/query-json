@@ -27,6 +27,8 @@ let usage ?(colorize = true) () =
     Console_style.indent 3
     ^ "-r, --raw-output: Output raw strings, not JSON texts";
     Console_style.indent 3
+    ^ "--stream-output: Flush each result as it is produced";
+    Console_style.indent 3
     ^ "-n, --null-input: Run filter with null as input (no input read)";
     Console_style.indent 3 ^ "-v, --verbose: Activate verbossity";
     Console_style.indent 3 ^ "-d, --debug: Print AST";
@@ -78,7 +80,7 @@ let reconnect_stdin_to_tty () =
   with Unix.Unix_error _ -> false
 
 let execution position_0 position_1 verbose debug no_color raw_output null_input
-    repl functions =
+    stream_output repl functions =
   let colorize = not no_color in
   if Option.is_some functions then
     match functions with
@@ -171,24 +173,44 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         usage ()
     | Some query -> (
         let output =
-          let* json =
+          let input =
             if null_input then
-              Ok `Null
+              Core.Value `Null
             else
               match position_1 with
               | Some f when Sys.file_exists f ->
-                  Json.parse_file f
+                  Core.File f
               | Some s ->
-                  Json.parse_string s
+                  Core.String s
               | None ->
-                  Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
+                  Core.Channel (Unix.in_channel_of_descr Unix.stdin)
           in
-          Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
-            query json
+          if stream_output then (
+            let emitted = ref false in
+            let emit value =
+              emitted := true;
+              output_string stdout value;
+              output_char stdout '\n';
+              flush stdout
+            in
+            let* () =
+              Core.run_input_iter ~input_delivery:Core.When_ready ~debug
+                ~colorize ~verbose ~raw:raw_output ~summarize:false ~emit query
+                input
+            in
+            if not !emitted then print_newline ();
+            Ok ()
+          ) else
+            let* results =
+              Core.run_input ~debug ~colorize ~verbose ~raw:raw_output
+                ~summarize:false query input
+            in
+            print_endline results;
+            Ok ()
         in
         match output with
-        | Ok results ->
-            print_endline results
+        | Ok () ->
+            ()
         | Error err ->
             print_error_message ~colorize err
       )
@@ -212,6 +234,13 @@ let () =
     value & flag
     & info [ "r"; "raw-output" ] ~doc:"Output raw strings, not JSON texts"
   in
+  let stream_output =
+    value & flag
+    & info [ "stream-output" ]
+        ~doc:
+          "Flush each result as it is produced. Earlier results remain if a \
+           later result or input tail fails. Has no effect in REPL mode."
+  in
   let null_input =
     value & flag
     & info [ "n"; "null-input" ]
@@ -233,7 +262,7 @@ let () =
   let term =
     let open Cmdliner.Term in
     const execution $ query $ json $ verbose $ debug $ color $ raw_output
-    $ null_input $ repl $ functions
+    $ null_input $ stream_output $ repl $ functions
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

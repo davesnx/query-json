@@ -38,7 +38,8 @@ let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =
   match parse ~debug ~colorize query with
   | Ok runtime -> (
-      match Interpreter.execute ~colorize ~verbose runtime json with
+      let plan = Execution.prepare runtime in
+      match Execution.execute ~colorize ~verbose plan json with
       | Ok results ->
           Ok
             (results
@@ -52,3 +53,106 @@ let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     )
   | Error err ->
       Error err
+
+let run_iter ?(debug = false) ?(colorize = true) ?(verbose = false)
+    ?(raw = false) ?(summarize = false) ~emit query json =
+  match parse ~debug ~colorize query with
+  | Ok runtime -> (
+      let plan = Execution.prepare runtime in
+      match
+        Execution.fold ~colorize ~verbose ~init:()
+          ~f:(fun () value ->
+            emit (Json.to_string_pretty ~colorize ~summarize ~raw value)
+          )
+          plan json
+      with
+      | Completed () ->
+          Ok ()
+      | Failed err ->
+          Error err
+      | Halted code ->
+          exit code
+    )
+  | Error err ->
+      Error err
+
+type input = Json.Input.source =
+  | String of string
+  | File of string
+  | Channel of in_channel
+  | Value of Json.t
+
+type input_delivery = Execution.input_delivery = After_validation | When_ready
+
+let load_input ~debug ~colorize query input =
+  match parse ~debug:false ~colorize query with
+  | Ok runtime -> (
+      let plan = Execution.prepare runtime in
+      match Execution.load plan input with
+      | Ok loaded ->
+          if debug then print_endline (Ast.show_expression runtime);
+          Ok loaded
+      | Error err ->
+          Error err
+    )
+  | Error query_error -> (
+      match Json.Input.read ~select:None input with
+      | Ok _ ->
+          Error query_error
+      | Error err ->
+          Error err
+    )
+
+let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
+    ?(raw = false) ?(summarize = false) query input =
+  match load_input ~debug ~colorize query input with
+  | Ok loaded -> (
+      match Execution.execute_loaded ~colorize ~verbose loaded with
+      | Ok results ->
+          Ok
+            (results
+            |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
+            |> String.concat "\n"
+            )
+      | Error err ->
+          Error err
+      | Halt code ->
+          exit code
+    )
+  | Error err ->
+      Error err
+
+let run_input_iter ?(input_delivery = After_validation) ?(debug = false)
+    ?(colorize = true) ?(verbose = false) ?(raw = false) ?(summarize = false)
+    ~emit query input =
+  let f () value =
+    emit (Json.to_string_pretty ~colorize ~summarize ~raw value)
+  in
+  let result =
+    if debug then
+      match load_input ~debug ~colorize query input with
+      | Ok loaded ->
+          Execution.fold_loaded ~colorize ~verbose ~init:() ~f loaded
+      | Error error ->
+          Execution.Failed error
+    else
+      match parse ~debug:false ~colorize query with
+      | Ok runtime ->
+          Execution.fold_source ~input_delivery ~colorize ~verbose ~init:() ~f
+            (Execution.prepare runtime)
+            input
+      | Error query_error -> (
+          match Json.Input.read ~select:None input with
+          | Ok _ ->
+              Execution.Failed query_error
+          | Error error ->
+              Execution.Failed error
+        )
+  in
+  match result with
+  | Completed () ->
+      Ok ()
+  | Failed err ->
+      Error err
+  | Halted code ->
+      exit code

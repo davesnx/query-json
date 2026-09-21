@@ -1,3 +1,7 @@
+(executable
+ (name stream_probe)
+ (libraries unix runtime_events))
+
 (cram
  (alias runtest)
- (deps %{bin:query-json} ./mock.json))
+ (deps %{bin:query-json} ./mock.json ./stream_probe.exe))
