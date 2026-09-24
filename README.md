@@ -136,7 +136,6 @@ query-json '.title | to_lowercase | split(" ") | first' article.json
 - **[Try it online](https://query-json.pages.dev)** - Interactive playground
 - **[Function Reference](https://query-json.pages.dev/functions)** - Complete list of built-in functions
 - **[jq Compatibility Guide](./docs/JQ_COMPATIBILITY.md)** - Migration guide for jq users
-- **[Compiled Query Engine Architecture](./docs/COMPILED_QUERY_ENGINE.md)** - Execution, selective input, and event-input design
 
 ## CLI Options
 
