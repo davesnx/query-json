@@ -1,10 +1,6 @@
 let run query input =
-  match Json.parse_string input with
-  | Ok json ->
-      Core.run ~debug:false ~colorize:false ~verbose:false ~raw:false
-        ~summarize:false query json
-  | Error err ->
-      Error err
+  Core.run_input ~debug:false ~colorize:false ~verbose:false ~raw:false
+    ~summarize:false query (Core.String input)
 
 let arity_to_js (arity : Language.arity) =
   match arity with

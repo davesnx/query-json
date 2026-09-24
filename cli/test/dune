@@ -1,3 +1,17 @@
+(executable
+ (name stream_probe)
+ (enabled_if
+  (<> %{os_type} "Win32"))
+ (libraries unix runtime_events))
+
 (cram
  (alias runtest)
+ (applies_to basic errors functions null)
  (deps %{bin:query-json} ./mock.json))
+
+(cram
+ (alias runtest)
+ (applies_to source)
+ (enabled_if
+  (<> %{os_type} "Win32"))
+ (deps %{bin:query-json} ./mock.json ./stream_probe.exe))

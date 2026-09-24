@@ -184,6 +184,10 @@ bench: ## Run benchmarks
 bench-parser: ## Run parser-only benchmark
 	$(DUNE) exec benchmarks/bench_parser.exe
 
+.PHONY: bench-execution
+bench-execution: ## Compare prepared execution with the interpreter in-process
+	$(DUNE) exec --root . --profile=release benchmarks/bench_execution.exe
+
 .PHONY: release
 release: ## Create a new release (usage: make release VERSION=1.2.3)
 	@if [ -z "$(VERSION)" ]; then \
