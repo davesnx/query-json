@@ -20,7 +20,6 @@ and plan = One of one | Many of many
 
 type t = Plan of plan | Fallback of Ast.expression
 type loaded = Loaded of t * Json.t
-type backend = Compiled | Interpreted
 type 'a fold_result = Completed of 'a | Failed of string | Halted of int
 
 let ( let* ) = Option.bind
@@ -81,8 +80,6 @@ let rec compile = function
 let prepare expr =
   match compile expr with Some plan -> Plan plan | None -> Fallback expr
 
-let backend = function Plan _ -> Compiled | Fallback _ -> Interpreted
-
 type stream_head = Root | Member of string
 type stream_cut = Root_items of plan | Member_items of string * plan
 
@@ -124,6 +121,10 @@ let stream_cut = function
         )
 
 module For_test = struct
+  type backend = Compiled | Interpreted
+
+  let backend = function Plan _ -> Compiled | Fallback _ -> Interpreted
+
   type stream_cut = Root_items of t | Member_items of string * t
 
   let stream_cut query =

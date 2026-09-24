@@ -41,13 +41,13 @@ let check_result label expected actual =
 
 let check_backend expected plan =
   let name = function
-    | Execution.Compiled ->
+    | Execution.For_test.Compiled ->
         "Compiled"
     | Interpreted ->
         "Interpreted"
   in
   Alcotest.check Alcotest.string "backend" (name expected)
-    (name (Execution.backend plan))
+    (name (Execution.For_test.backend plan))
 
 let parse query =
   match Core.parse ~debug:false ~colorize:false query with
@@ -113,12 +113,12 @@ let differential ?expected ?env backend expr inputs =
 
 let compiled ?expected name query inputs =
   Alcotest.test_case name `Quick (fun () ->
-      differential ?expected Execution.Compiled (parse query) inputs
+      differential ?expected Execution.For_test.Compiled (parse query) inputs
   )
 
 let interpreted ?expected name query inputs =
   Alcotest.test_case name `Quick (fun () ->
-      differential ?expected Execution.Interpreted (parse query) inputs
+      differential ?expected Execution.For_test.Interpreted (parse query) inputs
   )
 
 let obj fields : Json.t = `Assoc fields
@@ -187,7 +187,7 @@ let stream_cut_analysis () =
   List.iter
     (fun (query, expected_cut, residual_query, inputs) ->
       let plan = Execution.prepare (parse query) in
-      check_backend Execution.Compiled plan;
+      check_backend Execution.For_test.Compiled plan;
       let residual =
         match (expected_cut, Execution.For_test.stream_cut plan) with
         | Expected_root, Some (Root_items residual) ->
@@ -201,9 +201,9 @@ let stream_cut_analysis () =
             Alcotest.failf "%S does not have the expected %S member cut" query
               member
       in
-      check_backend Execution.Compiled residual;
+      check_backend Execution.For_test.Compiled residual;
       let expected_residual = Execution.prepare (parse residual_query) in
-      check_backend Execution.Compiled expected_residual;
+      check_backend Execution.For_test.Compiled expected_residual;
       List.iter
         (fun input ->
           check_result
@@ -217,7 +217,7 @@ let stream_cut_analysis () =
     )
     eligible;
   List.iter
-    (check_no_stream_cut Execution.Compiled)
+    (check_no_stream_cut Execution.For_test.Compiled)
     [
       ".";
       "null";
@@ -239,7 +239,7 @@ let stream_cut_analysis () =
       ".rows | (., .[])";
     ];
   List.iter
-    (check_no_stream_cut Execution.Interpreted)
+    (check_no_stream_cut Execution.For_test.Interpreted)
     [
       ".[] | .value?";
       ".rows[] | length";
@@ -283,7 +283,7 @@ let numeric_matrix () =
   in
   List.iter
     (fun op ->
-      differential Execution.Compiled
+      differential Execution.For_test.Compiled
         Ast.(Operation (Key "l", op, Key "r"))
         inputs
     )
@@ -345,7 +345,8 @@ let unsupported_structure () =
     (fun expr ->
       List.iter
         (fun wrapped ->
-          check_backend Execution.Interpreted (Execution.prepare wrapped)
+          check_backend Execution.For_test.Interpreted
+            (Execution.prepare wrapped)
         )
         [
           expr;
@@ -367,25 +368,25 @@ let literal_timing () =
   List.iter
     (fun bad ->
       let literal = Literal (Number bad) in
-      differential Execution.Compiled literal [ `Null ];
-      differential ~expected:(Interpreter.Ok []) Execution.Compiled
+      differential Execution.For_test.Compiled literal [ `Null ];
+      differential ~expected:(Interpreter.Ok []) Execution.For_test.Compiled
         (Pipe (Fn0 Empty, literal))
         [ `Null ];
       differential
         ~expected:(Interpreter.Ok [ `List [] ])
-        Execution.Compiled
+        Execution.For_test.Compiled
         (Fn1 (With_expr (Map, literal)))
         [ `List [] ];
-      differential Execution.Compiled
+      differential Execution.For_test.Compiled
         (Comma (Key "missing", literal))
         [ empty_obj ];
-      differential Execution.Compiled
+      differential Execution.For_test.Compiled
         (Operation (Key "missing", Add, literal))
         [ empty_obj ];
-      differential Execution.Interpreted
+      differential Execution.For_test.Interpreted
         (Pipe (Fn0 Empty, Optional literal))
         [ `Null ];
-      differential Execution.Interpreted
+      differential Execution.For_test.Interpreted
         (Comma (Identity, Optional literal))
         [ `Null ]
     )
@@ -398,7 +399,7 @@ let literal_timing () =
 let environment_reuse () =
   let expr = parse "., $x" in
   let plan = Execution.prepare expr in
-  check_backend Execution.Interpreted plan;
+  check_backend Execution.For_test.Interpreted plan;
   List.iter
     (fun env ->
       check_result "per-call environment"
@@ -407,8 +408,8 @@ let environment_reuse () =
       check_result "per-call fold environment"
         (Interpreter.execute ~colorize:false ~verbose:false ~env expr `Null)
         (fold_collect ~colorize:false ~verbose:false ~env plan `Null);
-      differential ~env Execution.Interpreted expr [ `Null ];
-      differential ~env Execution.Compiled (parse ".") [ `Null ]
+      differential ~env Execution.For_test.Interpreted expr [ `Null ];
+      differential ~env Execution.For_test.Compiled (parse ".") [ `Null ]
     )
     [ [ ("x", `Int 1) ]; []; [ ("x", `String "next") ]; [] ]
 
@@ -445,7 +446,7 @@ let stream_compositions () =
       List.iter
         (fun right ->
           List.iter
-            (fun expr -> differential Execution.Compiled expr inputs)
+            (fun expr -> differential Execution.For_test.Compiled expr inputs)
             [
               Pipe (left, right);
               Comma (left, right);
@@ -460,7 +461,7 @@ let stream_compositions () =
 
 let long_filtered_stream () =
   let expr = parse ".[] | select(false, false) | .missing" in
-  differential ~expected:(Interpreter.Ok []) Execution.Compiled expr
+  differential ~expected:(Interpreter.Ok []) Execution.For_test.Compiled expr
     [ `List (List.init 20000 (fun n -> `Int n)) ]
 
 let fold_late_error () =
@@ -487,12 +488,12 @@ let fold_late_error () =
           Alcotest.fail "expected fold failure"
     )
     [
-      (Execution.Compiled, "1, 2, .missing, 3");
-      (Execution.Compiled, "1, 2, 1 % 0, 3");
-      (Execution.Interpreted, "1, 2, .missing, length");
-      (Execution.Interpreted, "1, 2, 1 % 0, length");
-      (Execution.Interpreted, "1, 2, error(\"stop\"), 3");
-      (Execution.Interpreted, "1, 2, break, 3");
+      (Execution.For_test.Compiled, "1, 2, .missing, 3");
+      (Execution.For_test.Compiled, "1, 2, 1 % 0, 3");
+      (Execution.For_test.Interpreted, "1, 2, .missing, length");
+      (Execution.For_test.Interpreted, "1, 2, 1 % 0, length");
+      (Execution.For_test.Interpreted, "1, 2, error(\"stop\"), 3");
+      (Execution.For_test.Interpreted, "1, 2, break, 3");
     ]
 
 let check_callback_exception ?(at = 1) call =
@@ -554,18 +555,19 @@ let fold_callback_exception () =
         (fold_collect ~colorize:false ~verbose:false plan `Null)
     )
     [
-      (Execution.Compiled, "1, 2");
-      (Execution.Interpreted, "range(1; 3)");
-      (Execution.Interpreted, "try (1, 2, error(\"query\")) catch 3");
-      (Execution.Interpreted, "(1, 2, .missing)?");
-      (Execution.Interpreted, "1, 2, halt");
+      (Execution.For_test.Compiled, "1, 2");
+      (Execution.For_test.Interpreted, "range(1; 3)");
+      (Execution.For_test.Interpreted, "try (1, 2, error(\"query\")) catch 3");
+      (Execution.For_test.Interpreted, "(1, 2, .missing)?");
+      (Execution.For_test.Interpreted, "1, 2, halt");
     ]
 
 let fold_halt () =
   List.iter
     (fun (query, code) ->
       let expr = parse query in
-      differential ~expected:(Halt code) Execution.Interpreted expr [ `Null ];
+      differential ~expected:(Halt code) Execution.For_test.Interpreted expr
+        [ `Null ];
       let seen = ref [] in
       let result =
         Execution.fold ~colorize:false ~verbose:false ~init:()
@@ -603,7 +605,10 @@ let fold_long_stream () =
       | _ ->
           Alcotest.fail "expected completed fold"
     )
-    [ (Execution.Compiled, ".[]"); (Execution.Interpreted, ".[]?") ]
+    [
+      (Execution.For_test.Compiled, ".[]");
+      (Execution.For_test.Interpreted, ".[]?");
+    ]
 
 let core_output () =
   List.iter
@@ -757,7 +762,7 @@ let check_fold label (expected, expected_seen) (actual, actual_seen) =
 
 let loaded_shapes =
   List.map
-    (fun query -> (Execution.Compiled, query))
+    (fun query -> (Execution.For_test.Compiled, query))
     [
       ".a";
       ".a.b";
@@ -773,7 +778,7 @@ let loaded_shapes =
       ".a + 1";
       ".[]";
     ]
-  @ [ (Execution.Interpreted, ".a?") ]
+  @ [ (Execution.For_test.Interpreted, ".a?") ]
 
 let loaded_plan_matrix () =
   let inputs =
@@ -1082,7 +1087,7 @@ let source_plan_matrix () =
         (fun head ->
           let query = head ^ suffix in
           let plan = Execution.prepare (parse query) in
-          check_backend Execution.Compiled plan;
+          check_backend Execution.For_test.Compiled plan;
           Alcotest.check Alcotest.bool "eligible source plan" true
             (Option.is_some (Execution.For_test.stream_cut plan));
           let texts =

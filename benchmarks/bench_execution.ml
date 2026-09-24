@@ -2,7 +2,7 @@ type workload = {
   name : string;
   query : string;
   payload : string;
-  backend : Execution.backend;
+  backend : Execution.For_test.backend;
   iterations : int;
   expected : Json.t list;
 }
@@ -40,7 +40,7 @@ let workloads =
       name = "deep_scalar_chain";
       query = ".root.groups[1].members[0].profile.stats.scores[2].value";
       payload = deep_payload;
-      backend = Execution.Compiled;
+      backend = Execution.For_test.Compiled;
       iterations = 100_000;
       expected = [ `Int 42 ];
     };
@@ -48,7 +48,7 @@ let workloads =
       name = "scalar_predicate";
       query = ".price * .quantity + .fee > .limit and .active";
       payload = {|{"price":17,"quantity":4,"fee":3,"limit":60,"active":true}|};
-      backend = Execution.Compiled;
+      backend = Execution.For_test.Compiled;
       iterations = 50_000;
       expected = [ `Bool true ];
     };
@@ -56,7 +56,7 @@ let workloads =
       name = "iterator_select_field";
       query = ".[] | select(.active and .score >= 50) | .id";
       payload = array_payload;
-      backend = Execution.Compiled;
+      backend = Execution.For_test.Compiled;
       iterations = 2_000;
       expected = List.init 25 (fun i -> `Int (50 + (2 * i)));
     };
@@ -64,7 +64,7 @@ let workloads =
       name = "map_transform";
       query = "map(.score * 2 + .id)";
       payload = array_payload;
-      backend = Execution.Compiled;
+      backend = Execution.For_test.Compiled;
       iterations = 2_000;
       expected =
         [ `List (List.init rows (fun i -> `Int ((i mod 100 * 2) + i))) ];
@@ -73,16 +73,16 @@ let workloads =
       name = "fallback_length";
       query = ".root.groups | length";
       payload = deep_payload;
-      backend = Execution.Interpreted;
+      backend = Execution.For_test.Interpreted;
       iterations = 100_000;
       expected = [ `Int64 2L ];
     };
   ]
 
 let backend_name = function
-  | Execution.Compiled ->
+  | Execution.For_test.Compiled ->
       "compiled"
-  | Execution.Interpreted ->
+  | Execution.For_test.Interpreted ->
       "fallback"
 
 let rec describe_json : Json.t -> string = function
@@ -188,7 +188,7 @@ let prepare workload =
         failwith (workload.name ^ ": JSON parse error: " ^ message)
   in
   let plan = Execution.prepare expr in
-  let actual_backend = Execution.backend plan in
+  let actual_backend = Execution.For_test.backend plan in
   if actual_backend <> workload.backend then
     failwith
       (Printf.sprintf "%s: expected %s backend, got %s" workload.name
@@ -341,7 +341,7 @@ let bench_sink ~iterations ~warmup ~samples =
         failwith message
   in
   let plan = Execution.prepare expr in
-  if Execution.backend plan <> Execution.Compiled then
+  if Execution.For_test.backend plan <> Execution.For_test.Compiled then
     failwith "large_stream_sink: expected compiled backend";
   let collect () =
     Execution.execute ~colorize:false ~verbose:false plan input
@@ -449,7 +449,7 @@ let bench_input ~iterations ~warmup ~samples =
       | Error message ->
           failwith (name ^ ": query parse error: " ^ message)
     in
-    if Execution.backend (Execution.prepare expr) <> backend then
+    if Execution.For_test.backend (Execution.prepare expr) <> backend then
       failwith (name ^ ": unexpected backend");
     let execution () =
       Core.run_input ~debug:false ~colorize:false ~verbose:false ~raw:false
@@ -473,14 +473,19 @@ let bench_input ~iterations ~warmup ~samples =
         ( "input_early_keep",
           ".keep.value",
           early,
-          Execution.Compiled,
+          Execution.For_test.Compiled,
           [ `Int 42 ]
         );
-        ("input_late_keep", ".keep.value", late, Execution.Compiled, [ `Int 42 ]);
+        ( "input_late_keep",
+          ".keep.value",
+          late,
+          Execution.For_test.Compiled,
+          [ `Int 42 ]
+        );
         ( "input_full_fallback",
           "length",
           early,
-          Execution.Interpreted,
+          Execution.For_test.Interpreted,
           [ `Int64 2L ]
         );
       ]
@@ -526,7 +531,7 @@ let bench_first_result ~warmup ~samples =
         failwith (name ^ ": " ^ message)
   in
   let plan = Execution.prepare expr in
-  if Execution.backend plan <> Execution.Compiled then
+  if Execution.For_test.backend plan <> Execution.For_test.Compiled then
     failwith (name ^ ": expected compiled backend");
   ( match Execution.For_test.stream_cut plan with
   | Some (Execution.For_test.Member_items ("rows", _)) ->

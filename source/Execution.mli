@@ -1,15 +1,18 @@
 type t
 type loaded
-type backend = Compiled | Interpreted
 type 'a fold_result = Completed of 'a | Failed of string | Halted of int
 
 val prepare : Ast.expression -> t
 (** Select a backend for the complete expression without evaluating it. Plans
     are immutable and can be reused after success or failure. *)
 
-val backend : t -> backend
-
 module For_test : sig
+  type backend = Compiled | Interpreted
+
+  val backend : t -> backend
+  (** The path [prepare] chose. Tests and benchmarks assert it so a case meant
+      for the compiled path cannot pass through the fallback. *)
+
   type stream_cut = private Root_items of t | Member_items of string * t
 
   val stream_cut : t -> stream_cut option
