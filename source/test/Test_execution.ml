@@ -656,7 +656,15 @@ let core_output () =
               Alcotest.check
                 (Alcotest.result Alcotest.string Alcotest.string)
                 (query ^ " run_iter") expected
-                (Result.map (fun () -> Buffer.contents output) actual);
+                (Result.map
+                   (fun count ->
+                     Alcotest.check Alcotest.int
+                       (query ^ " run_iter count")
+                       (List.length !seen) count;
+                     Buffer.contents output
+                   )
+                   actual
+                );
               match Interpreter.execute ~colorize ~verbose:false expr input with
               | Ok values ->
                   Alcotest.check
@@ -705,7 +713,7 @@ let core_iter_errors () =
             "same error as run"
             (Core.run ~colorize:false ~verbose:true query empty_obj)
             (Error error)
-      | Ok () ->
+      | Ok _ ->
           Alcotest.fail "expected run_iter error"
     )
     [
@@ -918,7 +926,7 @@ let observe_iter call =
 
 let check_iter label (expected, expected_seen) (actual, actual_seen) =
   Alcotest.check
-    (Alcotest.result Alcotest.unit Alcotest.string)
+    (Alcotest.result Alcotest.int Alcotest.string)
     (label ^ " terminal") expected actual;
   Alcotest.check
     (Alcotest.list Alcotest.string)
@@ -954,7 +962,7 @@ let core_source_calls () =
                 (fun prefix ->
                   check_iter
                     (query ^ " reference late error")
-                    ( Result.map (fun _ -> ()) expected,
+                    ( Result.map (fun _ -> List.length prefix) expected,
                       List.map
                         (Json.to_string_pretty ~colorize ~raw ~summarize)
                         prefix

@@ -540,7 +540,7 @@ let bench_first_result ~warmup ~samples =
       failwith (name ^ ": expected Member_items rows cut")
   );
   let check_status = function
-    | Ok () ->
+    | Ok _ ->
         ()
     | Error message ->
         failwith (name ^ ": " ^ message)

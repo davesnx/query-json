@@ -71,8 +71,6 @@ let repl_usage ?(colorize = true) () =
   |> String.concat (Console_style.enter 1)
   |> print_endline
 
-let ( let* ) = Result.bind
-
 (* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
 
    This function reconnects stdin to /dev/tty (the controlling terminal),
@@ -179,49 +177,45 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
     | None ->
         usage ()
     | Some query -> (
-        let output =
-          let input =
-            if null_input then
-              Core.Value `Null
-            else
-              match position_1 with
-              | Some f when Sys.file_exists f ->
-                  Core.File f
-              | Some s ->
-                  Core.String s
-              | None ->
-                  Core.Channel (Unix.in_channel_of_descr Unix.stdin)
-          in
-          if stream_output then (
-            let emitted = ref false in
-            let emit value =
-              emitted := true;
-              output_string stdout value;
-              output_char stdout '\n';
-              flush stdout
-            in
-            let* () =
-              Core.run_input_iter ~debug ~colorize ~verbose ~raw:raw_output
-                ~summarize:false ~emit query input
-            in
-            if not !emitted then print_newline ();
-            Ok ()
-          ) else
-            let* results =
-              Core.run_input ~debug ~colorize ~verbose ~raw:raw_output
-                ~summarize:false query input
-            in
-            print_endline results;
-            Ok ()
+        let input =
+          if null_input then
+            Core.Value `Null
+          else
+            match position_1 with
+            | Some f when Sys.file_exists f ->
+                Core.File f
+            | Some s ->
+                Core.String s
+            | None ->
+                Core.Channel (Unix.in_channel_of_descr Unix.stdin)
         in
-        match output with
-        | Ok () ->
-            ()
+        (* One line per result in both modes. --stream-output flushes each line
+           as it is produced; the default holds every line until the query has
+           succeeded, so stdout stays all-or-nothing. *)
+        let held = Buffer.create 4096 in
+        let emit line =
+          if stream_output then (
+            output_string stdout line;
+            output_char stdout '\n';
+            flush stdout
+          ) else (
+            Buffer.add_string held line;
+            Buffer.add_char held '\n'
+          )
+        in
+        match
+          Core.run_input_iter ~debug ~colorize ~verbose ~raw:raw_output
+            ~summarize:false ~emit query input
+        with
+        | Ok 0 ->
+            (* no results still end the output with one line break *)
+            print_newline ()
+        | Ok _ ->
+            print_string (Buffer.contents held)
+        | Error err when stream_output ->
+            exit_with_stream_error err
         | Error err ->
-            if stream_output then
-              exit_with_stream_error err
-            else
-              print_error_message ~colorize err
+            print_error_message ~colorize err
       )
 
 let () =

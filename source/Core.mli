@@ -21,10 +21,11 @@ val run_iter :
   emit:(string -> unit) ->
   string ->
   Json.t ->
-  (unit, string) result
+  (int, string) result
 (** Parse and prepare once, then call [emit] once per rendered result without
-    separators. A late error can follow earlier calls to [emit]. Exceptions
-    raised by [emit] escape unchanged. A halt exits as in [run]. *)
+    separators, and return how many results were emitted. A late error can
+    follow earlier calls to [emit]. Exceptions raised by [emit] escape
+    unchanged. A halt exits as in [run]. *)
 
 type input = Json.Input.source =
   | String of string
@@ -54,8 +55,9 @@ val run_input_iter :
   emit:(string -> unit) ->
   string ->
   input ->
-  (unit, string) result
-(** Can emit results before EOF for eligible compiled queries. Barriers and
+  (int, string) result
+(** Call [emit] once per rendered result and return how many results were
+    emitted. Can emit before EOF for eligible compiled queries. Barriers and
     interpreted queries still validate first, as in [run_input]. [debug=true]
     always validates first and prints the AST only after valid EOF. Invalid
     queries also validate the full input, with input errors taking precedence.

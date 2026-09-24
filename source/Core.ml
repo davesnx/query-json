@@ -60,14 +60,15 @@ let run_iter ?(debug = false) ?(colorize = true) ?(verbose = false)
   | Ok runtime -> (
       let plan = Execution.prepare runtime in
       match
-        Execution.fold ~colorize ~verbose ~init:()
-          ~f:(fun () value ->
-            emit (Json.to_string_pretty ~colorize ~summarize ~raw value)
+        Execution.fold ~colorize ~verbose ~init:0
+          ~f:(fun count value ->
+            emit (Json.to_string_pretty ~colorize ~summarize ~raw value);
+            count + 1
           )
           plan json
       with
-      | Completed () ->
-          Ok ()
+      | Completed count ->
+          Ok count
       | Failed err ->
           Error err
       | Halted code ->
@@ -122,20 +123,21 @@ let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
 
 let run_input_iter ?(debug = false) ?(colorize = true) ?(verbose = false)
     ?(raw = false) ?(summarize = false) ~emit query input =
-  let f () value =
-    emit (Json.to_string_pretty ~colorize ~summarize ~raw value)
+  let f count value =
+    emit (Json.to_string_pretty ~colorize ~summarize ~raw value);
+    count + 1
   in
   let result =
     if debug then
       match load_input ~debug ~colorize query input with
       | Ok loaded ->
-          Execution.fold_loaded ~colorize ~verbose ~init:() ~f loaded
+          Execution.fold_loaded ~colorize ~verbose ~init:0 ~f loaded
       | Error error ->
           Execution.Failed error
     else
       match parse ~debug:false ~colorize query with
       | Ok runtime ->
-          Execution.fold_source ~colorize ~verbose ~init:() ~f
+          Execution.fold_source ~colorize ~verbose ~init:0 ~f
             (Execution.prepare runtime)
             input
       | Error query_error -> (
@@ -147,8 +149,8 @@ let run_input_iter ?(debug = false) ?(colorize = true) ?(verbose = false)
         )
   in
   match result with
-  | Completed () ->
-      Ok ()
+  | Completed count ->
+      Ok count
   | Failed err ->
       Error err
   | Halted code ->

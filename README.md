@@ -157,17 +157,18 @@ Options:
   --help              Print help
 ```
 
-By default, query output is written only after the query succeeds, and an error
-shares stdout with any results. With `--stream-output`, each result is flushed
-to stdout as it is produced. If a later result or input tail fails, earlier
-output on stdout remains, the error is written to stderr instead, and the
-process exits with status 1. Successful output is identical in both modes.
-This flag has no effect in REPL mode.
+By default, all output is written at once after the query succeeds, and an
+error shares stdout with any results. With `--stream-output`, each result is
+flushed to stdout as it is produced. If a later result or input tail fails,
+earlier output on stdout remains, the error is written to stderr instead, and
+the process exits with status 1. Successful output is identical in both modes;
+a query with no results prints one empty line. This flag has no effect in REPL
+mode.
 
-Default output and `--debug` validate the complete JSON input before execution.
-`--stream-output` can execute complete items before EOF for supported root or
-direct root-member iteration. Collection barriers and unsupported queries still
-validate first. After a query error, callbacks stop and input validation continues.
+Both modes execute complete items before EOF for supported root or direct
+root-member iteration; without `--stream-output` the results are held until the
+query has succeeded. Collection barriers, unsupported queries and `--debug`
+validate the complete JSON input first. After a query error, callbacks stop and input validation continues.
 A later input error wins. Invalid JSON also takes precedence over an invalid query.
 The debug AST prints only after valid EOF.
 For supported queries that start with a root object key, file, inline, and stdin
