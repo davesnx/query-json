@@ -82,8 +82,6 @@ type input = Json.Input.source =
   | Channel of in_channel
   | Value of Json.t
 
-type input_delivery = Execution.input_delivery = After_validation | When_ready
-
 let load_input ~debug ~colorize query input =
   match parse ~debug:false ~colorize query with
   | Ok runtime -> (
@@ -122,9 +120,8 @@ let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
   | Error err ->
       Error err
 
-let run_input_iter ?(input_delivery = After_validation) ?(debug = false)
-    ?(colorize = true) ?(verbose = false) ?(raw = false) ?(summarize = false)
-    ~emit query input =
+let run_input_iter ?(debug = false) ?(colorize = true) ?(verbose = false)
+    ?(raw = false) ?(summarize = false) ~emit query input =
   let f () value =
     emit (Json.to_string_pretty ~colorize ~summarize ~raw value)
   in
@@ -138,7 +135,7 @@ let run_input_iter ?(input_delivery = After_validation) ?(debug = false)
     else
       match parse ~debug:false ~colorize query with
       | Ok runtime ->
-          Execution.fold_source ~input_delivery ~colorize ~verbose ~init:() ~f
+          Execution.fold_source ~colorize ~verbose ~init:() ~f
             (Execution.prepare runtime)
             input
       | Error query_error -> (

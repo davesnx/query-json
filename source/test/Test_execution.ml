@@ -1043,11 +1043,20 @@ let core_source_error_precedence () =
     )
     [ false; true ]
 
-let observe_source ?(input_delivery = Execution.When_ready) ?(colorize = false)
-    ?(verbose = false) ?env plan source =
+let observe_source ?(colorize = false) ?(verbose = false) ?env plan source =
   observe_fold (fun f ->
-      Execution.fold_source ~input_delivery ~colorize ~verbose ?env ~init:[] ~f
-        plan source
+      Execution.fold_source ~colorize ~verbose ?env ~init:[] ~f plan source
+  )
+
+(* Reimplements the validate-first path fold_source takes for plans without a
+   stream cut, so tests can pin the atomic ground truth for comparison. *)
+let observe_validated ?(colorize = false) ?(verbose = false) ?env plan source =
+  observe_fold (fun f ->
+      match Execution.load plan source with
+      | Ok loaded ->
+          Execution.fold_loaded ~colorize ~verbose ?env ~init:[] ~f loaded
+      | Error error ->
+          Execution.Failed error
   )
 
 let source_plan_matrix () =
@@ -1131,10 +1140,7 @@ let source_error_drain () =
   List.iter
     (fun (query, valid, malformed, expected_seen) ->
       let plan = Execution.prepare (parse query) in
-      let expected =
-        observe_source ~input_delivery:Execution.After_validation plan
-          (Json.Input.String valid)
-      in
+      let expected = observe_validated plan (Json.Input.String valid) in
       ( match fst expected with
       | Error _ ->
           ()
@@ -1180,11 +1186,9 @@ let source_invalid_tail () =
       check_fold "successful items before malformed tail"
         (Error (input_error text), prefix)
         (observe_source plan (Json.Input.String text));
-      check_fold "After_validation never exposes an invalid input prefix"
+      check_fold "validating first never exposes an invalid input prefix"
         (Error (input_error text), [])
-        (observe_source ~input_delivery:Execution.After_validation plan
-           (Json.Input.String text)
-        )
+        (observe_validated plan (Json.Input.String text))
     )
     [
       (".[]", "[1,2,", [ `Int 1; `Int 2 ]);
@@ -1206,10 +1210,7 @@ let source_validation_barriers () =
       check_fold "barrier validates before callbacks"
         (Error (input_error malformed), [])
         (observe_source plan (Json.Input.String malformed));
-      let expected =
-        observe_source ~input_delivery:Execution.After_validation plan
-          (Json.Input.String valid)
-      in
+      let expected = observe_validated plan (Json.Input.String valid) in
       List.iter
         (fun source ->
           check_fold "barrier valid input" expected (observe_source plan source)
@@ -1237,17 +1238,13 @@ let source_callback_reuse () =
   List.iter
     (fun (query, text) ->
       let plan = Execution.prepare (parse query) in
-      let expected =
-        observe_source ~input_delivery:Execution.After_validation plan
-          (Json.Input.String text)
-      in
+      let expected = observe_validated plan (Json.Input.String text) in
       List.iter
         (fun source ->
           List.iter
             (fun at ->
               check_callback_exception ~at (fun callback ->
-                  Execution.fold_source ~input_delivery:Execution.When_ready
-                    ~colorize:false ~verbose:false ~init:()
+                  Execution.fold_source ~colorize:false ~verbose:false ~init:()
                     ~f:(fun () value -> callback value)
                     plan source
               );
@@ -1266,8 +1263,7 @@ let source_callback_reuse () =
             ~finally:(fun () -> close_out_noerr channel)
             (fun () -> output_string channel text);
           check_callback_exception (fun callback ->
-              Execution.fold_source ~input_delivery:Execution.When_ready
-                ~colorize:false ~verbose:false ~init:()
+              Execution.fold_source ~colorize:false ~verbose:false ~init:()
                 ~f:(fun () value -> callback value)
                 plan (Json.Input.File file)
           );
@@ -1290,32 +1286,25 @@ let source_callback_reuse () =
     )
     [ {|[{"id":1},{},{"id":3}]|}; {|[{"id":1},|} ];
   check_callback_exception (fun callback ->
-      Execution.fold_source ~input_delivery:Execution.When_ready ~colorize:false
-        ~verbose:false ~init:()
+      Execution.fold_source ~colorize:false ~verbose:false ~init:()
         ~f:(fun () value -> callback value)
         plan (Json.Input.String {|[{"id":1},|})
   )
 
-let core_input_delivery () =
+let core_streaming () =
   List.iter
     (fun (query, text, prefix) ->
       let expected_error = input_error text in
-      check_iter "Core default validates first" (Error expected_error, [])
+      check_iter "Core run_input_iter permits prefixes"
+        (Error expected_error, prefix)
         (observe_iter (fun emit ->
              Core.run_input_iter ~colorize:false ~emit query (Core.String text)
          )
         );
-      check_iter "Core When_ready permits prefixes"
-        (Error expected_error, prefix)
-        (observe_iter (fun emit ->
-             Core.run_input_iter ~input_delivery:Core.When_ready ~colorize:false
-               ~emit query (Core.String text)
-         )
-        );
       check_iter "Core debug forces validation first" (Error expected_error, [])
         (observe_iter (fun emit ->
-             Core.run_input_iter ~input_delivery:Core.When_ready ~debug:true
-               ~colorize:false ~emit query (Core.String text)
+             Core.run_input_iter ~debug:true ~colorize:false ~emit query
+               (Core.String text)
          )
         )
     )
@@ -1339,10 +1328,10 @@ let core_input_delivery () =
       in
       List.iter
         (fun source ->
-          check_iter "Core When_ready valid input" expected
+          check_iter "Core run_input_iter valid input" expected
             (observe_iter (fun emit ->
-                 Core.run_input_iter ~input_delivery:Core.When_ready
-                   ~colorize:false ~raw:true ~summarize:true ~emit query source
+                 Core.run_input_iter ~colorize:false ~raw:true ~summarize:true
+                   ~emit query source
              )
             )
         )
@@ -1357,8 +1346,7 @@ let core_input_delivery () =
   List.iter
     (fun (query, text) ->
       check_callback_exception (fun emit ->
-          Core.run_input_iter ~input_delivery:Core.When_ready ~colorize:false
-            ~emit query (Core.String text)
+          Core.run_input_iter ~colorize:false ~emit query (Core.String text)
       )
     )
     [ (".[]", "[1,2,"); (".rows[] | .id", {|{"rows":[{"id":1},|}) ]
@@ -1571,7 +1559,7 @@ let tests =
       core_source_calls;
     Alcotest.test_case "Core source JSON error precedence" `Quick
       core_source_error_precedence;
-    Alcotest.test_case "source delivery plan matrix" `Quick source_plan_matrix;
+    Alcotest.test_case "source streaming plan matrix" `Quick source_plan_matrix;
     Alcotest.test_case "source query errors drain input" `Quick
       source_error_drain;
     Alcotest.test_case "source invalid tails preserve valid prefixes" `Quick
@@ -1580,6 +1568,6 @@ let tests =
       source_validation_barriers;
     Alcotest.test_case "source callback exceptions and plan reuse" `Quick
       source_callback_reuse;
-    Alcotest.test_case "Core input delivery and debug policy" `Quick
-      core_input_delivery;
+    Alcotest.test_case "Core run_input_iter streaming and debug policy" `Quick
+      core_streaming;
   ]

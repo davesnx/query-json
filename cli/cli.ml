@@ -201,9 +201,8 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
               flush stdout
             in
             let* () =
-              Core.run_input_iter ~input_delivery:Core.When_ready ~debug
-                ~colorize ~verbose ~raw:raw_output ~summarize:false ~emit query
-                input
+              Core.run_input_iter ~debug ~colorize ~verbose ~raw:raw_output
+                ~summarize:false ~emit query input
             in
             if not !emitted then print_newline ();
             Ok ()

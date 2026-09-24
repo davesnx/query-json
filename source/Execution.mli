@@ -2,7 +2,6 @@ type t
 type loaded
 type backend = Compiled | Interpreted
 type 'a fold_result = Completed of 'a | Failed of string | Halted of int
-type input_delivery = After_validation | When_ready
 
 val prepare : Ast.expression -> t
 (** Select a backend for the complete expression without evaluating it. Plans
@@ -65,7 +64,6 @@ val fold_loaded :
     call owns its evaluation state, including after failure or halt. *)
 
 val fold_source :
-  input_delivery:input_delivery ->
   colorize:bool ->
   verbose:bool ->
   ?env:(string * Json.t) list ->
@@ -74,10 +72,9 @@ val fold_source :
   t ->
   Json.Input.source ->
   'a fold_result
-(** [After_validation] loads and validates the complete source before [f].
-    [When_ready] permits early results only for proven compiled item cuts. Other
-    plans use [load] and [fold_loaded]. Each complete child is fully evaluated
-    before reading the next child.
+(** Permits early results only for proven compiled item cuts. Other plans use
+    [load] and [fold_loaded]. Each complete child is fully evaluated before
+    reading the next child.
 
     A query failure or halt stops callbacks and saves the terminal result while
     the remaining input is validated. A later input error wins. Otherwise the

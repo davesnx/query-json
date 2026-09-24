@@ -540,21 +540,31 @@ let bench_first_result ~warmup ~samples =
     | Error message ->
         failwith (name ^ ": " ^ message)
   in
-  let collect input_delivery =
+  let collect () =
     let outputs = ref [] in
-    Core.run_input_iter ~input_delivery ~debug:false ~colorize:false
-      ~verbose:false ~raw:false ~summarize:false
+    Core.run_input_iter ~debug:false ~colorize:false ~verbose:false ~raw:false
+      ~summarize:false
       ~emit:(fun value -> outputs := value :: !outputs)
       query input
     |> check_status;
     Array.of_list (List.rev !outputs)
   in
-  let expected = collect Core.After_validation in
-  if collect Core.When_ready <> expected then
-    failwith (name ^ ": delivery policies produced different outputs");
+  let expected = collect () in
+  let expected_atomic =
+    match
+      Core.run_input ~debug:false ~colorize:false ~verbose:false ~raw:false
+        ~summarize:false query input
+    with
+    | Ok result ->
+        result
+    | Error message ->
+        failwith (name ^ ": " ^ message)
+  in
+  if String.concat "\n" (Array.to_list expected) <> expected_atomic then
+    failwith (name ^ ": streamed output does not match atomic output");
   if Array.length expected = 0 || expected.(0) <> "1" then
     failwith (name ^ ": expected first rendered output 1");
-  let measure_first input_delivery =
+  let measure_first_streamed () =
     let index = ref 0 in
     let first = ref None in
     let before = ref 0.0 in
@@ -575,8 +585,8 @@ let bench_first_result ~warmup ~samples =
     Gc.full_major ();
     before := Gc.allocated_bytes ();
     start := Unix.gettimeofday ();
-    Core.run_input_iter ~input_delivery ~debug:false ~colorize:false
-      ~verbose:false ~raw:false ~summarize:false ~emit query input
+    Core.run_input_iter ~debug:false ~colorize:false ~verbose:false ~raw:false
+      ~summarize:false ~emit query input
     |> check_status;
     if !index <> Array.length expected then
       failwith (name ^ ": incomplete output");
@@ -586,51 +596,73 @@ let bench_first_result ~warmup ~samples =
     | _ ->
         failwith (name ^ ": missing first result or non-positive elapsed time")
   in
+  let measure_complete_atomic () =
+    Gc.full_major ();
+    let before = Gc.allocated_bytes () in
+    let start = Unix.gettimeofday () in
+    let result =
+      Core.run_input ~debug:false ~colorize:false ~verbose:false ~raw:false
+        ~summarize:false query input
+    in
+    let ns = (Unix.gettimeofday () -. start) *. 1e9 in
+    let bytes = Gc.allocated_bytes () -. before in
+    ( match result with
+    | Ok value when value = expected_atomic ->
+        ()
+    | Ok _ ->
+        failwith (name ^ ": atomic output mismatch")
+    | Error message ->
+        failwith (name ^ ": " ^ message)
+    );
+    if ns <= 0.0 then failwith (name ^ ": non-positive elapsed time");
+    { ns; bytes }
+  in
   let warmup = min 3 warmup in
   for _ = 1 to warmup do
-    ignore (measure_first Core.When_ready);
-    ignore (measure_first Core.After_validation)
+    ignore (measure_first_streamed ());
+    ignore (measure_complete_atomic ())
   done;
-  let ready = ref [] in
-  let validated = ref [] in
-  let sample policy results = results := measure_first policy :: !results in
+  let streamed = ref [] in
+  let atomic = ref [] in
   for i = 1 to samples do
     if i mod 2 = 1 then begin
-      sample Core.When_ready ready;
-      sample Core.After_validation validated
+      streamed := measure_first_streamed () :: !streamed;
+      atomic := measure_complete_atomic () :: !atomic
     end else begin
-      sample Core.After_validation validated;
-      sample Core.When_ready ready
+      atomic := measure_complete_atomic () :: !atomic;
+      streamed := measure_first_streamed () :: !streamed
     end
   done;
-  let ready = summarize !ready in
-  let validated = summarize !validated in
+  let streamed = summarize !streamed in
+  let atomic = summarize !atomic in
   Printf.printf
     "\n\
-     First rendered result: W = When_ready; A = After_validation.\n\
+     First rendered result: S = first Core.run_input_iter result; A = complete \
+     Core.run_input result.\n\
      Fixture: benchmarks/big.json wrapped as {\"rows\":<array>,\"tail\":0}; \
      query: %s.\n\
      Compiled Member_items rows cut; %d input bytes; %d outputs; first output 1.\n\
-     One fresh Core.run_input_iter over Core.String per policy per paired \
-     sample.\n\
-     %d warmup calls per policy; alternating sample order; --iterations does \
-     not apply.\n\
-     Includes query parse/prepare, JSON parsing to first complete child, \
-     residual execution, rendering.\n\
-     A also validates the complete document before its first output.\n\
+     One fresh call per path per paired sample, both over the same retained \
+     Core.String.\n\
+     %d warmup calls per path; alternating sample order; --iterations does not \
+     apply.\n\
+     Includes query parse/prepare, JSON parsing, execution, rendering. S \
+     measures time to the first complete child; A measures time to the \
+     complete rendered result.\n\
      Excludes fixture load/generation, process startup, stdout; source string \
      stays retained.\n\
-     First callback records time/allocation before result checking; each call \
-     continues to EOF and checks every output.\n\
+     S records time/allocation at its first callback, before result checking, \
+     then continues to EOF and checks every output. A records time/allocation \
+     when the call returns, then checks the result.\n\
      B is allocation volume, not peak RSS. No performance threshold.\n\n"
     query (String.length payload) (Array.length expected) warmup;
   Printf.printf "%-23s %12s %12s %12s %12s %10s %10s %7s\n%!" "Workload"
-    "W first ns" "A first ns" "W first B" "A first B" "Time delta" "Alloc delta"
-    "Samples";
+    "S first ns" "A complete ns" "S first B" "A complete B" "Time delta"
+    "Alloc delta" "Samples";
   Printf.printf "%-23s %12.1f %12.1f %12.1f %12.1f %+9.1f%% %+9.1f%% %7d\n%!"
-    name ready.ns validated.ns ready.bytes validated.bytes
-    (((ready.ns /. validated.ns) -. 1.0) *. 100.0)
-    (((ready.bytes /. validated.bytes) -. 1.0) *. 100.0)
+    name streamed.ns atomic.ns streamed.bytes atomic.bytes
+    (((streamed.ns /. atomic.ns) -. 1.0) *. 100.0)
+    (((streamed.bytes /. atomic.bytes) -. 1.0) *. 100.0)
     samples
 
 let () =

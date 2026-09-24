@@ -22,7 +22,6 @@ type t = Plan of plan | Fallback of Ast.expression
 type loaded = Loaded of t * Json.t
 type backend = Compiled | Interpreted
 type 'a fold_result = Completed of 'a | Failed of string | Halted of int
-type input_delivery = After_validation | When_ready
 
 let ( let* ) = Option.bind
 
@@ -402,16 +401,16 @@ let execute_loaded ~colorize ~verbose ?env (Loaded (query, json)) =
 let fold_loaded ~colorize ~verbose ?env ~init ~f (Loaded (query, json)) =
   fold ~colorize ~verbose ?env ~init ~f query json
 
-let fold_source ~input_delivery ~colorize ~verbose ?env ~init ~f query source =
-  match (input_delivery, stream_cut query) with
-  | After_validation, _ | When_ready, None -> (
+let fold_source ~colorize ~verbose ?env ~init ~f query source =
+  match stream_cut query with
+  | None -> (
       match load query source with
       | Ok loaded ->
           fold_loaded ~colorize ~verbose ?env ~init ~f loaded
       | Error error ->
           Failed error
     )
-  | When_ready, Some cut -> (
+  | Some cut -> (
       let at, residual =
         match cut with
         | Root_items residual ->

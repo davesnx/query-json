@@ -32,8 +32,6 @@ type input = Json.Input.source =
   | Channel of in_channel
   | Value of Json.t
 
-type input_delivery = Execution.input_delivery = After_validation | When_ready
-
 val run_input :
   ?debug:bool ->
   ?colorize:bool ->
@@ -48,7 +46,6 @@ val run_input :
     Render results atomically as in [run]. *)
 
 val run_input_iter :
-  ?input_delivery:input_delivery ->
   ?debug:bool ->
   ?colorize:bool ->
   ?verbose:bool ->
@@ -58,12 +55,10 @@ val run_input_iter :
   string ->
   input ->
   (unit, string) result
-(** Default [After_validation] validates input as in [run_input], then emits
-    results as in [run_iter]. [When_ready] permits earlier output for eligible
-    compiled queries. Barriers and interpreted queries still validate first.
-    [debug=true] always validates first and prints the AST only after valid EOF.
-    Invalid queries also validate the full input, with input errors taking
-    precedence.
+(** Can emit results before EOF for eligible compiled queries. Barriers and
+    interpreted queries still validate first, as in [run_input]. [debug=true]
+    always validates first and prints the AST only after valid EOF. Invalid
+    queries also validate the full input, with input errors taking precedence.
 
     A query failure or halt stops callbacks and validates the remaining input. A
     later input error wins. Otherwise the query error returns or the halt exits
