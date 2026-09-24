@@ -148,13 +148,19 @@ Arguments:
 
 Options:
   -r, --raw-output    Output strings without quotes
-  --no-color          Disable colored output
+  -c, --no-color      Disable colored output (default when stdout isn't a terminal)
+  -C, --color         Force colored output, even when stdout isn't a terminal
   --repl              Start interactive REPL mode
   -v, --verbose       Show verbose output including deprecation warnings
   --debug             Print lexer tokens and AST
   --version           Print version
   --help              Print help
 ```
+
+Color is on by default when stdout is a terminal, and off when it's piped or
+redirected (matching `jq`). The `NO_COLOR` environment variable (any
+non-empty value) disables color unless `-C`/`--color` is also given; `-C`
+always wins, and `-c`/`--no-color` always forces color off.
 
 ## Contributing
 

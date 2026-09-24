@@ -477,6 +477,9 @@ let reduce =
     test {|reduce .[] as $item (0; . + $item)|} {|[1,2,3,4,5]|} {|15|};
     test {|reduce .[] as [$i,$j] (0; . + $i * $j)|} {|[[1,2],[3,4],[5,6]]|}
       {|44|};
+    (* reduce over an empty generator keeps the init value unchanged *)
+    test {|reduce empty as $x (0; . + $x)|} {|null|} {|0|};
+    test {|reduce .[] as $x (10; . + $x)|} {|[]|} {|10|};
   ]
 
 let foreach =
@@ -501,6 +504,9 @@ let limit =
     test {|[limit(3; range(10))]|} {|null|} {|[ 0, 1, 2 ]|};
     test {|[limit(3; .[])]|} {|[0,1,2,3,4,5,6,7,8,9]|} {|[ 0, 1, 2 ]|};
     test {|[limit(5; infinite)]|} {|null|} {|[ 0, 1, 2, 3, 4 ]|};
+    (* limit(0; ...) must stop before pulling any value from the generator *)
+    test {|[limit(0; range(10))]|} {|null|} {|[]|};
+    test {|[limit(0; infinite)]|} {|null|} {|[]|};
   ]
 
 let is_empty =
@@ -620,6 +626,19 @@ let sort =
     test {|sort_by(.foo, .bar)|}
       {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|}
       {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 3, "bar": 20 }, { "foo": 4, "bar": 10 } ]|};
+    (* jq type ordering across every kind at once: null < false < true <
+       numbers (mixed int/float) < strings (by codepoint) < arrays < objects *)
+    test {|sort|}
+      {|[null,true,false,1,1.5,"a",[1],{"a":1},{"a":0,"b":1},"B",-2]|}
+      {|[ null, false, true, -2, 1, 1.5, "B", "a", [ 1 ], { "a": 1 }, { "a": 0, "b": 1 } ]|};
+    (* stability: elements with equal sort keys keep their original relative order *)
+    test {|sort_by(.a)|}
+      {|[{"a":1,"b":1},{"a":1,"b":2},{"a":0,"b":3},{"a":1,"b":4}]|}
+      {|[ { "a": 0, "b": 3 }, { "a": 1, "b": 1 }, { "a": 1, "b": 2 }, { "a": 1, "b": 4 } ]|};
+    (* objects with the same keys inserted in a different order compare equal,
+       so sort (stable) keeps their original relative order *)
+    test {|sort|} {|[{"b":1,"a":2},{"a":2,"b":1}]|}
+      {|[ { "b": 1, "a": 2 }, { "a": 2, "b": 1 } ]|};
   ]
 
 (* unique, unique_by *)
@@ -725,6 +744,14 @@ let entries =
       {|{"a": 3, "b": 10}|} {|{ "a": 3, "b": 20 }|};
     test {|with_entries(.key |= "KEY_" + .)|} {|{"a": 1, "b": 2}|}
       {|{ "KEY_a": 1, "KEY_b": 2 }|};
+    (* first entry wins on lookup, but from_entries keeps every entry it was given *)
+    test {|from_entries|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
+      {|{ "a": 1, "a": 2 }|};
+    test {|from_entries | .a|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
+      {|1|};
+    (* renaming every entry to the same key keeps them all, in order *)
+    test {|with_entries(.key = "dup")|} {|{"a": 1, "b": 2}|}
+      {|{ "dup": 1, "dup": 2 }|};
   ]
 
 let contains =
@@ -737,6 +764,8 @@ let contains =
     test {|contains(["baz", "bar"])|} {|["foobar", "foobaz", "blarp"]|} {|true|};
     test {|contains({foo: 12, bar: [{barp: 12}]})|}
       {|{"foo": 12, "bar":[1,2,{"barp":12, "blip":13}]}|} {|true|};
+    test {|contains("")|} {|"anything"|} {|true|};
+    test {|contains("")|} {|""|} {|true|};
     test {|contains({foo: 12, bar: [{barp: 15}]})|}
       {|{"foo": 12, "bar":[1,2,{"barp":12, "blip":13}]}|} {|false|};
   ]
@@ -797,6 +826,10 @@ let split_join =
     test {|join(", ")|} {|["a","b,c,d","e"]|} {|"a, b,c,d, e"|};
     test {|split(", ")|} {|"a, b,c,d, e, "|} {|[ "a", "b,c,d", "e", "" ]|};
     test {|join(" ")|} {|["a",1,2.3,true,null,false]|} {|"a 1 2.3 true false"|};
+    test {|split("é")|} {|"café"|} {|[ "caf", "" ]|};
+    (* separator at both ends *)
+    test {|split(",")|} {|",a,b,"|} {|[ "", "a", "b", "" ]|};
+    test {|split("")|} {|""|} {|[]|};
   ]
 
 let explode_implode =
@@ -827,6 +860,11 @@ let index =
     test {|indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
     test {|indices(1)|} {|[0,1,2,1,3,1,4]|} {|[ 1, 3, 5 ]|};
     test {|indices([1,2])|} {|[0,1,2,3,1,4,2,5,1,2,6,7]|} {|[ 1, 8 ]|};
+    test {|index("é")|} {|"café"|} {|3|};
+    (* empty needle: no match, like jq (also avoids looping forever) *)
+    test {|index("")|} {|"abc"|} {|null|};
+    test {|rindex("")|} {|"abc"|} {|null|};
+    test {|indices("")|} {|"abc"|} {|[]|};
   ]
 
 let math_abs =
@@ -938,11 +976,36 @@ let regex_sub_gsub =
   [
     test {|sub("world"; "universe")|} {|"hello world"|} {|"hello universe"|};
     test {|gsub("l"; "L")|} {|"hello"|} {|"heLLo"|};
+    (* an invalid pattern silently passes the value through unchanged, and
+       does so every time it is evaluated, not just on the first (uncached)
+       compile attempt *)
+    test {|sub("(unclosed"; "Z")|} {|"abc"|} {|"abc"|};
+    test {|[.[] | sub("(unclosed"; "Z")]|} {|["a1", "b2"]|} {|[ "a1", "b2" ]|};
+    (* gsub with a pattern that can match the empty string *)
+    test {|gsub("x*"; "-")|} {|"abc"|} {|"-a-b-c-"|};
+    (* two distinct literal patterns compiled in the same run must not
+       collide in the compiled-regex cache *)
+    test {|[.[] | sub("a"; "1")]|} {|["cat", "dog"]|} {|[ "c1t", "dog" ]|};
+    test {|[.[] | gsub("o"; "2")]|} {|["cat", "dog"]|} {|[ "cat", "d2g" ]|};
     (* TODO: test {|sub("[^a-z]*(?<x>[a-z]+)"; "Z\(.x)"; "g")|} {|"123abc456def"|} {|"ZabcZdef"|}; *)
     (* TODO: test {|[sub("(?<a>.)"; "\(.a|to_uppercase)", "\(.a|to_lowercase)")]|} {|"aB"|} {|["AB","aB"]|}; *)
     (* TODO: test {|gsub("(?<x>.)[^a]*"; "+\(.x)-")|} {|"Abcabc"|} {|"+A-+a-"|}; *)
     (* TODO: test {|[gsub("p"; "a", "b")]|} {|"p"|} {|["a","b"]|}; *)
   ]
+
+(* The compiled-regex cache resets once it holds 64 entries. Compile 64
+   distinct never-matching filler patterns after "P0" (65 distinct patterns
+   total) to force the reset and evict "P0", then reuse "P0": it must
+   recompile and match correctly rather than reuse stale cache state. *)
+let regex_cache_eviction =
+  let fillers =
+    String.concat " | "
+      (List.init 64 (fun i -> Printf.sprintf {|gsub("F%d"; "Z")|} (i + 1)))
+  in
+  let query =
+    Printf.sprintf {|gsub("P0"; "P0") | %s | gsub("P0"; "DONE")|} fillers
+  in
+  [ test query {|"P0 hello"|} {|"DONE hello"|} ]
 
 let regex_scan =
   [
@@ -992,6 +1055,7 @@ let del =
     test {|delete(.foo)|} {|{"foo": 42, "bar": 9001, "baz": 42}|}
       {|{ "bar": 9001, "baz": 42 }|};
     test {|delete(.[1, 2])|} {|["foo", "bar", "baz"]|} {|[ "foo" ]|};
+    test {|delete(.nope)|} {|{"a": 1, "b": 2}|} {|{ "a": 1, "b": 2 }|};
   ]
 
 let object_index_brackets =
@@ -1228,6 +1292,36 @@ let decimal_number =
     test {|1 / 3|} {|null|} {|0.333333|};
   ]
 
+let numeric_fast_path_boundaries =
+  (* Coverage for the Int/Int64 add & subtract fast paths: overflow must
+     still promote exactly like the generic Decimal path (Int -> Int64 ->
+     Big_int), and every other representation pairing must stay untouched. *)
+  [
+    (* Int - Int underflow at min_int promotes to Int64 *)
+    test {|-4611686018427387904 - 1|} {|null|} {|-4611686018427387905|};
+    (* Int64 + Int64 overflow promotes to Big_int *)
+    test {|9223372036854775807 + 9223372036854775807|} {|null|}
+      {|18446744073709551614|};
+    (* Int64 - Int64 underflow promotes to Big_int *)
+    test {|(-9223372036854775808) - 9223372036854775807|} {|null|}
+      {|-18446744073709551615|};
+    (* Decimal + Float and Float + Decimal (unaffected by the fast path) *)
+    test {|1.5 + (4|sqrt)|} {|null|} {|3.5|};
+    test {|(4|sqrt) + 1.5|} {|null|} {|3.5|};
+    (* Big_int + Int, Int on the left *)
+    test {|1 + 99999999999999999999999999999|} {|null|}
+      {|100000000000000000000000000000|};
+    (* Modulo keeps the dividend's sign, like jq/C *)
+    test {|(-7) % (-3)|} {|null|} {|-1|};
+    test {|7 % (-3)|} {|null|} {|1|};
+    test {|(-7) % 3|} {|null|} {|-1|};
+    (* Comparisons across representations with numerically equal values *)
+    test {|1 == 1.00|} {|null|} {|true|};
+    test {|1.0 == 1.00|} {|null|} {|true|};
+    test {|1 < 1.5|} {|null|} {|true|};
+    test {|1.50 > 1|} {|null|} {|true|};
+  ]
+
 let tobase =
   [
     test
@@ -1436,7 +1530,68 @@ let object_merge =
       {|{ "a": { "x": 1, "y": 2 } }|};
     test {|reduce .[] as $obj ({}; . * $obj)|}
       {|[{"a": 1, "b": 2}, {"b": 3, "c": 4}]|} {|{ "a": 1, "b": 3, "c": 4 }|};
+    (* a key present on both sides keeps its left-hand position; new keys append after *)
+    test {|. + {"b": 30, "c": 40}|} {|{"a": 1, "b": 2}|}
+      {|{ "a": 1, "b": 30, "c": 40 }|};
   ]
+
+(* [assoc_merge] switches from a linear scan to a hash-indexed lookup once
+   the right-hand side has more than 32 entries. Build a right-hand object
+   with exactly [n] raw entries: "a" (present on the left, so it overrides
+   rather than appends), "dup" appearing twice (a key only on the right,
+   so both occurrences survive, unlike "a"), and filler keys padding out to
+   [n]. Also derive the expected merge against the fixed left object
+   {"a": 1, "b": 2} for both [+] (override) and [*] (recursive merge, which
+   behaves the same here since every value is a plain int). *)
+let object_merge_threshold_boundary =
+  let compact_object pairs =
+    "{"
+    ^ String.concat ","
+        (List.map (fun (k, v) -> Printf.sprintf {|"%s":%d|} k v) pairs)
+    ^ "}"
+  in
+  (* the merged result has 30+ keys, well past the 120-char compact-width
+     budget, so the default (uncolored, non-`-c`) renderer this test harness
+     uses prints one "key": value per line, matching [assoc_multiline_test]
+     in Test_write.ml. *)
+  let pretty_object pairs =
+    let n = List.length pairs in
+    "{\n"
+    ^ String.concat ""
+        (List.mapi
+           (fun i (k, v) ->
+             Printf.sprintf "  \"%s\": %d%s" k v
+               ( if i = n - 1 then
+                   "\n"
+                 else
+                   ",\n"
+               )
+           )
+           pairs
+        )
+    ^ "}"
+  in
+  let case n =
+    let fillers = List.init (n - 3) (fun i -> (Printf.sprintf "k%d" i, i)) in
+    let raw_pairs = [ ("a", 999); ("dup", 100) ] @ fillers @ [ ("dup", 200) ] in
+    let right_json = compact_object raw_pairs in
+    let merged_pretty =
+      pretty_object
+        ([ ("a", 999); ("b", 2) ]
+        @ List.filter (fun (k, _) -> k <> "a") raw_pairs
+        )
+    in
+    [
+      test
+        (Printf.sprintf {|. + %s|} right_json)
+        {|{"a": 1, "b": 2}|} merged_pretty;
+      test
+        (Printf.sprintf {|. * %s|} right_json)
+        {|{"a": 1, "b": 2}|} merged_pretty;
+    ]
+  in
+  List.concat
+    [ case 32 (* linear-scan path *); case 40 (* hash-indexed path *) ]
 
 let array_algorithms =
   [
@@ -1619,6 +1774,19 @@ let deep_traversal =
       {|[ "alice", "bob" ]|};
   ]
 
+(* 10,000-deep nesting must not overflow the stack for any traversal
+   strategy (breadth-first descend, depth-first dive/recurse, paths). *)
+let deep_nesting =
+  let depth = 10_000 in
+  let deeply_nested = String.make depth '[' ^ "0" ^ String.make depth ']' in
+  let node_count = Int.to_string (depth + 1) in
+  [
+    test {|[descend] | length|} deeply_nested node_count;
+    test {|[dive] | length|} deeply_nested node_count;
+    test {|[recurse] | length|} deeply_nested node_count;
+    test {|[paths] | length|} deeply_nested (Int.to_string depth);
+  ]
+
 let tests =
   List.concat
     [
@@ -1653,6 +1821,7 @@ let tests =
       while_;
       until;
       recurse;
+      deep_nesting;
       walk;
       reduce;
       foreach;
@@ -1701,6 +1870,7 @@ let tests =
       regex_match;
       regex_capture;
       regex_sub_gsub;
+      regex_cache_eviction;
       regex_scan;
       regex_split;
       regex_splits;
@@ -1729,6 +1899,7 @@ let tests =
       optional_functions;
       generators_iterators;
       decimal_number;
+      numeric_fast_path_boundaries;
       index_operations;
       snake_case_aliases;
       collection_helpers;
@@ -1746,6 +1917,7 @@ let tests =
       complex_filtering;
       fizzbuzz;
       object_merge;
+      object_merge_threshold_boundary;
       array_algorithms;
       statistics;
     ]

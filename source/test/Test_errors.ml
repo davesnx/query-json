@@ -133,6 +133,9 @@ let tests =
     test {|error?|} {|"boom"|} "boom";
     (* pow without arguments should be a parse error *)
     test "pow" "5" "requires x and y";
+    (* first/nth on an empty or exhausted generator error (not silently null) *)
+    test "first(empty)" "null" "empty expression result";
+    test "nth(10; range(3))" "null" "out of bounds";
     test_location "single-line parse error location" "@@@" "null"
       [ "--> @@@"; "^" ];
     test_location "multiline: error on later line" "\n\n\n@@@" "null"

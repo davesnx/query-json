@@ -33,6 +33,13 @@ module Decimal = struct
 
   let z_of_string_opt s = try Some (Z.of_string s) with _ -> None
 
+  let is_digit c = c >= '0' && c <= '9'
+
+  (* Digit strings up to this length fit in a native int (63-bit) with
+     no risk of overflow while accumulating one digit at a time: even
+     the all-nines case 10^18 - 1 stays under max_int (~4.6e18). *)
+  let max_fast_digits = 18
+
   let normalize ?repr coeff scale =
     let rec trim c s =
       if s > 0 && Z.equal (Z.erem c ten) Z.zero then
@@ -93,39 +100,79 @@ module Decimal = struct
           1
       in
       let int_start = !i in
-      while !i < len && s.[!i] >= '0' && s.[!i] <= '9' do
+      while !i < len && is_digit s.[!i] do
         incr i
       done;
       let int_len = !i - int_start in
       if int_len = 0 then
         None
       else
-        let frac_part =
-          if !i < len && s.[!i] = '.' then (
-            incr i;
-            let frac_start = !i in
-            while !i < len && s.[!i] >= '0' && s.[!i] <= '9' do
-              incr i
-            done;
-            let frac_len = !i - frac_start in
-            if frac_len = 0 then
+        (* frac_start = -1 means there is no fractional part *)
+        let frac_start = ref (-1) in
+        let frac_len = ref 0 in
+        let frac_valid = ref true in
+        if !i < len && s.[!i] = '.' then begin
+          incr i;
+          frac_start := !i;
+          while !i < len && is_digit s.[!i] do
+            incr i
+          done;
+          frac_len := !i - !frac_start;
+          if !frac_len = 0 then frac_valid := false
+        end;
+        if not !frac_valid then
+          None
+        else
+          match parse_exponent s !i len with
+          | None ->
               None
-            else
-              Some (String.sub s frac_start frac_len)
-          ) else
-            Some ""
-        in
-        match frac_part with
-        | None ->
-            None
-        | Some frac_part -> (
-            match parse_exponent s !i len with
-            | None ->
+          | Some (exp, stop) -> (
+              if stop <> len then
                 None
-            | Some (exp, stop) -> (
-                if stop <> len then
-                  None
-                else
+              else
+                let scale = !frac_len - exp in
+                let total_digits = int_len + !frac_len in
+                if total_digits <= max_fast_digits && scale >= 0 then (
+                  (* Fast path: accumulate the significant digits (skipping
+                     the '.') directly into a native int, no Z.t/string
+                     allocation and no big-int arithmetic for the common
+                     case of an ordinary machine-sized decimal literal. *)
+                  let n = ref 0 in
+                  for k = int_start to int_start + int_len - 1 do
+                    n := (!n * 10) + (Char.code s.[k] - 48)
+                  done;
+                  if !frac_start >= 0 then
+                    for k = !frac_start to !frac_start + !frac_len - 1 do
+                      n := (!n * 10) + (Char.code s.[k] - 48)
+                    done;
+                  if !n = 0 then
+                    Some { coeff = Z.zero; scale = 0; repr = Some s }
+                  else begin
+                    let sc = ref scale in
+                    while !sc > 0 && !n mod 10 = 0 do
+                      n := !n / 10;
+                      decr sc
+                    done;
+                    let coeff =
+                      Z.of_int
+                        ( if sign < 0 then
+                            - !n
+                          else
+                            !n
+                        )
+                    in
+                    Some { coeff; scale = !sc; repr = Some s }
+                  end
+                ) else
+                  (* Slow path: arbitrary-precision literal, or a positive
+                     exponent that shifts the decimal point past the
+                     fractional digits (needs a big-int multiply). *)
+                  let frac_part =
+                    if !frac_start >= 0 then
+                      String.sub s !frac_start !frac_len
+                    else
+                      ""
+                  in
                   let int_part = String.sub s int_start int_len in
                   let digits = int_part ^ frac_part in
                   match z_of_string_opt digits with
@@ -138,15 +185,13 @@ module Decimal = struct
                         else
                           z
                       in
-                      let scale = String.length frac_part - exp in
                       if Z.equal coeff Z.zero then
                         Some { coeff = Z.zero; scale = 0; repr = Some s }
                       else if scale >= 0 then
                         Some (normalize ~repr:s coeff scale)
                       else
                         Some (normalize ~repr:s (Z.mul coeff (pow10 (-scale))) 0)
-              )
-          )
+            )
 
   let of_lexeme_exn s =
     match of_lexeme_opt s with

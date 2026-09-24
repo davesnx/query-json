@@ -125,6 +125,34 @@ let parse_leading_zero_float () =
   check_parse "0.123" Fixtures.leading_zero_float_json
     Fixtures.leading_zero_float_value ()
 
+(* Decimal parsing: independent checks (not routed through
+   Decimal.of_lexeme_exn on both sides) of the value the lexer's fast
+   path (plain machine-sized mantissa) and slow path (arbitrary
+   precision / positive exponent shift) compute, plus a literal
+   round-trip check of the preserved source representation. *)
+let check_decimal name json_str expected_value expected_repr () =
+  let v = Json.from_string json_str in
+  Alcotest.(check bool) (name ^ " value") true (Json.equal v expected_value);
+  Alcotest.(check string) (name ^ " roundtrip") expected_repr (Json.to_string v)
+
+let parse_decimal_trims_to_integer () =
+  check_decimal "1.0 trims to integer 1" "1.0" (`Int 1) "1.0" ()
+
+let parse_decimal_small_fraction () =
+  check_decimal "0.1 keeps fractional value" "0.1" (`Float 0.1) "0.1" ()
+
+let parse_decimal_positive_exponent () =
+  check_decimal "1e5 expands to 100000" "1e5" (`Int 100_000) "1e5" ()
+
+let parse_decimal_negative_exponent () =
+  check_decimal "1E-7 keeps small fractional value" "1E-7" (`Float 1e-7) "1E-7"
+    ()
+
+let parse_decimal_huge_exponent () =
+  check_decimal "1e400 keeps exact big magnitude" "1e400"
+    (`Big_int (Z.pow (Z.of_int 10) 400))
+    "1e400" ()
+
 let parse_empty_string () =
   check_parse "empty string" Fixtures.empty_string_json
     Fixtures.empty_string_value ()
@@ -190,6 +218,39 @@ let parse_utf8_direct () =
 let parse_utf8_emoji () =
   check_parse "direct utf8 emoji" Fixtures.utf8_emoji_json
     Fixtures.utf8_emoji_value ()
+
+let parse_escape_then_plain () =
+  check_parse "escape followed by unescaped run before closing quote"
+    Fixtures.escape_then_plain_json Fixtures.escape_then_plain_value ()
+
+let parse_unicode_null () =
+  check_parse "\\u0000 escape" Fixtures.unicode_null_json
+    Fixtures.unicode_null_value ()
+
+let parse_invalid_utf8 () =
+  check_parse "invalid utf8 bytes pass through unvalidated"
+    Fixtures.invalid_utf8_json Fixtures.invalid_utf8_value ()
+
+let parse_long_unescaped_string () =
+  check_parse "very long string without escapes"
+    Fixtures.long_unescaped_string_json Fixtures.long_unescaped_string_value ()
+
+let fail_lone_high_surrogate () =
+  Alcotest.check_raises "high surrogate with no low surrogate following"
+    (Json.Json_error
+       "Line 1, bytes 7-9:\n\
+        Missing escape sequence representing low surrogate for code point \
+        beyond U+FFFF 'X\"'"
+    )
+    (parse {|"\uD800X"|})
+
+let fail_invalid_low_surrogate () =
+  Alcotest.check_raises "high surrogate followed by a non-low-surrogate escape"
+    (Json.Json_error
+       "Line 1, bytes 7-14:\n\
+        Invalid low surrogate for code point beyond U+FFFF '\\u0041\"'"
+    )
+    (parse {|"\uD800\u0041"|})
 
 let parse_empty_array () =
   check_parse "empty array" Fixtures.empty_array_json Fixtures.empty_array_value
@@ -355,6 +416,11 @@ let single_json =
     ("parse_exp_positive", `Quick, parse_exp_positive);
     ("parse_zero_point", `Quick, parse_zero_point);
     ("parse_leading_zero_float", `Quick, parse_leading_zero_float);
+    ("parse_decimal_trims_to_integer", `Quick, parse_decimal_trims_to_integer);
+    ("parse_decimal_small_fraction", `Quick, parse_decimal_small_fraction);
+    ("parse_decimal_positive_exponent", `Quick, parse_decimal_positive_exponent);
+    ("parse_decimal_negative_exponent", `Quick, parse_decimal_negative_exponent);
+    ("parse_decimal_huge_exponent", `Quick, parse_decimal_huge_exponent);
     (* Strings *)
     ("parse_empty_string", `Quick, parse_empty_string);
     ("parse_simple_string", `Quick, parse_simple_string);
@@ -373,6 +439,12 @@ let single_json =
     ("parse_unicode_surrogate", `Quick, parse_unicode_surrogate);
     ("parse_utf8_direct", `Quick, parse_utf8_direct);
     ("parse_utf8_emoji", `Quick, parse_utf8_emoji);
+    ("parse_escape_then_plain", `Quick, parse_escape_then_plain);
+    ("parse_unicode_null", `Quick, parse_unicode_null);
+    ("parse_invalid_utf8", `Quick, parse_invalid_utf8);
+    ("parse_long_unescaped_string", `Quick, parse_long_unescaped_string);
+    ("fail_lone_high_surrogate", `Quick, fail_lone_high_surrogate);
+    ("fail_invalid_low_surrogate", `Quick, fail_invalid_low_surrogate);
     (* Arrays *)
     ("parse_empty_array", `Quick, parse_empty_array);
     ("parse_single_array", `Quick, parse_single_array);

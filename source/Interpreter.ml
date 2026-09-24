@@ -352,6 +352,58 @@ let fail_invalid_type ~ctx op (json : Json.t) =
     ^ " to " ^ type_desc
     )
 
+module Literal_str = struct
+  (* Plain byte-string search for a literal (non-regex) needle: no
+     Re.compile per call, so splitting/searching one string doesn't pay for
+     building a throwaway automaton. [needle] must be non-empty; callers
+     special-case the empty needle themselves (jq treats it as "no match"
+     for search, and as "one part per char" for split). *)
+  let index_from haystack needle start =
+    let needle_len = String.length needle in
+    let hay_len = String.length haystack in
+    let limit = hay_len - needle_len in
+    let first = String.unsafe_get needle 0 in
+    let matches_at idx =
+      let rec aux k =
+        k >= needle_len
+        || String.unsafe_get haystack (idx + k) = String.unsafe_get needle k
+           && aux (k + 1)
+      in
+      aux 1
+    in
+    let rec loop i =
+      if i > limit then
+        None
+      else
+        match String.index_from_opt haystack i first with
+        | None ->
+            None
+        | Some idx when idx > limit ->
+            None
+        | Some idx ->
+            if matches_at idx then
+              Some idx
+            else
+              loop (idx + 1)
+    in
+    if start > limit then
+      None
+    else
+      loop start
+
+  let split s sep =
+    let len = String.length s in
+    let sep_len = String.length sep in
+    let rec loop start acc =
+      match index_from s sep start with
+      | None ->
+          List.rev (String.sub s start (len - start) :: acc)
+      | Some idx ->
+          loop (idx + sep_len) (String.sub s start (idx - start) :: acc)
+    in
+    loop 0 []
+end
+
 module Operators = struct
   let not (json : Json.t) =
     match json with `Bool false | `Null -> `Bool true | _ -> `Bool false
@@ -405,8 +457,105 @@ module Operators = struct
   let sub_exact l r = Json.Decimal.sub l r |> json_of_decimal
   let mul_exact l r = Json.Decimal.mul l r |> json_of_decimal
 
+  (* Merge two association lists: left entries keep their position, a key
+     present on both sides is combined with [merge_value], and keys only on
+     the right are appended after, in their original (first-occurrence)
+     order. [merge_left] walks [l_entries] once and conses [new_keys]
+     straight onto the tail (via [@tail_mod_cons], so this is one O(n)
+     allocation pass, not a map followed by a separate `@` copy), reusing
+     the original pair when [r_lookup] finds nothing so unrelated keys cost
+     no extra allocation.
+     Above [merge_threshold] keys on the right we index it in a hashtable so
+     each left key resolves in O(1) instead of rescanning the right list;
+     below it, a linear scan is cheaper (no hashing/allocation overhead). *)
+  let merge_threshold = 32
+
+  let[@tail_mod_cons] rec merge_left ~merge_value ~r_lookup new_keys l_entries =
+    match l_entries with
+    | [] ->
+        new_keys
+    | ((k, v) as pair) :: rest -> (
+        match r_lookup k with
+        | Some r_val ->
+            (k, merge_value v r_val)
+            :: merge_left ~merge_value ~r_lookup new_keys rest
+        | None ->
+            pair :: merge_left ~merge_value ~r_lookup new_keys rest
+      )
+
+  let assoc_merge ~merge_value (l_entries : (string * Json.t) list)
+      (r_entries : (string * Json.t) list) =
+    if List.length r_entries > merge_threshold then (
+      let r_tbl : (string, Json.t) Hashtbl.t =
+        Hashtbl.create (2 * List.length r_entries)
+      in
+      List.iter
+        (fun (k, v) ->
+          (* keep the first occurrence, matching List.assoc_opt semantics *)
+          if Stdlib.not (Hashtbl.mem r_tbl k) then Hashtbl.add r_tbl k v
+        )
+        r_entries;
+      let l_keys : (string, unit) Hashtbl.t =
+        Hashtbl.create (2 * List.length l_entries)
+      in
+      List.iter (fun (k, _) -> Hashtbl.replace l_keys k ()) l_entries;
+      let new_keys =
+        List.filter (fun (k, _) -> Stdlib.not (Hashtbl.mem l_keys k)) r_entries
+      in
+      merge_left ~merge_value ~r_lookup:(Hashtbl.find_opt r_tbl) new_keys
+        l_entries
+    ) else
+      let new_keys =
+        List.filter
+          (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
+          r_entries
+      in
+      merge_left ~merge_value
+        ~r_lookup:(fun k -> List.assoc_opt k r_entries)
+        new_keys l_entries
+
+  let int64_min_as_int = Int64.of_int Int.min_int
+  let int64_max_as_int = Int64.of_int Int.max_int
+
+  (* Fast paths for plain-integer +/- : Int/Int64 add and subtract never need
+     exact decimal arithmetic (no fractional scale is involved), so they skip
+     the Z round-trip that [add_exact]/[sub_exact] pay for every Decimal
+     operation. Overflow still promotes exactly like [json_of_integer_z]
+     would: Int -> Int64 -> Big_int. *)
+  let add_int64 (l : int64) (r : int64) : Json.t =
+    let result = Int64.add l r in
+    if Int64.logxor l r >= 0L && Int64.logxor l result < 0L then
+      json_of_integer_z (Z.add (Z.of_int64 l) (Z.of_int64 r))
+    else if result >= int64_min_as_int && result <= int64_max_as_int then
+      `Int (Int64.to_int result)
+    else
+      `Int64 result
+
+  let sub_int64 (l : int64) (r : int64) : Json.t =
+    let result = Int64.sub l r in
+    if Int64.logxor l r < 0L && Int64.logxor l result < 0L then
+      json_of_integer_z (Z.sub (Z.of_int64 l) (Z.of_int64 r))
+    else if result >= int64_min_as_int && result <= int64_max_as_int then
+      `Int (Int64.to_int result)
+    else
+      `Int64 result
+
   let add ~ctx str (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    | `Int l, `Int r ->
+        let result = l + r in
+        (* two 63-bit ints always sum within Int64 range, so overflow never
+           needs to reach Big_int here *)
+        if l lxor r >= 0 && l lxor result < 0 then
+          `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
+    | `Int64 l, `Int64 r ->
+        add_int64 l r
+    | `Int l, `Int64 r ->
+        add_int64 (Int64.of_int l) r
+    | `Int64 l, `Int r ->
+        add_int64 l (Int64.of_int r)
     | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
         ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
         add_exact
@@ -434,24 +583,7 @@ module Operators = struct
         `String (l ^ r)
     | `Assoc l_entries, `Assoc r_entries ->
         (* right side wins for duplicate keys (override, not merge) *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some v' ->
-                  (k, v')
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* then add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
+        `Assoc (assoc_merge ~merge_value:(fun _l r -> r) l_entries r_entries)
     | `List l, `List r ->
         `List (l @ r)
     | `Null, r ->
@@ -506,6 +638,19 @@ module Operators = struct
 
   let subtract ~ctx (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
+    | `Int l, `Int r ->
+        let result = l - r in
+        (* two 63-bit ints always differ within Int64 range *)
+        if l lxor r < 0 && l lxor result < 0 then
+          `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
+        else
+          `Int result
+    | `Int64 l, `Int64 r ->
+        sub_int64 l r
+    | `Int l, `Int64 r ->
+        sub_int64 (Int64.of_int l) r
+    | `Int64 l, `Int r ->
+        sub_int64 l (Int64.of_int r)
     | ( ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as l),
         ((`Int _ | `Int64 _ | `Big_int _ | `Decimal _) as r) ) ->
         sub_exact
@@ -539,24 +684,7 @@ module Operators = struct
     match (left, right) with
     | `Assoc l_entries, `Assoc r_entries ->
         (* preserve key order: update existing keys from l with recursive merge from r *)
-        let updated_l =
-          List.map
-            (fun (k, v) ->
-              match List.assoc_opt k r_entries with
-              | Some r_val ->
-                  (k, deep_merge v r_val)
-              | None ->
-                  (k, v)
-            )
-            l_entries
-        in
-        (* add new keys from r that weren't in l *)
-        let new_keys =
-          List.filter
-            (fun (k, _) -> Stdlib.not (List.mem_assoc k l_entries))
-            r_entries
-        in
-        `Assoc (updated_l @ new_keys)
+        `Assoc (assoc_merge ~merge_value:deep_merge l_entries r_entries)
     | _, r ->
         r
 
@@ -658,11 +786,16 @@ module Operators = struct
         `Float (Json.Decimal.to_float l /. r)
     | `Float l, `Decimal r ->
         `Float (l /. Json.Decimal.to_float r)
-    | `String s, `String delim ->
+    | `String s, `String "" ->
+        (* keep the existing (Re-driven) empty-pattern semantics: this is a
+           distinct, rarely used edge case from split("")'s per-char split,
+           and not perf sensitive *)
         `List
-          (Re.split_delim (Re.compile (Re.str delim)) s
+          (Re.split_delim (Re.compile (Re.str "")) s
           |> List.map (fun part -> `String part)
           )
+    | `String s, `String delim ->
+        `List (Literal_str.split s delim |> List.map (fun part -> `String part))
     | _ ->
         fail_invalid_type ~ctx "/" left
 
@@ -703,36 +836,39 @@ module Operators = struct
 end
 
 module Search = struct
+  (* [needle = ""] is special-cased to "no match" here (matching jq), which
+     also sidesteps looping forever advancing by zero positions. *)
   let string_first haystack needle =
-    match Re.exec_opt (Re.compile (Re.str needle)) haystack with
-    | Some g ->
-        Some (fst (Re.Group.offset g 0))
-    | None ->
-        None
+    if needle = "" then
+      None
+    else
+      Literal_str.index_from haystack needle 0
 
   let string_last haystack needle =
-    let compiled = Re.compile (Re.str needle) in
-    let rec search pos last =
-      match Re.exec_opt ~pos compiled haystack with
-      | Some g ->
-          let found = fst (Re.Group.offset g 0) in
-          search (found + 1) (Some found)
-      | None ->
-          last
-    in
-    search 0 None
+    if needle = "" then
+      None
+    else
+      let rec search pos last =
+        match Literal_str.index_from haystack needle pos with
+        | Some found ->
+            search (found + 1) (Some found)
+        | None ->
+            last
+      in
+      search 0 None
 
   let string_all haystack needle =
-    let compiled = Re.compile (Re.str needle) in
-    let rec search pos acc =
-      match Re.exec_opt ~pos compiled haystack with
-      | Some g ->
-          let found = fst (Re.Group.offset g 0) in
-          search (found + 1) (found :: acc)
-      | None ->
-          List.rev acc
-    in
-    search 0 []
+    if needle = "" then
+      []
+    else
+      let rec search pos acc =
+        match Literal_str.index_from haystack needle pos with
+        | Some found ->
+            search (found + 1) (found :: acc)
+        | None ->
+            List.rev acc
+      in
+      search 0 []
 
   let sublist_matches_at haystack sublist idx =
     let sublen = List.length sublist in
@@ -1311,24 +1447,30 @@ let has ~ctx (json : Json.t) key =
   | _ ->
       fail_invalid_type ~ctx "has" json
 
-let range_list ?(step = 1) start stop =
+(* Yields range elements one at a time (instead of building the whole list
+   first) so that laziness (limit/first stopping the generator early) and
+   deep ranges (millions of elements) both work without a giant intermediate
+   list or unbounded stack growth. The [loop] below is tail-recursive. *)
+let yield_range_list ?(step = 1) start stop =
   if step = 0 then
-    []
+    ()
   else
     let rec loop current =
       if (step > 0 && current >= stop) || (step < 0 && current <= stop) then
-        []
-      else
-        current :: loop (current + step)
+        ()
+      else (
+        yield (`Int64 (Int64.of_int current));
+        loop (current + step)
+      )
     in
     loop start
 
-let range ?step from upto =
+let yield_range ?step from upto =
   match upto with
   | None ->
-      range_list 0 from
+      yield_range_list 0 from
   | Some stop ->
-      range_list ?step from stop
+      yield_range_list ?step from stop
 
 let length ~ctx (json : Json.t) =
   let utf8_codepoint_length s =
@@ -1594,21 +1736,27 @@ let flatten ~ctx depth (json : Json.t) =
 let sort ~ctx (json : Json.t) =
   match json with
   | `List l ->
-      `List (List.sort Json.compare l)
+      `List (List.stable_sort Json.compare l)
   | _ ->
       fail_invalid_type ~ctx "sort" json
 
 let unique ~ctx (json : Json.t) =
   match json with
   | `List l ->
+      (* Hash set instead of `List.mem x acc`: same structural-equality,
+         first-occurrence semantics, but O(1) average lookup instead of
+         O(n), avoiding an O(n^2) blowup on large inputs. *)
+      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
       let rec unique acc = function
         | [] ->
             List.rev acc
         | x :: xs ->
-            if List.mem x acc then
+            if Hashtbl.mem seen x then
               unique acc xs
-            else
+            else (
+              Hashtbl.add seen x ();
               unique (x :: acc) xs
+            )
       in
       `List (unique [] l)
   | _ ->
@@ -1835,13 +1983,35 @@ let descend_depth json =
   in
   List.rev (descend [] json)
 
+(* [sub]/[gsub] only ever see a pattern that is a string literal fixed at
+   parse time (Language.ml requires it), so the same pattern text is
+   recompiled on every input value that flows through a `map`/pipe. Cache
+   the compiled regex (or the fact that it fails to compile) keyed by
+   pattern text, bounded so a pathological program can't grow it forever. *)
+let regex_cache : (string, Re.re option) Hashtbl.t = Hashtbl.create 16
+
+let compiled_pcre_cached pattern =
+  match Hashtbl.find_opt regex_cache pattern with
+  | Some cached ->
+      cached
+  | None ->
+      let compiled =
+        try Some (Re.compile (Re.Pcre.re pattern)) with _ -> None
+      in
+      if Hashtbl.length regex_cache >= 64 then Hashtbl.reset regex_cache;
+      Hashtbl.add regex_cache pattern compiled;
+      compiled
+
 let replace_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
-      try
-        let regex = Re.compile (Re.Pcre.re pattern) in
-        `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
-      with _ -> json
+      match compiled_pcre_cached pattern with
+      | Some regex -> (
+          try `String (Re.replace ~all:false regex ~f:(fun _ -> replacement) s)
+          with _ -> json
+        )
+      | None ->
+          json
     )
   | _ ->
       fail_invalid_type ~ctx "replace" json
@@ -1849,10 +2019,13 @@ let replace_regex ~ctx pattern replacement json =
 let replace_all_regex ~ctx pattern replacement json =
   match json with
   | `String s -> (
-      try
-        let regex = Re.compile (Re.Pcre.re pattern) in
-        `String (Re.replace regex ~f:(fun _ -> replacement) s)
-      with _ -> json
+      match compiled_pcre_cached pattern with
+      | Some regex -> (
+          try `String (Re.replace regex ~f:(fun _ -> replacement) s)
+          with _ -> json
+        )
+      | None ->
+          json
     )
   | _ ->
       fail_invalid_type ~ctx "replace_all" json
@@ -1977,7 +2150,7 @@ let split_sep ~ctx sep json =
         if sep = "" then
           List.init (String.length s) (fun i -> String.make 1 (String.get s i))
         else
-          Re.split_delim (Re.compile (Re.str sep)) s
+          Literal_str.split s sep
       in
       `List (List.map (fun p -> `String p) parts)
   | _ ->
@@ -2800,14 +2973,7 @@ and range_expr ~ctx from_expr upto_expr step_expr json =
   List.iter
     (fun from ->
       List.iter
-        (fun upto ->
-          List.iter
-            (fun step ->
-              let vals = range ?step from upto in
-              List.iter (fun i -> yield (`Int64 (Int64.of_int i))) vals
-            )
-            steps
-        )
+        (fun upto -> List.iter (fun step -> yield_range ?step from upto) steps)
         uptos
     )
     froms
@@ -2918,9 +3084,11 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
 and sort_by ~ctx expr json =
   match json with
   | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
+      (* Decorate-sort-undecorate: evaluate the key expression once per
+         element instead of once per comparison (List.sort would otherwise
+         call it O(n log n) times). *)
+      let decorated = List.map (fun item -> (collect ~ctx expr item, item)) l in
+      let compare_by (res_a, _) (res_b, _) =
         let rec compare_lists la lb =
           match (la, lb) with
           | [], [] ->
@@ -2938,8 +3106,8 @@ and sort_by ~ctx expr json =
         in
         compare_lists res_a res_b
       in
-      let sorted = List.sort compare_by l in
-      yield (`List sorted)
+      let sorted = List.stable_sort compare_by decorated in
+      yield (`List (List.map snd sorted))
   | _ ->
       fail_invalid_type ~ctx "sort_by" json
 
@@ -2947,25 +3115,30 @@ and min_by ~ctx expr json =
   match json with
   | `List [] ->
       Runtime_error.empty_array "min_by"
-  | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
-        match (res_a, res_b) with
-        | [ av ], [ bv ] ->
-            Json.compare av bv
-        | _ ->
-            0
+  | `List (hd :: tl) ->
+      (* Evaluate each element's key once instead of re-evaluating the
+         accumulator's key on every fold step. *)
+      let key_of x =
+        match collect ~ctx expr x with [ v ] -> Some v | _ -> None
       in
-      let min_elem =
+      let is_less kx acc_key =
+        match (kx, acc_key) with
+        | Some a, Some b ->
+            Json.compare a b < 0
+        | _ ->
+            false
+      in
+      let _, min_elem =
         List.fold_left
-          (fun acc x ->
-            if compare_by x acc < 0 then
-              x
+          (fun (acc_key, acc_elem) x ->
+            let kx = key_of x in
+            if is_less kx acc_key then
+              (kx, x)
             else
-              acc
+              (acc_key, acc_elem)
           )
-          (List.hd l) (List.tl l)
+          (key_of hd, hd)
+          tl
       in
       yield min_elem
   | _ ->
@@ -2975,25 +3148,28 @@ and max_by ~ctx expr json =
   match json with
   | `List [] ->
       Runtime_error.empty_array "max_by"
-  | `List l ->
-      let compare_by a b =
-        let res_a = collect ~ctx expr a in
-        let res_b = collect ~ctx expr b in
-        match (res_a, res_b) with
-        | [ av ], [ bv ] ->
-            Json.compare av bv
-        | _ ->
-            0
+  | `List (hd :: tl) ->
+      let key_of x =
+        match collect ~ctx expr x with [ v ] -> Some v | _ -> None
       in
-      let max_elem =
+      let is_greater kx acc_key =
+        match (kx, acc_key) with
+        | Some a, Some b ->
+            Json.compare a b > 0
+        | _ ->
+            false
+      in
+      let _, max_elem =
         List.fold_left
-          (fun acc x ->
-            if compare_by x acc > 0 then
-              x
+          (fun (acc_key, acc_elem) x ->
+            let kx = key_of x in
+            if is_greater kx acc_key then
+              (kx, x)
             else
-              acc
+              (acc_key, acc_elem)
           )
-          (List.hd l) (List.tl l)
+          (key_of hd, hd)
+          tl
       in
       yield max_elem
   | _ ->
@@ -3002,22 +3178,28 @@ and max_by ~ctx expr json =
 and unique_by ~ctx expr json =
   match json with
   | `List l ->
-      let rec unique acc seen = function
+      (* A hash set gives the same first-occurrence semantics as the old
+         `List.mem key seen` scan (structural equality), but O(1) average
+         lookup instead of O(n), avoiding an O(n^2) blowup on large inputs. *)
+      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
+      let rec unique acc = function
         | [] ->
             List.rev acc
         | x :: xs -> (
             let keys = collect ~ctx expr x in
             match keys with
             | [ key ] ->
-                if List.mem key seen then
-                  unique acc seen xs
-                else
-                  unique (x :: acc) (key :: seen) xs
+                if Hashtbl.mem seen key then
+                  unique acc xs
+                else (
+                  Hashtbl.add seen key ();
+                  unique (x :: acc) xs
+                )
             | _ ->
-                unique (x :: acc) seen xs
+                unique (x :: acc) xs
           )
       in
-      yield (`List (unique [] [] l))
+      yield (`List (unique [] l))
   | _ ->
       fail_invalid_type ~ctx "unique_by" json
 
@@ -3581,7 +3763,7 @@ and contains ~ctx expr json =
   let rec value_contains haystack needle =
     match (haystack, needle) with
     | `String s, `String sub ->
-        Re.execp (Re.compile (Re.str sub)) s
+        sub = "" || Option.is_some (Literal_str.index_from s sub 0)
     | `List haystack, `List needle ->
         (* every element in needle must be contained by some element in haystack *)
         List.for_all
@@ -3670,7 +3852,12 @@ and inside ~ctx expr json =
   |> List.iter (fun container ->
       match (json, container) with
       | `String needle, `String haystack ->
-          yield (`Bool (Re.execp (Re.compile (Re.str needle)) haystack))
+          yield
+            (`Bool
+               (needle = ""
+               || Option.is_some (Literal_str.index_from haystack needle 0)
+               )
+            )
       | `List needles, `List haystack ->
           yield
             (`Bool
@@ -3882,21 +4069,36 @@ and first_of_expr ~ctx expr json =
       yield v
 
 and last_of_array ~ctx json =
+  (* Walk to the end instead of List.rev-ing the whole array just to read
+     its head: same O(n) time, no extra n-cons-cell allocation. *)
+  let rec last = function
+    | [ x ] ->
+        x
+    | _ :: tl ->
+        last tl
+    | [] ->
+        assert false
+  in
   match json with
   | `List [] ->
       Runtime_error.empty_array "last"
   | `List l ->
-      yield (List.hd (List.rev l))
+      yield (last l)
   | _ ->
       fail_invalid_type ~ctx "last" json
 
 and last_of_expr ~ctx expr json =
-  match collect ~ctx expr json with
-  | [] ->
+  (* Track the last yielded value directly instead of collecting every
+     value into a list and reversing it twice (once inside [collect], once
+     here) just to read the final element. *)
+  let found = ref None in
+  on_yield (fun () -> interp ~ctx expr json) ~then_:(fun v -> found := Some v);
+  match !found with
+  | None ->
       Runtime_error.empty_result ~op:"last"
         ~suggestion:"Use last? for optional access" ()
-  | l ->
-      yield (List.hd (List.rev l))
+  | Some v ->
+      yield v
 
 and nth ~ctx n_expr expr json =
   let n_results = collect ~ctx n_expr json in
