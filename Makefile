@@ -84,11 +84,17 @@ format-check: ## Checks if format is correct
 subst: ## Run dune substitute
 	$(DUNE) subst
 
+.PHONY: pin-list
+pin-list: # list pinned dependencies, one "<name> <url>" per line
+	@echo "toffee.dev https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df"
+	@echo "matrix.dev https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df"
+	@echo "mosaic.dev https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df"
+
 .PHONY: pin
 pin: # pin dependencies
-	opam pin add toffee.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
-	opam pin add matrix.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
-	opam pin add mosaic.dev "https://github.com/tmattio/mosaic.git#12e4c090f941442e9d55d2816873f596399eb8df" -y
+	@$(MAKE) -s pin-list | while read -r name url; do \
+		opam pin add "$$name" "$$url" -y || exit 1; \
+	done
 
 
 .PHONY: create-switch

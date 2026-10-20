@@ -50,118 +50,26 @@ jobs:
           node-version: 22.x
           cache: 'npm'
 
-      - name: Load opam cache
-        id: opam-cache
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-            C:\cygwin
-            C:\.opam
-          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('dune-project', 'Makefile') }}
+      - name: List pins
+        id: pins
+        shell: bash
+        run: |
+          {
+            echo 'list<<EOF'
+            make -s pin-list
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Use OCaml ${{ env.OCAML_COMPILER }}
-        uses: ocaml/setup-ocaml@v3
-        if: steps.opam-cache.outputs.cache-hit != 'true'
+      - name: Setup OCaml and dependencies
+        uses: ml-in-barcelona/gh-ci-action@v1.0.0
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
-          dune-cache: true
-          opam-disable-sandboxing: true
+          pins: ${{ steps.pins.outputs.list }}
+          with-doc: true
+          with-dev-setup: true
 
-      - name: Get OPAM executable path
-        if: steps.opam-cache.outputs.cache-hit != 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const opam_path = await io.which('opam', true);
-            console.log('opam executable found: %s', opam_path);
-            const Fs = require('fs/promises');
-            await Fs.writeFile('.opam-path', opam_path, 'utf-8');
-            console.log('stored path to .opam-path');
-
-      - name: Use cached OPAM environment
-        if: steps.opam-cache.outputs.cache-hit == 'true'
-        run: |
-          # https://github.com/ocaml/setup-ocaml/blob/v3.4.6/packages/setup-ocaml/src/installer.ts
-          echo "OPAMCOLOR=always"                    >> "$GITHUB_ENV"
-          echo "OPAMCONFIRMLEVEL=unsafe-yes"         >> "$GITHUB_ENV"
-          echo "OPAMDOWNLOADJOBS=4"                  >> "$GITHUB_ENV"
-          echo "OPAMERRLOGLEN=0"                     >> "$GITHUB_ENV"
-          echo "OPAMEXTERNALSOLVER=builtin-0install" >> "$GITHUB_ENV"
-          echo "OPAMPRECISETRACKING=1"               >> "$GITHUB_ENV"
-          echo "OPAMRETRIES=10"                      >> "$GITHUB_ENV"
-          echo "OPAMSOLVERTIMEOUT=600"               >> "$GITHUB_ENV"
-          echo "OPAMYES=1"                           >> "$GITHUB_ENV"
-          echo "CLICOLOR_FORCE=1"                    >> "$GITHUB_ENV"
-
-          if [[ "$RUNNER_OS" != "Windows" ]]; then
-            echo "OPAMROOT=$HOME/.opam"      >> "$GITHUB_ENV"
-          else
-            echo "OPAMROOT=C:\\.opam"        >> "$GITHUB_ENV"
-          fi
-
-          OPAM_PATH="$(cat .opam-path)"
-          chmod +x "$OPAM_PATH"
-          dirname "$OPAM_PATH" >> "$GITHUB_PATH"
-
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            fsutil behavior query SymlinkEvaluation
-            fsutil behavior set symlinkEvaluation R2L:1 R2R:1
-            fsutil behavior query SymlinkEvaluation
-
-            echo "HOME=$USERPROFILE" >> "$GITHUB_ENV"
-            echo "MSYS=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "CYGWIN=winsymlinks:native" >> "$GITHUB_ENV"
-            echo "BASH_ENV=C:\\cygwin\\bash_env" >> "$GITHUB_ENV"
-
-            # Add Cygwin bin to PATH - required for OCaml binaries to find DLLs
-            echo "C:\\cygwin\\bin" >> "$GITHUB_PATH"
-            echo "C:\\cygwin\\wrapperbin" >> "$GITHUB_PATH"
-          fi
-        shell: bash
-
-      - name: Pin some deps
-        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
-        run: make pin
-
-      - name: Pin some deps (Windows with retry)
-        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $maxRetries = 3
-          $retryCount = 0
-          do {
-            $retryCount++
-            Write-Host "Attempt $retryCount of $maxRetries"
-            make pin
-            if ($LASTEXITCODE -eq 0) { break }
-            Write-Host "Attempt failed, waiting 10 seconds before retry..."
-            Start-Sleep -Seconds 10
-          } while ($retryCount -lt $maxRetries)
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-
-      - name: Install deps
-        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os != 'windows-latest'
-        run: make install
-
-      - name: Install deps (Windows with retry)
-        if: steps.opam-cache.outputs.cache-hit != 'true' && matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $maxRetries = 3
-          $retryCount = 0
-          do {
-            $retryCount++
-            Write-Host "Attempt $retryCount of $maxRetries"
-            make install
-            if ($LASTEXITCODE -eq 0) { break }
-            Write-Host "Attempt failed, waiting 10 seconds before retry..."
-            Start-Sleep -Seconds 10
-          } while ($retryCount -lt $maxRetries)
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Load dune cache
+        uses: ml-in-barcelona/gh-ci-action/dune-cache/load@v1.0.0
 
       - name: Install npm deps
         run: make npm-install
@@ -171,6 +79,10 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Save dune cache
+        if: ${{ !cancelled() }}
+        uses: ml-in-barcelona/gh-ci-action/dune-cache/save@v1.0.0
 
       - name: Install benchmark tools
         if: matrix.os == 'ubuntu-latest'
@@ -197,19 +109,6 @@ jobs:
         with:
           name: query-json-js
           path: _build/default/js/js.bc.js
-
-      - name: Save opam cache
-        uses: actions/cache/save@v5
-        if: steps.opam-cache.outputs.cache-hit != 'true'
-        with:
-          path: |
-            ${{ runner.tool_cache }}/opam
-            ~/.opam
-            _opam
-            .opam-path
-            C:\cygwin
-            C:\.opam
-          key: opam-${{ matrix.os }}-${{ matrix.arch }}-${{ env.OCAML_COMPILER }}-${{ hashFiles('dune-project', 'Makefile') }}
 
       # ========================================
       # Website deploy (ubuntu-latest, main/PR)
