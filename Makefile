@@ -74,11 +74,11 @@ setup-githooks: ## Setup githooks
 
 .PHONY: format
 format: ## Format the codebase with ocamlformat
-	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build @fmt --auto-promote
+	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build --root . @fmt --auto-promote
 
 .PHONY: format-check
 format-check: ## Checks if format is correct
-	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build @fmt
+	@DUNE_CONFIG__GLOBAL_LOCK=disabled $(DUNE) build --root . @fmt
 
 .PHONY: subst
 subst: ## Run dune substitute
