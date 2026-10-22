@@ -61,7 +61,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Setup OCaml and dependencies
-        uses: ml-in-barcelona/gh-ci-action@v1.1.0
+        uses: ml-in-barcelona/gh-ci-action@v1.2.0
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
           pins: ${{ steps.pins.outputs.list }}
@@ -69,7 +69,7 @@ jobs:
           with-dev-setup: true
 
       - name: Load dune cache
-        uses: ml-in-barcelona/gh-ci-action/dune-cache/load@v1.1.0
+        uses: ml-in-barcelona/gh-ci-action/dune-cache/load@v1.2.0
 
       - name: Install npm deps
         run: make npm-install
@@ -81,7 +81,7 @@ jobs:
         run: make test
 
       - name: Save dune cache
-        uses: ml-in-barcelona/gh-ci-action/dune-cache/save@v1.1.0
+        uses: ml-in-barcelona/gh-ci-action/dune-cache/save@v1.2.0
 
       - name: Install benchmark tools
         if: matrix.os == 'ubuntu-latest'
