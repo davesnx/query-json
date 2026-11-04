@@ -347,7 +347,15 @@ and read_array_sep v = parse
   | _    { long_error "Expected ',' or ']' but found" v lexbuf }
   | eof  { custom_error "Unexpected end of input" v lexbuf }
 
+and read_array_start = parse
+  | '['  { true }
+  | ""   { false }
+
 (* Object structure *)
+and read_object_start = parse
+  | '{'  { true }
+  | ""   { false }
+
 and read_object_end = parse
   | '}'  { raise Common.End_of_object }
   | ""   { () }
@@ -527,15 +535,11 @@ and read_abstract_fields read_key read_field init_acc v = parse
 
 (* Skip rules - for ignoring field values *)
 and skip_json v = parse
-  | "true" | "false" | "null" | "NaN" | "Infinity" | "-Infinity" { () }
-  | '"'                 { finish_skip_stringlit v lexbuf }
-  | '-'? positive_int   { () }
-  | float               { () }
   | '{' {
       try
         read_space v lexbuf;
         read_object_end lexbuf;
-        skip_ident v lexbuf;
+        ignore (read_ident v lexbuf);
         read_space v lexbuf;
         read_colon v lexbuf;
         read_space v lexbuf;
@@ -544,7 +548,7 @@ and skip_json v = parse
           read_space v lexbuf;
           read_object_sep v lexbuf;
           read_space v lexbuf;
-          skip_ident v lexbuf;
+          ignore (read_ident v lexbuf);
           read_space v lexbuf;
           read_colon v lexbuf;
           read_space v lexbuf;
@@ -571,19 +575,7 @@ and skip_json v = parse
   | "/*"         { finish_comment v lexbuf; skip_json v lexbuf }
   | "\n"         { newline v lexbuf; skip_json v lexbuf }
   | space        { skip_json v lexbuf }
-  | eof          { custom_error "Unexpected end of input" v lexbuf }
-  | _            { long_error "Invalid token" v lexbuf }
-
-and finish_skip_stringlit v = parse
-  | ('\\' (['"' '\\' '/' 'b' 'f' 'n' 'r' 't'] | 'u' hex hex hex hex) | [^'"' '\\'])* '"' { () }
-  | _   { long_error "Invalid string literal" v lexbuf }
-  | eof { custom_error "Unexpected end of input" v lexbuf }
-
-and skip_ident v = parse
-  | '"'   { finish_skip_stringlit v lexbuf }
-  | ident { () }
-  | _     { long_error "Expected string or identifier but found" v lexbuf }
-  | eof   { custom_error "Unexpected end of input" v lexbuf }
+  | ""           { ignore (read_json v lexbuf) }
 
 (* Buffer rules - for capturing deferred values *)
 and buffer_json v = parse
@@ -764,15 +756,18 @@ and finish_buffer_comment v = parse
       from_lexbuf v lexbuf
     with Common.End_of_input -> Common.json_error "Blank input data"
 
-  let from_file ?buf ?fname ?lnum file =
+  let with_file read file =
     let ic = open_in file in
     try
-      let x = from_channel ?buf ?fname ?lnum ic in
+      let x = read ic in
       close_in ic;
       x
     with e ->
       close_in_noerr ic;
       raise e
+
+  let from_file ?buf ?fname ?lnum file =
+    with_file (from_channel ?buf ?fname ?lnum) file
 
   exception Finally of exn * exn
 
@@ -827,21 +822,254 @@ and finish_buffer_comment v = parse
   exception Json_error = Common.Json_error
 
   (* Result-based parsing wrappers *)
-  let parse_string str =
-    try Ok (from_string str)
+  let parse_with_error context read input =
+    try Ok (read input)
     with
     | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading the string")
+    | e -> Error (Printexc.to_string e ^ " There was an error reading " ^ context)
+
+  let parse_string str =
+    parse_with_error "the string" from_string str
 
   let parse_file file =
-    try Ok (from_file file)
-    with
-    | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading the file")
+    parse_with_error "the file" from_file file
 
   let parse_channel channel =
-    try Ok (from_channel channel)
-    with
-    | Common.Json_error msg -> Error ("JSON parse error: " ^ msg)
-    | e -> Error (Printexc.to_string e ^ " There was an error reading from standard input")
+    parse_with_error "from standard input" from_channel channel
+
+  module Input = struct
+    type source = String of string | File of string | Channel of in_channel | Value of t
+    type selection = Whole of t | Selected of t
+    type item_location = Root | Member of string
+    type 'a step = Continue of 'a | Validate_rest of 'a
+    type 'a items_result = Folded of 'a | Materialized of selection
+
+    type position = First | Next | Tail | Done
+    type cursor = { next : unit -> t option; drain : unit -> unit }
+    type probe = Items of cursor | Ready of selection
+
+    let array_closed read =
+      try read (); false with Common.End_of_array -> true
+
+    let object_closed read =
+      try read (); false with Common.End_of_object -> true
+
+    let read_key v lexbuf =
+      let name = read_ident v lexbuf in
+      read_space v lexbuf;
+      read_colon v lexbuf;
+      read_space v lexbuf;
+      name
+
+    let container_cursor v lexbuf ~is_object ~after =
+      let position = ref First in
+      let at_end () =
+        if is_object then object_closed (fun () -> read_object_end lexbuf)
+        else array_closed (fun () -> read_array_end lexbuf)
+      in
+      let boundary () =
+        read_space v lexbuf;
+        let closed =
+          if is_object then object_closed (fun () -> read_object_sep v lexbuf)
+          else array_closed (fun () -> read_array_sep v lexbuf)
+        in
+        position := if closed then Tail else Next
+      in
+      let rec advance read () =
+        match !position with
+        | Done -> None
+        | Tail -> after (); position := Done; None
+        | First ->
+            read_space v lexbuf;
+            position := if at_end () then Tail else Next;
+            advance read ()
+        | Next ->
+            read_space v lexbuf;
+            if is_object then ignore (read_key v lexbuf);
+            let value = read v lexbuf in
+            boundary ();
+            Some value
+      in
+      let rec drain () =
+        match advance skip_json () with
+        | None -> ()
+        | Some () -> drain ()
+      in
+      { next = advance read_json; drain }
+
+    let probe_items at lexbuf =
+      let v = init_lexer () in
+      let finish () = finish v lexbuf in
+      let materialize selection = finish (); Ready selection in
+      let container ~after =
+        if read_array_start lexbuf then
+          Some (Items (container_cursor v lexbuf ~is_object:false ~after))
+        else if read_object_start lexbuf then
+          Some (Items (container_cursor v lexbuf ~is_object:true ~after))
+        else None
+      in
+      let rec object_tail () =
+        read_space v lexbuf;
+        if object_closed (fun () -> read_object_sep v lexbuf) then finish ()
+        else begin
+          read_space v lexbuf;
+          ignore (read_key v lexbuf);
+          skip_json v lexbuf;
+          object_tail ()
+        end
+      in
+      let rec member key fields =
+        let name = read_key v lexbuf in
+        if name = key then
+          match container ~after:object_tail with
+          | Some items -> items
+          | None ->
+              let value = read_json v lexbuf in
+              object_tail ();
+              Ready (Selected value)
+        else begin
+          let value = read_json v lexbuf in
+          let fields = (name, value) :: fields in
+          read_space v lexbuf;
+          if object_closed (fun () -> read_object_sep v lexbuf) then
+            materialize (Whole (`Assoc (List.rev fields)))
+          else begin
+            read_space v lexbuf;
+            member key fields
+          end
+        end
+      in
+      read_space v lexbuf;
+      if read_eof lexbuf then Common.json_error "Blank input data";
+      match at with
+      | Root ->
+          (match container ~after:finish with
+          | Some items -> items
+          | None -> materialize (Whole (read_json v lexbuf)))
+      | Member key ->
+          if not (read_object_start lexbuf) then
+            materialize (Whole (read_json v lexbuf))
+          else begin
+            read_space v lexbuf;
+            if object_closed (fun () -> read_object_end lexbuf) then
+              materialize (Whole (`Assoc []))
+            else member key []
+          end
+
+    let fold_lexbuf context ~at ~init ~f lexbuf =
+      let parse read = parse_with_error context read () in
+      let rec loop cursor state =
+        match parse cursor.next with
+        | Error _ as error -> error
+        | Ok None -> Ok (Folded state)
+        | Ok (Some value) ->
+            match f state value with
+            | Continue state -> loop cursor state
+            | Validate_rest state ->
+                Result.map (fun () -> Folded state) (parse cursor.drain)
+      in
+      match parse (fun () -> probe_items at lexbuf) with
+      | Error _ as error -> error
+      | Ok (Ready selection) -> Ok (Materialized selection)
+      | Ok (Items cursor) -> loop cursor init
+
+    let fold_value ~at ~init ~f value =
+      let rec fold get state = function
+        | [] -> Folded state
+        | item :: rest ->
+            match f state (get item) with
+            | Continue state -> fold get state rest
+            | Validate_rest state -> Folded state
+      in
+      let selection =
+        match at, value with
+        | Member key, `Assoc fields ->
+            (match List.assoc_opt key fields with
+            | Some value -> Selected value
+            | None -> Whole value)
+        | _ -> Whole value
+      in
+      let target = match selection with Whole value | Selected value -> value in
+      match at, selection, target with
+      | Member _, Whole _, _ -> Materialized selection
+      | _, _, `List items -> fold Fun.id init items
+      | _, _, `Assoc fields -> fold snd init fields
+      | _ -> Materialized selection
+
+    let fold_items ~at ~init ~f source =
+      let from_channel context channel =
+        fold_lexbuf context ~at ~init ~f (Lexing.from_channel channel)
+      in
+      match source with
+      | Value value -> Ok (fold_value ~at ~init ~f value)
+      | String text -> fold_lexbuf "the string" ~at ~init ~f (Lexing.from_string text)
+      | Channel channel -> from_channel "from standard input" channel
+      | File file ->
+          match parse_with_error "the file" open_in file with
+          | Error _ as error -> error
+          | Ok channel ->
+              match from_channel "the file" channel with
+              | result -> close_in_noerr channel; result
+              | exception error ->
+                  let backtrace = Printexc.get_raw_backtrace () in
+                  close_in_noerr channel;
+                  Printexc.raise_with_backtrace error backtrace
+
+    let read_selected key lexbuf =
+      let v = init_lexer () in
+      read_space v lexbuf;
+      if read_eof lexbuf then Common.json_error "Blank input data";
+      let result =
+        if not (read_object_start lexbuf) then Whole (read_json v lexbuf)
+        else
+          let fields = ref [] in
+          let selected = ref None in
+          let read_field () =
+            let name = read_ident v lexbuf in
+            read_space v lexbuf;
+            read_colon v lexbuf;
+            read_space v lexbuf;
+            match !selected with
+            | Some _ -> skip_json v lexbuf
+            | None ->
+                if name = key then begin
+                  fields := [];
+                  selected := Some (read_json v lexbuf)
+                end else
+                  fields := (name, read_json v lexbuf) :: !fields
+          in
+          (try
+            read_space v lexbuf;
+            read_object_end lexbuf;
+            read_field ();
+            while true do
+              read_space v lexbuf;
+              read_object_sep v lexbuf;
+              read_space v lexbuf;
+              read_field ()
+            done
+          with Common.End_of_object -> ());
+          match !selected with
+          | Some value -> Selected value
+          | None -> Whole (`Assoc (List.rev !fields))
+      in
+      finish v lexbuf;
+      result
+
+    let read ~select source =
+      match select, source with
+      | _, Value value -> Ok (Whole value)
+      | None, String str -> Result.map (fun value -> Whole value) (parse_string str)
+      | None, File file -> Result.map (fun value -> Whole value) (parse_file file)
+      | None, Channel channel -> Result.map (fun value -> Whole value) (parse_channel channel)
+      | Some key, String str ->
+          parse_with_error "the string"
+            (fun str -> read_selected key (Lexing.from_string str)) str
+      | Some key, File file ->
+          parse_with_error "the file"
+            (with_file (fun channel -> read_selected key (Lexing.from_channel channel))) file
+      | Some key, Channel channel ->
+          parse_with_error "from standard input"
+            (fun channel -> read_selected key (Lexing.from_channel channel)) channel
+  end
 }

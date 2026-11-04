@@ -2,6 +2,7 @@
  (name Core)
  (wrapped false)
  (public_name query-json.core)
+ (private_modules Runtime)
  (libraries json sedlex re unix zarith query-json.console-style)
  (preprocess
   (pps ppx_deriving.show sedlex.ppx))
