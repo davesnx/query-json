@@ -320,7 +320,7 @@ jobs:
 
       - name: Publish to opam
         if: matrix.os == 'ubuntu-latest' && startsWith(github.ref, 'refs/tags/')
-        uses: davesnx/dune-release-action@v0.4.0
+        uses: davesnx/dune-release-action@v0.6.0
         with:
           packages: 'query-json'
           changelog: './CHANGES.md'
