@@ -71,6 +71,30 @@ let from_file () =
     (Json.from_file input_file);
   Sys.remove input_file
 
+let from_file_fail_across_chunk () =
+  let json =
+    "[" ^ String.make 65510 ' ' ^ "1, xyzabcdefghijklmnopqrstuvwxyz0123456789]"
+  in
+  let input_file = Filename.temp_file "test_jotason_chunk" ".json" in
+  let oc = open_out_bin input_file in
+  output_string oc json;
+  close_out oc;
+  let error f =
+    try
+      ignore (f ());
+      ""
+    with Json.Json_error msg -> msg
+  in
+  let from_string = error (fun () -> Json.from_string json) in
+  let from_file = error (fun () -> Json.from_file input_file) in
+  Sys.remove input_file;
+  Alcotest.(check string)
+    "string error"
+    "Line 1, bytes 65514-65547:\n\
+     Invalid token 'xyzabcdefghijklmnopqrstuvwxyz0123'"
+    from_string;
+  Alcotest.(check string) "file error equals string error" from_string from_file
+
 let unquoted_from_string () =
   Alcotest.(check Testable.jotason)
     __LOC__ Fixtures.unquoted_value
@@ -338,6 +362,7 @@ let single_json =
     );
     ("from_string_fail_escaped_char", `Quick, from_string_fail_escaped_char);
     ("from_file", `Quick, from_file);
+    ("from_file_fail_across_chunk", `Quick, from_file_fail_across_chunk);
     ("unquoted_from_string", `Quick, unquoted_from_string);
     (* Primitives *)
     ("parse_null", `Quick, parse_null);
