@@ -111,12 +111,6 @@ let rec finish_line_comment s =
     )
 
 let rec skip_space s =
-  while
-    s.pos < s.len
-    && match peek s 0 with ' ' | '\t' | '\r' -> true | _ -> false
-  do
-    s.pos <- s.pos + 1
-  done;
   s.mark <- s.pos;
   if more s then
     match peek s 0 with
@@ -271,46 +265,22 @@ let rec skip_digits s k =
   else
     k
 
-let min10 =
-  (min_int / 10)
-  -
-  if min_int mod 10 = 0 then
-    0
-  else
-    1
-let max10 =
-  (max_int / 10)
-  +
-  if max_int mod 10 = 0 then
-    0
-  else
-    1
-
 exception Int_overflow
 
 let extract_int s k =
   let neg = peek s 0 = '-' in
   let n = ref 0 in
-  for
-    i =
-      if neg then
-        1
-      else
-        0 to k - 1
-  do
-    let d = Char.code (peek s i) - 48 in
-    if neg then
-      if !n <= min10 then
-        raise Int_overflow
-      else
-        n := (10 * !n) - d
-    else if !n >= max10 then
-      raise Int_overflow
-    else
-      n := (10 * !n) + d
+  for i = Bool.to_int neg to k - 1 do
+    if !n < min_int / 10 then raise Int_overflow;
+    n := (10 * !n) - (Char.code (peek s i) - 48);
+    if !n > 0 then raise Int_overflow
   done;
-  if (neg && !n > 0) || ((not neg) && !n < 0) then raise Int_overflow;
-  !n
+  if neg then
+    !n
+  else if !n = min_int then
+    raise Int_overflow
+  else
+    - !n
 
 let read_number s : t =
   let k =
@@ -519,35 +489,15 @@ let from_channel ?buf ?fname ?lnum ic =
   read_toplevel (make ?buf ?fname ?lnum (Some ic) (Bytes.create 65536) 0)
 
 let from_file ?buf ?fname ?lnum file =
-  let ic = open_in file in
-  try
-    let x = from_channel ?buf ?fname ?lnum ic in
-    close_in ic;
-    x
-  with e ->
-    close_in_noerr ic;
-    raise e
+  In_channel.with_open_text file (from_channel ?buf ?fname ?lnum)
 
-let parse_string str =
-  try Ok (from_string str) with
+let parse what f x =
+  try Ok (f x) with
   | Json_error msg ->
       Error ("JSON parse error: " ^ msg)
   | e ->
-      Error (Printexc.to_string e ^ " There was an error reading the string")
+      Error (Printexc.to_string e ^ " There was an error reading " ^ what)
 
-let parse_file file =
-  try Ok (from_file file) with
-  | Json_error msg ->
-      Error ("JSON parse error: " ^ msg)
-  | e ->
-      Error (Printexc.to_string e ^ " There was an error reading the file")
-
-let parse_channel channel =
-  try Ok (from_channel channel) with
-  | Json_error msg ->
-      Error ("JSON parse error: " ^ msg)
-  | e ->
-      Error
-        (Printexc.to_string e
-       ^ " There was an error reading from standard input"
-        )
+let parse_string = parse "the string" (fun s -> from_string s)
+let parse_file = parse "the file" (fun f -> from_file f)
+let parse_channel = parse "from standard input" (fun c -> from_channel c)
