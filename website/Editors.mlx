@@ -51,20 +51,33 @@ module CopyButton = struct
     in
     <button
       onClick=on_click
-      className="flex items-center gap-1 px-2 py-1 text-xs \
-                 text-muted-foreground hover:text-foreground hover:bg-accent \
-                 rounded transition-colors cursor-pointer"
+      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground \
+                 hover:bg-accent rounded transition-colors cursor-pointer"
       ariaLabel="Copy output">
-      ( match copied with
-      | true ->
-          <React.Fragment>
-            <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
-          </React.Fragment>
-      | false ->
-          <React.Fragment>
-            <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
-          </React.Fragment>
-      )
+      <span className="grid">
+        <span
+          className=("col-start-1 row-start-1 flex items-center justify-center \
+                      gap-1"
+                    ^
+                    if copied then
+                      ""
+                    else
+                      " invisible"
+                    )>
+          <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
+        </span>
+        <span
+          className=("col-start-1 row-start-1 flex items-center justify-center \
+                      gap-1"
+                    ^
+                    if copied then
+                      " invisible"
+                    else
+                      ""
+                    )>
+          <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
+        </span>
+      </span>
     </button>
 end
 

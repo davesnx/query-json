@@ -190,17 +190,31 @@ module Playground_page = struct
           kind=Secondary
           size=Sm
           on_click=on_share_click
-          className="min-w-[110px] whitespace-nowrap">
-          ( match state.copied with
-          | true ->
-              <span className="flex items-center gap-2">
-                <Icons.Check size=Small /> (React.string "Copied!")
-              </span>
-          | false ->
-              <span className="flex items-center gap-2">
-                <Icons.Link2 size=Small /> (React.string "Copy unique URL")
-              </span>
-          )
+          className="whitespace-nowrap">
+          <span className="grid">
+            <span
+              className=("col-start-1 row-start-1 flex items-center \
+                          justify-center gap-2"
+                        ^
+                        if state.copied then
+                          ""
+                        else
+                          " invisible"
+                        )>
+              <Icons.Check size=Small /> (React.string "Copied!")
+            </span>
+            <span
+              className=("col-start-1 row-start-1 flex items-center \
+                          justify-center gap-2"
+                        ^
+                        if state.copied then
+                          " invisible"
+                        else
+                          ""
+                        )>
+              <Icons.Link2 size=Small /> (React.string "Copy unique URL")
+            </span>
+          </span>
         </Button>
       </TextInput>
       <Editors
