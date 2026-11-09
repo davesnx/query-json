@@ -1,7 +1,3 @@
-Following the plan: let's implement 5 now. Keep adding tests for features in @test/Test_runtime.ml and @test/Test_errors.ml. Also, the parser @source/Parser.mly should have 0 conflicts, so @source/Parser.conflicts should not exist (it should raise an issue if the file exists, conceptually)!
-
-Also, add any problem with the design of the language in the document @.cursor/LANGUAGE_IMPROVEMENTS.md
-
 # query-json Language Improvements
 
 This document outlines planned language design improvements over jq, making query-json **safer**, **more consistent**, and **easier to reason about**.
