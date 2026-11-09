@@ -1,5 +1,9 @@
 include module type of Common
 
+val trim_float_exponent : string -> string
+(** Removes the leading zero of a three-digit exponent, as the Windows C runtime
+    prints: ["1.5e-010"] becomes ["1.5e-10"]. *)
+
 val to_buffer : ?suf:string -> ?std:bool -> Buffer.t -> t -> unit
 
 val to_string :

@@ -2181,7 +2181,7 @@ let join_sep ~ctx sep json =
                 if Float.is_integer f then
                   Some (Int.to_string (Float.to_int f))
                 else
-                  Some (Float.to_string f)
+                  Some (Json.trim_float_exponent (Float.to_string f))
             | other ->
                 Some
                   (Json.to_string_pretty other ~colorize:false ~summarize:false
@@ -4178,7 +4178,7 @@ and group_by ~ctx expr json =
                     if Float.is_integer f then
                       Int.to_string (Float.to_int f)
                     else
-                      Float.to_string f
+                      Json.trim_float_exponent (Float.to_string f)
                 | `Bool b ->
                     Bool.to_string b
                 | `Null ->
