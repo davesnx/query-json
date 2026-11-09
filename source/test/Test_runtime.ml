@@ -409,7 +409,7 @@ let try_catch =
       {|"invalid value: 42"|};
     test {|try error catch .|} {|"error message"|} {|"error message"|};
     test {|try error catch .|} {|33|} {|33|};
-    test {|[.[]|try .a]|} {|[{}, true, {"a":1}]|} {|[ null, null, 1 ]|};
+    test {|[.[]|try .a]|} {|[{}, true, {"a":1}]|} {|[ null, 1 ]|};
   ]
 
 let empty =
@@ -1062,7 +1062,7 @@ let object_index_brackets =
   [
     test {|.["foo"]|} {|{"foo": 42}|} {|42|};
     test {|.["foo"]?|} {|{"foo": 42}|} {|42|};
-    test {|[.foo?]|} {|[1,2]|} {|[ null ]|};
+    test {|[.foo?]|} {|[1,2]|} {|[]|};
   ]
 
 let recursive_descent =
@@ -1108,9 +1108,38 @@ let destructuring_alternative =
 
 let optional_operator =
   [
-    test {|[.[] | .a?]|} {|[{}, true, {"a":1}]|} {|[ null, null, 1 ]|};
-    test {|[.[] | to_number?]|} {|["1", "invalid", "3", 4]|}
-      {|[ 1, null, 3, 4 ]|};
+    test {|[.[] | .a?]|} {|[{}, true, {"a":1}]|} {|[ null, 1 ]|};
+    test {|[.[] | to_number?]|} {|["1", "invalid", "3", 4]|} {|[ 1, 3, 4 ]|};
+  ]
+
+let optional_on_type_error =
+  let users =
+    {|{"users":[{"id":1,"name":"alice","active":true},{"id":2,"name":"bob","metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}|}
+  in
+  [
+    test {|.users[].metadata?.preferences?[]?.notifications?.email?|} users
+      {|"bob@example.com"|};
+    test {|.users[] | try .metadata.preferences[].notifications.email|} users
+      {|null|};
+    test {|.a?|} {|{}|} {|null|};
+    test {|.a.b?|} {|{"a":null}|} {|null|};
+    test {|.[5]?|} {|[1]|} {|null|};
+    test {|.[]?|} {|1|} {||};
+    test {|.a?|} {|"x"|} {||};
+    test {|.[]?|} {|null|} {||};
+    test {|[.[] | .a?]|} {|[1, "s", true, [], {"a": 2}]|} {|[ 2 ]|};
+    test {|try .a|} {|"x"|} {||};
+    test {|([1, .a])?|} {|"x"|} {||};
+    test {|(1, .a)?|} {|"x"|} {|1|};
+    test {|.[0]?|} {|null|} {|null|};
+    test {|.[-1]?|} {|null|} {|null|};
+    test {|.[0, 1]?|} {|null|} {|null|};
+    test {|(.[1:2])?|} {|null|} {|null|};
+    test {|(.[1:2])?|} {|1|} {||};
+    test {|try .[0]|} {|null|} {|null|};
+    test {|try foo catch .kind|} {|null|} {|"undefined_function"|};
+    test {|(1 / 0)?|} {|null|} {|null|};
+    test {|assert(. > 10)?|} {|5|} {|null|};
   ]
 
 let arithmetic_update =
@@ -1268,7 +1297,7 @@ let optional_functions =
     (* The ? operator only catches errors, not empty results *)
     test {|[empty?]|} {|null|} {|[]|};
     (* Optional on functions that would otherwise error *)
-    test {|keys?|} {|123|} {|null|};
+    test {|keys?|} {|123|} {||};
     test {|keys?|} {|{"a": 1}|} {|[ "a" ]|};
     (* Optional with alternative *)
     test {|first? ?? "default"|} {|[]|} {|"default"|};
@@ -1883,6 +1912,7 @@ let tests =
       variable_binding;
       destructuring_alternative;
       optional_operator;
+      optional_on_type_error;
       arithmetic_update;
       keys;
       pick;

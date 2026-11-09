@@ -51,20 +51,33 @@ module CopyButton = struct
     in
     <button
       onClick=on_click
-      className="flex items-center gap-1 px-2 py-1 text-xs \
-                 text-muted-foreground hover:text-foreground hover:bg-accent \
-                 rounded transition-colors cursor-pointer"
+      className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground \
+                 hover:bg-accent rounded transition-colors cursor-pointer"
       ariaLabel="Copy output">
-      ( match copied with
-      | true ->
-          <React.Fragment>
-            <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
-          </React.Fragment>
-      | false ->
-          <React.Fragment>
-            <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
-          </React.Fragment>
-      )
+      <span className="grid">
+        <span
+          className=("col-start-1 row-start-1 flex items-center justify-center \
+                      gap-1"
+                    ^
+                    if copied then
+                      ""
+                    else
+                      " invisible"
+                    )>
+          <Icons.Check size=Small /> <span>(React.string "Copied!")</span>
+        </span>
+        <span
+          className=("col-start-1 row-start-1 flex items-center justify-center \
+                      gap-1"
+                    ^
+                    if copied then
+                      " invisible"
+                    else
+                      ""
+                    )>
+          <Icons.Copy size=Small /> <span>(React.string "Copy")</span>
+        </span>
+      </span>
     </button>
 end
 
@@ -101,8 +114,8 @@ let[@react.component] make ~json_value ~on_json_change ~output =
       FileReader.readAsText reader file
     )
   in
-  <main className="flex-1 flex flex-col overflow-hidden">
-    <div className="w-full h-full border-b border-border bg-muted/20">
+  <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+    <div className="w-full border-b border-border bg-muted/20">
       <div className="max-w-[1400px] mx-auto w-full h-full flex">
         <div
           className="flex-1 flex flex-col border-r border-border \
@@ -124,11 +137,12 @@ let[@react.component] make ~json_value ~on_json_change ~output =
       </div>
     </div>
     <div
-      className="w-full flex-1 flex flex-row border-b border-border \
+      className="w-full flex-1 min-h-0 flex flex-row border-b border-border \
                  bg-background">
-      <div className="max-w-[1360px] mx-auto flex-1 flex flex">
+      <div className="max-w-[1360px] mx-auto flex-1 min-w-0 flex">
         <div
-          className=("overflow-auto flex-1 flex border-r border-border relative"
+          className=("overflow-hidden flex-1 min-w-0 flex border-r \
+                      border-border relative"
                     ^
                     if is_dragging then
                       " ring-2 ring-ring ring-inset"
@@ -151,7 +165,7 @@ let[@react.component] make ~json_value ~on_json_change ~output =
               React.null
           )
         </div>
-        <div className="overflow-auto flex-1 flex">
+        <div className="overflow-hidden flex-1 min-w-0 flex">
           ( match output with
           | Some value ->
               <Editor.Output value />

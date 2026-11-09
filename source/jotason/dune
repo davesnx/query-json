@@ -1,5 +1,3 @@
-(ocamllex Read)
-
 (library
  (name json)
  (public_name query-json.jotason)
