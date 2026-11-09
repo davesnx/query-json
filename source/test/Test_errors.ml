@@ -79,6 +79,13 @@ let tests =
     test ".foo" "123" "Cannot index";
     test ".[0]" "{\"a\": 1}" "object";
     test ". + null" "\"foo\"" "Cannot add string to null";
+    test ".[0]" "null" "Cannot index null with [0]";
+    test ".[1:2]" "null" "Cannot index null with [1:2]";
+    test ".[1:2]" "1" "Cannot apply";
+    (* ? and try without catch do not hide an undefined function *)
+    test "foo?" "null" "undefined function: `foo`";
+    test "try foo" "null" "undefined function: `foo`";
+    test "[.[] | foo?]" "[1]" "undefined function: `foo`";
     (* get_path/set_path/delete_paths without arguments *)
     test "get_path" "null" "requires path";
     test "set_path" "null" "requires path and value";
