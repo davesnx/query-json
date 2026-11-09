@@ -95,6 +95,54 @@ let from_file_fail_across_chunk () =
     from_string;
   Alcotest.(check string) "file error equals string error" from_string from_file
 
+let chunk_fragments =
+  [
+    {|"abcdefghijklmnop"|};
+    {|"a\nb\"c\\d\/e\tf"|};
+    {|"\u00e9\uD83D\uDE00"|};
+    "true";
+    "false";
+    "null";
+    "NaN";
+    "Infinity";
+    "-Infinity";
+    "123456789";
+    "-0";
+    "1.5e+10";
+    "9223372036854775807";
+    "99999999999999999999999999999";
+    {|{"key":[1,2]}|};
+    "{unquoted:1}";
+    "/* comment */1";
+    "// comment\n1";
+    "tru";
+    {|"\q"|};
+    {|"\uD83Dx"|};
+    "[1 2]";
+    {|"unterminated|};
+    "/* unterminated";
+    "1 junk";
+  ]
+
+let from_file_across_chunk fragment () =
+  let result f =
+    match f () with v -> Ok v | exception Json.Json_error msg -> Error msg
+  in
+  let same_value = Alcotest.testable Json.pp (fun a b -> compare a b = 0) in
+  let input_file = Filename.temp_file "test_jotason_chunk" ".json" in
+  Fun.protect
+    ~finally:(fun () -> Sys.remove input_file)
+    (fun () ->
+      for shift = 0 to String.length fragment do
+        let json = String.make (65536 - shift) ' ' ^ fragment in
+        Out_channel.with_open_bin input_file (fun oc -> output_string oc json);
+        Alcotest.(check (result same_value string))
+          (Printf.sprintf "%S split at %d" fragment shift)
+          (result (fun () -> Json.from_string json))
+          (result (fun () -> Json.from_file input_file))
+      done
+    )
+
 let unquoted_from_string () =
   Alcotest.(check Testable.jotason)
     __LOC__ Fixtures.unquoted_value
@@ -430,3 +478,11 @@ let single_json =
     ("fail_missing_comma_array", `Quick, fail_missing_comma_array);
     ("fail_missing_comma_object", `Quick, fail_missing_comma_object);
   ]
+  @ List.map
+      (fun fragment ->
+        ( Printf.sprintf "from_file_across_chunk %S" fragment,
+          `Quick,
+          from_file_across_chunk fragment
+        )
+      )
+      chunk_fragments
