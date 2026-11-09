@@ -92,13 +92,14 @@ external caml_format_float : string -> float -> string = "caml_format_float"
 
 (* The Windows C runtime prints at least three exponent digits ("1.5e-010");
    C99 and jq print two. *)
-let format_float fmt x =
-  let s = caml_format_float fmt x in
+let trim_float_exponent s =
   match String.index_opt s 'e' with
   | Some i when String.length s = i + 5 && s.[i + 2] = '0' ->
       String.sub s 0 (i + 2) ^ String.sub s (i + 3) 2
   | _ ->
       s
+
+let format_float fmt x = trim_float_exponent (caml_format_float fmt x)
 
 let float_needs_period s =
   try
