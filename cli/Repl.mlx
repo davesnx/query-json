@@ -53,8 +53,8 @@ module Json_path = struct
         acc
     | Ast.Pipe (left, right) ->
         segments_of_ast (segments_of_ast acc right) left
-    | Ast.Optional inner ->
-        segments_of_ast acc inner
+    | Ast.Optional (step, rest) ->
+        segments_of_ast (segments_of_ast acc rest) step
     | _ ->
         acc
 

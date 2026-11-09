@@ -1,6 +1,7 @@
 # Unreleased
 
-- [BREAKING CHANGE] **`?` and `try` give no output on a type mismatch**: As in jq, `"x" | .a?`, `1 | .[]?`, `null | .[]?` and `123 | keys?` now give no output instead of `null`. A missing key, a key or an index on `null` (`null | .[0]?`), an index out of bounds and `first?`/`last?` on an empty array still give `null`. An undefined function is no longer hidden: `foo?` and `try foo` now report the error. `.users[].metadata?.preferences?[]?.notifications?.email?` now prints only the matching emails (#62)
+- [BREAKING CHANGE] **`?` and `try` give no output on a type mismatch**: As in jq, `"x" | .a?`, `1 | .[]?`, `null | .[]?` and `123 | keys?` now give no output instead of `null`. A missing key, a key or an index on `null` (`null | .[0]?`), an index out of bounds and `first?`/`last?` on an empty array still give `null`. An undefined function is no longer hidden: `foo?` and `try foo` now report the error (#62)
+- [BREAKING CHANGE] **`?` skips the rest of the path, like `?.` in JavaScript**: when a step marked with `?` gives `null`, the rest of the path is skipped and the result is `null`. `{} | .a?.b.c` gives `null`; `(.a?).b` and `.a? | .b` still fail, because parentheses and `|` end the path. A `?` step that gives `null` before a later `[]?` now gives `null` instead of no output: `{"a": null} | .a?[]?` gives `null`. `.[1:2]?` now parses without parentheses (#62)
 
 ## 1.0.0~beta-1
 

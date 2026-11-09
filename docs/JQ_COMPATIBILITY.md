@@ -218,13 +218,39 @@ query-json '.a.b?' '{"a": null}'
 query-json '.a?' '"text"'   # no output
 query-json '.[]?' '1'       # no output
 query-json '.[]?' 'null'    # no output
-
-query-json '.users[].metadata?.preferences?[]?.notifications?.email?' \
-  '{"users":[{"name":"alice"},{"metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}'
-# Output: "bob@example.com"
 ```
 
 `try` without `catch` follows the same rule.
+
+### `?` skips the rest of the path
+
+As with `?.` in JavaScript, one `?` is enough for a step that can be absent. When that step gives `null`, the rest of the path is skipped and the result is `null`:
+
+```bash
+query-json '.users[].metadata?.preferences[].notifications?.email' \
+  '{"users":[{"name":"alice"},{"metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}'
+# Output: null
+#         "bob@example.com"
+```
+
+Alice has no `metadata`, so `.metadata?` gives `null` and `.preferences[].notifications?.email` is skipped. For Bob, `"dark_mode"` is a string, so `.notifications?` gives no output.
+
+The path ends at `|`, `,`, an operator, `??`, or a closing bracket or parenthesis. Steps without `?` stay strict:
+
+```bash
+query-json '.a?.b.c' '{}'           # null
+query-json '.a?.b' '{"a": {}}'      # error[key_not_found]: Key 'b' not found in object
+query-json '(.a?).b' '{}'           # error[null_access]: the parentheses end the path
+query-json '.a?.b | .c' '{}'        # error[null_access]: `|` ends the path
+```
+
+jq has no such rule. For the example above, jq fails with `Cannot iterate over null`: for Alice, `.preferences` gives `null` and `[]` cannot iterate it. To drop the `null` results in query-json, add `| values`:
+
+```bash
+query-json '.users[].metadata?.preferences[].notifications?.email | values' \
+  '{"users":[{"name":"alice"},{"metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}'
+# Output: "bob@example.com"
+```
 
 `?` and `try` without `catch` do not hide a call to an undefined function, because that is a mistake in the query, not in the data:
 

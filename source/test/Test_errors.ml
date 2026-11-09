@@ -82,6 +82,17 @@ let tests =
     test ".[0]" "null" "Cannot index null with [0]";
     test ".[1:2]" "null" "Cannot index null with [1:2]";
     test ".[1:2]" "1" "Cannot apply";
+    (* A ? step skips only the rest of its own path *)
+    test ".users[].metadata?.preferences[].notifications.email"
+      {|{"users":[{"id":1},{"metadata":{"preferences":["dark_mode"]}}]}|}
+      "Cannot index string with string \"notifications\"";
+    test "(.a?).b" "{}" "Cannot access key 'b' on null";
+    test ".a?.b" {|{"a":{}}|} "Key 'b' not found";
+    test ".a?.b?.c" {|{"a":{"b":{}}}|} "Key 'c' not found";
+    test ".a?.b" {|{"a":"x"}|} "Cannot index string";
+    test ".a? | .b" "{}" "Cannot access key 'b' on null";
+    test ".a?.b + 1" "{}" "Cannot add";
+    test "(.a?.b).c" "{}" "Cannot access key 'c' on null";
     (* ? and try without catch do not hide an undefined function *)
     test "foo?" "null" "undefined function: `foo`";
     test "try foo" "null" "undefined function: `foo`";

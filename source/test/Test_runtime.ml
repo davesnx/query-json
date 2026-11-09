@@ -1054,7 +1054,7 @@ let optional_on_type_error =
   in
   [
     test {|.users[].metadata?.preferences?[]?.notifications?.email?|} users
-      {|"bob@example.com"|};
+      "null\n\"bob@example.com\"";
     test {|.users[] | try .metadata.preferences[].notifications.email|} users
       {|null|};
     test {|.a?|} {|{}|} {|null|};
@@ -1076,6 +1076,43 @@ let optional_on_type_error =
     test {|try foo catch .kind|} {|null|} {|"undefined_function"|};
     test {|(1 / 0)?|} {|null|} {|null|};
     test {|assert(. > 10)?|} {|5|} {|null|};
+  ]
+
+let optional_chaining =
+  let users =
+    {|{"users":[{"id":1,"name":"alice","active":true},{"id":2,"name":"bob","metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}|}
+  in
+  [
+    test {|.users[].metadata?.preferences[].notifications?.email|} users
+      "null\n\"bob@example.com\"";
+    test {|.a?.b.c|} {|{}|} {|null|};
+    test {|.a?.b|} {|{"a":null}|} {|null|};
+    test {|.a?[]|} {|{}|} {|null|};
+    test {|.a?[0].b|} {|{}|} {|null|};
+    test {|.a?.b|} {|{"a":{"b":1}}|} {|1|};
+    test {|.a?[]?|} {|{"a":null}|} {|null|};
+    test {|.a?.b?[]?|} {|{}|} {|null|};
+    test {|.a?.b?.c|} {|{}|} {|null|};
+    test {|.a?.b?.c|} {|{"a":{}}|} {|null|};
+    test {|.a?.b?.c|} {|{"a":{"b":{"c":3}}}|} {|3|};
+    test {|.a?.b?|} {|{"a":"x"}|} {||};
+    test {|.a?.b|} {|"x"|} {||};
+    test {|.[]?.a|} {|[{"a":1}, null, {"a":2}]|} "1\nnull\n2";
+    test {|.[]?.a|} {|1|} {||};
+    test {|.[].a?.b|} {|[{"a":{"b":1}}, {}, {"a":null}]|} "1\nnull\nnull";
+    test {|first?.a|} {|[]|} {|null|};
+    test {|first?.a|} {|[{"a":5}]|} {|5|};
+    test {|(.a)?.b|} {|{}|} {|null|};
+    test {|[.[] | .a?.b]|} {|[{}, {"a":{"b":1}}]|} {|[ null, 1 ]|};
+    test {|{x: .a?.b}|} {|{}|} {|{ "x": null }|};
+    test {|map(.a?.b)|} {|[{}, {"a":{"b":2}}]|} {|[ null, 2 ]|};
+    test {|.[] | select(.a?.b == 1)|} {|[{}, {"a":{"b":1}}]|}
+      {|{ "a": { "b": 1 } }|};
+    test {|.a?.c, .b|} {|{"b":2}|} "null\n2";
+    test {|.a?.b ?? 5|} {|{}|} {|5|};
+    test {|.[1:2]?|} {|null|} {|null|};
+    test {|.[1:2]?|} {|[1,2,3]|} {|[ 2 ]|};
+    test {|.a?[1:2]|} {|{}|} {|null|};
   ]
 
 let arithmetic_update =
@@ -1743,6 +1780,7 @@ let tests =
       destructuring_alternative;
       optional_operator;
       optional_on_type_error;
+      optional_chaining;
       arithmetic_update;
       keys;
       pick;

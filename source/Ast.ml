@@ -254,7 +254,7 @@ and expression =
   | Object of (expression * expression option) list (* {} *)
   (* Access patterns *)
   | Key of string (* .foo *)
-  | Optional of expression (* ? *)
+  | Optional of expression * expression (* step? rest-of-path *)
   | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
   | Dynamic_access of expression (* .[$expr] - dynamic key/index access *)
   | Slice of int option * int option

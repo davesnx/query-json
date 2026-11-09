@@ -53,14 +53,6 @@ let error stream message =
   in
   Error.raise error stream.start_pos stream.end_pos
 
-let optional_question stream expr =
-  match (peek stream : Lexer.token) with
-  | QUESTION_MARK ->
-      advance stream;
-      Optional expr
-  | _ ->
-      expr
-
 let unwrap_or_raise stream = function
   | Ok ast ->
       ast
@@ -408,6 +400,16 @@ and parse_term stream =
   let expr = parse_primary stream in
   parse_postfix stream expr
 
+and optional_question stream expr =
+  match (peek stream : Lexer.token) with
+  | QUESTION_MARK ->
+      advance stream;
+      optional_step stream expr
+  | _ ->
+      expr
+
+and optional_step stream step = Optional (step, parse_postfix stream Identity)
+
 and parse_postfix stream expr =
   match (peek stream : Lexer.token) with
   | DOT -> (
@@ -444,7 +446,7 @@ and parse_bracket_access stream expr =
       advance stream;
       let end_ = parse_index_number stream in
       expect stream CLOSE_BRACKET;
-      Pipe (expr, Slice (None, Some end_))
+      Pipe (expr, optional_question stream (Slice (None, Some end_)))
   | _ -> (
       let first_num = parse_index_number stream in
       match (peek stream : Lexer.token) with
@@ -453,11 +455,15 @@ and parse_bracket_access stream expr =
           match (peek stream : Lexer.token) with
           | CLOSE_BRACKET ->
               advance stream;
-              Pipe (expr, Slice (Some first_num, None))
+              Pipe
+                (expr, optional_question stream (Slice (Some first_num, None)))
           | _ ->
               let end_ = parse_index_number stream in
               expect stream CLOSE_BRACKET;
-              Pipe (expr, Slice (Some first_num, Some end_))
+              Pipe
+                ( expr,
+                  optional_question stream (Slice (Some first_num, Some end_))
+                )
         )
       | COMMA ->
           let indices = parse_remaining_indices stream [ first_num ] in
@@ -774,10 +780,11 @@ and parse_identifier stream name =
       | OPEN_PARENT ->
           advance stream;
           let arg1 = parse_sequence_expr stream in
-          Optional (parse_call_rest stream fn_start name arg1)
+          optional_step stream (parse_call_rest stream fn_start name arg1)
       | _ ->
           let new_stream = { stream with start_pos = fn_start } in
-          Optional (unwrap_or_raise new_stream (Language.map_nullary_fn name))
+          optional_step stream
+            (unwrap_or_raise new_stream (Language.map_nullary_fn name))
     )
   | _ ->
       let new_stream = { stream with start_pos = fn_start } in

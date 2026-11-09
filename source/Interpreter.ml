@@ -326,8 +326,8 @@ let rec substitute_params (params : string list) (args : expression list)
       List (sub_opt e)
   | Object pairs ->
       Object (List.map (fun (k, v) -> (sub k, sub_opt v)) pairs)
-  | Optional e ->
-      Optional (sub e)
+  | Optional (step, rest) ->
+      Optional (sub step, sub rest)
   | Dynamic_access e ->
       Dynamic_access (sub e)
   | Slice_expr (a, b) ->
@@ -2232,10 +2232,16 @@ let rec interp ~ctx expression json : unit =
       yield (`Assoc [])
   | Object list ->
       objects ~ctx list json
-  | Optional expr -> (
-      match (fun () -> interp ~ctx expr json) () with
+  | Optional (step, rest) -> (
+      match (fun () -> interp ~ctx step json) () with
       | () ->
           ()
+      | effect Yield `Null, k ->
+          yield `Null;
+          Effect.Deep.continue k ()
+      | effect Yield v, k ->
+          interp ~ctx rest v;
+          Effect.Deep.continue k ()
       | effect Runtime_error.Fail err, _ ->
           on_caught_runtime_error err
     )
@@ -3321,6 +3327,12 @@ and path_of ~ctx expr json =
     | Comma (left, right) ->
         extract_paths current_path left value
         @ extract_paths current_path right value
+    | Optional (_, Identity) ->
+        []
+    | Optional (step, rest) ->
+        extract_paths current_path
+          (Pipe (Optional (step, Identity), rest))
+          value
     | _ ->
         []
   and extract_path_for_value parent child =

@@ -39,7 +39,7 @@ let tests =
       );
     test ".WAT" (Key "WAT");
     test "head" (Fn0 First);
-    test ".WAT?" (Optional (Key "WAT"));
+    test ".WAT?" (Optional (Key "WAT", Identity));
     test "1, 2" (Comma (int_num 1, int_num 2));
     test "empty" (Fn0 Empty);
     test "(1, 2) + 3" (Operation (Comma (int_num 1, int_num 2), Add, int_num 3));
@@ -49,33 +49,46 @@ let tests =
     test "select(true)" (Fn1 (With_expr (Select, Literal (Bool true))));
     test "[1][0]" (Pipe (List (Some (int_num 1)), Index [ 0 ]));
     test "[1].foo" (Pipe (List (Some (int_num 1)), Key "foo"));
-    test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo")));
+    test "(empty).foo?" (Pipe (Fn0 Empty, Optional (Key "foo", Identity)));
     (* Optional access on nullary functions *)
-    test "first?" (Optional (Fn0 First));
-    test "last?" (Optional (Fn0 Last));
-    test "empty?" (Optional (Fn0 Empty));
-    test "keys?" (Optional (Fn0 Keys));
+    test "first?" (Optional (Fn0 First, Identity));
+    test "last?" (Optional (Fn0 Last, Identity));
+    test "empty?" (Optional (Fn0 Empty, Identity));
+    test "keys?" (Optional (Fn0 Keys, Identity));
     (* Optional access on function calls with arguments *)
-    test "first(.)?" (Optional (Fn1 (With_expr (First_expr, Identity))));
-    test "last(.)?" (Optional (Fn1 (With_expr (Last_expr, Identity))));
-    test "map(.x)?" (Optional (Fn1 (With_expr (Map, Key "x"))));
+    test "first(.)?"
+      (Optional (Fn1 (With_expr (First_expr, Identity)), Identity));
+    test "last(.)?" (Optional (Fn1 (With_expr (Last_expr, Identity)), Identity));
+    test "map(.x)?" (Optional (Fn1 (With_expr (Map, Key "x")), Identity));
     (* Optional function call syntax: fn?(args) is equivalent to fn(args)? *)
     test "first?(range(3))"
-      (Optional (Fn1 (With_expr (First_expr, Range (int_num 3, None, None)))));
-    test "last?(empty)" (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty))));
+      (Optional
+         (Fn1 (With_expr (First_expr, Range (int_num 3, None, None))), Identity)
+      );
+    test "last?(empty)"
+      (Optional (Fn1 (With_expr (Last_expr, Fn0 Empty)), Identity));
     (* Optional access on parenthesized expressions *)
-    test "(first)?" (Optional (Fn0 First));
-    test "(.foo)?" (Optional (Key "foo"));
-    test ".foo?" (Optional (Key "foo"));
+    test "(first)?" (Optional (Fn0 First, Identity));
+    test "(.foo)?" (Optional (Key "foo", Identity));
+    test ".foo?" (Optional (Key "foo", Identity));
     test ".[1:3]" (Pipe (Identity, Slice (Some 1, Some 3)));
     test ".[1:]" (Pipe (Identity, Slice (Some 1, None)));
     test ".[:3]" (Pipe (Identity, Slice (None, Some 3)));
     test ".[-2:]" (Pipe (Identity, Slice (Some (-2), None)));
     test ".[]" (Pipe (Identity, Index []));
     test ".foo[]" (Pipe (Key "foo", Index []));
-    test ".foo[]?" (Pipe (Key "foo", Optional (Index [])));
-    test ".foo?[]" (Pipe (Optional (Key "foo"), Index []));
-    test ".foo?[]?" (Pipe (Optional (Key "foo"), Optional (Index [])));
+    test ".foo[]?" (Pipe (Key "foo", Optional (Index [], Identity)));
+    test ".foo?[]" (Optional (Key "foo", Pipe (Identity, Index [])));
+    test ".foo?[]?"
+      (Optional (Key "foo", Pipe (Identity, Optional (Index [], Identity))));
+    test ".a?.b.c" (Optional (Key "a", Pipe (Pipe (Identity, Key "b"), Key "c")));
+    test ".a.b?.c" (Pipe (Key "a", Optional (Key "b", Pipe (Identity, Key "c"))));
+    test "(.a?).b" (Pipe (Optional (Key "a", Identity), Key "b"));
+    test "(.a)?.b" (Optional (Key "a", Pipe (Identity, Key "b")));
+    test "first?.a" (Optional (Fn0 First, Pipe (Identity, Key "a")));
+    test ".a?.b | .c"
+      (Pipe (Optional (Key "a", Pipe (Identity, Key "b")), Key "c"));
+    test ".[1:2]?" (Pipe (Identity, Optional (Slice (Some 1, Some 2), Identity)));
     test "{}" (Object []);
     test "{\"foo\": 42, bar: [\"hello world\", 42], user}"
       (Object
