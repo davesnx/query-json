@@ -88,6 +88,18 @@ let write_int64 ob x = Buffer.add_string ob (Int64.to_string x)
 let write_big_int ob x = Buffer.add_string ob (Z.to_string x)
 let write_decimal ob x = Buffer.add_string ob (Common.Decimal.to_string x)
 
+external caml_format_float : string -> float -> string = "caml_format_float"
+
+(* The Windows C runtime prints at least three exponent digits ("1.5e-010");
+   C99 and jq print two. *)
+let format_float fmt x =
+  let s = caml_format_float fmt x in
+  match String.index_opt s 'e' with
+  | Some i when String.length s = i + 5 && s.[i + 2] = '0' ->
+      String.sub s 0 (i + 2) ^ String.sub s (i + 3) 2
+  | _ ->
+      s
+
 let float_needs_period s =
   try
     for i = 0 to String.length s - 1 do
@@ -108,12 +120,12 @@ let write_float ob x =
             "-Infinity"
         )
   | _ ->
-      let s1 = Printf.sprintf "%.16g" x in
+      let s1 = format_float "%.16g" x in
       let s =
         if Float.of_string s1 = x then
           s1
         else
-          Printf.sprintf "%.17g" x
+          format_float "%.17g" x
       in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
@@ -130,12 +142,12 @@ let write_std_float ob x =
             "-Infinity value not allowed in standard JSON"
         )
   | _ ->
-      let s1 = Printf.sprintf "%.16g" x in
+      let s1 = format_float "%.16g" x in
       let s =
         if Float.of_string s1 = x then
           s1
         else
-          Printf.sprintf "%.17g" x
+          format_float "%.17g" x
       in
       Buffer.add_string ob s;
       if float_needs_period s then Buffer.add_string ob ".0"
@@ -413,13 +425,7 @@ module Pretty = struct
   let indent_str = "  "
   let max_compact_width = 120
 
-  (* Same C primitive Printf's "%g" ultimately calls (see
-     camlinternalFormat.ml: Float_g with no explicit precision expands to
-     exactly "%.6g"). Calling it directly gives byte-identical output to
-     `Printf.bprintf buf "%g" f` / `Printf.sprintf "%g" f` without paying for
-     CamlinternalFormat's generic format-string parsing on every float. *)
-  external format_float_g : string -> float -> string = "caml_format_float"
-  let format_g f = format_float_g "%.6g" f
+  let format_g f = format_float "%.6g" f
 
   let should_compact (json : t) =
     let exception Not_compact in
