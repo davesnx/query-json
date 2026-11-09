@@ -212,6 +212,20 @@ query-json '.a.b?' '{"a": null}'
 # Output: null
 ```
 
+`?` gives `null` only when the value is absent: a missing key, a key on `null`, an index out of bounds, or `first?`/`last?`/`min?`/`max?` on an empty array. When the input has the wrong type, `?` gives no output, as in jq:
+
+```bash
+query-json '.a?' '"text"'   # no output
+query-json '.[]?' '1'       # no output
+query-json '.[]?' 'null'    # no output
+
+query-json '.users[].metadata?.preferences?[]?.notifications?.email?' \
+  '{"users":[{"name":"alice"},{"metadata":{"preferences":["dark_mode",{"notifications":{"email":"bob@example.com"}}]}}]}'
+# Output: "bob@example.com"
+```
+
+`try` without `catch` follows the same rule.
+
 ### Try-catch for error handling
 
 For more complex error handling, use `try-catch` (same syntax as jq):
@@ -378,7 +392,7 @@ In jq, the `?` operator only works on field access (`.foo?`) and indexing (`.[0]
 ```bash
 # Optional nullary functions
 query-json 'first?' '[]'        # null (instead of error)
-query-json 'keys?' '123'        # null (instead of error)
+query-json 'keys?' '123'        # no output (instead of error)
 
 # Optional function calls
 query-json 'first?(empty)' 'null'    # null
@@ -389,7 +403,7 @@ query-json 'first?(range(3))' 'null' # 0
 query-json 'first(range(3))?' 'null' # 0
 ```
 
-This makes error handling more consistent. Can use `?` in places that aren't sure about your data, and you want `null` instead of an error.
+This makes error handling more consistent. Use `?` where you are not sure about your data: an absent value gives `null`, and a value of the wrong type gives no output.
 
 ---
 

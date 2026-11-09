@@ -9,6 +9,7 @@ module Runtime_error : sig
   val message : t -> string
   val value : t -> Json.t option
   val suggestion : t -> string option
+  val caught_result : t -> Json.t option
   val key_not_found : key:string -> value:Json.t -> 'a
   val null_access : key:string -> value:Json.t -> 'a
   val type_mismatch : value:Json.t -> ?suggestion:string -> string -> 'a
@@ -86,6 +87,9 @@ end = struct
   let message err = err.message
   let value err = err.value
   let suggestion err = err.suggestion
+
+  let caught_result err =
+    match err.kind with Type_mismatch -> None | _ -> Some `Null
 
   let fail ~kind ?value ?suggestion message =
     Effect.perform (Fail { kind; message; value; suggestion });
@@ -2194,8 +2198,8 @@ let rec interp ~ctx expression json : unit =
       match (fun () -> interp ~ctx expr json) () with
       | () ->
           ()
-      | effect Runtime_error.Fail _, _ ->
-          yield `Null
+      | effect Runtime_error.Fail err, _ ->
+          Option.iter yield (Runtime_error.caught_result err)
     )
   | Dynamic_access expr ->
       dynamic_access ~ctx expr json
@@ -4260,12 +4264,12 @@ and try_catch ~ctx expr handler finally_expr json =
         ignore (collect ~ctx cleanup json)
   in
   let error_occurred = ref false in
-  let handle_error error_json input_for_handler =
+  let handle_error ~caught_result error_json input_for_handler =
     error_occurred := true;
     let () =
       match handler with
       | None ->
-          yield `Null
+          Option.iter yield caught_result
       | Some handler_expr ->
           let ctx_with_error =
             { ctx with env = ("error", error_json) :: ctx.env }
@@ -4285,10 +4289,13 @@ and try_catch ~ctx expr handler finally_expr json =
             ("value", value);
           ]
       in
-      handle_error error_json value
+      handle_error ~caught_result:(Some `Null) error_json value
     )
     ~on_runtime_error:(fun err ->
-      handle_error (Runtime_error.to_json err) (Runtime_error.to_json err)
+      handle_error
+        ~caught_result:(Runtime_error.caught_result err)
+        (Runtime_error.to_json err)
+        (Runtime_error.to_json err)
     );
   if not !error_occurred then run_finally ()
 

@@ -1,5 +1,7 @@
 # Unreleased
 
+- [BREAKING CHANGE] **`?` and `try` give no output on a type mismatch**: As in jq, `"x" | .a?`, `1 | .[]?`, `null | .[]?` and `123 | keys?` now give no output instead of `null`. A missing key, a key on `null`, an index out of bounds and `first?`/`last?` on an empty array still give `null`. `.users[].metadata?.preferences?[]?.notifications?.email?` now prints only the matching emails (#62)
+
 ## 1.0.0~beta-1
 
 - [FIX] **`pow` requires two arguments**: Bare `pow` no longer silently squares the input — it now produces a helpful error pointing to the correct `pow(x; y)` usage
