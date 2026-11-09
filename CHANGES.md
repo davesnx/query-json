@@ -1,6 +1,6 @@
 # Unreleased
 
-- [BREAKING CHANGE] **`?` and `try` give no output on a type mismatch**: As in jq, `"x" | .a?`, `1 | .[]?`, `null | .[]?` and `123 | keys?` now give no output instead of `null`. A missing key, a key on `null`, an index out of bounds and `first?`/`last?` on an empty array still give `null`. `.users[].metadata?.preferences?[]?.notifications?.email?` now prints only the matching emails (#62)
+- [BREAKING CHANGE] **`?` and `try` give no output on a type mismatch**: As in jq, `"x" | .a?`, `1 | .[]?`, `null | .[]?` and `123 | keys?` now give no output instead of `null`. A missing key, a key or an index on `null` (`null | .[0]?`), an index out of bounds and `first?`/`last?` on an empty array still give `null`. An undefined function is no longer hidden: `foo?` and `try foo` now report the error. `.users[].metadata?.preferences?[]?.notifications?.email?` now prints only the matching emails (#62)
 
 ## 1.0.0~beta-1
 

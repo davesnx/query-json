@@ -1067,6 +1067,15 @@ let optional_on_type_error =
     test {|try .a|} {|"x"|} {||};
     test {|([1, .a])?|} {|"x"|} {||};
     test {|(1, .a)?|} {|"x"|} {|1|};
+    test {|.[0]?|} {|null|} {|null|};
+    test {|.[-1]?|} {|null|} {|null|};
+    test {|.[0, 1]?|} {|null|} {|null|};
+    test {|(.[1:2])?|} {|null|} {|null|};
+    test {|(.[1:2])?|} {|1|} {||};
+    test {|try .[0]|} {|null|} {|null|};
+    test {|try foo catch .kind|} {|null|} {|"undefined_function"|};
+    test {|(1 / 0)?|} {|null|} {|null|};
+    test {|assert(. > 10)?|} {|5|} {|null|};
   ]
 
 let arithmetic_update =

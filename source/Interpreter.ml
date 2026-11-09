@@ -2,6 +2,7 @@ open Ast
 
 module Runtime_error : sig
   type t
+  type caught = Yield_null | Yield_nothing | Propagate
   type _ Effect.t += Fail : t -> unit Effect.t
 
   val to_json : t -> Json.t
@@ -9,9 +10,10 @@ module Runtime_error : sig
   val message : t -> string
   val value : t -> Json.t option
   val suggestion : t -> string option
-  val caught_result : t -> Json.t option
+  val when_caught : t -> caught
   val key_not_found : key:string -> value:Json.t -> 'a
   val null_access : key:string -> value:Json.t -> 'a
+  val null_index : op:string -> 'a
   val type_mismatch : value:Json.t -> ?suggestion:string -> string -> 'a
   val index_out_of_bounds : index:int -> length:int -> value:Json.t -> 'a
   val empty_array : string -> 'a
@@ -88,8 +90,23 @@ end = struct
   let value err = err.value
   let suggestion err = err.suggestion
 
-  let caught_result err =
-    match err.kind with Type_mismatch -> None | _ -> Some `Null
+  type caught = Yield_null | Yield_nothing | Propagate
+
+  let when_caught err =
+    match err.kind with
+    | Type_mismatch ->
+        Yield_nothing
+    | Undefined_function ->
+        Propagate
+    | Key_not_found
+    | Null_access
+    | Index_out_of_bounds
+    | Empty_array
+    | Empty_result
+    | Assertion_error
+    | Invalid_argument
+    | Custom _ ->
+        Yield_null
 
   let fail ~kind ?value ?suggestion message =
     Effect.perform (Fail { kind; message; value; suggestion });
@@ -127,6 +144,9 @@ end = struct
 
   let null_access ~key ~value =
     fail ~kind:Null_access ~value ("Cannot access key '" ^ key ^ "' on null")
+
+  let null_index ~op =
+    fail ~kind:Null_access ~value:`Null ("Cannot index null with " ^ op)
 
   let type_mismatch ~value ?suggestion message =
     fail ~kind:Type_mismatch ~value ?suggestion message
@@ -193,6 +213,15 @@ let user_error value =
   assert false
 
 let yield_many items = List.iter yield items
+
+let on_caught_runtime_error err =
+  match Runtime_error.when_caught err with
+  | Yield_null ->
+      yield `Null
+  | Yield_nothing ->
+      ()
+  | Propagate ->
+      Effect.perform (Runtime_error.Fail err)
 
 let on_yield fn ~then_ =
   match fn () with
@@ -2070,6 +2099,8 @@ let rec index ~ctx (indices : int list) (json : Json.t) =
           else
             Runtime_error.index_out_of_bounds ~index:value ~length:len
               ~value:json
+      | `Null ->
+          Runtime_error.null_index ~op:("[" ^ Int.to_string value ^ "]")
       | _ ->
           fail_invalid_type ~ctx ("[" ^ Int.to_string value ^ "]") json
     )
@@ -2091,8 +2122,15 @@ let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
         start
     | (`String _ | `List _), None ->
         0
-    | _ ->
-        (* slice can't be parsed outside of List or String *) assert false
+    | _ -> (
+        let bound = Option.fold ~none:"" ~some:Int.to_string in
+        let op = "[" ^ bound start ^ ":" ^ bound finish ^ "]" in
+        match json with
+        | `Null ->
+            Runtime_error.null_index ~op
+        | _ ->
+            fail_invalid_type ~ctx op json
+      )
   in
   let finish =
     match (json, finish) with
@@ -2199,7 +2237,7 @@ let rec interp ~ctx expression json : unit =
       | () ->
           ()
       | effect Runtime_error.Fail err, _ ->
-          Option.iter yield (Runtime_error.caught_result err)
+          on_caught_runtime_error err
     )
   | Dynamic_access expr ->
       dynamic_access ~ctx expr json
@@ -4264,12 +4302,12 @@ and try_catch ~ctx expr handler finally_expr json =
         ignore (collect ~ctx cleanup json)
   in
   let error_occurred = ref false in
-  let handle_error ~caught_result error_json input_for_handler =
+  let handle_error ~unhandled error_json input_for_handler =
     error_occurred := true;
     let () =
       match handler with
       | None ->
-          Option.iter yield caught_result
+          unhandled ()
       | Some handler_expr ->
           let ctx_with_error =
             { ctx with env = ("error", error_json) :: ctx.env }
@@ -4289,11 +4327,11 @@ and try_catch ~ctx expr handler finally_expr json =
             ("value", value);
           ]
       in
-      handle_error ~caught_result:(Some `Null) error_json value
+      handle_error ~unhandled:(fun () -> yield `Null) error_json value
     )
     ~on_runtime_error:(fun err ->
       handle_error
-        ~caught_result:(Runtime_error.caught_result err)
+        ~unhandled:(fun () -> on_caught_runtime_error err)
         (Runtime_error.to_json err)
         (Runtime_error.to_json err)
     );

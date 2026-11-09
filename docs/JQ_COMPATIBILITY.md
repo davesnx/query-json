@@ -212,7 +212,7 @@ query-json '.a.b?' '{"a": null}'
 # Output: null
 ```
 
-`?` gives `null` only when the value is absent: a missing key, a key on `null`, an index out of bounds, or `first?`/`last?`/`min?`/`max?` on an empty array. When the input has the wrong type, `?` gives no output, as in jq:
+`?` gives `null` only when the value is absent: a missing key, a key or an index on `null`, an index out of bounds, or `first?`/`last?`/`min?`/`max?` on an empty array. When the input has the wrong type, `?` gives no output, as in jq:
 
 ```bash
 query-json '.a?' '"text"'   # no output
@@ -225,6 +225,13 @@ query-json '.users[].metadata?.preferences?[]?.notifications?.email?' \
 ```
 
 `try` without `catch` follows the same rule.
+
+`?` and `try` without `catch` do not hide a call to an undefined function, because that is a mistake in the query, not in the data:
+
+```bash
+query-json 'foo?' 'null'
+# error[undefined_function]: undefined function: `foo`
+```
 
 ### Try-catch for error handling
 
