@@ -19,6 +19,7 @@ type options = {
   bracketPairColorizationEnabled : bool;
       [@mel.as "bracketPairColorization.enabled"]
   readOnly : bool;
+  automaticLayout : bool;
 }
 
 module External = struct
@@ -62,6 +63,7 @@ let[@react.component] make ~(value : string)
       matchBrackets = "never";
       bracketPairColorizationEnabled = false;
       readOnly = is_read_only on_change_value;
+      automaticLayout = true;
     }
   in
   <External

@@ -167,7 +167,7 @@ module Playground_page = struct
       update_json json
     in
 
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="flex flex-col h-dvh bg-background">
       <Header>
         <div className="flex items-center gap-2">
           <Button kind=Secondary size=Sm on_click=on_navigate_functions>
@@ -180,29 +180,29 @@ module Playground_page = struct
               <Icons.FileJson size=Small /> (React.string "Examples")
             </span>
           </Button>
-          <Button
-            kind=Secondary
-            size=Sm
-            on_click=on_share_click
-            className="min-w-[110px]">
-            ( match state.copied with
-            | true ->
-                <span className="flex items-center gap-2">
-                  <Icons.Check size=Small /> (React.string "Copied!")
-                </span>
-            | false ->
-                <span className="flex items-center gap-2">
-                  <Icons.Link2 size=Small /> (React.string "Copy unique URL")
-                </span>
-            )
-          </Button>
         </div>
       </Header>
       <TextInput
         value=state.query
         on_change=update_query
-        placeholder="Type your filter (e.g., '.store.books[0]')"
-      />
+        placeholder="Type your filter (e.g., '.store.books[0]')">
+        <Button
+          kind=Secondary
+          size=Sm
+          on_click=on_share_click
+          className="min-w-[110px] whitespace-nowrap">
+          ( match state.copied with
+          | true ->
+              <span className="flex items-center gap-2">
+                <Icons.Check size=Small /> (React.string "Copied!")
+              </span>
+          | false ->
+              <span className="flex items-center gap-2">
+                <Icons.Link2 size=Small /> (React.string "Copy unique URL")
+              </span>
+          )
+        </Button>
+      </TextInput>
       <Editors
         json_value=(Option.value state.json ~default:"")
         on_json_change=update_json
