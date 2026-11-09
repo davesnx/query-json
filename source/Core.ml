@@ -34,21 +34,42 @@ let parse ~debug ~colorize input =
       in
       Error (Error.format ~colorize err)
 
+let execute ~colorize ~verbose ~raw ~summarize runtime json =
+  match Interpreter.execute ~colorize ~verbose runtime json with
+  | Ok results ->
+      Ok
+        (results
+        |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
+        |> String.concat "\n"
+        )
+  | Error err ->
+      Error err
+  | Halt code ->
+      exit code
+
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
     ?(summarize = false) query json =
   match parse ~debug ~colorize query with
-  | Ok runtime -> (
-      match Interpreter.execute ~colorize ~verbose runtime json with
-      | Ok results ->
-          Ok
-            (results
-            |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
-            |> String.concat "\n"
-            )
-      | Error err ->
-          Error err
-      | Halt code ->
-          exit code
-    )
+  | Ok runtime ->
+      execute ~colorize ~verbose ~raw ~summarize runtime json
   | Error err ->
       Error err
+
+let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
+    ?(raw = false) ?(summarize = false) query read =
+  match parse ~debug:false ~colorize query with
+  | Ok runtime -> (
+      match read (Demand.of_expression runtime) with
+      | Ok json ->
+          if debug then print_endline (Ast.show_expression runtime);
+          execute ~colorize ~verbose ~raw ~summarize runtime json
+      | Error err ->
+          Error err
+    )
+  | Error err -> (
+      match read Json.All with
+      | Ok _ ->
+          Error err
+      | Error json_err ->
+          Error json_err
+    )

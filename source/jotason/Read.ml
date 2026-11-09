@@ -6,6 +6,7 @@ type source = {
   mutable len : int;
   mutable off : int;
   mutable mark : int;
+  mutable pin : int;
   mutable eof : bool;
   ic : in_channel option;
   st : lexer_state;
@@ -18,12 +19,13 @@ let refill s =
   | Some _ when s.eof ->
       false
   | Some ic ->
-      if s.mark > 0 then (
-        Bytes.blit s.buf s.mark s.buf 0 (s.len - s.mark);
-        s.off <- s.off + s.mark;
-        s.pos <- s.pos - s.mark;
-        s.len <- s.len - s.mark;
-        s.mark <- 0
+      let keep = min s.mark (s.pin - s.off) in
+      if keep > 0 then (
+        Bytes.blit s.buf keep s.buf 0 (s.len - keep);
+        s.off <- s.off + keep;
+        s.pos <- s.pos - keep;
+        s.len <- s.len - keep;
+        s.mark <- s.mark - keep
       );
       if s.len = Bytes.length s.buf then (
         let b = Bytes.create (2 * Bytes.length s.buf) in
@@ -252,6 +254,22 @@ let read_string s =
     Buffer.clear b;
     finish_string s b
 
+let rec skip_string s =
+  s.mark <- s.pos;
+  if not (more s) then eof_error s;
+  let i = scan_string s.buf s.pos s.len in
+  s.pos <- i;
+  if i = s.len then
+    skip_string s
+  else if Bytes.unsafe_get s.buf i = '"' then
+    s.pos <- i + 1
+  else (
+    s.pos <- i + 1;
+    Buffer.clear s.st.buf;
+    read_escape s s.st.buf;
+    skip_string s
+  )
+
 let[@inline] is_digit c = c >= '0' && c <= '9'
 let peek_or_nul s k =
   if ensure s (k + 1) then
@@ -282,39 +300,40 @@ let extract_int s k =
   else
     - !n
 
-let read_number s : t =
+let int_end s =
   let k =
     if peek s 0 = '-' then
       1
     else
       0
   in
-  let k =
-    if peek_or_nul s k = '0' then
-      k + 1
-    else
-      skip_digits s (k + 1)
-  in
-  let int_end = k in
-  let k =
-    if peek_or_nul s k = '.' && is_digit (peek_or_nul s (k + 1)) then
-      skip_digits s (k + 2)
-    else
-      k
-  in
-  let k =
-    match peek_or_nul s k with
-    | 'e' | 'E' ->
-        let j =
-          match peek_or_nul s (k + 1) with '+' | '-' -> k + 2 | _ -> k + 1
-        in
-        if is_digit (peek_or_nul s j) then
-          skip_digits s (j + 1)
-        else
-          k
-    | _ ->
+  if peek_or_nul s k = '0' then
+    k + 1
+  else
+    skip_digits s (k + 1)
+
+let frac_end s k =
+  if peek_or_nul s k = '.' && is_digit (peek_or_nul s (k + 1)) then
+    skip_digits s (k + 2)
+  else
+    k
+
+let exp_end s k =
+  match peek_or_nul s k with
+  | 'e' | 'E' ->
+      let j =
+        match peek_or_nul s (k + 1) with '+' | '-' -> k + 2 | _ -> k + 1
+      in
+      if is_digit (peek_or_nul s j) then
+        skip_digits s (j + 1)
+      else
         k
-  in
+  | _ ->
+      k
+
+let read_number s : t =
+  let int_end = int_end s in
+  let k = exp_end s (frac_end s int_end) in
   let result =
     if k = int_end then
       try `Int (extract_int s k)
@@ -328,6 +347,16 @@ let read_number s : t =
   in
   s.pos <- s.pos + k;
   result
+
+(* Without an exponent the conversion in [read_number] cannot fail. With one,
+   [Decimal.of_lexeme_exn] can raise or take long, so it runs here too. *)
+let skip_number s =
+  let f = frac_end s (int_end s) in
+  let k = exp_end s f in
+  if k > f then
+    ignore (read_number s)
+  else
+    s.pos <- s.pos + k
 
 let rec literal_matches s lit i =
   i = String.length lit || (peek s i = lit.[i] && literal_matches s lit (i + 1))
@@ -364,6 +393,49 @@ let read_key s =
   | _ ->
       long_error s "Expected string or identifier but found" 1
 
+let no_field = ("", Skip)
+
+let rec sub_equal buf off k i n =
+  i = n
+  || Bytes.unsafe_get buf (off + i) = String.unsafe_get k i
+     && sub_equal buf off k (i + 1) n
+
+let rec find_field buf off n = function
+  | [] ->
+      no_field
+  | ((k, _) as f) :: rest ->
+      if String.length k = n && sub_equal buf off k 0 n then
+        f
+      else
+        find_field buf off n rest
+
+let key_field s fs =
+  s.mark <- s.pos;
+  if not (more s) then eof_error s;
+  match peek s 0 with
+  | '"' ->
+      let i = scan_string s.buf (s.pos + 1) s.len in
+      if i < s.len && Bytes.unsafe_get s.buf i = '"' then (
+        let f = find_field s.buf (s.pos + 1) (i - s.pos - 1) fs in
+        s.pos <- i + 1;
+        f
+      ) else (
+        s.pos <- s.pos + 1;
+        if fs = [] then (
+          skip_string s;
+          no_field
+        ) else
+          let k = read_string s in
+          find_field (Bytes.unsafe_of_string k) 0 (String.length k) fs
+      )
+  | 'a' .. 'z' | 'A' .. 'Z' | '_' ->
+      let k = ident_end s 1 in
+      let f = find_field s.buf s.pos k fs in
+      s.pos <- s.pos + k;
+      f
+  | _ ->
+      long_error s "Expected string or identifier but found" 1
+
 let read_colon s =
   s.mark <- s.pos;
   if not (more s) then eof_error s;
@@ -371,6 +443,21 @@ let read_colon s =
     s.pos <- s.pos + 1
   else
     long_error s "Expected ':' but found" 1
+
+let next_member s close descr =
+  skip_space s;
+  s.mark <- s.pos;
+  if not (more s) then eof_error s;
+  let c = peek s 0 in
+  if c = ',' then (
+    s.pos <- s.pos + 1;
+    skip_space s;
+    true
+  ) else if c = close then (
+    s.pos <- s.pos + 1;
+    false
+  ) else
+    long_error s descr 1
 
 let rec read_value s : t =
   s.mark <- s.pos;
@@ -418,19 +505,10 @@ and fields s acc =
   read_colon s;
   skip_space s;
   let acc = (key, read_value s) :: acc in
-  skip_space s;
-  s.mark <- s.pos;
-  if not (more s) then eof_error s;
-  match peek s 0 with
-  | ',' ->
-      s.pos <- s.pos + 1;
-      skip_space s;
-      fields s acc
-  | '}' ->
-      s.pos <- s.pos + 1;
-      `Assoc (List.rev acc)
-  | _ ->
-      long_error s "Expected ',' or '}' but found" 1
+  if next_member s '}' "Expected ',' or '}' but found" then
+    fields s acc
+  else
+    `Assoc (List.rev acc)
 
 and read_array s =
   skip_space s;
@@ -442,24 +520,145 @@ and read_array s =
 
 and items s acc =
   let acc = read_value s :: acc in
-  skip_space s;
-  s.mark <- s.pos;
-  if not (more s) then eof_error s;
-  match peek s 0 with
-  | ',' ->
-      s.pos <- s.pos + 1;
-      skip_space s;
-      items s acc
-  | ']' ->
-      s.pos <- s.pos + 1;
-      `List (List.rev acc)
-  | _ ->
-      long_error s "Expected ',' or ']' but found" 1
+  if next_member s ']' "Expected ',' or ']' but found" then
+    items s acc
+  else
+    `List (List.rev acc)
 
-let read_toplevel s =
+let skip_or d (v : t) : t = match d with Skip -> `Null | _ -> v
+
+let rec value_d s d : t =
+  match d with
+  | All ->
+      read_value s
+  | _ -> (
+      s.mark <- s.pos;
+      if not (more s) then eof_error s;
+      match peek s 0 with
+      | '"' -> (
+          s.pos <- s.pos + 1;
+          match d with
+          | Skip ->
+              skip_string s;
+              `Null
+          | _ ->
+              `String (read_string s)
+        )
+      | '{' -> (
+          s.pos <- s.pos + 1;
+          match d with
+          | Skip ->
+              ignore (members s []);
+              `Null
+          | Fields fs ->
+              fields_d s fs
+          | _ ->
+              read_object s
+        )
+      | '[' -> (
+          s.pos <- s.pos + 1;
+          match d with
+          | Skip ->
+              ignore (elements s ~keep:false Skip);
+              `Null
+          | Items d ->
+              `List (elements s ~keep:true d)
+          | _ ->
+              read_array s
+        )
+      | '0' .. '9' ->
+          number_d s d
+      | '-' when ensure s 2 && is_digit (peek s 1) ->
+          number_d s d
+      | '-' when ensure s 2 && peek s 1 = 'I' ->
+          skip_or d (literal s "-Infinity" (`Float neg_infinity))
+      | 't' ->
+          skip_or d (literal s "true" (`Bool true))
+      | 'f' ->
+          skip_or d (literal s "false" (`Bool false))
+      | 'n' ->
+          literal s "null" `Null
+      | 'N' ->
+          skip_or d (literal s "NaN" (`Float nan))
+      | 'I' ->
+          skip_or d (literal s "Infinity" (`Float infinity))
+      | _ ->
+          long_error s "Invalid token" 1
+    )
+
+and number_d s d =
+  match d with
+  | Skip ->
+      skip_number s;
+      `Null
+  | _ ->
+      read_number s
+
+and fields_d s fs =
+  let start = s.off + s.pos in
+  let lnum = s.st.lnum and bol = s.st.bol and pin = s.pin in
+  if start < pin then s.pin <- start;
+  let acc = members s fs in
+  s.pin <- pin;
+  if List.for_all (fun (k, _) -> List.mem_assoc k acc) fs then
+    `Assoc (List.rev acc)
+  else (
+    s.pos <- start - s.off;
+    s.st.lnum <- lnum;
+    s.st.bol <- bol;
+    read_object s
+  )
+
+and members s fs =
+  skip_space s;
+  if more s && peek s 0 = '}' then (
+    s.pos <- s.pos + 1;
+    []
+  ) else
+    members_loop s fs []
+
+and members_loop s fs acc =
+  let ((key, d) as f) = key_field s fs in
+  skip_space s;
+  read_colon s;
+  skip_space s;
+  let acc =
+    if f == no_field then (
+      ignore (value_d s Skip);
+      acc
+    ) else
+      (key, value_d s d) :: acc
+  in
+  if next_member s '}' "Expected ',' or '}' but found" then
+    members_loop s fs acc
+  else
+    acc
+
+and elements s ~keep d =
+  skip_space s;
+  if more s && peek s 0 = ']' then (
+    s.pos <- s.pos + 1;
+    []
+  ) else
+    elements_loop s ~keep d []
+
+and elements_loop s ~keep d acc =
+  let v = value_d s d in
+  let acc =
+    if keep then
+      v :: acc
+    else
+      acc
+  in
+  if next_member s ']' "Expected ',' or ']' but found" then
+    elements_loop s ~keep d acc
+  else
+    List.rev acc
+
+let read_toplevel ?(demand = All) s =
   skip_space s;
   if not (more s) then json_error "Blank input data";
-  let x = read_value s in
+  let x = match demand with All -> read_value s | d -> value_d s d in
   skip_space s;
   if more s then long_error s "Junk after end of JSON value:" 0;
   x
@@ -471,25 +670,26 @@ let make ?buf ?fname ?lnum ic bytes len =
     len;
     off = 0;
     mark = 0;
+    pin = max_int;
     eof = false;
     ic;
     st = init_lexer ?buf ?fname ?lnum ();
   }
 
-let from_string ?buf ?fname ?lnum str =
+let from_string ?buf ?fname ?lnum ?demand str =
   (* [refill] never writes to the buffer when [ic] is [None], so the string
      is only read. *)
-  read_toplevel
+  read_toplevel ?demand
     (make ?buf ?fname ?lnum None
        (Bytes.unsafe_of_string str)
        (String.length str)
     )
 
-let from_channel ?buf ?fname ?lnum ic =
-  read_toplevel (make ?buf ?fname ?lnum (Some ic) (Bytes.create 65536) 0)
+let from_channel ?buf ?fname ?lnum ?demand ic =
+  read_toplevel ?demand (make ?buf ?fname ?lnum (Some ic) (Bytes.create 65536) 0)
 
-let from_file ?buf ?fname ?lnum file =
-  In_channel.with_open_text file (from_channel ?buf ?fname ?lnum)
+let from_file ?buf ?fname ?lnum ?demand file =
+  In_channel.with_open_text file (from_channel ?buf ?fname ?lnum ?demand)
 
 let parse what f x =
   try Ok (f x) with
@@ -498,6 +698,8 @@ let parse what f x =
   | e ->
       Error (Printexc.to_string e ^ " There was an error reading " ^ what)
 
-let parse_string = parse "the string" (fun s -> from_string s)
-let parse_file = parse "the file" (fun f -> from_file f)
-let parse_channel = parse "from standard input" (fun c -> from_channel c)
+let parse_string ?demand = parse "the string" (fun s -> from_string ?demand s)
+let parse_file ?demand = parse "the file" (fun f -> from_file ?demand f)
+
+let parse_channel ?demand =
+  parse "from standard input" (fun c -> from_channel ?demand c)

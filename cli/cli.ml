@@ -62,8 +62,6 @@ let repl_usage ?(colorize = true) () =
   |> String.concat (Console_style.enter 1)
   |> print_endline
 
-let ( let* ) = Result.bind
-
 (* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
 
    This function reconnects stdin to /dev/tty (the controlling terminal),
@@ -171,20 +169,21 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
         usage ()
     | Some query -> (
         let output =
-          let* json =
-            if null_input then
-              Ok `Null
-            else
-              match position_1 with
-              | Some f when Sys.file_exists f ->
-                  Json.parse_file f
-              | Some s ->
-                  Json.parse_string s
-              | None ->
-                  Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
-          in
-          Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
-            query json
+          if null_input then
+            Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
+              query `Null
+          else
+            Core.run_input ~debug ~colorize ~verbose ~raw:raw_output
+              ~summarize:false query (fun demand ->
+                match position_1 with
+                | Some f when Sys.file_exists f ->
+                    Json.parse_file ~demand f
+                | Some s ->
+                    Json.parse_string ~demand s
+                | None ->
+                    Json.parse_channel ~demand
+                      (Unix.in_channel_of_descr Unix.stdin)
+            )
         in
         match output with
         | Ok results ->
