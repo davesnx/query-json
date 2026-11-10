@@ -49,6 +49,8 @@ let rec demand e (k : Json.demand) : Json.demand =
       join (demand a k) (demand b k)
   | Literal _ | List None ->
       Skip
+  | Fn0 Length ->
+      Items Skip
   | List (Some e) ->
       demand e (element k)
   | Fn1 (With_expr (Map, f)) ->

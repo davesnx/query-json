@@ -62,7 +62,10 @@ let analysis_tests =
     analysis ".[0]" "All";
     analysis ".[0] | .a" "All";
     analysis ".a?" "All";
-    analysis ".a | length" "All";
+    analysis "length" "Items (Skip)";
+    analysis ".a | length" {|Fields ["a", Items (Skip)]|};
+    analysis "map(length)" "Items (Items (Skip))";
+    analysis "length, .[]" "All";
     analysis "keys" "All";
     analysis ".[1:2]" "All";
     analysis "{a: .a}" "All";
@@ -150,6 +153,10 @@ let queries =
     ".[] | .a | 1";
     ".a +";
     "length";
+    ".a | length";
+    "map(length)";
+    "length, .[]";
+    "length, (.[] | .a)";
   ]
 
 let full_run query input =
