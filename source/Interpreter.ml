@@ -1773,21 +1773,50 @@ let sort ~ctx (json : Json.t) =
   | _ ->
       fail_invalid_type ~ctx "sort" json
 
+let exact_pow10 =
+  Array.init 23 (fun i -> Float.of_string ("1e" ^ Int.to_string i))
+
+let rec value_hash (json : Json.t) =
+  match json with
+  | `Decimal { coeff; scale; _ }
+    when scale >= 0 && scale <= 22 && Z.numbits coeff <= 53 ->
+      Hashtbl.hash (Z.to_float coeff /. exact_pow10.(scale))
+  | `List l ->
+      List.fold_left (fun h x -> (h * 31) + value_hash x) 1 l
+  | `Assoc kvs ->
+      List.fold_left
+        (fun h (k, v) -> h + (Hashtbl.hash k * 31 lxor value_hash v))
+        2 kvs
+  | _ -> (
+      match Json.to_float json with
+      | Some f ->
+          Hashtbl.hash f
+      | None ->
+          Hashtbl.hash json
+    )
+
+module Json_tbl = Hashtbl.Make (struct
+  type t = int * Json.t
+
+  let equal (ha, a) (hb, b) = ha = hb && Json.compare a b = 0
+  let hash (h, _) = h
+end)
+
+let json_key json = (value_hash json, json)
+
 let unique ~ctx (json : Json.t) =
   match json with
   | `List l ->
-      (* Hash set instead of `List.mem x acc`: same structural-equality,
-         first-occurrence semantics, but O(1) average lookup instead of
-         O(n), avoiding an O(n^2) blowup on large inputs. *)
-      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
+      let seen = Json_tbl.create (List.length l) in
       let rec unique acc = function
         | [] ->
             List.rev acc
         | x :: xs ->
-            if Hashtbl.mem seen x then
+            let key = json_key x in
+            if Json_tbl.mem seen key then
               unique acc xs
             else (
-              Hashtbl.add seen x ();
+              Json_tbl.add seen key ();
               unique (x :: acc) xs
             )
       in
@@ -3220,10 +3249,7 @@ and max_by ~ctx expr json =
 and unique_by ~ctx expr json =
   match json with
   | `List l ->
-      (* A hash set gives the same first-occurrence semantics as the old
-         `List.mem key seen` scan (structural equality), but O(1) average
-         lookup instead of O(n), avoiding an O(n^2) blowup on large inputs. *)
-      let seen : (Json.t, unit) Hashtbl.t = Hashtbl.create (List.length l) in
+      let seen = Json_tbl.create (List.length l) in
       let rec unique acc = function
         | [] ->
             List.rev acc
@@ -3231,10 +3257,11 @@ and unique_by ~ctx expr json =
             let keys = collect ~ctx expr x in
             match keys with
             | [ key ] ->
-                if Hashtbl.mem seen key then
+                let key = json_key key in
+                if Json_tbl.mem seen key then
                   unique acc xs
                 else (
-                  Hashtbl.add seen key ();
+                  Json_tbl.add seen key ();
                   unique (x :: acc) xs
                 )
             | _ ->
