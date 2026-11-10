@@ -79,6 +79,13 @@ let tests =
     test ".foo" "123" "Cannot index";
     test ".[0]" "{\"a\": 1}" "object";
     test ". + null" "\"foo\"" "Cannot add string to null";
+    test ".[0]" "null" "Cannot index null with [0]";
+    test ".[1:2]" "null" "Cannot index null with [1:2]";
+    test ".[1:2]" "1" "Cannot apply";
+    (* ? and try without catch do not hide an undefined function *)
+    test "foo?" "null" "undefined function: `foo`";
+    test "try foo" "null" "undefined function: `foo`";
+    test "[.[] | foo?]" "[1]" "undefined function: `foo`";
     (* get_path/set_path/delete_paths without arguments *)
     test "get_path" "null" "requires path";
     test "set_path" "null" "requires path and value";
@@ -133,6 +140,9 @@ let tests =
     test {|error?|} {|"boom"|} "boom";
     (* pow without arguments should be a parse error *)
     test "pow" "5" "requires x and y";
+    (* first/nth on an empty or exhausted generator error (not silently null) *)
+    test "first(empty)" "null" "empty expression result";
+    test "nth(10; range(3))" "null" "out of bounds";
     test_location "single-line parse error location" "@@@" "null"
       [ "--> @@@"; "^" ];
     test_location "multiline: error on later line" "\n\n\n@@@" "null"

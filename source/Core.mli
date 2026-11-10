@@ -8,6 +8,7 @@ val run :
   ?verbose:bool ->
   ?raw:bool ->
   ?summarize:bool ->
+  ?buf_size_hint:int ->
   string ->
   Json.t ->
   (string, string) result

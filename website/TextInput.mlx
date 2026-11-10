@@ -1,4 +1,4 @@
-let[@react.component] make ~value ~placeholder ~on_change =
+let[@react.component] make ~value ~placeholder ~on_change ~children =
   let on_change_handler event =
     let target = React.Event.Form.target event in
     on_change target##value
@@ -41,6 +41,7 @@ let[@react.component] make ~value ~placeholder ~on_change =
               React.null
           )
         </div>
+        children
       </div>
     </div>
   </div>

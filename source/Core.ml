@@ -34,24 +34,45 @@ let parse ~debug ~colorize input =
       in
       Error (Error.format ~colorize err)
 
-let execute ~colorize ~verbose ~raw ~summarize runtime json =
+(* Render straight into one shared buffer instead of turning each result
+   into its own string (via Json.to_string_pretty) and then copying all of
+   those strings again with String.concat: for many results (or one huge
+   one) that was two extra full-size copies for no reason. *)
+let render_result_into buf ~colorize ~summarize ~raw (json : Json.t) =
+  match (raw, json) with
+  | true, `String s ->
+      Buffer.add_string buf s
+  | _ ->
+      Json.Pretty.to_buffer_colored buf ~colorize ~summarize json
+
+let execute ~colorize ~verbose ~raw ~summarize ?(buf_size_hint = 4096) runtime
+    json =
   match Interpreter.execute ~colorize ~verbose runtime json with
   | Ok results ->
-      Ok
-        (results
-        |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
-        |> String.concat "\n"
-        )
+      (* A caller that knows roughly how big the input was can pass that as a
+         hint: for a single huge result, starting the buffer near its final
+         size avoids the repeated grow-and-copy of doubling up from 4096. *)
+      let buf = Buffer.create (max 4096 buf_size_hint) in
+      let rec write_all first = function
+        | [] ->
+            ()
+        | x :: rest ->
+            if not first then Buffer.add_char buf '\n';
+            render_result_into buf ~colorize ~summarize ~raw x;
+            write_all false rest
+      in
+      write_all true results;
+      Ok (Buffer.contents buf)
   | Error err ->
       Error err
   | Halt code ->
       exit code
 
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
-    ?(summarize = false) query json =
+    ?(summarize = false) ?(buf_size_hint = 4096) query json =
   match parse ~debug ~colorize query with
   | Ok runtime ->
-      execute ~colorize ~verbose ~raw ~summarize runtime json
+      execute ~colorize ~verbose ~raw ~summarize ~buf_size_hint runtime json
   | Error err ->
       Error err
 
@@ -88,7 +109,7 @@ let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
   let add results =
     List.iter
       (fun json ->
-        Json.add_pretty out ~colorize ~summarize ~raw json;
+        render_result_into out ~colorize ~summarize ~raw json;
         Buffer.add_char out '\n';
         incr count
       )

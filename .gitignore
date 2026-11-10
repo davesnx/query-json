@@ -3,6 +3,7 @@ node_modules
 
 # Editor
 *.merlin
+.cursor
 
 # Esy
 _esy
