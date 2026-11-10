@@ -225,6 +225,41 @@ let parse_decimal_huge_exponent () =
     (`Big_int (Z.pow (Z.of_int 10) 400))
     "1e400" ()
 
+let check_repr name json_str expected =
+  let repr =
+    match Json.from_string json_str with
+    | `Decimal (d : Json.Decimal.t) ->
+        d.repr
+    | _ ->
+        Alcotest.fail (name ^ " is not a decimal")
+  in
+  Alcotest.(check (option string)) (name ^ " repr") expected repr
+
+let parse_decimal_fast_path_canonical () =
+  check_decimal "1234.5678 fast path" "1234.5678"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1234.5678"))
+    "1234.5678" ();
+  check_repr "1234.5678" "1234.5678" None
+
+let parse_decimal_fast_path_negative () =
+  check_decimal "-12.34 fast path" "-12.34"
+    (`Decimal (Json.Decimal.of_lexeme_exn "-12.34"))
+    "-12.34" ();
+  check_repr "-12.34" "-12.34" None
+
+let parse_decimal_trailing_zero_keeps_repr () =
+  check_decimal "1.50 keeps repr" "1.50"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1.50"))
+    "1.50" ();
+  check_repr "1.50" "1.50" (Some "1.50")
+
+let parse_decimal_many_digits_keeps_repr () =
+  check_decimal "1.2345678901234567895 keeps repr" "1.2345678901234567895"
+    (`Decimal (Json.Decimal.of_lexeme_exn "1.2345678901234567895"))
+    "1.2345678901234567895" ();
+  check_repr "1.2345678901234567895" "1.2345678901234567895"
+    (Some "1.2345678901234567895")
+
 let parse_empty_string () =
   check_parse "empty string" Fixtures.empty_string_json
     Fixtures.empty_string_value ()
@@ -494,6 +529,22 @@ let single_json =
     ("parse_decimal_positive_exponent", `Quick, parse_decimal_positive_exponent);
     ("parse_decimal_negative_exponent", `Quick, parse_decimal_negative_exponent);
     ("parse_decimal_huge_exponent", `Quick, parse_decimal_huge_exponent);
+    ( "parse_decimal_fast_path_canonical",
+      `Quick,
+      parse_decimal_fast_path_canonical
+    );
+    ( "parse_decimal_fast_path_negative",
+      `Quick,
+      parse_decimal_fast_path_negative
+    );
+    ( "parse_decimal_trailing_zero_keeps_repr",
+      `Quick,
+      parse_decimal_trailing_zero_keeps_repr
+    );
+    ( "parse_decimal_many_digits_keeps_repr",
+      `Quick,
+      parse_decimal_many_digits_keeps_repr
+    );
     (* Strings *)
     ("parse_empty_string", `Quick, parse_empty_string);
     ("parse_simple_string", `Quick, parse_simple_string);

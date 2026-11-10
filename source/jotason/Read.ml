@@ -333,7 +333,8 @@ let exp_end s k =
 
 let read_number s : t =
   let int_end = int_end s in
-  let k = exp_end s (frac_end s int_end) in
+  let frac_end = frac_end s int_end in
+  let k = exp_end s frac_end in
   let result =
     if k = int_end then
       try `Int (extract_int s k)
@@ -343,7 +344,30 @@ let read_number s : t =
         with Failure _ -> `Big_int (Z.of_string lexeme)
       )
     else
-      `Decimal (Decimal.of_lexeme_exn (Bytes.sub_string s.buf s.pos k))
+      let start = Bool.to_int (peek s 0 = '-') in
+      if
+        k = frac_end
+        && k - start - 1 <= Decimal.max_fast_digits
+        && peek s (k - 1) <> '0'
+      then (
+        let n = ref 0 in
+        for i = start to k - 1 do
+          if i <> int_end then n := (10 * !n) + (Char.code (peek s i) - 48)
+        done;
+        `Decimal
+          {
+            coeff =
+              Z.of_int
+                ( if start = 1 then
+                    - !n
+                  else
+                    !n
+                );
+            scale = k - int_end - 1;
+            repr = None;
+          }
+      ) else
+        `Decimal (Decimal.of_lexeme_exn (Bytes.sub_string s.buf s.pos k))
   in
   s.pos <- s.pos + k;
   result
