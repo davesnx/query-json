@@ -9,6 +9,13 @@ let to_string_pretty json ~colorize ~summarize ~raw =
   | _ ->
       Write.Pretty.to_string_colored ~colorize ~summarize json
 
+let add_pretty buf json ~colorize ~summarize ~raw =
+  match (raw, json) with
+  | true, `String s ->
+      Buffer.add_string buf s
+  | _ ->
+      Write.Pretty.to_buffer_colored buf ~colorize ~summarize json
+
 let print_pretty (json : t) ~colorize ~summarize ~raw =
   match (raw, json) with
   | true, `String s ->

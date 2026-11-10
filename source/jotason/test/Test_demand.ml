@@ -230,6 +230,121 @@ let demand_across_chunk fragment () =
       done
     )
 
+let each ?(stop_after = max_int) ?(demand = Json.All) d input =
+  let seen = ref [] in
+  let f v =
+    seen := v :: !seen;
+    List.length !seen < stop_after
+  in
+  let result = Json.parse_string_each ~demand ~each:(d, f) input in
+  (result, List.rev !seen)
+
+let each_outcome =
+  Alcotest.(pair (result (option same_value) string) (list same_value))
+
+let each_elements () =
+  Alcotest.check each_outcome "one call per element, read with its demand"
+    (Ok None, [ `Int 1; `Assoc [ ("a", `Int 2) ]; `String "x"; `Null ])
+    (each (Fields [ ("a", All) ]) {|[1, {"b": [3], "a": 2}, "x", null]|})
+
+let each_nested () =
+  Alcotest.check each_outcome "nested demand"
+    ( Ok None,
+      [
+        `List [ `Assoc [ ("x", `Int 1) ] ];
+        `List [ `Assoc [ ("x", `Int 2) ]; `Assoc [ ("x", `Int 3) ] ];
+      ]
+    )
+    (each
+       (Items (Fields [ ("x", All) ]))
+       {|[[{"x": 1, "y": 0}], [{"y": 0, "x": 2}, {"x": 3}]]|}
+    )
+
+let each_not_array () =
+  Alcotest.check each_outcome "not an array: whole demand, no call"
+    (Ok (Some (`Assoc [ ("a", `Int 1) ])), [])
+    (each ~demand:(Fields [ ("a", All) ]) Skip {|{"a": 1, "b": [2]}|})
+
+let each_without_callback () =
+  Alcotest.(check (result (option same_value) string))
+    "no callback: the value is read with demand"
+    (Ok (Some (`List [ `Int 1 ])))
+    (Json.parse_string_each ~demand:All "[1]")
+
+let each_empty () =
+  Alcotest.check each_outcome "empty array" (Ok None, []) (each All "[]");
+  Alcotest.check each_outcome "empty array with spaces" (Ok None, [])
+    (each All "[ \n ]")
+
+let each_malformed_tail () =
+  let input = "[1,\n 2, tru]" in
+  Alcotest.check each_outcome "calls before the error, then the error"
+    ( Error "JSON parse error: Line 2, bytes 4-8:\nInvalid token 'tru]'",
+      [ `Int 1; `Int 2 ]
+    )
+    (each All input);
+  Alcotest.(check (result string string))
+    "same error as the full reader"
+    (Json.parse_string input |> Result.map Json.to_string)
+    (fst (each All input) |> Result.map (fun _ -> ""))
+
+let each_junk () =
+  Alcotest.check each_outcome "junk after the array"
+    ( Error
+        "JSON parse error: Line 1, bytes 7-8:\n\
+         Junk after end of JSON value: 'x'",
+      [ `Int 1; `Int 2 ]
+    )
+    (each All "[1, 2] x")
+
+let each_stop () =
+  Alcotest.check each_outcome "no call after false, the rest is validated"
+    (Ok None, [ `Int 1; `Int 2 ])
+    (each ~stop_after:2 All {|[1, 2, {"a": [3]}, "4"]|});
+  Alcotest.check each_outcome "an error after the stop is still reported"
+    ( Error
+        "JSON parse error: Line 1, bytes 7-10:\nInvalid escape sequence 'q\"]'",
+      [ `Int 1 ]
+    )
+    (each ~stop_after:1 All {|[1, "a\q"]|})
+
+let each_across_chunks () =
+  let input_file = Filename.temp_file "test_jotason_each" ".json" in
+  Fun.protect
+    ~finally:(fun () -> Sys.remove input_file)
+    (fun () ->
+      let d = Json.Fields [ ("k", All) ] in
+      let element i =
+        Printf.sprintf {|{"pad": "%s", "k": [%d, "%s"]}|}
+          (String.make (1000 + (i * 37)) 'p')
+          i
+          (String.make (i mod 7) 'q')
+      in
+      let json = "[" ^ String.concat ",\n" (List.init 200 element) ^ "]" in
+      Out_channel.with_open_bin input_file (fun oc -> output_string oc json);
+      let expected =
+        match Json.from_string ~demand:(Items d) json with
+        | `List l ->
+            l
+        | _ ->
+            assert false
+      in
+      let seen = ref [] in
+      let result =
+        Json.parse_file_each ~demand:All
+          ~each:
+            ( d,
+              fun v ->
+                seen := v :: !seen;
+                true
+            )
+          input_file
+      in
+      Alcotest.check each_outcome "file read element by element"
+        (Ok None, expected)
+        (result, List.rev !seen)
+    )
+
 let tests =
   [
     ("Fields keeps listed", `Quick, fields_keep_listed);
@@ -255,6 +370,15 @@ let tests =
     ("skipped error text", `Quick, skipped_error_text);
     ("skipped exponent failure", `Quick, skipped_exponent_failure);
     ("missing key across chunks", `Quick, missing_key_across_chunks);
+    ("each: elements", `Quick, each_elements);
+    ("each: nested demand", `Quick, each_nested);
+    ("each: not an array", `Quick, each_not_array);
+    ("each: no callback", `Quick, each_without_callback);
+    ("each: empty array", `Quick, each_empty);
+    ("each: malformed tail", `Quick, each_malformed_tail);
+    ("each: junk after", `Quick, each_junk);
+    ("each: stop", `Quick, each_stop);
+    ("each: across chunks", `Quick, each_across_chunks);
   ]
   @ List.map skipped_error bad_fragments
   @ List.map

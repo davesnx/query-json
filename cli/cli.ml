@@ -30,6 +30,8 @@ let usage ?(colorize = true) () =
     ^ "-n, --null-input: Run filter with null as input (no input read)";
     Console_style.indent 3 ^ "-v, --verbose: Activate verbossity";
     Console_style.indent 3 ^ "-d, --debug: Print AST";
+    Console_style.indent 3
+    ^ "--stream-output: Print each result as soon as it is ready";
     Console_style.indent 3 ^ "--repl: Start interactive REPL mode";
     Console_style.indent 3 ^ "--version: Show version information."
     ^ Console_style.enter 2 ^ Console_style.indent 1 ^ t.bold "EXAMPLES";
@@ -76,7 +78,7 @@ let reconnect_stdin_to_tty () =
   with Unix.Unix_error _ -> false
 
 let execution position_0 position_1 verbose debug no_color raw_output null_input
-    repl functions =
+    repl functions stream_output =
   let colorize = not no_color in
   if Option.is_some functions then
     match functions with
@@ -172,22 +174,23 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
           if null_input then
             Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
               query `Null
+            |> Result.map print_endline
           else
-            Core.run_input ~debug ~colorize ~verbose ~raw:raw_output
-              ~summarize:false query (fun demand ->
+            Core.run_output ~debug ~colorize ~verbose ~raw:raw_output
+              ~summarize:false ~stream:stream_output query (fun demand each ->
                 match position_1 with
                 | Some f when Sys.file_exists f ->
-                    Json.parse_file ~demand f
+                    Json.parse_file_each ~demand ?each f
                 | Some s ->
-                    Json.parse_string ~demand s
+                    Json.parse_string_each ~demand ?each s
                 | None ->
-                    Json.parse_channel ~demand
+                    Json.parse_channel_each ~demand ?each
                       (Unix.in_channel_of_descr Unix.stdin)
             )
         in
         match output with
-        | Ok results ->
-            print_endline results
+        | Ok () ->
+            ()
         | Error err ->
             print_error_message ~colorize err
       )
@@ -219,6 +222,14 @@ let () =
   let repl =
     value & flag & info [ "repl" ] ~doc:"Start interactive REPL mode"
   in
+  let stream_output =
+    value & flag
+    & info [ "stream-output" ]
+        ~doc:
+          "Print each result as soon as it is ready, before the whole input is \
+           read. An error found later in the input or in the query then \
+           follows the results already printed"
+  in
   let functions =
     let some_str = Cmdliner.Arg.some Cmdliner.Arg.string in
     value
@@ -232,7 +243,7 @@ let () =
   let term =
     let open Cmdliner.Term in
     const execution $ query $ json $ verbose $ debug $ color $ raw_output
-    $ null_input $ repl $ functions
+    $ null_input $ repl $ functions $ stream_output
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

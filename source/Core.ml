@@ -73,3 +73,89 @@ let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
       | Error json_err ->
           Error json_err
     )
+
+let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
+    ?(raw = false) ?(summarize = false) ~stream query read =
+  let out = Buffer.create 65536 in
+  let count = ref 0 in
+  let ast = ref None in
+  let write () =
+    Option.iter (fun a -> print_endline (Ast.show_expression a)) !ast;
+    ast := None;
+    Buffer.output_buffer stdout out;
+    Buffer.clear out
+  in
+  let add results =
+    List.iter
+      (fun json ->
+        Json.add_pretty out ~colorize ~summarize ~raw json;
+        Buffer.add_char out '\n';
+        incr count
+      )
+      results
+  in
+  let finish result =
+    match result with
+    | Interpreter.Ok results ->
+        add results;
+        if !count = 0 then Buffer.add_char out '\n';
+        write ();
+        Ok ()
+    | Error err ->
+        Buffer.clear out;
+        write ();
+        Error err
+    | Halt code ->
+        Buffer.clear out;
+        write ();
+        exit code
+  in
+  match parse ~debug:false ~colorize query with
+  | Error err -> (
+      match read Json.All None with
+      | Ok _ ->
+          Error err
+      | Error json_err ->
+          Error json_err
+    )
+  | Ok runtime -> (
+      if debug then ast := Some runtime;
+      let whole = Demand.of_expression runtime in
+      let run_all json =
+        write ();
+        finish (Interpreter.execute ~colorize ~verbose runtime json)
+      in
+      match Demand.stream runtime with
+      | None -> (
+          match read whole None with
+          | Ok (Some json) ->
+              run_all json
+          | Ok None ->
+              assert false
+          | Error err ->
+              Error err
+        )
+      | Some f -> (
+          let stopped = ref (Interpreter.Ok []) in
+          let each json =
+            match Interpreter.execute ~colorize ~verbose f json with
+            | Ok results ->
+                add results;
+                if stream then (
+                  write ();
+                  flush stdout
+                );
+                true
+            | stop ->
+                stopped := stop;
+                false
+          in
+          match read whole (Some (Demand.of_expression f, each)) with
+          | Ok (Some json) ->
+              run_all json
+          | Ok None ->
+              finish !stopped
+          | Error err ->
+              Error err
+        )
+    )

@@ -79,3 +79,80 @@ let rec demand e (k : Json.demand) : Json.demand =
       raise Unknown
 
 let of_expression e = try demand e All with Unknown -> All
+
+let children = function
+  | Identity
+  | Literal _
+  | Variable _
+  | Env_var _
+  | Key _
+  | Index _
+  | Slice _
+  | Fn0 _
+  | Fn1 (With_pattern _ | With_separator _) ->
+      []
+  | Fn1 (With_expr (_, e)) | Optional e | Dynamic_access e ->
+      [ e ]
+  | Pipe (a, b)
+  | Update (a, b)
+  | Alternative (a, b)
+  | Comma (a, b)
+  | Operation (a, _, b)
+  | Assign (a, b)
+  | Fn2 (_, a, b) ->
+      [ a; b ]
+  | List e ->
+      Option.to_list e
+  | Object pairs ->
+      List.concat_map (fun (k, v) -> k :: Option.to_list v) pairs
+  | Slice_expr (a, b) ->
+      Option.to_list a @ Option.to_list b
+  | If_then_else (a, b, c) | Fma (a, b, c) ->
+      [ a; b; c ]
+  | Range (a, b, c) ->
+      (a :: Option.to_list b) @ Option.to_list c
+  | Reduce (a, _, b, c) ->
+      [ a; b; c ]
+  | Foreach (a, _, b, c, d) ->
+      [ a; b; c; d ]
+  | As (a, _, b) ->
+      [ a; b ]
+  | Try (a, b, c) ->
+      (a :: Option.to_list b) @ Option.to_list c
+  | Fn (_, _, body) ->
+      [ body ]
+  | Apply (_, args) ->
+      args
+
+let rec prints = function
+  | Fn0 (Debug | Stderr) | Fn1 (With_expr (Debug_msg, _)) ->
+      true
+  | e ->
+      List.exists prints (children e)
+
+let rec pipeline = function
+  | Pipe (Fn _, _) as e ->
+      [ e ]
+  | Pipe (a, b) ->
+      pipeline a @ pipeline b
+  | Identity ->
+      []
+  | e ->
+      [ e ]
+
+let stream e =
+  match pipeline e with
+  | Index [] :: rest
+    when not (List.exists (function Fn _ -> true | e -> prints e) rest) ->
+      Some
+        (List.fold_right
+           (fun e acc ->
+             if acc = Identity then
+               e
+             else
+               Pipe (e, acc)
+           )
+           rest Identity
+        )
+  | _ ->
+      None

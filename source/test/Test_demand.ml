@@ -180,4 +180,186 @@ let differential =
     )
     queries
 
-let tests = analysis_tests @ differential
+let stream query expected =
+  Alcotest.test_case ("stream " ^ query) `Quick (fun () ->
+      match Core.parse ~debug:false ~colorize:false query with
+      | Error err ->
+          Alcotest.fail err
+      | Ok ast ->
+          Alcotest.(check (option string))
+            "per-element query" expected
+            (Option.map Ast.show_expression (Demand.stream ast))
+  )
+
+let stream_tests =
+  [
+    stream ".[]" (Some "Identity");
+    stream ".[] | ." (Some "Identity");
+    stream ".[] | .a" (Some {|(Key "a")|});
+    stream ". | .[] | .a" (Some {|(Key "a")|});
+    stream "(.[] | .a) | .b" (Some {|(Pipe ((Key "a"), (Key "b")))|});
+    stream ".[] | (.a | .b)" (Some {|(Pipe ((Key "a"), (Key "b")))|});
+    stream ".[] | .a, .b" (Some {|(Comma ((Key "a"), (Key "b")))|});
+    stream ".[] | select(.a > 1) | [.a, .b]"
+      (Some
+         (Ast.show_expression
+            (Pipe
+               ( Fn1
+                   (With_expr
+                      ( Select,
+                        Operation
+                          (Key "a", Greater_than, Literal (Number (Integer "1")))
+                      )
+                   ),
+                 List (Some (Comma (Key "a", Key "b")))
+               )
+            )
+         )
+      );
+    stream ".[] | .[]" (Some "(Index [])");
+    stream ".a | .[]" None;
+    stream ".[]?" None;
+    stream ".[0] | .a" None;
+    stream "map(.a)" None;
+    stream "[.[] | .a]" None;
+    stream ".[] | debug" None;
+    stream ".[] | .a | debug(\"m\")" None;
+    stream ".[] | stderr" None;
+    stream ".[] | if .a then debug else 1 end" None;
+    stream ".[] | [.a | debug]" None;
+    stream ".[] | fn f: .a; f"
+      (Some {|(Pipe ((Fn ("f", [], (Key "a"))), (Apply ("f", []))))|});
+    stream "fn f: .a; .[] | f" None;
+    stream ".[] | (fn f: .a; f)"
+      (Some {|(Pipe ((Fn ("f", [], (Key "a"))), (Apply ("f", []))))|});
+    stream ".[] | halt" (Some "(Fn0 Halt)");
+    stream ".[] | error" (Some "(Fn1 (With_expr (Error_msg, Identity)))");
+    stream "(fn f: .a; .[]) | f" None;
+  ]
+
+let capture_stdout f =
+  flush stdout;
+  let file = Filename.temp_file "test_demand" ".out" in
+  let fd = Unix.openfile file [ O_WRONLY; O_TRUNC ] 0o600 in
+  let saved = Unix.dup Unix.stdout in
+  Unix.dup2 fd Unix.stdout;
+  Unix.close fd;
+  let result =
+    Fun.protect
+      ~finally:(fun () ->
+        flush stdout;
+        Unix.dup2 saved Unix.stdout;
+        Unix.close saved
+      )
+      f
+  in
+  let out = In_channel.with_open_bin file In_channel.input_all in
+  Sys.remove file;
+  (result, out)
+
+let output_run ~stream query input =
+  capture_stdout (fun () ->
+      Core.run_output ~colorize:false ~stream query (fun demand each ->
+          Json.parse_string_each ~demand ?each input
+      )
+  )
+
+let printed_full_run query input =
+  match full_run query input with
+  | Ok s ->
+      (Ok (), s ^ "\n")
+  | Error err ->
+      (Error err, "")
+
+let stream_documents =
+  [
+    {|[{"a": 1, "b": "x"}, {"a": 2, "b": "y"}, {"a": 3, "b": "z"}]|};
+    {|[{"a": 1, "b": "x"}, {"a": 2}, {"a": 3, "b": "z"}]|};
+    {|[{"a": 1}, [2], "s", null, 4]|};
+    {|[]|};
+    {|[ ]|};
+    {|[{"a": 1}, {"a": 2}, tru]|};
+    {|[{"a": 1}, {"a": 2, "b": "\q"}]|};
+    {|[{"a": 1}, {"a": 2}|};
+    {|[{"a": 1}, {"a": 2}] x|};
+    {|[{"a": 1}, {"a": 3, "b": 1e99999999999999999999}]|};
+    {|{"a": [1, 2]}|};
+    {|"s"|};
+  ]
+
+let stream_queries =
+  [
+    ".[]";
+    ".[] | .a";
+    ".[] | .b";
+    ".[] | [.a, .b]";
+    ".[] | select(.a > 1)";
+    ".[] | select(.a > 1) | .b";
+    ".[] | .a | . + 1";
+    "(.[] | .a) | . * 2";
+    ".[] | error";
+    ".[] | if .a == 2 then error(\"boom\") else .a end";
+    ".[] | if .a == 3 then error else . end";
+    ".[] | empty";
+    ".[] | .a?";
+    ".[] | try .b catch \"none\"";
+    ".[] | (.a, .a)";
+    ".[] | .[]";
+    ".[] | length";
+    ".[] | break";
+    ".[] | (fn f: .a; f)";
+  ]
+
+let output_differential =
+  List.concat_map
+    (fun query ->
+      List.map
+        (fun input ->
+          Alcotest.test_case
+            (Printf.sprintf "held output: %s on %S" query input) `Quick
+            (fun () ->
+              Alcotest.(check (pair (result unit string) string))
+                "same as a full read"
+                (printed_full_run query input)
+                (output_run ~stream:false query input)
+          )
+        )
+        (stream_documents @ documents)
+    )
+    (stream_queries @ queries)
+
+let streamed_output =
+  let check name query input expected =
+    Alcotest.test_case name `Quick (fun () ->
+        Alcotest.(check (pair (result unit string) string))
+          "streamed output" expected
+          (output_run ~stream:true query input)
+    )
+  in
+  [
+    check "streamed: success equals held output" ".[] | .a"
+      {|[{"a": 1}, {"a": [2]}]|} (Ok (), "1\n[ 2 ]\n");
+    check "streamed: no result prints one newline" ".[] | empty" "[1, 2]"
+      (Ok (), "\n");
+    check "streamed: JSON error after partial output" ".[] | .a"
+      {|[{"a": 1}, {"a": 2}, tru]|}
+      ( Error "JSON parse error: Line 1, bytes 21-25:\nInvalid token 'tru]'",
+        "1\n2\n"
+      );
+    check "streamed: query error after partial output" ".[] | .a"
+      {|[{"a": 1}, 2, {"a": 3}]|}
+      ( Error
+          "error[type_mismatch]: Cannot index number with string \"a\"\n\n\
+          \  in: 2",
+        "1\n"
+      );
+    check "streamed: JSON error wins over an earlier query error" ".[] | .a"
+      {|[{"a": 1}, 2, tru]|}
+      ( Error "JSON parse error: Line 1, bytes 14-18:\nInvalid token 'tru]'",
+        "1\n"
+      );
+  ]
+
+let tests =
+  analysis_tests @ differential @ stream_tests @ output_differential
+  @ streamed_output

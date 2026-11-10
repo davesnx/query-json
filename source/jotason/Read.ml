@@ -655,13 +655,44 @@ and elements_loop s ~keep d acc =
   else
     List.rev acc
 
-let read_toplevel ?(demand = All) s =
+let rec each_element s d f =
+  let v = value_d s d in
+  let d =
+    match d with
+    | Skip ->
+        Skip
+    | _ ->
+        if f v then
+          d
+        else
+          Skip
+  in
+  if next_member s ']' "Expected ',' or ']' but found" then each_element s d f
+
+let toplevel s read =
   skip_space s;
   if not (more s) then json_error "Blank input data";
-  let x = match demand with All -> read_value s | d -> value_d s d in
+  let x = read s in
   skip_space s;
   if more s then long_error s "Junk after end of JSON value:" 0;
   x
+
+let read_toplevel ?(demand = All) s = toplevel s (fun s -> value_d s demand)
+
+let read_each ~demand ?each s =
+  toplevel s (fun s ->
+      match each with
+      | Some (d, f) when peek s 0 = '[' ->
+          s.pos <- s.pos + 1;
+          skip_space s;
+          if more s && peek s 0 = ']' then
+            s.pos <- s.pos + 1
+          else
+            each_element s d f;
+          None
+      | _ ->
+          Some (value_d s demand)
+  )
 
 let make ?buf ?fname ?lnum ic bytes len =
   {
@@ -676,17 +707,19 @@ let make ?buf ?fname ?lnum ic bytes len =
     st = init_lexer ?buf ?fname ?lnum ();
   }
 
+(* [refill] never writes to the buffer when [ic] is [None], so the string is
+   only read. *)
+let string_source ?buf ?fname ?lnum str =
+  make ?buf ?fname ?lnum None (Bytes.unsafe_of_string str) (String.length str)
+
+let channel_source ?buf ?fname ?lnum ic =
+  make ?buf ?fname ?lnum (Some ic) (Bytes.create 65536) 0
+
 let from_string ?buf ?fname ?lnum ?demand str =
-  (* [refill] never writes to the buffer when [ic] is [None], so the string
-     is only read. *)
-  read_toplevel ?demand
-    (make ?buf ?fname ?lnum None
-       (Bytes.unsafe_of_string str)
-       (String.length str)
-    )
+  read_toplevel ?demand (string_source ?buf ?fname ?lnum str)
 
 let from_channel ?buf ?fname ?lnum ?demand ic =
-  read_toplevel ?demand (make ?buf ?fname ?lnum (Some ic) (Bytes.create 65536) 0)
+  read_toplevel ?demand (channel_source ?buf ?fname ?lnum ic)
 
 let from_file ?buf ?fname ?lnum ?demand file =
   In_channel.with_open_text file (from_channel ?buf ?fname ?lnum ?demand)
@@ -703,3 +736,18 @@ let parse_file ?demand = parse "the file" (fun f -> from_file ?demand f)
 
 let parse_channel ?demand =
   parse "from standard input" (fun c -> from_channel ?demand c)
+
+let parse_string_each ~demand ?each =
+  parse "the string" (fun s -> read_each ~demand ?each (string_source s))
+
+let parse_file_each ~demand ?each =
+  parse "the file" (fun f ->
+      In_channel.with_open_text f (fun ic ->
+          read_each ~demand ?each (channel_source ic)
+      )
+  )
+
+let parse_channel_each ~demand ?each =
+  parse "from standard input" (fun c ->
+      read_each ~demand ?each (channel_source c)
+  )
