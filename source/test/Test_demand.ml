@@ -313,6 +313,10 @@ let printed_full_run query input =
 
 let stream_documents =
   [
+    {|[{"a": 1, "b": "value number 1", "c": [1, {"d": [2, 3]}]}, {"a": 2, "b": "value number 2", "c": [1, {"d": [2, 3]}]}, {"a": 3, "b": "value number 3", "c": [1, {"d": [2, 3]}]}, {"a": 4, "b": "value number 4", "c": [1, {"d": [2, 3]}]}, {"a": 5, "b": "value number 5", "c": [1, {"d": [2, 3]}]}, {"a": 6, "b": "value number 6", "c": [1, {"d": [2, 3]}]}, {"a": 7, "b": "value number 7", "c": [1, {"d": [2, 3]}]}, {"a": 8, "b": "value number 8", "c": [1, {"d": [2, 3]}]}]|};
+    {|[{"a": 1, "b": [1, 2, 3]}, {"a": 1, "b": [1, 2, 3]}, {"a": 1, "b": [1, 2, 3]}, {"a": 1, "b": [1, 2, 3]}]|};
+    {|[{"a": 1, "b": "value number 1", "c": [1, {"d": [2, 3]}]}, {"a": 2, "b": "value number 2", "c": [1, {"d": [2, 3]}]}, {"a": 3, "b": "value number 3", "c": [1, {"d": [2, 3]}]}, {"a": 4, "b": "value number 4", "c": [1, {"d": [2, 3]}]}, {"a": 5, "b": "value number 5", "c": [1, {"d": [2, 3]}]}, {"a": 6, "b": "value number 6", "c": [1, {"d": [2, 3]}]}, {"a": 7, "b": "value number 7", "c": [1, {"d": [2, 3]}]}, {"a": 8, "b": "value number 8", "c": [1, {"d": [2, 3]}]}, tru]|};
+    {|[{"a": [[]], "b": {}}, {"a": {"x": "wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww"}, "b": []}, {"a": 2, "b": 1}]|};
     {|[{"a": 1, "b": "x"}, {"a": 2, "b": "y"}, {"a": 3, "b": "z"}]|};
     {|[{"a": 1, "b": "x"}, {"a": 2}, {"a": 3, "b": "z"}]|};
     {|[{"a": 1}, [2], "s", null, 4]|};
@@ -348,6 +352,26 @@ let stream_queries =
     ".[] | length";
     ".[] | break";
     ".[] | (fn f: .a; f)";
+    ".[] | 1";
+    ".[] | (1, 2)";
+    ".";
+    ". | .";
+    "map(.)";
+    "map(.a)";
+    "map(.a | . + 1)";
+    "map(select(.a > 1) | .b)";
+    "map(.a, .b)";
+    "map(empty)";
+    "map(error)";
+    "map(if .a == 2 then error(\"boom\") else . end)";
+    "map(.a?)";
+    "[.[]]";
+    "[.[] | .a]";
+    "[.[] | .a | . + 1]";
+    "map(.[])";
+    "map(debug)";
+    "map(fn f: .a; f)";
+    "map(.a) | .";
   ]
 
 let output_differential =

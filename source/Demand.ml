@@ -161,19 +161,31 @@ let rec pipeline = function
   | e ->
       [ e ]
 
+let per_element rest =
+  if List.exists (function Fn _ -> true | e -> prints e) rest then
+    None
+  else
+    Some
+      (List.fold_right
+         (fun e acc ->
+           if acc = Identity then
+             e
+           else
+             Pipe (e, acc)
+         )
+         rest Identity
+      )
+
 let stream e =
+  match pipeline e with Index [] :: rest -> per_element rest | _ -> None
+
+let collect e =
   match pipeline e with
-  | Index [] :: rest
-    when not (List.exists (function Fn _ -> true | e -> prints e) rest) ->
-      Some
-        (List.fold_right
-           (fun e acc ->
-             if acc = Identity then
-               e
-             else
-               Pipe (e, acc)
-           )
-           rest Identity
-        )
+  | [] ->
+      Some Identity
+  | [ Fn1 (With_expr (Map, f)) ] ->
+      per_element (pipeline f)
+  | [ List (Some e) ] ->
+      stream e
   | _ ->
       None

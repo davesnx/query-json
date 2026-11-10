@@ -48,6 +48,35 @@ as for any other query.
   Invalid token 'tru]'
   
 
+A root `.`, `map(f)` or `[.[] | f]` on an array is also read one element at a
+time. The output is the same array.
+
+  $ query-json -c '.[] | 1' '[1, 2]'
+  1
+  1
+  $ query-json -c 'map(1)' '[1, 2]'
+  [ 1, 1 ]
+  $ query-json -c 'map(.a)' '[{"a": 1}, {"a": [2]}]'
+  [ 1, [ 2 ] ]
+  $ query-json -c '.' '[{"a": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}, [1, {"b": 2}], []]'
+  [
+    {
+      "a": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    [
+      1,
+      {
+        "b": 2
+      }
+    ],
+    []
+  ]
+  $ query-json -c 'map(.a)' '[{"a": 1}, 2, tru]'
+  
+  JSON parse error: Line 1, bytes 14-18:
+  Invalid token 'tru]'
+  
+
 With --stream-output, the results of each element are printed when they are
 ready. An error found later follows them. The first query error or halt ends
 the run: the rest of the input is not read.

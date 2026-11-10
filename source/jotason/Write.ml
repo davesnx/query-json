@@ -924,6 +924,13 @@ module Pretty = struct
          for closures and an always-true [if colorize] check per token. *)
       write_json_colored buf ~indent:0 json
 
+  let item_to_buffer buf ~colorize json =
+    write_indent buf 1;
+    if colorize then
+      write_json_colored buf ~indent:1 json
+    else
+      write_json_plain buf ~indent:1 json
+
   let to_string_colored ~colorize ~summarize json =
     let buf = Buffer.create 4096 in
     to_buffer_colored buf ~colorize ~summarize json;

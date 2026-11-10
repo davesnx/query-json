@@ -146,7 +146,16 @@ let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
         write ();
         finish (Interpreter.execute ~colorize ~verbose runtime json)
       in
-      match Demand.stream runtime with
+      let mode =
+        match Demand.stream runtime with
+        | Some f ->
+            Some (f, false)
+        | None when summarize ->
+            None
+        | None ->
+            Option.map (fun f -> (f, true)) (Demand.collect runtime)
+      in
+      match mode with
       | None -> (
           match read whole None with
           | Ok (Some json) ->
@@ -156,27 +165,62 @@ let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
           | Error err ->
               Error err
         )
-      | Some f -> (
+      | Some (f, collect) -> (
           let stopped = ref (Interpreter.Ok []) in
+          let pending = ref [] in
+          let expanded = ref false in
+          let item json =
+            if !expanded then (
+              Buffer.add_string out ",\n";
+              Json.Pretty.item_to_buffer out ~colorize json
+            ) else (
+              pending := json :: !pending;
+              let items = List.rev !pending in
+              if not (Json.Pretty.should_compact (`List items)) then (
+                expanded := true;
+                pending := [];
+                Buffer.add_string out "[\n";
+                List.iteri
+                  (fun i json ->
+                    if i > 0 then Buffer.add_string out ",\n";
+                    Json.Pretty.item_to_buffer out ~colorize json
+                  )
+                  items
+              )
+            )
+          in
           let each json =
             match Interpreter.execute ~colorize ~verbose f json with
             | Ok results ->
-                add results;
-                if stream then (
-                  write ();
-                  flush stdout
+                if collect then
+                  List.iter item results
+                else (
+                  add results;
+                  if stream then (
+                    write ();
+                    flush stdout
+                  )
                 );
                 true
             | stop ->
                 stopped := stop;
-                if stream then raise Json.Stop;
+                if stream && not collect then raise Json.Stop;
                 false
           in
           match read whole (Some (Demand.of_expression f, each)) with
           | Ok (Some json) ->
               run_all json
-          | Ok None ->
-              finish !stopped
+          | Ok None -> (
+              match !stopped with
+              | Ok [] when !expanded ->
+                  Buffer.add_string out "\n]\n";
+                  incr count;
+                  finish (Ok [])
+              | Ok [] when collect ->
+                  finish (Ok [ `List (List.rev !pending) ])
+              | stopped ->
+                  finish stopped
+            )
           | Error err ->
               Error err
         )

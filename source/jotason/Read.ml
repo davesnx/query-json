@@ -657,17 +657,14 @@ and elements_loop s ~keep d acc =
 
 let rec each_element s d f =
   let v = value_d s d in
-  let d =
-    match d with
-    | Skip ->
-        Skip
-    | _ ->
-        if f v then
-          d
-        else
-          Skip
-  in
-  if next_member s ']' "Expected ',' or ']' but found" then each_element s d f
+  if f v then (
+    if next_member s ']' "Expected ',' or ']' but found" then each_element s d f
+  ) else if next_member s ']' "Expected ',' or ']' but found" then
+    elements_skip s
+
+and elements_skip s =
+  ignore (value_d s Skip);
+  if next_member s ']' "Expected ',' or ']' but found" then elements_skip s
 
 let toplevel s read =
   skip_space s;

@@ -54,6 +54,14 @@ module Pretty : sig
   val to_buffer_colored :
     Buffer.t -> colorize:bool -> summarize:bool -> t -> unit
 
+  val should_compact : t -> bool
+  (** Whether [to_buffer_colored] without [summarize] prints an array or object
+      on one line. *)
+
+  val item_to_buffer : Buffer.t -> colorize:bool -> t -> unit
+  (** One member of a root array that is not printed on one line: its
+      indentation and the value, without a separator. *)
+
   val to_string_colored : colorize:bool -> summarize:bool -> t -> string
   val print_colored : colorize:bool -> summarize:bool -> t -> unit
 end
