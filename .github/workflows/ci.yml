@@ -145,9 +145,15 @@ jobs:
           DEPLOYMENT_URL: ${{ steps.preview.outputs.deployment-url }}
           COMMIT: ${{ github.event.pull_request.head.sha }}
         run: |
-          gh pr comment "$PR_URL" --edit-last --create-if-none --body "Playground preview: $PREVIEW_URL
-
-          Commit $COMMIT: $DEPLOYMENT_URL"
+          body=$(gh pr view "$PR_URL" --json comments --jq '[.comments[] | select(.author.login == "github-actions")] | last | .body // ""')
+          if [ -z "$body" ]; then
+            body="Playground preview: $PREVIEW_URL"$'\n'
+          fi
+          case "$body" in
+            *"$COMMIT"*) ;;
+            *) body="$body"$'\n'"- $COMMIT: $DEPLOYMENT_URL" ;;
+          esac
+          gh pr comment "$PR_URL" --edit-last --create-if-none --body "$body"
 
       # ========================================
       # Release (ubuntu-latest, tags only)
