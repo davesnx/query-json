@@ -679,20 +679,24 @@ let toplevel s read =
 
 let read_toplevel ?(demand = All) s = toplevel s (fun s -> value_d s demand)
 
+exception Stop
+
 let read_each ~demand ?each s =
-  toplevel s (fun s ->
-      match each with
-      | Some (d, f) when peek s 0 = '[' ->
-          s.pos <- s.pos + 1;
-          skip_space s;
-          if more s && peek s 0 = ']' then
-            s.pos <- s.pos + 1
-          else
-            each_element s d f;
-          None
-      | _ ->
-          Some (value_d s demand)
-  )
+  try
+    toplevel s (fun s ->
+        match each with
+        | Some (d, f) when peek s 0 = '[' ->
+            s.pos <- s.pos + 1;
+            skip_space s;
+            if more s && peek s 0 = ']' then
+              s.pos <- s.pos + 1
+            else
+              each_element s d f;
+            None
+        | _ ->
+            Some (value_d s demand)
+    )
+  with Stop -> None
 
 let make ?buf ?fname ?lnum ic bytes len =
   {

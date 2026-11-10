@@ -149,6 +149,7 @@ Arguments:
 Options:
   -r, --raw-output    Output strings without quotes
   --no-color          Disable colored output
+  --stream-output     Print each result of `.[] | ...` as soon as it is ready
   --repl              Start interactive REPL mode
   -v, --verbose       Show verbose output including deprecation warnings
   --debug             Print lexer tokens and AST

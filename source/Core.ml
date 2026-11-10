@@ -148,6 +148,7 @@ let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
                 true
             | stop ->
                 stopped := stop;
+                if stream then raise Json.Stop;
                 false
           in
           match read whole (Some (Demand.of_expression f, each)) with

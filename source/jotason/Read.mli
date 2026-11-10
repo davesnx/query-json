@@ -18,6 +18,8 @@ val parse_string : ?demand:demand -> string -> (t, string) result
 val parse_file : ?demand:demand -> string -> (t, string) result
 val parse_channel : ?demand:demand -> in_channel -> (t, string) result
 
+exception Stop
+
 val parse_string_each :
   demand:demand ->
   ?each:demand * (t -> bool) ->
@@ -26,7 +28,8 @@ val parse_string_each :
 (** Like [parse_string] with [demand], but when [each] is [Some (d, f)] and the
     value is an array, each element is read with [d] and passed to [f], and the
     result is [None]. Once [f] returns [false], the remaining elements are only
-    validated. Any other value is read with [demand]. *)
+    validated. Any other value is read with [demand]. When [f] raises [Stop],
+    the read ends at once with [Ok None]: the rest of the input is not read. *)
 
 val parse_file_each :
   demand:demand ->

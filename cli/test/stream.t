@@ -49,7 +49,8 @@ as for any other query.
   
 
 With --stream-output, the results of each element are printed when they are
-ready. An error found later follows them.
+ready. An error found later follows them. The first query error or halt ends
+the run: the rest of the input is not read.
 
   $ query-json -c --stream-output '.[] | .a' '[{"a": 1}, {"a": [2]}, {"a": "x"}]'
   1
@@ -72,6 +73,16 @@ ready. An error found later follows them.
     in: 2
   
   $ query-json -c --stream-output '.[] | if .a == 2 then halt_error(5) else .a end' '[{"a": 1}, {"a": 2}, {"a": 3}]'
+  1
+  [5]
+  $ query-json -c --stream-output '.[] | .a' '[{"a": 1}, 2, tru]'
+  1
+  
+  error[type_mismatch]: Cannot index number with string "a"
+  
+    in: 2
+  
+  $ query-json -c --stream-output '.[] | if .a == 2 then halt_error(5) else .a end' '[{"a": 1}, {"a": 2}, tru]'
   1
   [5]
   $ query-json -c --stream-output -d '.[] | .a' '[{"a": 1}, {"a": 2}]'

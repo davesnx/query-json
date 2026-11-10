@@ -360,9 +360,11 @@ let streamed_output =
           \  in: 2",
         "1\n"
       );
-    check "streamed: JSON error wins over an earlier query error" ".[] | .a"
+    check "streamed: a query error stops the read" ".[] | .a"
       {|[{"a": 1}, 2, tru]|}
-      ( Error "JSON parse error: Line 1, bytes 14-18:\nInvalid token 'tru]'",
+      ( Error
+          "error[type_mismatch]: Cannot index number with string \"a\"\n\n\
+          \  in: 2",
         "1\n"
       );
   ]

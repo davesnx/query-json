@@ -260,6 +260,14 @@ let each_nested () =
        {|[[{"x": 1, "y": 0}], [{"y": 0, "x": 2}, {"x": 3}]]|}
     )
 
+let each_raise_stop () =
+  Alcotest.(check (result (option reject) string))
+    "Stop ends the read before the malformed rest" (Ok None)
+    (Json.parse_string_each ~demand:All
+       ~each:(All, fun _ -> raise Json.Stop)
+       "[1, tru"
+    )
+
 let each_not_array () =
   Alcotest.check each_outcome "not an array: whole demand, no call"
     (Ok (Some (`Assoc [ ("a", `Int 1) ])), [])
@@ -373,6 +381,7 @@ let tests =
     ("each: elements", `Quick, each_elements);
     ("each: nested demand", `Quick, each_nested);
     ("each: not an array", `Quick, each_not_array);
+    ("each: Stop exception", `Quick, each_raise_stop);
     ("each: no callback", `Quick, each_without_callback);
     ("each: empty array", `Quick, each_empty);
     ("each: malformed tail", `Quick, each_malformed_tail);
