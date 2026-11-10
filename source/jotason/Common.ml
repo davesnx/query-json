@@ -305,6 +305,13 @@ type t =
   | `Assoc of (string * t) list
   | `List of t list ]
 
+(** The parts of a value that a reader must build. [Skip] validates the value
+    and stores [`Null]. [Fields] keeps the listed members of an object, with
+    every duplicate; when a listed key is missing, the object is read in full.
+    [Items] reads every element of an array with the given demand. A value whose
+    kind does not fit [Fields] or [Items] is read in full. *)
+type demand = Skip | All | Fields of (string * demand) list | Items of demand
+
 exception Json_error of string
 
 let json_error s = raise (Json_error s)

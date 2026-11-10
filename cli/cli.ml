@@ -35,6 +35,8 @@ let usage ?(colorize = true) () =
     ^ "-n, --null-input: Run filter with null as input (no input read)";
     Console_style.indent 3 ^ "-v, --verbose: Activate verbossity";
     Console_style.indent 3 ^ "-d, --debug: Print AST";
+    Console_style.indent 3
+    ^ "--stream-output: Print each result as soon as it is ready";
     Console_style.indent 3 ^ "--repl: Start interactive REPL mode";
     Console_style.indent 3 ^ "--version: Show version information."
     ^ Console_style.enter 2 ^ Console_style.indent 1 ^ t.bold "EXAMPLES";
@@ -67,8 +69,6 @@ let repl_usage ?(colorize = true) () =
   |> String.concat (Console_style.enter 1)
   |> print_endline
 
-let ( let* ) = Result.bind
-
 (* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
 
    This function reconnects stdin to /dev/tty (the controlling terminal),
@@ -98,7 +98,7 @@ let should_colorize ~no_color ~force_color =
         Unix.isatty Unix.stdout
 
 let execution position_0 position_1 verbose debug no_color force_color
-    raw_output null_input repl functions =
+    raw_output null_input repl functions stream_output =
   let colorize = should_colorize ~no_color ~force_color in
   if Option.is_some functions then
     match functions with
@@ -191,45 +191,26 @@ let execution position_0 position_1 verbose debug no_color force_color
         usage ~colorize ()
     | Some query -> (
         let output =
-          (* Free-ish size hint (a stat, not a read) so Core.run can start
-             its output buffer close to the input's size instead of always
-             growing from scratch: cuts the doubling-copy cost on large
-             inputs. Pretty-printed output (indentation, spacing) tends to
-             run bigger than its compact input, so pad by half. Stdin/-n
-             keep the small default; that's fine, no size to know ahead of
-             time there. *)
-          let buf_size_hint =
-            if null_input then
-              0
-            else
-              match position_1 with
-              | Some f when Sys.file_exists f -> (
-                  try (Unix.stat f).Unix.st_size * 3 / 2
-                  with Unix.Unix_error _ -> 0
-                )
-              | Some s ->
-                  String.length s * 3 / 2
-              | None ->
-                  0
-          in
-          let* json =
-            if null_input then
-              Ok `Null
-            else
-              match position_1 with
-              | Some f when Sys.file_exists f ->
-                  Json.parse_file f
-              | Some s ->
-                  Json.parse_string s
-              | None ->
-                  Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
-          in
-          Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
-            ~buf_size_hint query json
+          if null_input then
+            Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
+              query `Null
+            |> Result.map print_endline
+          else
+            Core.run_output ~debug ~colorize ~verbose ~raw:raw_output
+              ~summarize:false ~stream:stream_output query (fun demand each ->
+                match position_1 with
+                | Some f when Sys.file_exists f ->
+                    Json.parse_file_each ~demand ?each f
+                | Some s ->
+                    Json.parse_string_each ~demand ?each s
+                | None ->
+                    Json.parse_channel_each ~demand ?each
+                      (Unix.in_channel_of_descr Unix.stdin)
+            )
         in
         match output with
-        | Ok results ->
-            print_endline results
+        | Ok () ->
+            ()
         | Error err ->
             print_error_message ~colorize err
       )
@@ -271,6 +252,14 @@ let () =
   let repl =
     value & flag & info [ "repl" ] ~doc:"Start interactive REPL mode"
   in
+  let stream_output =
+    value & flag
+    & info [ "stream-output" ]
+        ~doc:
+          "Print each result as soon as it is ready, before the whole input is \
+           read. An error found later in the input or in the query then \
+           follows the results already printed"
+  in
   let functions =
     let some_str = Cmdliner.Arg.some Cmdliner.Arg.string in
     value
@@ -284,7 +273,7 @@ let () =
   let term =
     let open Cmdliner.Term in
     const execution $ query $ json $ verbose $ debug $ no_color $ force_color
-    $ raw_output $ null_input $ repl $ functions
+    $ raw_output $ null_input $ repl $ functions $ stream_output
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version

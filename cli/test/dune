@@ -1,3 +1,8 @@
 (cram
  (alias runtest)
  (deps %{bin:query-json} ./mock.json))
+
+(cram
+ (applies_to stream_fifo)
+ (enabled_if
+  (= %{os_type} Unix)))
