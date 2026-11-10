@@ -33,8 +33,6 @@ let element : Json.demand -> Json.demand = function
   | All | Fields _ ->
       All
 
-exception Unknown
-
 let rec demand e (k : Json.demand) : Json.demand =
   match e with
   | Identity ->
@@ -77,10 +75,23 @@ let rec demand e (k : Json.demand) : Json.demand =
       join (demand a All) (demand b k)
   | If_then_else (c, t, e) ->
       join (demand c All) (join (demand t k) (demand e k))
+  | Object pairs ->
+      List.fold_left
+        (fun acc (key, value) ->
+          let value : Json.demand =
+            match (key, value) with
+            | _, Some v ->
+                demand v All
+            | Literal (String s), None ->
+                Fields [ (s, All) ]
+            | _, None ->
+                All
+          in
+          join acc (join (demand key All) value)
+        )
+        Skip pairs
   | _ ->
-      raise Unknown
-
-let of_expression e = try demand e All with Unknown -> All
+      All
 
 let children = function
   | Identity
@@ -125,6 +136,14 @@ let children = function
       [ body ]
   | Apply (_, args) ->
       args
+
+let rec defines = function Fn _ -> true | e -> List.exists defines (children e)
+
+let of_expression e : Json.demand =
+  if defines e then
+    All
+  else
+    demand e All
 
 let rec prints = function
   | Fn0 (Debug | Stderr) | Fn1 (With_expr (Debug_msg, _)) ->

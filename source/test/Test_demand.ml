@@ -68,7 +68,16 @@ let analysis_tests =
     analysis "length, .[]" "All";
     analysis "keys" "All";
     analysis ".[1:2]" "All";
-    analysis "{a: .a}" "All";
+    analysis "{a: .a}" {|Fields ["a", All]|};
+    analysis "{a, x: .b.c}" {|Fields ["a", All; "b", Fields ["c", All]]|};
+    analysis "{}" "Skip";
+    analysis "{(.a): 1}" {|Fields ["a", All]|};
+    analysis "map({a}) | .[] | .a" {|Items (Fields ["a", All])|};
+    analysis "map(.a) | add" {|Items (Fields ["a", All])|};
+    analysis ".a | keys" {|Fields ["a", All]|};
+    analysis ".[] | .a | not" {|Items (Fields ["a", All])|};
+    analysis "fn f: .a; map(.a) | add" "All";
+    analysis "map(.a) | (fn f: 1; f)" "All";
     analysis ".a |= 1" "All";
     analysis ".a = 1" "All";
     analysis "descend | .a" "All";
@@ -83,7 +92,7 @@ let analysis_tests =
     analysis "range(3)" "All";
     analysis "has(\"a\")" "All";
     analysis "to_entries" "All";
-    analysis ".a | to_string" "All";
+    analysis ".a | to_string" {|Fields ["a", All]|};
   ]
 
 let documents =
@@ -157,6 +166,30 @@ let queries =
     "map(length)";
     "length, .[]";
     "length, (.[] | .a)";
+    "{a}";
+    "{a, x: .b.c}";
+    "{(.a): .b}";
+    "{a: 1}";
+    "map({a})";
+    "map({a, b})";
+    ".[] | {x: .a, y: .b}";
+    "map(.a) | add";
+    "map(.a) | sort";
+    "map(.a) | first";
+    "map(.a | to_string)";
+    "map(.a | not)";
+    "map(.b) | unique | length";
+    ".a | keys";
+    ".b | to_entries";
+    "map(.a) | . as $x | $x | length";
+    "map(.a) | any(. > 1)";
+    "fn f: .a; map(f) | add";
+    "map(.a) | (fn length: 7; length)";
+    "[.[] | .a?] | add";
+    "map(try .a catch 0) | add";
+    "map(.a) | .[0]";
+    "map(.a) | .[1:]";
+    "map(.a) | debug | length";
   ]
 
 let full_run query input =
