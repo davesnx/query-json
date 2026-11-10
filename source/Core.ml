@@ -34,17 +34,38 @@ let parse ~debug ~colorize input =
       in
       Error (Error.format ~colorize err)
 
+(* Render straight into one shared buffer instead of turning each result
+   into its own string (via Json.to_string_pretty) and then copying all of
+   those strings again with String.concat: for many results (or one huge
+   one) that was two extra full-size copies for no reason. *)
+let render_result_into buf ~colorize ~summarize ~raw (json : Json.t) =
+  match (raw, json) with
+  | true, `String s ->
+      Buffer.add_string buf s
+  | _ ->
+      Json.Pretty.to_buffer_colored buf ~colorize ~summarize json
+
 let run ?(debug = false) ?(colorize = true) ?(verbose = false) ?(raw = false)
-    ?(summarize = false) query json =
+    ?(summarize = false) ?(buf_size_hint = 4096) query json =
   match parse ~debug ~colorize query with
   | Ok runtime -> (
       match Interpreter.execute ~colorize ~verbose runtime json with
       | Ok results ->
-          Ok
-            (results
-            |> List.map (Json.to_string_pretty ~colorize ~summarize ~raw)
-            |> String.concat "\n"
-            )
+          (* A caller that knows roughly how big the input was (e.g. the CLI,
+             from the source file's byte size) can pass that as a hint: for
+             a single huge result, starting the buffer near its final size
+             avoids the repeated grow-and-copy of doubling up from 4096. *)
+          let buf = Buffer.create (max 4096 buf_size_hint) in
+          let rec write_all first = function
+            | [] ->
+                ()
+            | x :: rest ->
+                if not first then Buffer.add_char buf '\n';
+                render_result_into buf ~colorize ~summarize ~raw x;
+                write_all false rest
+          in
+          write_all true results;
+          Ok (Buffer.contents buf)
       | Error err ->
           Error err
       | Halt code ->

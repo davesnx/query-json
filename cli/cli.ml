@@ -23,7 +23,12 @@ let usage ?(colorize = true) () =
     Console_style.enter 1 ^ "Usage:" ^ Console_style.enter 2
     ^ t.bold "query-json" ^ t.gray " [OPTIONS] " ^ "[QUERY] [JSON]"
     ^ Console_style.enter 2 ^ Console_style.indent 1 ^ t.bold " OPTIONS";
-    Console_style.indent 3 ^ "-c, --no-color: Disable color in the output";
+    Console_style.indent 3
+    ^ "-c, --no-color: Disable color in the output (default when stdout isn't \
+       a terminal)";
+    Console_style.indent 3
+    ^ "-C, --color: Force color in the output, even when stdout isn't a \
+       terminal";
     Console_style.indent 3
     ^ "-r, --raw-output: Output raw strings, not JSON texts";
     Console_style.indent 3
@@ -77,9 +82,24 @@ let reconnect_stdin_to_tty () =
     true
   with Unix.Unix_error _ -> false
 
-let execution position_0 position_1 verbose debug no_color raw_output null_input
-    repl functions =
-  let colorize = not no_color in
+(* jq's precedence: an explicit flag always wins over the environment or the
+   terminal check, -c (disable) wins over -C (force) if both are given, and
+   -C wins over NO_COLOR since it is the more specific, more recent request. *)
+let should_colorize ~no_color ~force_color =
+  if no_color then
+    false
+  else if force_color then
+    true
+  else
+    match Sys.getenv_opt "NO_COLOR" with
+    | Some v when v <> "" ->
+        false
+    | _ ->
+        Unix.isatty Unix.stdout
+
+let execution position_0 position_1 verbose debug no_color force_color
+    raw_output null_input repl functions =
+  let colorize = should_colorize ~no_color ~force_color in
   if Option.is_some functions then
     match functions with
     | Some "" | None ->
@@ -168,9 +188,30 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
   else
     match position_0 with
     | None ->
-        usage ()
+        usage ~colorize ()
     | Some query -> (
         let output =
+          (* Free-ish size hint (a stat, not a read) so Core.run can start
+             its output buffer close to the input's size instead of always
+             growing from scratch: cuts the doubling-copy cost on large
+             inputs. Pretty-printed output (indentation, spacing) tends to
+             run bigger than its compact input, so pad by half. Stdin/-n
+             keep the small default; that's fine, no size to know ahead of
+             time there. *)
+          let buf_size_hint =
+            if null_input then
+              0
+            else
+              match position_1 with
+              | Some f when Sys.file_exists f -> (
+                  try (Unix.stat f).Unix.st_size * 3 / 2
+                  with Unix.Unix_error _ -> 0
+                )
+              | Some s ->
+                  String.length s * 3 / 2
+              | None ->
+                  0
+          in
           let* json =
             if null_input then
               Ok `Null
@@ -184,7 +225,7 @@ let execution position_0 position_1 verbose debug no_color raw_output null_input
                   Json.parse_channel (Unix.in_channel_of_descr Unix.stdin)
           in
           Core.run ~debug ~colorize ~verbose ~raw:raw_output ~summarize:false
-            query json
+            ~buf_size_hint query json
         in
         match output with
         | Ok results ->
@@ -204,9 +245,19 @@ let () =
     value & flag & info [ "v"; "verbose" ] ~doc:"Activate verbossity"
   in
   let debug = value & flag & info [ "d"; "debug" ] ~doc:"Activate debug mode" in
-  let color =
+  let no_color =
     value & flag
-    & info [ "c"; "no-color" ] ~doc:"Enable or disable color in the output"
+    & info [ "c"; "no-color" ]
+        ~doc:
+          "Disable color in the output. Takes precedence over $(b,-C) and \
+           $(b,NO_COLOR)"
+  in
+  let force_color =
+    value & flag
+    & info [ "C"; "color" ]
+        ~doc:
+          "Force color in the output, even when stdout is not a terminal. \
+           Takes precedence over $(b,NO_COLOR)"
   in
   let raw_output =
     value & flag
@@ -232,8 +283,8 @@ let () =
   in
   let term =
     let open Cmdliner.Term in
-    const execution $ query $ json $ verbose $ debug $ color $ raw_output
-    $ null_input $ repl $ functions
+    const execution $ query $ json $ verbose $ debug $ no_color $ force_color
+    $ raw_output $ null_input $ repl $ functions
   in
   let info =
     Cmdliner.Cmd.info "query-json" ~version:Info.version
