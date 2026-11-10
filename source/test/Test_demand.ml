@@ -277,32 +277,18 @@ let stream_tests =
     stream "(fn f: .a; .[]) | f" None;
   ]
 
-let capture_stdout f =
-  flush stdout;
+let output_run ~stream query input =
   let file = Filename.temp_file "test_demand" ".out" in
-  let fd = Unix.openfile file [ O_WRONLY; O_TRUNC ] 0o600 in
-  let saved = Unix.dup Unix.stdout in
-  Unix.dup2 fd Unix.stdout;
-  Unix.close fd;
   let result =
-    Fun.protect
-      ~finally:(fun () ->
-        flush stdout;
-        Unix.dup2 saved Unix.stdout;
-        Unix.close saved
-      )
-      f
+    Out_channel.with_open_bin file (fun oc ->
+        Core.run_output ~colorize:false ~oc ~stream query (fun demand each ->
+            Json.parse_string_each ~demand ?each input
+        )
+    )
   in
   let out = In_channel.with_open_bin file In_channel.input_all in
   Sys.remove file;
   (result, out)
-
-let output_run ~stream query input =
-  capture_stdout (fun () ->
-      Core.run_output ~colorize:false ~stream query (fun demand each ->
-          Json.parse_string_each ~demand ?each input
-      )
-  )
 
 let printed_full_run query input =
   match full_run query input with

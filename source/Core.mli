@@ -32,6 +32,7 @@ val run_output :
   ?verbose:bool ->
   ?raw:bool ->
   ?summarize:bool ->
+  ?oc:out_channel ->
   stream:bool ->
   string ->
   (Json.demand ->
@@ -39,10 +40,10 @@ val run_output :
   (Json.t option, string) result
   ) ->
   (unit, string) result
-(** Like [run_input], but prints the results on stdout itself, each followed by
-    a newline (one newline when there is none). [read demand (Some (d, f))] may
-    pass the elements of an array to [f] one by one instead of returning the
-    value; [f] returns [false] to stop. For [.[] | f], each element is then run
-    on its own. Nothing is printed before the input is read in full, unless
-    [stream] is set: then the results of each element are printed and flushed
-    when ready. *)
+(** Like [run_input], but prints the results on [oc] (default [stdout]) itself,
+    each followed by a newline (one newline when there is none).
+    [read demand (Some (d, f))] may pass the elements of an array to [f] one by
+    one instead of returning the value; [f] returns [false] to stop. For
+    [.[] | f], each element is then run on its own. Nothing is printed before
+    the input is read in full, unless [stream] is set: then the results of each
+    element are printed and flushed when ready. *)

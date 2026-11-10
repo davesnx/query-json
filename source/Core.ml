@@ -96,15 +96,16 @@ let run_input ?(debug = false) ?(colorize = true) ?(verbose = false)
     )
 
 let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
-    ?(raw = false) ?(summarize = false) ~stream query read =
+    ?(raw = false) ?(summarize = false) ?(oc = stdout) ~stream query read =
   let out = Buffer.create 65536 in
   let count = ref 0 in
   let ast = ref None in
   let write () =
-    Option.iter (fun a -> print_endline (Ast.show_expression a)) !ast;
+    Option.iter (fun a -> output_string oc (Ast.show_expression a ^ "\n")) !ast;
     ast := None;
-    Buffer.output_buffer stdout out;
-    Buffer.clear out
+    Buffer.output_buffer oc out;
+    Buffer.clear out;
+    flush oc
   in
   let add results =
     List.iter
@@ -196,10 +197,7 @@ let run_output ?(debug = false) ?(colorize = true) ?(verbose = false)
                   List.iter item results
                 else (
                   add results;
-                  if stream then (
-                    write ();
-                    flush stdout
-                  )
+                  if stream then write ()
                 );
                 true
             | stop ->
