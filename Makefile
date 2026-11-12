@@ -13,24 +13,24 @@ help: ## Print this help message
 
 .PHONY: build
 build: ## Build the project, including non installable libraries and executables
-	$(DUNE) build @all
+	$(DUNE) build --root . @all
 
 .PHONY: build-prod
 build-prod: ## Build for production (--profile=prod)
-	$(DUNE) build --profile=release @all
-	$(DUNE) install
+	$(DUNE) build --root . --profile=release @all
+	$(DUNE) install --root .
 
 .PHONY: dev
 dev: ## Build everything in watch mode
-	$(DUNE) build -w @all
+	$(DUNE) build --root . -w @all
 
 .PHONY: dev-core
 dev-core: ## Build in watch mode
-	$(DUNE) build -w source
+	$(DUNE) build --root . -w source
 
 .PHONY: repl
 repl: ## Run repl with "package.json"
-	$(DUNE) exec ./cli/cli.exe -- --repl package.json
+	$(DUNE) exec --root . ./cli/cli.exe -- --repl package.json
 
 .PHONY: web-dev
 web-dev: ## Build and serve the website via HMR
@@ -54,19 +54,19 @@ web-serve: ## Serve the dist directory
 
 .PHONY: clean
 clean: ## Clean artifacts
-	$(DUNE) clean
+	$(DUNE) clean --root .
 
 .PHONY: test
 test: ## Run the unit tests
-	$(DUNE) build @runtest
+	$(DUNE) build --root . @runtest
 
 .PHONY: test-watch
 test-watch: ## Run the unit tests in watch mode
-	$(DUNE) build @runtest -w
+	$(DUNE) build --root . @runtest -w
 
 .PHONY: test-promote
 test-promote: ## Updates snapshots and promotes it to correct
-	$(DUNE) build @runtest --auto-promote
+	$(DUNE) build --root . @runtest --auto-promote
 
 .PHONY: setup-githooks
 setup-githooks: ## Setup githooks
@@ -140,7 +140,7 @@ demo-cast: ## Record demo cast (usage: make demo-cast FILE=cli-basic)
 		echo "Error: FILE is required. Usage: make demo FILE=repl-demo"; \
 		exit 1; \
 	fi
-	$(DUNE) install
+	$(DUNE) install --root .
 	@if [ "$(FILE)" = "repl-demo" ]; then \
 		asciinema rec --overwrite --cols 140 --rows 48 -c "python3 docs/record-repl-demo.py" docs/repl-demo.cast; \
 	elif [ -f "docs/demo-scripts/$(FILE).sh" ]; then \
@@ -188,7 +188,7 @@ bench: ## Run benchmarks
 
 .PHONY: bench-parser
 bench-parser: ## Run parser-only benchmark
-	$(DUNE) exec benchmarks/bench_parser.exe
+	$(DUNE) exec --root . benchmarks/bench_parser.exe
 
 .PHONY: release
 release: ## Create a new release (usage: make release VERSION=1.2.3)
@@ -198,7 +198,7 @@ release: ## Create a new release (usage: make release VERSION=1.2.3)
 	fi
 	@echo "Creating release $(VERSION)"
 	@sed -i.bak "s/^(version .*)/(version $(VERSION))/" dune-project && rm -f dune-project.bak
-	@$(DUNE) build
+	@$(DUNE) build --root .
 	@git add dune-project *.opam
 	@git commit -m "Bump version to $(VERSION)"
 	@git push origin main
