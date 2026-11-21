@@ -1,5 +1,3 @@
-(* Main test runner for Jotason *)
-
 let () =
   Alcotest.run "Jotason"
     [

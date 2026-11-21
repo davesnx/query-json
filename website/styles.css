@@ -57,7 +57,6 @@ body,
   min-height: 100vh;
 }
 
-/* Monaco Editor background color override */
 .monaco-editor,
 .monaco-editor-background,
 .monaco-editor .margin {

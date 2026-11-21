@@ -34,10 +34,6 @@ let parse ~debug ~colorize input =
       in
       Error (Error.format ~colorize err)
 
-(* Render straight into one shared buffer instead of turning each result
-   into its own string (via Json.to_string_pretty) and then copying all of
-   those strings again with String.concat: for many results (or one huge
-   one) that was two extra full-size copies for no reason. *)
 let render_result_into buf ~colorize ~summarize ~raw (json : Json.t) =
   match (raw, json) with
   | true, `String s ->
@@ -49,9 +45,6 @@ let execute ~colorize ~verbose ~raw ~summarize ?(buf_size_hint = 4096) runtime
     json =
   match Interpreter.execute ~colorize ~verbose runtime json with
   | Ok results ->
-      (* A caller that knows roughly how big the input was can pass that as a
-         hint: for a single huge result, starting the buffer near its final
-         size avoids the repeated grow-and-copy of doubling up from 4096. *)
       let buf = Buffer.create (max 4096 buf_size_hint) in
       let rec write_all first = function
         | [] ->

@@ -15,9 +15,9 @@ let identifier =
 let comment = [%sedlex.regexp? '#', Star (Compl '\n')]
 
 type token =
-  | INT of int (* small integers *)
-  | INT64 of int64 (* large integers *)
-  | BIG_INT of Z.t [@printer fun fmt z -> Z.pp_print fmt z] (* huge integers *)
+  | INT of int
+  | INT64 of int64
+  | BIG_INT of Z.t [@printer fun fmt z -> Z.pp_print fmt z]
   | DECIMAL of string
   | STRING of string
   | BOOL of bool
@@ -419,7 +419,6 @@ let rec tokenize buf =
       Ok (DECIMAL (lexeme buf))
   | integer -> (
       let num = lexeme buf in
-      (* Parse into smallest fitting type: int -> int64 -> Big_int *)
       match int_of_string_opt num with
       | Some i ->
           Ok (INT i)
@@ -434,7 +433,7 @@ let rec tokenize buf =
   | space ->
       tokenize buf
   | comment ->
-      tokenize buf (* Skip comments *)
+      tokenize buf
   | any ->
       Error ("Unexpected character '" ^ lexeme buf ^ "'")
   | _ ->

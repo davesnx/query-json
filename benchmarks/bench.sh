@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 
-# Configuration: which tools to benchmark (set to 0 to disable)
 BENCH_JQ=${BENCH_JQ:-1}
 BENCH_FAQ=${BENCH_FAQ:-0}
 BENCH_FX=${BENCH_FX:-0}
 BENCH_JET=${BENCH_JET:-0}
 
-# Hyperfine settings
 WARMUP=${WARMUP:-3}
 MIN_RUNS=${MIN_RUNS:-10}
 STYLE=${STYLE:-full}

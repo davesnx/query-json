@@ -34,8 +34,6 @@ let literals =
   ]
 
 let large_numbers =
-  (* 64-bit integer overflow handling *)
-  (* OCaml's int on 64-bit systems is limited to 63 bits (max: 4611686018427387903) *)
   [
     test {|.|} {|4611686018427387928|} {|4611686018427387928|};
     test {|.|} {|4611686018427387903|} {|4611686018427387903|};
@@ -51,48 +49,34 @@ let large_numbers =
   ]
 
 let int64_precision =
-  (* Int64 precision tests - query-json preserves full Int64 precision unlike jq *)
   [
-    (* 2^53 is the IEEE 754 double precision limit - jq loses precision here *)
     test {|9007199254740993|} {|null|} {|9007199254740993|};
     test {|9007199254740993 + 1|} {|null|} {|9007199254740994|};
-    (* The original example from the plan: 2^60 *)
     test {|1152921504606846976 + 0|} {|null|} {|1152921504606846976|};
     test {|1152921504606846976 + 1|} {|null|} {|1152921504606846977|};
-    (* Int64 max boundary: 2^63-1 *)
     test {|9223372036854775807|} {|null|} {|9223372036854775807|};
-    (* Int64 arithmetic preserves precision *)
     test {|9223372036854775807 - 1|} {|null|} {|9223372036854775806|};
     test {|1000000000000000000 * 2|} {|null|} {|2000000000000000000|};
     test {|9000000000000000000 + 223372036854775807|} {|null|}
       {|9223372036854775807|};
-    (* Mixed Int64/Decimal remains exact *)
     test {|5 + 0.5|} {|null|} {|5.5|};
     test {|9007199254740993 + 0.0|} {|null|} {|9007199254740993|};
-    (* loses precision when mixed with float results (e.g. pow) *)
     test {|9007199254740993 + pow(2; 0.5)|} {|null|} {|9007199254740994|};
     test {|10 / 3|} {|null|} {|3.33333|};
     test {|9007199254740994 / 1|} {|null|} {|9007199254740994|};
-    (* integer division preserves when result is integer *)
-    (* Modulo preserves Int64 *)
     test {|9007199254740993 % 10|} {|null|} {|3|};
     test {|9223372036854775807 % 1000000000000000000|} {|null|}
       {|223372036854775807|};
-    (* JSON input preserves Int64 precision *)
     test {|. + 1|} {|9007199254740993|} {|9007199254740994|};
     test {|.a + .b|} {|{"a": 9007199254740993, "b": 1}|} {|9007199254740994|};
-    (* Comparison with Int64 *)
     test {|9007199254740993 == 9007199254740993|} {|null|} {|true|};
     test {|9007199254740993 < 9007199254740994|} {|null|} {|true|};
-    (* Negative Int64 *)
     test {|-9007199254740993|} {|null|} {|-9007199254740993|};
     test {|-9007199254740993 - 1|} {|null|} {|-9007199254740994|};
-    (* Small Int + Int stays Int (no unnecessary promotion to Int64) *)
     test {|1 + 2|} {|null|} {|3|};
     test {|10 - 3|} {|null|} {|7|};
     test {|3 * 4|} {|null|} {|12|};
     test {|10 % 3|} {|null|} {|1|};
-    (* Int overflow promotes to Int64 correctly *)
     test {|4611686018427387903 + 1|} {|null|} {|4611686018427387904|};
     test {|2000000000 * 2000000000|} {|null|} {|4000000000000000000|};
   ]
@@ -159,8 +143,6 @@ let optional_object_identifier_index =
     test {|.foo?|} {|{}|} {|null|};
     test {|.foo?|} {|{"foo": 42, "bar": "less interesting data"}|} {|42|};
     test {|.foo?|} {|{"notfoo": true, "alsonotfoo": false}|} {|null|};
-    (* .a+.b? with {"a":42} errors because .b? returns null and you can't add number to null *)
-    (* test removed - this should error, not return 42 *)
   ]
 
 let array_index =
@@ -283,8 +265,6 @@ let addition =
     test {|1+1|} {|null|} {|2|};
     test {|1+1|} {|"wtasdf"|} {|2|};
     test {|.+4|} {|15|} {|19|};
-    (* .+null and null+. now error - cannot add to null *)
-    (* tests removed - these should error, not return values *)
     test {|[1,2,3] + [.]|} {|null|} {|[ 1, 2, 3, null ]|};
     test {|{"a":1} + {"b":2} + {"c":3}|} {|"asdfasdf"|}
       {|{ "a": 1, "b": 2, "c": 3 }|};
@@ -292,8 +272,6 @@ let addition =
       {|"asdfjkl;some stringsome stringsome string"|};
     test {|.a + 1|} {|{"a": 7}|} {|8|};
     test {|.a + .b|} {|{"a": [1,2], "b": [3,4]}|} {|[ 1, 2, 3, 4 ]|};
-    (* .a + null and .a + 1 (when .a missing) now error *)
-    (* tests removed - these should error *)
     test {|{a: 1} + {b: 2} + {c: 3} + {a: 42}|} {|null|}
       {|{ "a": 42, "b": 2, "c": 3 }|};
   ]
@@ -338,7 +316,6 @@ let equality =
     test {|. == {"b": {"d": 4, "c": 3}, "a":1}|}
       {|{"a":1, "b": {"c": 3, "d": 4}}|} {|true|};
     test {|.[] == 1|} {|[1, 1.0, "1", "banana"]|} "true\ntrue\nfalse\nfalse";
-    (* TODO: test {|. == {"b": {"d": (4 + 1e-20), "c": 3}, "a":1}|} {|{"a":1, "b": {"c": 3, "d": 4}}|} {|true|}; *)
   ]
 
 let boolean_operators =
@@ -350,7 +327,6 @@ let boolean_operators =
     test {|(true, false) or false|} {|null|} "true\nfalse";
     test {|[true, false | not]|} {|null|} {|[ false, true ]|};
     test {|42 and "a string"|} {|null|} {|true|};
-    (* TODO: test {|(true, true) and (true, false)|} {|null|} {|true|}; - requires multiple output from both sides of and *)
   ]
 
 let alternative =
@@ -372,7 +348,6 @@ let alternative =
     test {|.foo ?? 42|} {|{"foo": 19}|} {|19|};
     test {|.foo ?? 42|} {|{}|} {|42|};
     test {|(false, null, 1) ?? 42|} {|null|} {|1|};
-    (* TODO: test {|(false, null, 1) | . ?? 42|} {|null|} {|42|}; *)
   ]
 
 let update =
@@ -380,7 +355,6 @@ let update =
     test {|.value |= . * 2|} {|{"value": 5}|} {|{ "value": 10 }|};
     test {|.x |= . + 1|} {|{"x": 10}|} {|{ "x": 11 }|};
     test {|.[] |= . * 2|} {|[1,2,3]|} {|[ 2, 4, 6 ]|};
-    (* TODO: test {|(..|select(type=="boolean")) |= if . then 1 else 0 end|} {|[true,false,[5,true,[true,[false]],false]]|} {|[1,0,[5,1,[1,[0]],0]]|}; *)
   ]
 
 let conditionals =
@@ -389,7 +363,6 @@ let conditionals =
     test {|if 5 > 10 then 5 elif 5 < 10 then 3 else 2 end|} {|null|} {|3|};
     test {|if . == 0 then "zero" elif . == 1 then "one" else "many" end|} {|2|}
       {|"many"|};
-    (* truthy non-boolean values: anything except false and null is truthy *)
     test {|if 42 then "yes" else "no" end|} {|null|} {|"yes"|};
     test {|if "string" then "yes" else "no" end|} {|null|} {|"yes"|};
     test {|if [] then "yes" else "no" end|} {|null|} {|"yes"|};
@@ -477,7 +450,6 @@ let reduce =
     test {|reduce .[] as $item (0; . + $item)|} {|[1,2,3,4,5]|} {|15|};
     test {|reduce .[] as [$i,$j] (0; . + $i * $j)|} {|[[1,2],[3,4],[5,6]]|}
       {|44|};
-    (* reduce over an empty generator keeps the init value unchanged *)
     test {|reduce empty as $x (0; . + $x)|} {|null|} {|0|};
     test {|reduce .[] as $x (10; . + $x)|} {|[]|} {|10|};
   ]
@@ -494,7 +466,6 @@ let foreach =
       "[ 1, 2 ]\n[ 2, 6 ]\n[ 3, 12 ]\n[ 4, 20 ]\n[ 5, 30 ]";
     test {|foreach .[] as $item (0; . + $item)|} {|[1,2,3,4,5]|}
       "1\n3\n6\n10\n15";
-    (* TODO: test {|foreach .[] as $item (0; . + 1; {index: ., $item})|} {|["foo", "bar", "baz"]|} {|{"index":1,"item":"foo"}|}; *)
   ]
 
 let limit =
@@ -504,7 +475,6 @@ let limit =
     test {|[limit(3; range(10))]|} {|null|} {|[ 0, 1, 2 ]|};
     test {|[limit(3; .[])]|} {|[0,1,2,3,4,5,6,7,8,9]|} {|[ 0, 1, 2 ]|};
     test {|[limit(5; infinite)]|} {|null|} {|[ 0, 1, 2, 3, 4 ]|};
-    (* limit(0; ...) must stop before pulling any value from the generator *)
     test {|[limit(0; range(10))]|} {|null|} {|[]|};
     test {|[limit(0; infinite)]|} {|null|} {|[]|};
   ]
@@ -558,10 +528,8 @@ let has =
       {|[ true, false ]|};
     test {|map(has("foo"))|} {|[{"foo": 42}, {}]|} {|[ true, false ]|};
     test {|map(has(2))|} {|[[0,1], ["a","b","c"]]|} {|[ false, true ]|};
-    (* negative indices should return false *)
     test {|has(-1)|} {|[1, 2, 3]|} {|false|};
     test {|has(-100)|} {|[1, 2, 3]|} {|false|};
-    (* boundary: index equal to length should return false *)
     test {|has(3)|} {|[1, 2, 3]|} {|false|};
     test {|has(0)|} {|[1, 2, 3]|} {|true|};
     test {|has(1e0)|} {|[1, 2, 3]|} {|true|};
@@ -590,7 +558,6 @@ let length =
     test {|map(length)|} {|[[], [1,2]]|} {|[ 0, 2 ]|};
     test {|.[] | length|} {|[[1,2], "string", {"a":2}, null, -5]|}
       "2\n6\n1\n0\n5";
-    (* Unicode codepoints, not bytes *)
     test {|length|} {|"🎉"|} {|1|};
     test {|length|} {|"日本語"|} {|3|};
     test {|length|} {|"hello 🌍!"|} {|8|};
@@ -601,9 +568,7 @@ let byte_length =
   [
     test {|byte_length|} {|""|} {|0|};
     test {|byte_length|} {|"µ"|} {|2|};
-    (* ASCII is 1 byte per char *)
     test {|byte_length|} {|"hello"|} {|5|};
-    (* Emoji is 4 bytes in UTF-8 *)
     test {|byte_length|} {|"🎉"|} {|4|};
     test {|byte_length|} {|"日本語"|} {|9|};
   ]
@@ -626,22 +591,16 @@ let sort =
     test {|sort_by(.foo, .bar)|}
       {|[{"foo":4, "bar":10}, {"foo":3, "bar":20}, {"foo":2, "bar":1}, {"foo":3, "bar":10}]|}
       {|[ { "foo": 2, "bar": 1 }, { "foo": 3, "bar": 10 }, { "foo": 3, "bar": 20 }, { "foo": 4, "bar": 10 } ]|};
-    (* jq type ordering across every kind at once: null < false < true <
-       numbers (mixed int/float) < strings (by codepoint) < arrays < objects *)
     test {|sort|}
       {|[null,true,false,1,1.5,"a",[1],{"a":1},{"a":0,"b":1},"B",-2]|}
       {|[ null, false, true, -2, 1, 1.5, "B", "a", [ 1 ], { "a": 1 }, { "a": 0, "b": 1 } ]|};
-    (* stability: elements with equal sort keys keep their original relative order *)
     test {|sort_by(.a)|}
       {|[{"a":1,"b":1},{"a":1,"b":2},{"a":0,"b":3},{"a":1,"b":4}]|}
       {|[ { "a": 0, "b": 3 }, { "a": 1, "b": 1 }, { "a": 1, "b": 2 }, { "a": 1, "b": 4 } ]|};
-    (* objects with the same keys inserted in a different order compare equal,
-       so sort (stable) keeps their original relative order *)
     test {|sort|} {|[{"b":1,"a":2},{"a":2,"b":1}]|}
       {|[ { "b": 1, "a": 2 }, { "a": 2, "b": 1 } ]|};
   ]
 
-(* unique, unique_by *)
 let unique =
   [
     test {|unique|} {|[1,2,1,3,2]|} {|[ 1, 2, 3 ]|};
@@ -736,12 +695,10 @@ let add =
     test {|add|} {|["a","b","c"]|} {|"abc"|};
     test {|add|} {|[1, 2, 3]|} {|6|};
     test {|add|} {|[]|} {|null|};
-    (* add(.[].a?) errors because null can't be added - need to filter nulls first *)
     test {|[.[].a?] | map(select(. != null)) | add|}
       {|[{"a":3}, {"a":5}, {"b":6}]|} {|8|};
   ]
 
-(* to_entries, from_entries, with_entries(f) *)
 let entries =
   [
     test {|to_entries|} {|{"a":1,"b":2}|}
@@ -759,12 +716,10 @@ let entries =
       {|{"a": 3, "b": 10}|} {|{ "a": 3, "b": 20 }|};
     test {|with_entries(.key |= "KEY_" + .)|} {|{"a": 1, "b": 2}|}
       {|{ "KEY_a": 1, "KEY_b": 2 }|};
-    (* first entry wins on lookup, but from_entries keeps every entry it was given *)
     test {|from_entries|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
       {|{ "a": 1, "a": 2 }|};
     test {|from_entries | .a|} {|[{"key":"a","value":1},{"key":"a","value":2}]|}
       {|1|};
-    (* renaming every entry to the same key keeps them all, in order *)
     test {|with_entries(.key = "dup")|} {|{"a": 1, "b": 2}|}
       {|{ "dup": 1, "dup": 2 }|};
   ]
@@ -800,12 +755,7 @@ let inside =
 let startswith_endswith =
   [
     test {|starts_with("Hello")|} {|"Hello, world"|} {|true|};
-    (* Deprecated names startwith/endwith/startswith/endswith now parse error *)
-    (* test {|startswith("Hello")|} {|"Hello, world"|} {|true|}; *)
-    (* test {|startwith("Hello")|} {|"Hello, world"|} {|true|}; *)
     test {|ends_with("world")|} {|"Hello, world"|} {|true|};
-    (* test {|endswith("world")|} {|"Hello, world"|} {|true|}; *)
-    (* test {|endwith("world")|} {|"Hello, world"|} {|true|}; *)
     test {|[.[]|starts_with("foo")]|}
       {|["fo", "foo", "barfoo", "foobar", "barfoob"]|}
       {|[ false, true, false, true, false ]|};
@@ -842,7 +792,6 @@ let split_join =
     test {|split(", ")|} {|"a, b,c,d, e, "|} {|[ "a", "b,c,d", "e", "" ]|};
     test {|join(" ")|} {|["a",1,2.3,true,null,false]|} {|"a 1 2.3 true false"|};
     test {|split("é")|} {|"café"|} {|[ "caf", "" ]|};
-    (* separator at both ends *)
     test {|split(",")|} {|",a,b,"|} {|[ "", "a", "b", "" ]|};
     test {|split("")|} {|""|} {|[]|};
   ]
@@ -853,11 +802,9 @@ let explode_implode =
     test {|implode|} {|[72,101,108,108,111]|} {|"Hello"|};
     test {|explode|} {|"foobar"|} {|[ 102, 111, 111, 98, 97, 114 ]|};
     test {|implode|} {|[65, 66, 67]|} {|"ABC"|};
-    (* Unicode: multi-byte characters should produce codepoints, not bytes *)
     test {|explode|} {|"é"|} {|[ 233 ]|};
     test {|implode|} {|[233]|} {|"é"|};
     test {|explode | implode|} {|"é"|} {|"é"|};
-    (* CJK character U+4E16 *)
     test {|explode|} "\"世\"" {|[ 19990 ]|};
     test {|implode|} {|[19990]|} "\"世\"";
   ]
@@ -876,7 +823,6 @@ let index =
     test {|indices(1)|} {|[0,1,2,1,3,1,4]|} {|[ 1, 3, 5 ]|};
     test {|indices([1,2])|} {|[0,1,2,3,1,4,2,5,1,2,6,7]|} {|[ 1, 8 ]|};
     test {|index("é")|} {|"café"|} {|3|};
-    (* empty needle: no match, like jq (also avoids looping forever) *)
     test {|index("")|} {|"abc"|} {|null|};
     test {|rindex("")|} {|"abc"|} {|null|};
     test {|indices("")|} {|"abc"|} {|[]|};
@@ -889,7 +835,6 @@ let math_abs =
     test {|map(abs)|} {|[-10, -1.1, -0.1]|} {|[ 10, 1.1, 0.1 ]|};
   ]
 
-(* Math functions: floor, ceil, round *)
 let math_floor_ceil_round =
   [
     test {|floor|} {|3.7|} {|3|};
@@ -916,34 +861,17 @@ let math_trig =
     test {|asin|} {|0|} {|0|};
     test {|acos|} {|1|} {|0|};
     test {|atan|} {|0|} {|0|};
-    (* test {|atan(1; 1)|} {|null|} {|0.7853981633974483|}; *)
   ]
 
-let nan_infinite =
-  [ (* The following tests use `infinite` which in this implementation
-       is an infinite generator (0,1,2,...) for use with limit, NOT the IEEE
-       infinity float. These tests from jq manual are incompatible and hang:
-       test {|.[] | (infinite * .) < 0|} {|[-1, 1]|} {|true|};
-       test {|infinite, nan | type|} {|null|} {|"number"|};
-    *) ]
-
-(* tonumber, to_number *)
 let tonumber =
   [
     test {|to_number|} {|"42"|} {|42|};
-    (* Deprecated name tonumber now parse error *)
-    (* test {|tonumber|} {|"42"|} {|42|}; *)
     test {|.[] | to_number|} {|[1, "1"]|} "1\n1";
   ]
-
-let toboolean =
-  [ (* TODO: test {|.[] | toboolean|} {|["true", "false", true, false]|} {|true|}; *) ]
 
 let tostring =
   [
     test {|to_string|} {|42|} {|"42"|};
-    (* Deprecated name tostring now parse error *)
-    (* test {|tostring|} {|42|} {|"42"|}; *)
     test {|.[] | to_string|} {|[1, "1", [1]]|} "\"1\"\n\"1\"\n\"[ 1 ]\"";
     test {|[.[]|to_string]|} {|[1, "foo", ["foo"]]|}
       {|[ "1", "foo", "[ \"foo\" ]" ]|};
@@ -975,10 +903,6 @@ let regex_match =
   [
     test {|match("foo")|} {|"foo bar foo"|}
       {|{ "offset": 0, "length": 3, "string": "foo", "captures": [] }|};
-    (* TODO: test {|match("(abc)+"; "g")|} {|"abc abc"|} {|{"offset": 0, "length": 3, "string": "abc", "captures": [{"offset": 0, "length": 3, "string": "abc", "name": null}]}|}; *)
-    (* TODO: test {|match(["foo", "ig"])|} {|"foo bar FOO"|} {|{"offset": 0, "length": 3, "string": "foo", "captures": []}|}; *)
-    (* TODO: test {|match("foo (?<bar123>bar)? foo"; "ig")|} {|"foo bar foo foo foo"|} {|{"offset": 0, "length": 11, "string": "foo bar foo", "captures": [{"offset": 4, "length": 3, "string": "bar", "name": "bar123"}]}|}; *)
-    (* TODO: test {|[ match("."; "g")] | length|} {|"abc"|} {|3|}; *)
   ]
 
 let regex_capture =
@@ -991,27 +915,13 @@ let regex_sub_gsub =
   [
     test {|sub("world"; "universe")|} {|"hello world"|} {|"hello universe"|};
     test {|gsub("l"; "L")|} {|"hello"|} {|"heLLo"|};
-    (* an invalid pattern silently passes the value through unchanged, and
-       does so every time it is evaluated, not just on the first (uncached)
-       compile attempt *)
     test {|sub("(unclosed"; "Z")|} {|"abc"|} {|"abc"|};
     test {|[.[] | sub("(unclosed"; "Z")]|} {|["a1", "b2"]|} {|[ "a1", "b2" ]|};
-    (* gsub with a pattern that can match the empty string *)
     test {|gsub("x*"; "-")|} {|"abc"|} {|"-a-b-c-"|};
-    (* two distinct literal patterns compiled in the same run must not
-       collide in the compiled-regex cache *)
     test {|[.[] | sub("a"; "1")]|} {|["cat", "dog"]|} {|[ "c1t", "dog" ]|};
     test {|[.[] | gsub("o"; "2")]|} {|["cat", "dog"]|} {|[ "cat", "d2g" ]|};
-    (* TODO: test {|sub("[^a-z]*(?<x>[a-z]+)"; "Z\(.x)"; "g")|} {|"123abc456def"|} {|"ZabcZdef"|}; *)
-    (* TODO: test {|[sub("(?<a>.)"; "\(.a|to_uppercase)", "\(.a|to_lowercase)")]|} {|"aB"|} {|["AB","aB"]|}; *)
-    (* TODO: test {|gsub("(?<x>.)[^a]*"; "+\(.x)-")|} {|"Abcabc"|} {|"+A-+a-"|}; *)
-    (* TODO: test {|[gsub("p"; "a", "b")]|} {|"p"|} {|["a","b"]|}; *)
   ]
 
-(* The compiled-regex cache resets once it holds 64 entries. Compile 64
-   distinct never-matching filler patterns after "P0" (65 distinct patterns
-   total) to force the reset and evict "P0", then reuse "P0": it must
-   recompile and match correctly rather than reuse stale cache state. *)
 let regex_cache_eviction =
   let fillers =
     String.concat " | "
@@ -1028,15 +938,7 @@ let regex_scan =
     test {|[scan("[a-z]+")]|} {|"hello world test"|}
       {|[ "hello", "world", "test" ]|};
     test {|scan("c")|} {|"abcdefabc"|} "\"c\"\n\"c\"";
-    (* TODO: test {|scan("(a+)(b+)")|} {|"abaabbaaabbb"|} {|["a","b"]|}; *)
   ]
-
-let regex_split =
-  [ (* TODO: test {|split(", *"; null)|} {|"ab,cd, ef"|} {|["ab","cd","ef"]|}; *) ]
-
-let regex_splits =
-  [ (* TODO: test {|splits(", *")|} {|"ab,cd, ef, gh"|} {|"ab"|}; *)
-    (* TODO: test {|splits(",? *"; "n")|} {|"ab,cd ef, gh"|} {|"ab"|}; *) ]
 
 let path =
   [
@@ -1052,9 +954,7 @@ let path =
     test {|set_path(["x"]; 1)|} {|{}|} {|{ "x": 1 }|};
     test {|set_path(["a","b"]; 1)|} {|null|} {|{ "a": { "b": 1 } }|};
     test {|set_path(["a","b"]; 1)|} {|{"a":{"b":0}}|} {|{ "a": { "b": 1 } }|};
-    (* TODO: test {|[path(..)]|} {|{"a":[{"b":1}]}|} {|[ [], [ "a" ], [ "a", 0 ], [ "a", 0, "b" ] ]|}; *)
     test {|set_path([0,"a"]; 1)|} {|null|} {|[ { "a": 1 } ]|};
-    (* TODO: test {|[get_path(["a","b"], ["a","c"])]|} {|{"a":{"b":0, "c":1}}|} {|[0, 1]|}; *)
   ]
 
 let delpaths =
@@ -1082,10 +982,8 @@ let object_index_brackets =
 
 let recursive_descent =
   [
-    (* Basic recursive descent - outputs all values *)
     test {|[descend | numbers]|} {|{"a":1,"b":{"c":2}}|} {|[ 1, 2 ]|};
     test {|[descend | strings]|} {|{"a":"x","b":["y"]}|} {|[ "x", "y" ]|};
-    (* descend | .a? returns nulls for non-objects, need to filter them *)
     test {|descend | .a? | select(. != null)|} {|[[{"a":1}]]|} {|1|};
   ]
 
@@ -1115,11 +1013,6 @@ let variable_binding =
        { \"a\": 0, \"b\": 1 }\n\
        { \"a\": 2, \"b\": 1 }";
   ]
-
-let destructuring_alternative =
-  [ (* TODO: test {|.[] as {$a, $b, c: {$d, $e}} ?// {$a, $b, c: [{$d, $e}]} | {$a, $b, $d, $e}|} {|[{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 1, "b": 2, "c": [{"d": 3, "e": 4}]}]|} {|{"a":1,"b":2,"d":3,"e":4}|}; *)
-    (* TODO: test {|.[] as {$a, $b, c: {$d}} ?// {$a, $b, c: [{$e}]} | {$a, $b, $d, $e}|} {|[{"a": 1, "b": 2, "c": {"d": 3, "e": 4}}, {"a": 1, "b": 2, "c": [{"d": 3, "e": 4}]}]|} {|{"a":1,"b":2,"d":3,"e":null}|}; *)
-    (* TODO: test {|.[] as [$a] ?// [$b] | if $a != null then error("err: \($a)") else {$a,$b} end|} {|[[3]]|} {|{"a":null,"b":3}|}; *) ]
 
 let optional_operator =
   [
@@ -1163,7 +1056,6 @@ let arithmetic_update =
     test {|.foo -= 2|} {|{"foo": 42}|} {|{ "foo": 40 }|};
     test {|.foo *= 2|} {|{"foo": 21}|} {|{ "foo": 42 }|};
     test {|.foo /= 2|} {|{"foo": 42}|} {|{ "foo": 21 }|};
-    (* ??= works when field exists with non-null/false value - keeps original *)
     test {|.foo ??= 10|} {|{"foo": 42}|} {|{ "foo": 42 }|};
     test {|.foo ??= 10|} {|{"foo": false}|} {|{ "foo": 10 }|};
   ]
@@ -1201,21 +1093,15 @@ let repeat =
     test {|[repeat(.*2, error)?]|} {|1|} {|[ 2 ]|};
   ]
 
-let loc =
-  [ (* TODO: test {|try error("\($__loc__)") catch .|} {|null|} {|"{\"file\":\"<top-level>\",\"line\":1}"|};  *) ]
-
 let env =
   [
-    (* Test that env and $ENV both work - use HOME which should exist *)
     test {|$ENV.HOME != null|} {|null|} {|true|};
     test {|env.HOME != null|} {|null|} {|true|};
   ]
 
 let bsearch =
   [
-    test {|bsearch(0)|} {|[0,1]|} {|0|};
-    test {|bsearch(0)|} {|[1,2,3]|} {|-1|};
-    (* TODO: test {|bsearch(4) as $ix | if $ix < 0 then .[-(1+$ix)] = 4 else . end|} {|[1,2,3]|} {|[1,2,3,4]|}; *)
+    test {|bsearch(0)|} {|[0,1]|} {|0|}; test {|bsearch(0)|} {|[1,2,3]|} {|-1|};
   ]
 
 let date =
@@ -1244,7 +1130,6 @@ let defining_functions =
     test {|fn double: . * 2; double|} {|5|} {|10|};
     test {|fn double: . * 2;|} {|5|} {|5|};
     test {|fn double: . * 2; fn triple: . * 3; double | triple|} {|2|} {|12|};
-    (* Nested fn with same param name: inner param should shadow outer *)
     test {|fn outer(f): fn inner(f): f; inner(. * 3); outer(. + 1)|} {|5|}
       {|15|};
     test {|fn outer(f): fn inner(f): f * 2; inner(. + 10); outer(. + 1)|} {|5|}
@@ -1263,16 +1148,11 @@ let first_last_nth =
   [
     test {|[first(range(.)), last(range(.)), nth(5; range(.))]|} {|10|}
       {|[ 0, 9, 5 ]|};
-    (* first(empty) and last(empty) now error - empty produces no values *)
-    (* test removed - these should error *)
-    (* TODO: test {|[range(.)]|[first, last, nth(5)]|} {|10|} {|[0,9,5]|}; *)
-    (* nth(n) - get nth element from input array *)
     test {|nth(0)|} {|[1,2,3]|} {|1|};
     test {|nth(2)|} {|[1,2,3]|} {|3|};
     test {|nth(-1)|} {|[1,2,3]|} {|3|};
     test {|nth(-2)|} {|[1,2,3]|} {|2|};
     test {|.items | nth(1)|} {|{"items": ["a","b","c"]}|} {|"b"|};
-    (* head and tail are aliases for first and last *)
     test {|head|} {|[1,2,3]|} {|1|};
     test {|tail|} {|[1,2,3]|} {|3|};
     test {|first|} {|[1,2,3]|} {|1|};
@@ -1281,49 +1161,30 @@ let first_last_nth =
 
 let optional_functions =
   [
-    (* first? on empty array returns null instead of error *)
     test {|first?|} {|[]|} {|null|};
     test {|first?|} {|[1, 2, 3]|} {|1|};
-    (* last? on empty array returns null instead of error *)
     test {|last?|} {|[]|} {|null|};
     test {|last?|} {|[1, 2, 3]|} {|3|};
-    (* first?(expr) - optional first of expression results *)
     test {|first?(empty)|} {|null|} {|null|};
     test {|first?(range(3))|} {|null|} {|0|};
-    (* last?(expr) - optional last of expression results *)
     test {|last?(empty)|} {|null|} {|null|};
     test {|last?(range(3))|} {|null|} {|2|};
-    (* nth? with out of bounds index returns null *)
     test {|nth(10)?|} {|[1, 2, 3]|} {|null|};
     test {|nth(1)?|} {|[1, 2, 3]|} {|2|};
-    (* nth?(n; expr) - optional nth of expression results *)
     test {|nth(10; range(3))?|} {|null|} {|null|};
     test {|nth(1; range(3))?|} {|null|} {|1|};
-    (* Parenthesized expression with optional *)
     test {|(first)?|} {|[]|} {|null|};
     test {|(first)?|} {|[42]|} {|42|};
-    (* Chained with pipes *)
     test {|.items | first?|} {|{"items": []}|} {|null|};
     test {|.items | first?|} {|{"items": [1, 2]}|} {|1|};
-    (* Multiple optional functions *)
     test {|[first?, last?]|} {|[]|} {|[ null, null ]|};
     test {|[first?, last?]|} {|[1, 2, 3]|} {|[ 1, 3 ]|};
-    (* empty? still produces nothing since empty doesn't error, it just yields nothing *)
-    (* The ? operator only catches errors, not empty results *)
     test {|[empty?]|} {|null|} {|[]|};
-    (* Optional on functions that would otherwise error *)
     test {|keys?|} {|123|} {||};
     test {|keys?|} {|{"a": 1}|} {|[ "a" ]|};
-    (* Optional with alternative *)
     test {|first? ?? "default"|} {|[]|} {|"default"|};
     test {|first? ?? "default"|} {|[1]|} {|1|};
-    (* ? only catches runtime errors, NOT user errors from error() *)
-    (* error("msg")? should still propagate — tested in Test_errors *)
   ]
-
-let generators_iterators =
-  [ (* TODO: test {|fn range(init; upto; by): fn _range: if (by > 0 and . < upto) or (by < 0 and . > upto) then ., ((.+by)|_range) else empty end; if init == upto then empty elif by == 0 then init else init|_range end; range(0; 10; 3)|} {|null|} {|0|}; *)
-    (* TODO: test {|fn while(cond; update): fn _while: if cond then ., (update | _while) else empty end; _while; [while(.<100; .*2)]|} {|1|} {|[1,2,4,8,16,32,64]|}; *) ]
 
 let decimal_number =
   [
@@ -1337,29 +1198,19 @@ let decimal_number =
   ]
 
 let numeric_fast_path_boundaries =
-  (* Coverage for the Int/Int64 add & subtract fast paths: overflow must
-     still promote exactly like the generic Decimal path (Int -> Int64 ->
-     Big_int), and every other representation pairing must stay untouched. *)
   [
-    (* Int - Int underflow at min_int promotes to Int64 *)
     test {|-4611686018427387904 - 1|} {|null|} {|-4611686018427387905|};
-    (* Int64 + Int64 overflow promotes to Big_int *)
     test {|9223372036854775807 + 9223372036854775807|} {|null|}
       {|18446744073709551614|};
-    (* Int64 - Int64 underflow promotes to Big_int *)
     test {|(-9223372036854775808) - 9223372036854775807|} {|null|}
       {|-18446744073709551615|};
-    (* Decimal + Float and Float + Decimal (unaffected by the fast path) *)
     test {|1.5 + (4|sqrt)|} {|null|} {|3.5|};
     test {|(4|sqrt) + 1.5|} {|null|} {|3.5|};
-    (* Big_int + Int, Int on the left *)
     test {|1 + 99999999999999999999999999999|} {|null|}
       {|100000000000000000000000000000|};
-    (* Modulo keeps the dividend's sign, like jq/C *)
     test {|(-7) % (-3)|} {|null|} {|-1|};
     test {|7 % (-3)|} {|null|} {|1|};
     test {|(-7) % 3|} {|null|} {|-1|};
-    (* Comparisons across representations with numerically equal values *)
     test {|1 == 1.00|} {|null|} {|true|};
     test {|1.0 == 1.00|} {|null|} {|true|};
     test {|1 < 1.5|} {|null|} {|true|};
@@ -1574,19 +1425,10 @@ let object_merge =
       {|{ "a": { "x": 1, "y": 2 } }|};
     test {|reduce .[] as $obj ({}; . * $obj)|}
       {|[{"a": 1, "b": 2}, {"b": 3, "c": 4}]|} {|{ "a": 1, "b": 3, "c": 4 }|};
-    (* a key present on both sides keeps its left-hand position; new keys append after *)
     test {|. + {"b": 30, "c": 40}|} {|{"a": 1, "b": 2}|}
       {|{ "a": 1, "b": 30, "c": 40 }|};
   ]
 
-(* [assoc_merge] switches from a linear scan to a hash-indexed lookup once
-   the right-hand side has more than 32 entries. Build a right-hand object
-   with exactly [n] raw entries: "a" (present on the left, so it overrides
-   rather than appends), "dup" appearing twice (a key only on the right,
-   so both occurrences survive, unlike "a"), and filler keys padding out to
-   [n]. Also derive the expected merge against the fixed left object
-   {"a": 1, "b": 2} for both [+] (override) and [*] (recursive merge, which
-   behaves the same here since every value is a plain int). *)
 let object_merge_threshold_boundary =
   let compact_object pairs =
     "{"
@@ -1594,10 +1436,6 @@ let object_merge_threshold_boundary =
         (List.map (fun (k, v) -> Printf.sprintf {|"%s":%d|} k v) pairs)
     ^ "}"
   in
-  (* the merged result has 30+ keys, well past the 120-char compact-width
-     budget, so the default (uncolored, non-`-c`) renderer this test harness
-     uses prints one "key": value per line, matching [assoc_multiline_test]
-     in Test_write.ml. *)
   let pretty_object pairs =
     let n = List.length pairs in
     "{\n"
@@ -1634,8 +1472,7 @@ let object_merge_threshold_boundary =
         {|{"a": 1, "b": 2}|} merged_pretty;
     ]
   in
-  List.concat
-    [ case 32 (* linear-scan path *); case 40 (* hash-indexed path *) ]
+  List.concat [ case 32; case 40 ]
 
 let array_algorithms =
   [
@@ -1666,7 +1503,6 @@ let index_operations =
     test {|map({(.id | to_string): .}) | add|}
       {|[{"id": 1, "name": "a"}, {"id": 2, "name": "b"}]|}
       {|{ "1": { "id": 1, "name": "a" }, "2": { "id": 2, "name": "b" } }|};
-    (* group_by now returns an object, not an array, so we need to_entries first *)
     test
       {|group_by(.category) | to_entries | map({key: .value[0].category, values: .value}) | from_entries|}
       {|[{"category": "x", "v": 1}, {"category": "y", "v": 2}, {"category": "x", "v": 3}]|}
@@ -1675,77 +1511,53 @@ let index_operations =
 
 let snake_case_aliases =
   [
-    (* to_string works *)
     test {|to_string|} {|42|} {|"42"|};
-    (* to_number works *)
     test {|to_number|} {|"42"|} {|42|};
-    (* get_path *)
     test {|get_path(["a", "b"])|} {|{"a": {"b": 42}}|} {|42|};
-    (* set_path *)
     test {|set_path(["a", "b"]; 99)|} {|{"a": {"b": 42}}|}
       {|{ "a": { "b": 99 } }|};
-    (* delete_paths *)
     test {|delete_paths([["a","b"]])|} {|{"a":{"b":1},"x":{"y":2}}|}
       {|{ "a": {}, "x": { "y": 2 } }|};
-    (* starts_with works *)
     test {|starts_with("Hello")|} {|"Hello, world"|} {|true|};
-    (* ends_with works *)
     test {|ends_with("world")|} {|"Hello, world"|} {|true|};
-    (* trim_start *)
     test {|trim_start("foo")|} {|"foobar"|} {|"bar"|};
-    (* trim_end *)
     test {|trim_end("bar")|} {|"foobar"|} {|"foo"|};
-    (* is_normal *)
     test {|is_normal|} {|42|} {|true|};
-    (* to_uppercase *)
     test {|to_uppercase|} {|"hello"|} {|"HELLO"|};
-    (* to_lowercase *)
     test {|to_lowercase|} {|"HELLO"|} {|"hello"|};
-    (* find_indices / indices - both should work *)
     test {|find_indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
     test {|indices(", ")|} {|"a,b, cd, efg, hijk"|} {|[ 3, 7, 12 ]|};
-    (* Edge cases for snake_case functions *)
-    (* to_string works on all types *)
     test {|to_string|} {|null|} {|"null"|};
     test {|to_string|} {|true|} {|"true"|};
     test {|to_string|} {|[1,2]|} {|"[ 1, 2 ]"|};
     test {|to_string|} {|{"a":1}|} {|"{ \"a\": 1 }"|};
-    (* to_number with different string formats *)
     test {|to_number|} {|"3.14"|} {|3.14|};
     test {|to_number|} {|"-42"|} {|-42|};
     test {|to_number|} {|42|} {|42|};
-    (* numbers pass through *)
-    (* starts_with / ends_with edge cases *)
     test {|starts_with("")|} {|"hello"|} {|true|};
     test {|ends_with("")|} {|"hello"|} {|true|};
     test {|starts_with("hello")|} {|"hello"|} {|true|};
     test {|ends_with("hello")|} {|"hello"|} {|true|};
     test {|starts_with("x")|} {|""|} {|false|};
     test {|ends_with("x")|} {|""|} {|false|};
-    (* trim_start / trim_end when pattern not present *)
     test {|trim_start("xxx")|} {|"hello"|} {|"hello"|};
     test {|trim_end("xxx")|} {|"hello"|} {|"hello"|};
-    (* get_path with nested paths *)
     test {|get_path(["a", "b", "c"])|} {|{"a": {"b": {"c": 42}}}|} {|42|};
     test {|get_path([])|} {|{"a": 1}|} {|{ "a": 1 }|};
     test {|get_path(["missing"])|} {|{}|} {|null|};
-    (* set_path creating nested structure *)
     test {|set_path(["x", "y", "z"]; 1)|} {|{}|}
       {|{ "x": { "y": { "z": 1 } } }|};
-    (* find_indices for arrays *)
     test {|find_indices(2)|} {|[1, 2, 3, 2, 4, 2]|} {|[ 1, 3, 5 ]|};
     test {|indices("x")|} {|"axbxcx"|} {|[ 1, 3, 5 ]|};
   ]
 
 let collection_helpers =
   [
-    (* pluck - extract key from array of objects *)
     test {|pluck(.a)|} {|[{"a":1},{"a":2},{"a":3}]|} {|[ 1, 2, 3 ]|};
     test {|pluck(.name)|} {|[{"name":"alice"},{"name":"bob"}]|}
       {|[ "alice", "bob" ]|};
     test {|pluck(.x)|} {|[{"x":1,"y":2},{"y":3}]|} {|[ 1, null ]|};
     test {|pluck(.a.b)|} {|[{"a":{"b":1}},{"a":{"b":2}}]|} {|[ 1, 2 ]|};
-    (* partition - split into [matching, non-matching] *)
     test {|partition(. > 2)|} {|[1,2,3,4,5]|} {|[ [ 3, 4, 5 ], [ 1, 2 ] ]|};
     test {|partition(. > 10)|} {|[1,2,3]|} {|[ [], [ 1, 2, 3 ] ]|};
     test {|partition(. < 0)|} {|[1,2,3]|} {|[ [], [ 1, 2, 3 ] ]|};
@@ -1753,7 +1565,6 @@ let collection_helpers =
       {|[ [ { "active": true } ], [ { "active": false } ] ]|};
     test {|partition(type == "number")|} {|[1,"a",2,"b",3]|}
       {|[ [ 1, 2, 3 ], [ "a", "b" ] ]|};
-    (* is_empty - check if array/string/object is empty *)
     test {|is_empty|} {|[]|} {|true|};
     test {|is_empty|} {|[1,2,3]|} {|false|};
     test {|is_empty|} {|""|} {|true|};
@@ -1761,7 +1572,6 @@ let collection_helpers =
     test {|is_empty|} {|{}|} {|true|};
     test {|is_empty|} {|{"a":1}|} {|false|};
     test {|is_empty|} {|null|} {|true|};
-    (* is_blank - check if null, empty, or whitespace-only *)
     test {|is_blank|} {|null|} {|true|};
     test {|is_blank|} {|""|} {|true|};
     test {|is_blank|} {|"   "|} {|true|};
@@ -1772,11 +1582,9 @@ let collection_helpers =
     test {|is_blank|} {|[1]|} {|false|};
     test {|is_blank|} {|{}|} {|true|};
     test {|is_blank|} {|{"a":1}|} {|false|};
-    (* assert - fail if assertion fails *)
     test {|assert(. > 0)|} {|5|} {|5|};
     test {|assert(type == "number")|} {|42|} {|42|};
     test {|assert(length > 0)|} {|[1,2,3]|} {|[ 1, 2, 3 ]|};
-    (* debug - side-effect output (result unchanged) *)
     test {|. | debug("test")|} {|42|} {|42|};
     test {|debug|} {|{"a":1}|} {|{ "a": 1 }|};
   ]
@@ -1818,8 +1626,6 @@ let deep_traversal =
       {|[ "alice", "bob" ]|};
   ]
 
-(* 10,000-deep nesting must not overflow the stack for any traversal
-   strategy (breadth-first descend, depth-first dive/recurse, paths). *)
 let deep_nesting =
   let depth = 10_000 in
   let deeply_nested = String.make depth '[' ^ "0" ^ String.make depth ']' in
@@ -1905,9 +1711,7 @@ let tests =
       math_log_exp;
       math_pow;
       math_trig;
-      nan_infinite;
       tonumber;
-      toboolean;
       tostring;
       string_interpolation;
       regex_test;
@@ -1916,8 +1720,6 @@ let tests =
       regex_sub_gsub;
       regex_cache_eviction;
       regex_scan;
-      regex_split;
-      regex_splits;
       path;
       delpaths;
       del;
@@ -1925,7 +1727,6 @@ let tests =
       recursive_descent;
       type_selectors;
       variable_binding;
-      destructuring_alternative;
       optional_operator;
       optional_on_type_error;
       arithmetic_update;
@@ -1933,7 +1734,6 @@ let tests =
       pick;
       combinations;
       repeat;
-      loc;
       env;
       bsearch;
       date;
@@ -1942,14 +1742,12 @@ let tests =
       skip;
       first_last_nth;
       optional_functions;
-      generators_iterators;
       decimal_number;
       numeric_fast_path_boundaries;
       index_operations;
       snake_case_aliases;
       collection_helpers;
       deep_traversal;
-      (* programs *)
       tobase;
       cumulative_sum;
       flatten_nested;

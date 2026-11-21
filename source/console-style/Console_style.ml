@@ -2,9 +2,6 @@ let indent n = String.make (n * 1) ' '
 let enter n = String.make n '\n'
 let single_quotes str = "'" ^ str ^ "'"
 
-(* Lightweight ANSI SGR helpers — avoids pulling in matrix.ansi (which contains
-   64-bit integer literals that overflow when compiled to JS). *)
-
 type color = Red | Green | Yellow | Blue | Cyan | Bright_black
 
 let sgr_of_color = function

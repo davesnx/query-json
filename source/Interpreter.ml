@@ -291,7 +291,6 @@ let rec substitute_params (params : string list) (args : expression list)
     find 0 params
   in
   match expr with
-  (* nullary calls to a parameter name gets substituted with the argument expression *)
   | Apply (name, []) -> (
       match find_param name with Some arg_expr -> arg_expr | None -> expr
     )
@@ -347,7 +346,6 @@ let rec substitute_params (params : string list) (args : expression list)
   | Fma (e1, e2, e3) ->
       Fma (sub e1, sub e2, sub e3)
   | Fn (name, params', body) ->
-      (* Filter out parameters that are shadowed by the inner Fn's params *)
       let outer_params, outer_args =
         List.fold_left2
           (fun (ps, as_) p a ->
@@ -386,11 +384,6 @@ let fail_invalid_type ~ctx op (json : Json.t) =
     )
 
 module Literal_str = struct
-  (* Plain byte-string search for a literal (non-regex) needle: no
-     Re.compile per call, so splitting/searching one string doesn't pay for
-     building a throwaway automaton. [needle] must be non-empty; callers
-     special-case the empty needle themselves (jq treats it as "no match"
-     for search, and as "one part per char" for split). *)
   let index_from haystack needle start =
     let needle_len = String.length needle in
     let hay_len = String.length haystack in
@@ -490,17 +483,6 @@ module Operators = struct
   let sub_exact l r = Json.Decimal.sub l r |> json_of_decimal
   let mul_exact l r = Json.Decimal.mul l r |> json_of_decimal
 
-  (* Merge two association lists: left entries keep their position, a key
-     present on both sides is combined with [merge_value], and keys only on
-     the right are appended after, in their original (first-occurrence)
-     order. [merge_left] walks [l_entries] once and conses [new_keys]
-     straight onto the tail (via [@tail_mod_cons], so this is one O(n)
-     allocation pass, not a map followed by a separate `@` copy), reusing
-     the original pair when [r_lookup] finds nothing so unrelated keys cost
-     no extra allocation.
-     Above [merge_threshold] keys on the right we index it in a hashtable so
-     each left key resolves in O(1) instead of rescanning the right list;
-     below it, a linear scan is cheaper (no hashing/allocation overhead). *)
   let merge_threshold = 32
 
   let[@tail_mod_cons] rec merge_left ~merge_value ~r_lookup new_keys l_entries =
@@ -524,7 +506,6 @@ module Operators = struct
       in
       List.iter
         (fun (k, v) ->
-          (* keep the first occurrence, matching List.assoc_opt semantics *)
           if Stdlib.not (Hashtbl.mem r_tbl k) then Hashtbl.add r_tbl k v
         )
         r_entries;
@@ -550,11 +531,6 @@ module Operators = struct
   let int64_min_as_int = Int64.of_int Int.min_int
   let int64_max_as_int = Int64.of_int Int.max_int
 
-  (* Fast paths for plain-integer +/- : Int/Int64 add and subtract never need
-     exact decimal arithmetic (no fractional scale is involved), so they skip
-     the Z round-trip that [add_exact]/[sub_exact] pay for every Decimal
-     operation. Overflow still promotes exactly like [json_of_integer_z]
-     would: Int -> Int64 -> Big_int. *)
   let add_int64 (l : int64) (r : int64) : Json.t =
     let result = Int64.add l r in
     if Int64.logxor l r >= 0L && Int64.logxor l result < 0L then
@@ -577,8 +553,6 @@ module Operators = struct
     match (left, right) with
     | `Int l, `Int r ->
         let result = l + r in
-        (* two 63-bit ints always sum within Int64 range, so overflow never
-           needs to reach Big_int here *)
         if l lxor r >= 0 && l lxor result < 0 then
           `Int64 (Int64.add (Int64.of_int l) (Int64.of_int r))
         else
@@ -615,7 +589,6 @@ module Operators = struct
     | `String l, `String r ->
         `String (l ^ r)
     | `Assoc l_entries, `Assoc r_entries ->
-        (* right side wins for duplicate keys (override, not merge) *)
         `Assoc (assoc_merge ~merge_value:(fun _l r -> r) l_entries r_entries)
     | `List l, `List r ->
         `List (l @ r)
@@ -652,12 +625,7 @@ module Operators = struct
   let lte ~ctx = compare ~ctx "<=" ( <= )
 
   let is_truthy (json : Json.t) : bool =
-    (* in jq, false and null are falsy, everything else is truthy *)
-    match json with
-    | `Bool false | `Null ->
-        false
-    | _ ->
-        true
+    match json with `Bool false | `Null -> false | _ -> true
 
   let and_ ~ctx:_ (left : Json.t) (right : Json.t) : Json.t =
     `Bool (is_truthy left && is_truthy right)
@@ -673,7 +641,6 @@ module Operators = struct
     match (left, right) with
     | `Int l, `Int r ->
         let result = l - r in
-        (* two 63-bit ints always differ within Int64 range *)
         if l lxor r < 0 && l lxor result < 0 then
           `Int64 (Int64.sub (Int64.of_int l) (Int64.of_int r))
         else
@@ -716,7 +683,6 @@ module Operators = struct
   let rec deep_merge (left : Json.t) (right : Json.t) : Json.t =
     match (left, right) with
     | `Assoc l_entries, `Assoc r_entries ->
-        (* preserve key order: update existing keys from l with recursive merge from r *)
         `Assoc (assoc_merge ~merge_value:deep_merge l_entries r_entries)
     | _, r ->
         r
@@ -820,9 +786,6 @@ module Operators = struct
     | `Float l, `Decimal r ->
         `Float (l /. Json.Decimal.to_float r)
     | `String s, `String "" ->
-        (* keep the existing (Re-driven) empty-pattern semantics: this is a
-           distinct, rarely used edge case from split("")'s per-char split,
-           and not perf sensitive *)
         `List
           (Re.split_delim (Re.compile (Re.str "")) s
           |> List.map (fun part -> `String part)
@@ -869,8 +832,6 @@ module Operators = struct
 end
 
 module Search = struct
-  (* [needle = ""] is special-cased to "no match" here (matching jq), which
-     also sidesteps looping forever advancing by zero positions. *)
   let string_first haystack needle =
     if needle = "" then
       None
@@ -1480,10 +1441,6 @@ let has ~ctx (json : Json.t) key =
   | _ ->
       fail_invalid_type ~ctx "has" json
 
-(* Yields range elements one at a time (instead of building the whole list
-   first) so that laziness (limit/first stopping the generator early) and
-   deep ranges (millions of elements) both work without a giant intermediate
-   list or unbounded stack growth. The [loop] below is tail-recursive. *)
 let yield_range_list ?(step = 1) start stop =
   if step = 0 then
     ()
@@ -1507,7 +1464,6 @@ let yield_range ?step from upto =
 
 let length ~ctx (json : Json.t) =
   let utf8_codepoint_length s =
-    (* count the number of Unicode codepoints in a UTF-8 encoded string *)
     let byte_len = String.length s in
     let rec count i n =
       if i >= byte_len then
@@ -1544,13 +1500,11 @@ let length ~ctx (json : Json.t) =
 let byte_length ~ctx (json : Json.t) =
   match json with
   | `String s ->
-      (* OCaml strings are byte arrays *)
       `Int64 (Int64.of_int (String.length s))
   | _ ->
       fail_invalid_type ~ctx "byte_length" json
 
 let type_selector ~ctx:_ type_name json =
-  (* filter input to only yield if it matches the type *)
   if Json.type_of json = type_name then yield json
 
 let iterables_selector ~ctx:_ json =
@@ -1706,7 +1660,6 @@ let to_number ~ctx (json : Json.t) =
 
 let to_string ~ctx:_ (json : Json.t) =
   match json with
-  (* for strings, return as-is (no extra quotes) *)
   | `String s ->
       `String s
   | _ ->
@@ -1861,7 +1814,6 @@ let from_entries ~ctx (json : Json.t) =
         | entry :: rest -> (
             match entry with
             | `Assoc fields -> (
-                (* jq accepts both "key"/"name" and "value"/"values" *)
                 let key =
                   match List.assoc_opt "key" fields with
                   | Some k ->
@@ -1964,7 +1916,6 @@ let get_envs () =
         | [] ->
             None
     )
-    (* Unix.environment is not available in js_of_ocaml, so we catch the failure *)
   with Failure _ -> []
 
 let transpose ~ctx (json : Json.t) =
@@ -2045,11 +1996,6 @@ let descend_depth json =
   in
   List.rev (descend [] json)
 
-(* [sub]/[gsub] only ever see a pattern that is a string literal fixed at
-   parse time (Language.ml requires it), so the same pattern text is
-   recompiled on every input value that flows through a `map`/pipe. Cache
-   the compiled regex (or the fact that it fails to compile) keyed by
-   pattern text, bounded so a pathological program can't grow it forever. *)
 let regex_cache : (string, Re.re option) Hashtbl.t = Hashtbl.create 16
 
 let compiled_pcre_cached pattern =
@@ -2228,7 +2174,7 @@ let join_sep ~ctx sep json =
             | `String s ->
                 Some s
             | `Null ->
-                None (* null values are filtered out *)
+                None
             | `Bool true ->
                 Some "true"
             | `Bool false ->
@@ -2351,7 +2297,7 @@ let slice ~ctx (start : int option) (finish : int option) (json : Json.t) =
     | (`String _ | `List _), Some end_ ->
         end_
     | _ ->
-        (* slice can't be parsed outside of List or String *) assert false
+        assert false
   in
   match json with
   | `String _s when finish < start ->
@@ -2460,7 +2406,6 @@ let rec interp ~ctx expression json : unit =
   | Fma (x_expr, y_expr, z_expr) ->
       fma_op ~ctx x_expr y_expr z_expr json
   | Fn (_, _, _) ->
-      (* fn on its own (not in a Pipe). It shouldn't happen in well-formed programs *)
       yield json
   | Apply (fname, args) ->
       call_function ~ctx fname args json
@@ -2967,10 +2912,7 @@ and dynamic_access ~ctx expr json =
   )
 
 and update ~ctx path_expr transform json =
-  (* path |= f means: for each path selected by path_expr, apply f to the value and update *)
-  (* try to get existing paths *)
   let paths = collect ~ctx (Fn1 (With_expr (Path, path_expr))) json in
-  (* if no paths found, extract paths from AST for creation semantics *)
   let paths =
     if paths = [] then
       let rec extract_static_paths expr =
@@ -3127,7 +3069,7 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
             | [ v ] ->
                 Some v
             | [] ->
-                None (* filter out when expression produces empty *)
+                None
             | vs ->
                 Some (`List vs)
           )
@@ -3142,7 +3084,7 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
             | [ v ] ->
                 Some (key, v)
             | [] ->
-                None (* filter out when expression produces empty *)
+                None
             | vs ->
                 Some (key, `List vs)
           )
@@ -3155,9 +3097,6 @@ and map_values ~ctx (expr : expression) (json : Json.t) =
 and sort_by ~ctx expr json =
   match json with
   | `List l ->
-      (* Decorate-sort-undecorate: evaluate the key expression once per
-         element instead of once per comparison (List.sort would otherwise
-         call it O(n log n) times). *)
       let decorated = List.map (fun item -> (collect ~ctx expr item, item)) l in
       let compare_by (res_a, _) (res_b, _) =
         let rec compare_lists la lb =
@@ -3187,8 +3126,6 @@ and min_by ~ctx expr json =
   | `List [] ->
       Runtime_error.empty_array "min_by"
   | `List (hd :: tl) ->
-      (* Evaluate each element's key once instead of re-evaluating the
-         accumulator's key on every fold step. *)
       let key_of x =
         match collect ~ctx expr x with [ v ] -> Some v | _ -> None
       in
@@ -3725,7 +3662,6 @@ and call_function ~ctx fname args json =
           ~expected:(Int.to_string (List.length params) ^ " arguments")
           ~found:(Int.to_string (List.length args) ^ " arguments")
       else
-        (* separate value params ($x) from filter params (x) *)
         let is_value_param p = String.length p > 0 && p.[0] = '$' in
         let filter_params, filter_args, value_params, value_args =
           List.fold_left2
@@ -3741,9 +3677,7 @@ and call_function ~ctx fname args json =
         let filter_args = List.rev filter_args in
         let value_params = List.rev value_params in
         let value_args = List.rev value_args in
-        (* substitute filter params in body *)
         let new_body = substitute_params filter_params filter_args body in
-        (* evaluate value params and bind them as variables (strip the $ prefix for env lookup) *)
         let value_bindings =
           List.map2
             (fun param arg ->
@@ -3834,12 +3768,10 @@ and contains ~ctx expr json =
     | `String s, `String sub ->
         sub = "" || Option.is_some (Literal_str.index_from s sub 0)
     | `List haystack, `List needle ->
-        (* every element in needle must be contained by some element in haystack *)
         List.for_all
           (fun n -> List.exists (fun h -> value_contains h n) haystack)
           needle
     | `Assoc haystack, `Assoc needle ->
-        (* every key in needle must exist in haystack with contained value *)
         List.for_all
           (fun (k, v) ->
             match List.assoc_opt k haystack with
@@ -3986,7 +3918,6 @@ and trim ~ctx json =
       fail_invalid_type ~ctx "trim" json
 
 and combinations ~ctx json =
-  (* combinations: input is array of arrays, output all combinations *)
   match json with
   | `List arrays ->
       let arrays =
@@ -4004,7 +3935,6 @@ and combinations ~ctx json =
       fail_invalid_type ~ctx "combinations" json
 
 and combinations_n ~ctx expr json =
-  (* combinations(n): generates n-way combinations from input array *)
   match (json, collect ~ctx expr json) with
   | `List arr, [ n_val ] ->
       let n =
@@ -4138,8 +4068,6 @@ and first_of_expr ~ctx expr json =
       yield v
 
 and last_of_array ~ctx json =
-  (* Walk to the end instead of List.rev-ing the whole array just to read
-     its head: same O(n) time, no extra n-cons-cell allocation. *)
   let rec last = function
     | [ x ] ->
         x
@@ -4157,9 +4085,6 @@ and last_of_array ~ctx json =
       fail_invalid_type ~ctx "last" json
 
 and last_of_expr ~ctx expr json =
-  (* Track the last yielded value directly instead of collecting every
-     value into a list and reversing it twice (once inside [collect], once
-     here) just to read the final element. *)
   let found = ref None in
   on_yield (fun () -> interp ~ctx expr json) ~then_:(fun v -> found := Some v);
   match !found with
@@ -4307,7 +4232,6 @@ and while_loop ~ctx cond update json =
   yield_many (loop [] json)
 
 and until_loop ~ctx cond update json =
-  (* until(cond; update): loop until cond is true, yield only final value *)
   let rec loop current =
     let cond_res = collect ~ctx cond current in
     match cond_res with
@@ -4642,7 +4566,7 @@ and del ~ctx:_ path json =
 and delete_path value path_components =
   let rec del_at value = function
     | [] ->
-        `Null (* path points to root, delete returns null *)
+        `Null
     | [ `String key ] -> (
         match value with
         | `Assoc fields ->
@@ -4850,7 +4774,6 @@ and setpath ~ctx path value_expr json =
                 in
                 `List (update_list 0 items)
             | `Null ->
-                (* create array with nulls up to idx, then set value at idx *)
                 let arr =
                   List.init (idx + 1) (fun i ->
                       if i = idx then
@@ -4875,7 +4798,6 @@ and setpath ~ctx path value_expr json =
         ~expected:"(path_array, value)" ~found:"wrong number of arguments"
 
 and pick ~ctx expr json =
-  (* extract path structure from expressions, even for non-existent paths *)
   let rec extract_path_expr = function
     | Identity ->
         [ [] ]
@@ -4892,7 +4814,6 @@ and pick ~ctx expr json =
     | Comma (left, right) ->
         extract_path_expr left @ extract_path_expr right
     | Dynamic_access inner ->
-        (* for dynamic access like .[$var], evaluate to get the key/index *)
         let keys = collect ~ctx inner json in
         List.filter_map
           (function
@@ -5046,7 +4967,6 @@ and slice_expr ~ctx (start_expr : expression option)
   slice ~ctx start finish json
 
 and assign ~ctx path value_expr json =
-  (* assignment updates a path in the JSON structure *)
   let values = collect ~ctx value_expr json in
   let new_value = match values with [] -> `Null | v :: _ -> v in
   let rec assign_path result p =
@@ -5126,11 +5046,8 @@ and partition ~ctx expr json =
       fail_invalid_type ~ctx "partition" json
 
 and is_empty ~ctx expr json =
-  (* with argument: check if expression produces no output (jq semantics) *)
-  (* when expr is Identity, this behaves like the 0-arg version *)
   match expr with
   | Identity -> (
-      (* no argument: check if the value itself is empty *)
       match json with
       | `Null ->
           yield (`Bool true)
@@ -5150,7 +5067,6 @@ and is_empty ~ctx expr json =
           fail_invalid_type ~ctx "is_empty" json
     )
   | _ -> (
-      (* with argument: check if expression produces no output (jq semantics) *)
       match collect ~ctx expr json with
       | [] ->
           yield (`Bool true)

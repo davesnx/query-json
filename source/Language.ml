@@ -1462,10 +1462,8 @@ let error_for_missing_arg (name : string) : Error.t =
       Error.missing_argument ~fn_name:name ~usage:name
         ~description:"Unknown function" ()
 
-(* Check if a function name is a 1-arity function that can accept Identity as default *)
 let can_default_to_identity (name : string) : bool =
   match name with
-  (* Array/iteration functions that make sense with identity *)
   | "map"
   | "select"
   | "sort_by"
@@ -1501,7 +1499,6 @@ let can_default_to_identity (name : string) : bool =
   | "assert"
   | "debug" ->
       true
-  (* Functions that require specific argument types (string literals, etc.) *)
   | "test"
   | "match"
   | "scan"
@@ -1600,7 +1597,6 @@ let pcre_flags_of_string flags =
     flags;
   (!pcre_flags, !extended)
 
-(* Map 2-argument function names to AST nodes *)
 let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression)
     : (Ast.expression, Error.t) result =
   let open Ast in
@@ -1719,7 +1715,6 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
                ~example:(name ^ {|("pattern"; "gi") applies regex with flags|})
             )
     )
-  (* Not implemented *)
   | "strftime" ->
       Error (not_implemented "strftime")
   | "splits" ->
@@ -1730,7 +1725,6 @@ let map_binary_fn (name : string) (arg1 : Ast.expression) (arg2 : Ast.expression
       Error (not_implemented "date arithmetic")
   | "modulemeta" ->
       Error (not_implemented "modulemeta")
-  (* Default: generic function application *)
   | _ ->
       Ok (Apply (name, [ arg1; arg2 ]))
 
@@ -1752,7 +1746,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
     (Ast.expression, Error.t) result =
   let open Ast in
   match name with
-  (* Array/iteration functions *)
   | "filter" ->
       Ok (make_expr_fn Map (make_expr_fn Select arg))
   | "map" ->
@@ -1785,14 +1778,12 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn All_cond arg)
   | "walk" ->
       Ok (make_expr_fn Walk arg)
-  (* Object functions *)
   | "has" ->
       Ok (make_expr_fn Has arg)
   | "in" ->
       Ok (make_expr_fn In arg)
   | "with_entries" ->
       Ok (make_expr_fn With_entries arg)
-  (* String functions - separator-based *)
   | "split" -> (
       match arg with
       | Literal (String sep) ->
@@ -1813,7 +1804,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
                ~example:{|join(",") joins ["a", "b"] into "a,b"|}
             )
     )
-  (* String functions - expression-based *)
   | "starts_with" ->
       Ok (make_expr_fn Starts_with arg)
   | "startswith" ->
@@ -1838,7 +1828,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn Contains arg)
   | "binary_search" | "bsearch" ->
       Ok (make_expr_fn Binary_search arg)
-  (* Regex functions - pattern-based, compiled at parse time *)
   | "test" -> (
       match arg with
       | Literal (String pattern) ->
@@ -1880,7 +1869,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
                ~example:{|capture("(?<name>\\w+)") returns {name: ...}|}
             )
     )
-  (* Iteration/limiting functions *)
   | "first" ->
       Ok (make_expr_fn First_expr arg)
   | "last" ->
@@ -1901,7 +1889,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn Flatten_n arg)
   | "transpose" ->
       Ok (make_expr_fn Transpose_expr arg)
-  (* Path functions *)
   | "delete_paths" ->
       Ok (make_expr_fn Delpaths arg)
   | "delete" ->
@@ -1912,7 +1899,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn Getpath arg)
   | "paths" ->
       Ok (make_expr_fn Paths_filter arg)
-  (* Custom functions *)
   | "pluck" ->
       Ok (make_expr_fn Pluck arg)
   | "partition" ->
@@ -1923,7 +1909,6 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
       Ok (make_expr_fn Find_first arg)
   | "paths_to" ->
       Ok (make_expr_fn Paths_to arg)
-  (* Control flow *)
   | "assert" ->
       Ok (make_expr_fn Assert_simple arg)
   | "try" ->
@@ -1943,12 +1928,10 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
                ~example:"halt_error(1) terminates with exit code 1" ()
             )
     )
-  (* is_valid(expr) -> try (expr | true) catch false *)
   | "is_valid" ->
       Ok
         (Try (Pipe (arg, Literal (Bool true)), Some (Literal (Bool false)), None)
         )
-  (* Not implemented *)
   | "format" ->
       Error (not_implemented "format")
   | "strftime" ->
@@ -2012,15 +1995,12 @@ let map_unary_fn (name : string) (arg : Ast.expression) :
            ~usage:"condition and update expressions"
            ~description:"Loop construct" ~example ()
         )
-  (* Default: generic function application *)
   | _ ->
       Ok (Apply (name, [ arg ]))
 
-(* Map 0-argument function/identifier names to AST nodes *)
 let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
   let open Ast in
   match name with
-  (* Basic values *)
   | "empty" ->
       Ok (Fn0 Empty)
   | "null" ->
@@ -2037,14 +2017,12 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Break)
   | "env" ->
       Ok (Fn0 Env)
-  (* Object functions *)
   | "keys" ->
       Ok (Fn0 Keys)
   | "to_entries" ->
       Ok (Fn0 To_entries)
   | "from_entries" ->
       Ok (Fn0 From_entries)
-  (* Array functions *)
   | "head" ->
       Ok (Fn0 First)
   | "tail" ->
@@ -2081,7 +2059,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Flatten)
   | "add" ->
       Ok (Fn0 Add)
-  (* String functions *)
   | "tostring" ->
       Error (Error.deprecated ~old_name:"tostring" ~new_name:"to_string")
   | "to_string" ->
@@ -2108,7 +2085,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Error (Error.deprecated ~old_name:"trim_right" ~new_name:"trim")
   | "right_trim" ->
       Error (Error.deprecated ~old_name:"right_trim" ~new_name:"trim")
-  (* Math functions *)
   | "floor" ->
       Ok (Fn0 Floor)
   | "sqrt" ->
@@ -2177,24 +2153,20 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Logb)
   | "isnan" ->
       Ok (Fn0 Is_nan)
-  (* Recursion *)
   | "recurse" ->
       Ok (Fn0 Recurse)
   | "recurse_down" ->
       Ok (Fn0 Recurse_down)
-  (* Path functions *)
   | "paths" ->
       Ok (Fn0 Paths)
   | "leaf_paths" ->
       Ok (Fn0 Leaf_paths)
-  (* Control flow *)
   | "error" ->
       Ok (make_expr_fn Error_msg Identity)
   | "halt" ->
       Ok (Fn0 Halt)
   | "halt_error" ->
       Ok (make_expr_fn Halt_error_n (Literal (Number (Integer "5"))))
-  (* Type selectors *)
   | "numbers" ->
       Ok (Fn0 Numbers)
   | "strings" ->
@@ -2213,12 +2185,10 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Values)
   | "scalars" ->
       Ok (Fn0 Scalars)
-  (* Debug/IO *)
   | "debug" ->
       Ok (Fn0 Debug)
   | "stderr" ->
       Ok (Fn0 Stderr)
-  (* Custom functions *)
   | "is_empty" ->
       Ok (Fn0 Is_empty)
   | "is_blank" ->
@@ -2227,7 +2197,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 Descend)
   | "dive" ->
       Ok (Fn0 Dive)
-  (* Time functions *)
   | "to_local_time" ->
       Ok (Fn0 To_local_time)
   | "to_utc" ->
@@ -2236,7 +2205,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
       Ok (Fn0 To_unix)
   | "from_date" ->
       Ok (Fn0 From_date)
-  (* is_valid without argument: try (. | true) catch false *)
   | "is_valid" ->
       Ok
         (Try
@@ -2247,7 +2215,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
         )
   | "builtins" ->
       Ok (Fn0 Builtins)
-  (* Not implemented *)
   | "strftime" ->
       Error (not_implemented "strftime")
   | "strptime" | "parse_date" ->
@@ -2276,7 +2243,6 @@ let map_nullary_fn (name : string) : (Ast.expression, Error.t) result =
         )
   | "input_filename" | "input_line_number" ->
       Error (not_implemented "input metadata")
-  (* Default: check registry for functions that require arguments *)
   | _ -> (
       match find_function name with
       | Some f when f.arity <> No_args ->

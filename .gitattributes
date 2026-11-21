@@ -11,8 +11,6 @@ Makefile text eol=lf
 dune text eol=lf
 dune-project text eol=lf
 
-# Recognize all ml files as OCaml
 *.ml linguist-language=OCaml
 *.mly linguist-language=OCaml
-# Recognize all mlx files as OCaml
 *.mlx linguist-language=OCaml

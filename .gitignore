@@ -1,28 +1,21 @@
-# Node
 node_modules
 
-# Editor
 *.merlin
 .cursor
 
-# Esy
 _esy
 _build
 _release
 _export
 *.install
 
-# bisect_ppx Coverage
 _coverage
 ./trash.json
 *.coverage
 coverage.json
 
-# Website artifacts
 dist
 
-# Vite build
 build
 
-# local opam switch
 _opam

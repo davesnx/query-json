@@ -372,8 +372,6 @@ let read_number s : t =
   s.pos <- s.pos + k;
   result
 
-(* Without an exponent the conversion in [read_number] cannot fail. With one,
-   [Decimal.of_lexeme_exn] can raise or take long, so it runs here too. *)
 let skip_number s =
   let f = frac_end s (int_end s) in
   let k = exp_end s f in
@@ -732,8 +730,6 @@ let make ?buf ?fname ?lnum ic bytes len =
     st = init_lexer ?buf ?fname ?lnum ();
   }
 
-(* [refill] never writes to the buffer when [ic] is [None], so the string is
-   only read. *)
 let string_source ?buf ?fname ?lnum str =
   make ?buf ?fname ?lnum None (Bytes.unsafe_of_string str) (String.length str)
 

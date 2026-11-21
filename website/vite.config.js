@@ -20,7 +20,6 @@ const config = {
   mode: isProd ? "production" : "development",
   resolve: {
     alias: {
-      // Redirect @monaco-editor/react to our custom minimal component that only loads JSON
       "@monaco-editor/react": Path.resolve(workspaceRoot, "_build/default/website/website/monaco-editor.js"),
     },
   },

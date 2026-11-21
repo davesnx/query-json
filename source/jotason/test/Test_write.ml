@@ -1,5 +1,3 @@
-(* Tests for Jotason writing/serialization *)
-
 let to_string_tests =
   let test ?suf expected =
     Alcotest.(check string)
@@ -50,11 +48,6 @@ let to_file_tests =
     );
   ]
 
-(* Covers the Pretty (indented) writer's per-item rendering
-   (write_list_item(_plain)/write_assoc_item(_plain)) and float formatting:
-   code paths touched while removing a per-element closure allocation and
-   routing non-integral floats through caml_format_float directly instead
-   of Printf. *)
 let pretty_uncolored json =
   Json.Pretty.to_string_colored ~colorize:false ~summarize:false json
 let pretty_colored json =
@@ -73,7 +66,6 @@ let float_tests =
   in
   [
     test 1.0 "1";
-    (* whole-valued floats print without a decimal point *)
     test 1e5 "100000";
     test (-0.0) "0";
     test 3.14159 "3.14159";
@@ -178,8 +170,6 @@ let list_multiline_with_empty_test =
     );
   ]
 
-(* 100 levels of single-child nesting: past `indent_for`'s cached-depth cap
-   (64), so this exercises the uncached `String.make` fallback. *)
 let deep_indent_test =
   let depth = 100 in
   let json : Json.t =
