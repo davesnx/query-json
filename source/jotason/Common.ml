@@ -35,9 +35,6 @@ module Decimal = struct
 
   let is_digit c = c >= '0' && c <= '9'
 
-  (* Digit strings up to this length fit in a native int (63-bit) with
-     no risk of overflow while accumulating one digit at a time: even
-     the all-nines case 10^18 - 1 stays under max_int (~4.6e18). *)
   let max_fast_digits = 18
 
   let normalize ?repr coeff scale =
@@ -107,7 +104,6 @@ module Decimal = struct
       if int_len = 0 then
         None
       else
-        (* frac_start = -1 means there is no fractional part *)
         let frac_start = ref (-1) in
         let frac_len = ref 0 in
         let frac_valid = ref true in
@@ -133,10 +129,6 @@ module Decimal = struct
                 let scale = !frac_len - exp in
                 let total_digits = int_len + !frac_len in
                 if total_digits <= max_fast_digits && scale >= 0 then (
-                  (* Fast path: accumulate the significant digits (skipping
-                     the '.') directly into a native int, no Z.t/string
-                     allocation and no big-int arithmetic for the common
-                     case of an ordinary machine-sized decimal literal. *)
                   let n = ref 0 in
                   for k = int_start to int_start + int_len - 1 do
                     n := (!n * 10) + (Char.code s.[k] - 48)
@@ -164,9 +156,6 @@ module Decimal = struct
                     Some { coeff; scale = !sc; repr = Some s }
                   end
                 ) else
-                  (* Slow path: arbitrary-precision literal, or a positive
-                     exponent that shifts the decimal point past the
-                     fractional digits (needs a big-int multiply). *)
                   let frac_part =
                     if !frac_start >= 0 then
                       String.sub s !frac_start !frac_len
@@ -296,20 +285,15 @@ end
 type t =
   [ `Null
   | `Bool of bool
-  | `Int of int (* Small integers: 63-bit, fast arithmetic *)
-  | `Int64 of int64 (* Large integers: 64-bit, for values outside int range *)
-  | `Float of float (* Floating point *)
-  | `Big_int of Z.t (* Huge integers: arbitrary precision *)
-  | `Decimal of decimal (* Exact decimal / scientific notation numbers *)
+  | `Int of int
+  | `Int64 of int64
+  | `Float of float
+  | `Big_int of Z.t
+  | `Decimal of decimal
   | `String of string
   | `Assoc of (string * t) list
   | `List of t list ]
 
-(** The parts of a value that a reader must build. [Skip] validates the value
-    and stores [`Null]. [Fields] keeps the listed members of an object, with
-    every duplicate; when a listed key is missing, the object is read in full.
-    [Items] reads every element of an array with the given demand. A value whose
-    kind does not fit [Fields] or [Items] is read in full. *)
 type demand = Skip | All | Fields of (string * demand) list | Items of demand
 
 exception Json_error of string
@@ -321,18 +305,16 @@ exception End_of_object
 exception End_of_input
 
 type lexer_state = {
-  buf : Buffer.t; (* Buffer used to accumulate substrings *)
-  mutable lnum : int; (* Current line number (starting from 1) *)
+  buf : Buffer.t;
+  mutable lnum : int;
   mutable bol : int;
-      (* Absolute position of the first character of the current line (starting from 0) *)
-  mutable fname : string option; (* Name describing the input file *)
+  mutable fname : string option;
 }
 
 let init_lexer ?buf ?fname ?(lnum = 1) () =
   let buf = match buf with None -> Buffer.create 256 | Some buf -> buf in
   { buf; lnum; bol = 0; fname }
 
-(** Get numeric value as float for comparison, None for non-numeric types *)
 let to_float (json : t) : float option =
   match json with
   | `Int n ->
@@ -361,10 +343,8 @@ let to_decimal_exact (json : t) : decimal option =
   | _ ->
       None
 
-(** Compare two JSON values for ordering (jq semantics) *)
 let rec compare_values (a : t) (b : t) : int =
   match (a, b) with
-  (* null < false < true < numbers < strings < arrays < objects *)
   | `Null, `Null ->
       0
   | `Null, _ ->
@@ -383,7 +363,6 @@ let rec compare_values (a : t) (b : t) : int =
       -1
   | _, `Bool _ ->
       1
-  (* Numbers - compare numerically *)
   | ( (`Int _ | `Int64 _ | `Float _ | `Big_int _ | `Decimal _),
       (`Int _ | `Int64 _ | `Float _ | `Big_int _ | `Decimal _) ) -> (
       match (a, b) with
@@ -405,21 +384,18 @@ let rec compare_values (a : t) (b : t) : int =
       -1
   | _, (`Int _ | `Int64 _ | `Float _ | `Big_int _ | `Decimal _) ->
       1
-  (* Strings - lexicographic *)
   | `String sa, `String sb ->
       String.compare sa sb
   | `String _, _ ->
       -1
   | _, `String _ ->
       1
-  (* Arrays - lexicographic element-wise *)
   | `List la, `List lb ->
       compare_lists la lb
   | `List _, _ ->
       -1
   | _, `List _ ->
       1
-  (* Objects - compare by sorted keys then values *)
   | `Assoc aa, `Assoc ab ->
       compare_objects aa ab
 
@@ -463,5 +439,4 @@ and compare_objects aa ab =
   in
   cmp sa sb
 
-(** Check if two JSON values are equal *)
 let equal (a : t) (b : t) : bool = compare_values a b = 0

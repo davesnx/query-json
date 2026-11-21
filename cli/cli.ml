@@ -69,11 +69,6 @@ let repl_usage ?(colorize = true) () =
   |> String.concat (Console_style.enter 1)
   |> print_endline
 
-(* When JSON is piped via stdin (e.g., `cat data.json | query-json --repl`), stdin is consumed by the JSON parser. The REPL then needs stdin for interactive keyboard input, but it's exhausted/closed from the pipe.
-
-   This function reconnects stdin to /dev/tty (the controlling terminal),
-   allowing the REPL to receive keyboard input after reading piped JSON.
-   This is the standard Unix pattern used by programs like fzf, less, and vim. *)
 let reconnect_stdin_to_tty () =
   try
     let tty_fd = Unix.openfile "/dev/tty" [ Unix.O_RDONLY ] 0 in
@@ -82,9 +77,6 @@ let reconnect_stdin_to_tty () =
     true
   with Unix.Unix_error _ -> false
 
-(* jq's precedence: an explicit flag always wins over the environment or the
-   terminal check, -c (disable) wins over -C (force) if both are given, and
-   -C wins over NO_COLOR since it is the more specific, more recent request. *)
 let should_colorize ~no_color ~force_color =
   if no_color then
     false
@@ -216,8 +208,6 @@ let execution position_0 position_1 verbose debug no_color force_color
       )
 
 let () =
-  (* On Windows, stdout defaults to text mode which converts \n to \r\n.
-     Set binary mode to ensure consistent LF output across platforms. *)
   set_binary_mode_out stdout true;
   let open Cmdliner.Arg in
   let query = value & pos 0 (some string) None & info [] ~doc:"Query to run" in

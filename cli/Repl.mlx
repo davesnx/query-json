@@ -417,7 +417,6 @@ let update msg model =
         else
           model.completion_index + 1
       in
-      (* Scroll down if new_index goes below visible window *)
       let new_offset =
         if new_index = 0 then
           0
@@ -443,7 +442,6 @@ let update msg model =
         else
           model.completion_index - 1
       in
-      (* Scroll up if new_index goes above visible window, or jump to end *)
       let new_offset =
         if model.completion_index = 0 && new_index = total - 1 then
           max 0 (total - max_visible_completions)

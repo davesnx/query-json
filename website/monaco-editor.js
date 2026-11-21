@@ -63,7 +63,6 @@ export default function Editor(props) {
   });
 }
 
-// Export loader API for compatibility
 export const loader = {
   config: () => {},
   init: () => Promise.resolve(monaco),

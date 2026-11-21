@@ -82,7 +82,6 @@ end
 module Option = struct
   include Option
 
-  (* Option.bind with pipe-last friendly *)
   let bind f o = match o with None -> None | Some v -> f v
 end
 

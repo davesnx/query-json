@@ -1,5 +1,3 @@
-(* Alcotest testable for Jotason *)
-
 let jotason = Alcotest.testable Json.pp Json.equal
 
 let variant_kind_pp fmt = function

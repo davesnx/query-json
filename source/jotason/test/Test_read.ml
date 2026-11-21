@@ -197,11 +197,6 @@ let parse_leading_zero_float () =
   check_parse "0.123" Fixtures.leading_zero_float_json
     Fixtures.leading_zero_float_value ()
 
-(* Decimal parsing: independent checks (not routed through
-   Decimal.of_lexeme_exn on both sides) of the value the lexer's fast
-   path (plain machine-sized mantissa) and slow path (arbitrary
-   precision / positive exponent shift) compute, plus a literal
-   round-trip check of the preserved source representation. *)
 let check_decimal name json_str expected_value expected_repr () =
   let v = Json.from_string json_str in
   Alcotest.(check bool) (name ^ " value") true (Json.equal v expected_value);
@@ -300,8 +295,6 @@ let parse_escaped_tab () =
   check_parse "escaped tab" Fixtures.escaped_tab_json Fixtures.escaped_tab_value
     ()
 
-(* === Unicode tests === *)
-
 let parse_unicode_basic () =
   check_parse "unicode basic" Fixtures.unicode_basic_json
     Fixtures.unicode_basic_value ()
@@ -379,8 +372,6 @@ let parse_deeply_nested () =
   check_parse "deeply nested" Fixtures.deeply_nested_json
     Fixtures.deeply_nested_value ()
 
-(* === Object tests === *)
-
 let parse_empty_object () =
   check_parse "empty object" Fixtures.empty_object_json
     Fixtures.empty_object_value ()
@@ -419,8 +410,6 @@ let parse_empty_key () =
 let parse_duplicate_keys () =
   check_parse "duplicate keys" Fixtures.duplicate_keys_json
     Fixtures.duplicate_keys_value ()
-
-(* === Whitespace tests === *)
 
 let parse_whitespace () =
   check_parse "extra whitespace" Fixtures.whitespace_json
@@ -477,11 +466,8 @@ let fail_missing_comma_object () =
     )
     (parse {|{"a":1 "b":2}|})
 
-(* === Test list === *)
-
 let single_json =
   [
-    (* Original tests *)
     ("from_string", `Quick, from_string);
     ("from_crlf_string", `Quick, from_crlf_string);
     ("from_string_fail_simple", `Quick, from_string_fail_simple);
@@ -508,7 +494,6 @@ let single_json =
     ("from_file", `Quick, from_file);
     ("from_file_fail_across_chunk", `Quick, from_file_fail_across_chunk);
     ("unquoted_from_string", `Quick, unquoted_from_string);
-    (* Primitives *)
     ("parse_null", `Quick, parse_null);
     ("parse_true", `Quick, parse_true);
     ("parse_false", `Quick, parse_false);
@@ -545,7 +530,6 @@ let single_json =
       `Quick,
       parse_decimal_many_digits_keeps_repr
     );
-    (* Strings *)
     ("parse_empty_string", `Quick, parse_empty_string);
     ("parse_simple_string", `Quick, parse_simple_string);
     ("parse_escaped_quote", `Quick, parse_escaped_quote);
@@ -556,7 +540,6 @@ let single_json =
     ("parse_escaped_newline", `Quick, parse_escaped_newline);
     ("parse_escaped_carriage", `Quick, parse_escaped_carriage);
     ("parse_escaped_tab", `Quick, parse_escaped_tab);
-    (* Unicode *)
     ("parse_unicode_basic", `Quick, parse_unicode_basic);
     ("parse_unicode_euro", `Quick, parse_unicode_euro);
     ("parse_unicode_snowman", `Quick, parse_unicode_snowman);
@@ -569,13 +552,11 @@ let single_json =
     ("parse_long_unescaped_string", `Quick, parse_long_unescaped_string);
     ("fail_lone_high_surrogate", `Quick, fail_lone_high_surrogate);
     ("fail_invalid_low_surrogate", `Quick, fail_invalid_low_surrogate);
-    (* Arrays *)
     ("parse_empty_array", `Quick, parse_empty_array);
     ("parse_single_array", `Quick, parse_single_array);
     ("parse_mixed_array", `Quick, parse_mixed_array);
     ("parse_nested_array", `Quick, parse_nested_array);
     ("parse_deeply_nested", `Quick, parse_deeply_nested);
-    (* Objects *)
     ("parse_empty_object", `Quick, parse_empty_object);
     ("parse_single_object", `Quick, parse_single_object);
     ("parse_multi_object", `Quick, parse_multi_object);
@@ -586,11 +567,9 @@ let single_json =
     ("parse_key_with_unicode", `Quick, parse_key_with_unicode);
     ("parse_empty_key", `Quick, parse_empty_key);
     ("parse_duplicate_keys", `Quick, parse_duplicate_keys);
-    (* Whitespace *)
     ("parse_whitespace", `Quick, parse_whitespace);
     ("parse_newlines", `Quick, parse_newlines);
     ("parse_tabs", `Quick, parse_tabs);
-    (* Error cases *)
     ("fail_trailing_comma_array", `Quick, fail_trailing_comma_array);
     ("fail_trailing_comma_object", `Quick, fail_trailing_comma_object);
     ("fail_leading_zeros", `Quick, fail_leading_zeros);

@@ -5,7 +5,6 @@ set -e
 INSTALL_DIR="/usr/local/bin"
 RELEASE="latest"
 
-# Parse Flags
 parse_args() {
   while [[ $# -gt 0 ]]; do
     key="$1"
@@ -13,8 +12,8 @@ parse_args() {
     case $key in
     -r | --release)
       RELEASE="$2"
-      shift # past release argument
-      shift # past release value
+      shift
+      shift
       ;;
     *)
       echo "Unrecognized argument $key"

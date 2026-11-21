@@ -1,8 +1,6 @@
 include module type of Common
 
 val trim_float_exponent : string -> string
-(** Removes the leading zero of a three-digit exponent, as the Windows C runtime
-    prints: ["1.5e-010"] becomes ["1.5e-10"]. *)
 
 val to_buffer : ?suf:string -> ?std:bool -> Buffer.t -> t -> unit
 
@@ -55,12 +53,8 @@ module Pretty : sig
     Buffer.t -> colorize:bool -> summarize:bool -> t -> unit
 
   val should_compact : t -> bool
-  (** Whether [to_buffer_colored] without [summarize] prints an array or object
-      on one line. *)
 
   val item_to_buffer : Buffer.t -> colorize:bool -> t -> unit
-  (** One member of a root array that is not printed on one line: its
-      indentation and the value, without a separator. *)
 
   val to_string_colored : colorize:bool -> summarize:bool -> t -> string
   val print_colored : colorize:bool -> summarize:bool -> t -> unit

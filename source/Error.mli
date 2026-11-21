@@ -22,12 +22,8 @@ val with_location : input:string -> start_pos:int -> end_pos:int -> t -> t
 val with_context : context -> t -> t
 
 val format : colorize:bool -> t -> string
-(** Format error with colors and Rust-style layout *)
 
 val to_string : t -> string
-(** Get just the message string *)
-
-(** {2 Common Error Constructors} *)
 
 val key_not_found : key:string -> json:Json.t -> available_keys:string list -> t
 

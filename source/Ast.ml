@@ -1,21 +1,15 @@
 type number = Integer of string | Decimal of string
 [@@deriving show { with_path = false }]
 
-type literal =
-  | Bool of bool (* true *)
-  | String of string (* "TEXT" *)
-  | Number of number (* numeric lexeme from source code *)
-  | Null (* null *)
+type literal = Bool of bool | String of string | Number of number | Null
 [@@deriving show { with_path = false }]
 
 type fn0 =
-  (* String functions *)
   | Trim
   | To_uppercase
   | To_lowercase
   | To_codepoints
   | From_codepoints
-  (* Array functions *)
   | Sort
   | Unique
   | Reverse
@@ -29,17 +23,14 @@ type fn0 =
   | Flatten
   | Combinations
   | Transpose
-  (* Object functions *)
   | Keys
   | To_entries
   | From_entries
-  (* Type functions *)
   | Type
   | To_string
   | To_number
   | Length
   | Byte_length
-  (* Type selectors *)
   | Numbers
   | Strings
   | Objects
@@ -49,7 +40,6 @@ type fn0 =
   | Iterables
   | Scalars
   | Values
-  (* Math functions *)
   | Floor
   | Sqrt
   | Abs
@@ -83,29 +73,24 @@ type fn0 =
   | Infinite
   | Nan
   | Now
-  (* Path functions *)
   | Paths
   | Leaf_paths
   | Recurse
   | Recurse_down
   | Descend
   | Dive
-  (* Control flow *)
   | Empty
   | Not
   | Break
   | Halt
   | Env
-  (* Debug/IO *)
   | Debug
   | Stderr
   | Builtins
-  (* Time *)
   | To_local_time
   | To_utc
   | To_unix
   | From_date
-  (* Custom helpers *)
   | Is_blank
   | Is_empty
 [@@deriving show { with_path = false }]
@@ -117,7 +102,6 @@ type fn1_separator = Split | Join | Parse_date
 [@@deriving show { with_path = false }]
 
 type fn1_expr =
-  (* Array functions *)
   | Map
   | Map_values
   | Flat_map
@@ -142,7 +126,6 @@ type fn1_expr =
   | Add_expr
   | Repeat
   | Binary_search
-  (* Object functions *)
   | Has
   | In
   | With_entries
@@ -150,7 +133,6 @@ type fn1_expr =
   | Pick
   | Getpath
   | Delpaths
-  (* String functions *)
   | Starts_with
   | Ends_with
   | Index_of
@@ -160,7 +142,6 @@ type fn1_expr =
   | Trim_start
   | Trim_end
   | Contains
-  (* Path functions *)
   | Walk
   | Path
   | Paths_filter
@@ -168,7 +149,6 @@ type fn1_expr =
   | Find_all
   | Find_first
   | Paths_to
-  (* Control flow *)
   | Is_empty_expr
   | Error_msg
   | Halt_error_n
@@ -181,10 +161,8 @@ type compiled_regex = { pattern : string; regex : Re.re }
 let pp_compiled_regex fmt r = Format.fprintf fmt "/%s/" r.pattern
 
 type fn2 =
-  (* String functions *)
   | Replace
   | Replace_all
-  (* Control flow *)
   | While
   | Until
   | Limit
@@ -194,10 +172,8 @@ type fn2 =
   | All_gen
   | Assert_msg
   | Raise
-  (* Path functions *)
   | Setpath
   | Nth
-  (* Math functions *)
   | Atan2
   | Copysign
   | Ldexp
@@ -235,48 +211,35 @@ type fn1 =
   | With_expr of fn1_expr * expression
 
 and expression =
-  | Identity (* . *)
+  | Identity
   | Literal of literal
-  | Variable of string (* $var *)
-  | Env_var of string (* $ENV.VAR or env.VAR *)
-  (* Pipes and operators *)
-  | Pipe of expression * expression (* | *)
-  | Update of expression * expression (* |= *)
-  | Alternative of expression * expression (* ?? *)
-  | Comma of expression * expression (* expr1 , expr2 *)
+  | Variable of string
+  | Env_var of string
+  | Pipe of expression * expression
+  | Update of expression * expression
+  | Alternative of expression * expression
+  | Comma of expression * expression
   | Operation of expression * op * expression
-  | Assign of expression * expression (* .foo = value *)
+  | Assign of expression * expression
   | Fn0 of fn0
   | Fn1 of fn1
   | Fn2 of fn2 * expression * expression
-  (* Constructors *)
-  | List of expression option (* [ expr ] *)
-  | Object of (expression * expression option) list (* {} *)
-  (* Access patterns *)
-  | Key of string (* .foo *)
-  | Optional of expression (* ? *)
-  | Index of int list (* .[1] or .[0,1,2] - when empty list, acts as iterator *)
-  | Dynamic_access of expression (* .[$expr] - dynamic key/index access *)
+  | List of expression option
+  | Object of (expression * expression option) list
+  | Key of string
+  | Optional of expression
+  | Index of int list
+  | Dynamic_access of expression
   | Slice of int option * int option
-  | Slice_expr of expression option * expression option (* .[expr:expr] *)
-  | If_then_else of
-      expression * expression * expression (* If then (elseif) else end *)
-  | Range of
-      expression
-      * expression option
-      * expression option (* range(from; upto; step) *)
+  | Slice_expr of expression option * expression option
+  | If_then_else of expression * expression * expression
+  | Range of expression * expression option * expression option
   | Reduce of expression * binding_pattern * expression * expression
-    (* reduce EXPR as PATTERN (INIT; UPDATE) *)
   | Foreach of
       expression * binding_pattern * expression * expression * expression
-    (* foreach EXPR as PATTERN (INIT; UPDATE; EXTRACT) *)
-  | As of expression * binding_pattern * expression (* expr as PATTERN | body *)
+  | As of expression * binding_pattern * expression
   | Try of expression * expression option * expression option
-    (* try expr catch handler finally cleanup *)
-  | Fma of
-      expression
-      * expression
-      * expression (* fma(x; y; z) - fused multiply-add *)
-  | Fn of string * string list * expression (* fn name(args): body *)
-  | Apply of string * expression list (* function_name(args) *)
+  | Fma of expression * expression * expression
+  | Fn of string * string list * expression
+  | Apply of string * expression list
 [@@deriving show { with_path = false }]
